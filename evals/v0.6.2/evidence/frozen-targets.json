@@ -1,0 +1,15 @@
+{
+  "calibrationBaselineHash": "e7c905240b9f908527e7b583b72600cee4ac9c099282042022f3408e6df9e52f",
+  "corpusHash": "584569a0f6d9cb570210b1086eb870e0363d46d624a966744347ba2c11d10a78",
+  "freezeOrder": "calibration baseline saved -> targets persisted -> heldout evaluated",
+  "productionThresholdsChanged": false,
+  "protocolHash": "b8237d88985488348eed00311bd61f0ad99f6cef6915eb5c8534a296238d6ba3",
+  "targets": {
+    "goldEvidenceContextRate": 0.85,
+    "mrrAt10": 0.8,
+    "recallAt5": 0.9,
+    "unsupportedEvidenceFalsePositiveRateMax": 0.1
+  },
+  "tuningPerformed": false,
+  "version": 1
+}

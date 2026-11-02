@@ -1,0 +1,6 @@
+stateDiagram-v2
+  state "编辑中" as editing
+  state "已保存" as saved
+  [*] --> editing
+  editing --> saved: 保存
+  saved --> editing: 修改

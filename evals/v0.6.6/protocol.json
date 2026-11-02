@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "frozenBeforeRetrievalChanges": true,
+  "authorIndependent": false,
+  "corpora": {
+    "corrected-observed-32": "development regression; not new",
+    "new-40": "same-author frozen check; 8 comparisons include 4 reversed pairs; not 8 independent topics"
+  },
+  "targets": {
+    "contextEvidenceRate": 0.85,
+    "unsupportedAdmissionCount": 0,
+    "scopeVersionCitationErrors": 0
+  },
+  "candidateBudget": {
+    "perBranch": 60,
+    "mergedMaximum": 120,
+    "rerankWindow": 40,
+    "displayed": 12,
+    "equalTotalCostComparison": false
+  },
+  "maxHttpAttemptsAcrossRuns": 240,
+  "maxWallSecondsAcrossRuns": 1800,
+  "generationCaseIds": [
+    "P01",
+    "P06",
+    "P11",
+    "P13",
+    "P17",
+    "P19",
+    "P23",
+    "P25",
+    "P26",
+    "P29",
+    "P33",
+    "P37"
+  ],
+  "onlineLatency": "Query embeddings per question, no batch-precomputed query vectors; online end-to-end includes embedding/local retrieval/rerank/context/generation, indexed document embeddings reported separately.",
+  "models": {
+    "embedding": "text-embedding-3-small",
+    "chat": "gpt-4.1-mini",
+    "rerank": "qwen3-reranker-0.6b"
+  },
+  "limits": "Synthetic small corpus, same author, template repetition and reverse pairs; no general accuracy or cross-provider claims. Stop without changing targets if budget is exhausted."
+}

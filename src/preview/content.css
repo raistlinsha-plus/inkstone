@@ -1,0 +1,83 @@
+.markdown-reading {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.markdown-reading > div > :first-child {
+  margin-top: 0;
+}
+.markdown-reading pre {
+  white-space: pre;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.markdown-reading code {
+  font-size: 0.9em;
+}
+.markdown-reading .preview-table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.markdown-reading .code-preview-block {
+  margin: 16px 0;
+}
+.markdown-reading .block-label {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.markdown-reading .json-row {
+  font-size: 12px;
+}
+.markdown-reading .json-row .json-label {
+  min-width: 0;
+  white-space: normal;
+  text-align: left;
+}
+.markdown-reading .json-row .json-label span {
+  white-space: pre-wrap;
+}
+.markdown-reading .graph-actions {
+  flex-wrap: wrap;
+}
+.markdown-reading .calendar-toolbar,
+.markdown-reading .calendar-date-nav {
+  flex-wrap: wrap;
+}
+.markdown-reading .calendar-date-nav label {
+  min-width: 0;
+}
+.markdown-reading a {
+  color: #426849;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.markdown-reading h1,
+.markdown-reading h2,
+.markdown-reading h3 {
+  line-height: 1.4;
+}
+.markdown-reading :is(h1, h2, h3, h4, h5, h6):focus {
+  outline: 2px solid #77916b;
+  outline-offset: 3px;
+}
+.content-fallback {
+  border: 1px solid #ddc9a8;
+  border-radius: 6px;
+  padding: 12px;
+  color: #695133;
+}
+.content-fallback pre {
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.calendar-inspection {
+  background: #f5f6ef;
+  padding: 12px;
+  border: 1px solid #ccd5c6;
+  border-radius: 6px;
+  margin: 8px 0;
+}
+.calendar-inspection p {
+  margin: 6px 0;
+  white-space: pre-wrap;
+}

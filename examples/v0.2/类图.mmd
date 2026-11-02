@@ -1,0 +1,7 @@
+classDiagram
+  class Document["文档"] {
+    +String title
+    +save()
+  }
+  class Workspace["工作区"]
+  Workspace --> Document : 包含

@@ -1,0 +1,36 @@
+name: Verify macOS source
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: macos-15
+    timeout-minutes: 35
+    env:
+      CARGO_BUILD_JOBS: 2
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.14.0
+          cache: npm
+      - name: Install verified toolchain
+        run: |
+          npm install --global npm@11.9.0 --registry=https://registry.npmjs.org
+          rustup toolchain install 1.99.1 --profile minimal
+          rustup default 1.99.1
+      - run: npm ci --registry=https://registry.npmjs.org
+      - name: Full offline-model gates
+        run: npm run verify
+      - name: macOS application bundle (local ad-hoc signature)
+        run: npm run bundle
+      - name: Verify local signature
+        run: codesign --verify --deep --strict src-tauri/target/release/bundle/macos/Inkstone.app

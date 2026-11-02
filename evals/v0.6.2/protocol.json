@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "metrics": "Deduplicate by document; Recall@5/@20 and MRR@10 on answerable cases; evidence-in-context and no-context on unsupported cases are proxies only, not factual answer/correct-refusal scores.",
+  "targets": {
+    "recallAt5": 0.9,
+    "mrrAt10": 0.8,
+    "goldEvidenceContextRate": 0.85,
+    "unsupportedEvidenceFalsePositiveRateMax": 0.1
+  },
+  "freezeOrder": "Write calibration baseline first, freeze these predeclared candidate acceptance targets with its hash, then run heldout. Do not tune production thresholds using heldout or relax failed targets.",
+  "productionThresholdsChanged": false,
+  "remote": "not_run unless caller explicitly invokes run-remote.mjs --split calibration|heldout --run with provider environment. No Keychain."
+}

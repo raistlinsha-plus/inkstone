@@ -1,0 +1,1674 @@
+{
+  "authorIndependent": false,
+  "corpus": "corrected-observed-32",
+  "corpusHash": "468b64b0dd0bcbff05ad77364b7f8ac1f16c86602aa15d462035306621e8cbdf",
+  "externalCalls": 0,
+  "generation": "not_run",
+  "keychainAccessed": false,
+  "phase": "baseline",
+  "protocol": {
+    "authorIndependent": false,
+    "candidateBudget": {
+      "displayed": 12,
+      "equalTotalCostComparison": false,
+      "mergedMaximum": 120,
+      "perBranch": 60,
+      "rerankWindow": 40
+    },
+    "corpora": {
+      "corrected-observed-32": "development regression; not new",
+      "new-40": "same-author frozen check; 8 comparisons include 4 reversed pairs; not 8 independent topics"
+    },
+    "frozenBeforeRetrievalChanges": true,
+    "generationCaseIds": [
+      "P01",
+      "P06",
+      "P11",
+      "P13",
+      "P17",
+      "P19",
+      "P23",
+      "P25",
+      "P26",
+      "P29",
+      "P33",
+      "P37"
+    ],
+    "limits": "Synthetic small corpus, same author, template repetition and reverse pairs; no general accuracy or cross-provider claims. Stop without changing targets if budget is exhausted.",
+    "maxHttpAttemptsAcrossRuns": 240,
+    "maxWallSecondsAcrossRuns": 1800,
+    "models": {
+      "chat": "gpt-4.1-mini",
+      "embedding": "text-embedding-3-small",
+      "rerank": "qwen3-reranker-0.6b"
+    },
+    "onlineLatency": "Query embeddings per question, no batch-precomputed query vectors; online end-to-end includes embedding/local retrieval/rerank/context/generation, indexed document embeddings reported separately.",
+    "targets": {
+      "contextEvidenceRate": 0.85,
+      "scopeVersionCitationErrors": 0,
+      "unsupportedAdmissionCount": 0
+    },
+    "version": 1
+  },
+  "records": [
+    {
+      "answerable": true,
+      "id": "N01",
+      "kind": "fact",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/海棠修复室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "海棠修复室的接收单号与登记时间是什么？",
+      "retrievalEvidenceMs": 2.4408339999999997,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -21.782030737848533,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "73367c1dc067653d0765b0b8660257e0bac17d50a3451739b0bdd64db4d24a15",
+          "heading": "现行规则",
+          "id": 4,
+          "matchKind": "keyword",
+          "path": "新资料/海棠修复室.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 7,
+          "text": "接收单号为HT-2048，纸页在周二09:20完成登记。\n\n",
+          "title": "新资料/海棠修复室.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "海棠",
+        "修复",
+        "室",
+        "接收",
+        "单号",
+        "登记",
+        "时间"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N02",
+      "kind": "fact",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/岩星器材站.md",
+          "新资料/纸鸢配音社.md",
+          "新资料/海棠修复室.md",
+          "新资料/澄湖标本室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "岩星器材站领取截止在何时，超时怎么办？",
+      "retrievalEvidenceMs": 1.75775,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -20.746378264819185,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "82fc9577fb7e6f1f37dce7ea7d262b4138b532082254f6783162f897cdaf988b",
+          "heading": "现行规则",
+          "id": 13,
+          "matchKind": "keyword",
+          "path": "新资料/岩星器材站.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 7,
+          "text": "器材领取在周五16:40截止，超过时点顺延一周。\n\n",
+          "title": "新资料/岩星器材站.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "岩星",
+        "器材",
+        "站",
+        "领取",
+        "截止",
+        "在",
+        "超时",
+        "怎么办"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N03",
+      "kind": "fact",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "新资料/柳桥排练厅.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "柳桥排练厅主厅和小厅分别能预约多长时间？",
+      "retrievalEvidenceMs": 1.517542,
+      "sources": [],
+      "status": "completed",
+      "terms": [
+        "柳桥",
+        "排练",
+        "排练厅",
+        "主厅",
+        "小厅",
+        "分别",
+        "预约",
+        "时间",
+        "长时间",
+        "多长时间"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N04",
+      "kind": "fact",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/澄湖标本室.md",
+          "新资料/蓝砂实验书屋.md",
+          "新资料/海棠修复室.md",
+          "新资料/南枝织染间.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "澄湖标本室的批次代码是什么，前导零能否删除？",
+      "retrievalEvidenceMs": 2.3750839999999998,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -27.76663079911359,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "ddd889af7af827689b9a687bcc5a84b289347519cc0838fc5771cccce6261524",
+          "heading": "现行规则",
+          "id": 31,
+          "matchKind": "keyword",
+          "path": "新资料/澄湖标本室.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 7,
+          "text": "批次代码为000728；不得把前导零去掉。\n\n",
+          "title": "新资料/澄湖标本室.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "澄湖",
+        "标本",
+        "本室",
+        "标本室",
+        "批次",
+        "代码",
+        "前导",
+        "零",
+        "删除"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N05",
+      "kind": "fact",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/纸鸢配音社.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "纸鸢配音社要求的采样率、位深和保存格式是什么？",
+      "retrievalEvidenceMs": 1.261292,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -26.024784075419976,
+          "documentId": null,
+          "endLine": 10,
+          "evidence": true,
+          "hash": "d99eed0eb3d7cc24e3624dcdd4fb33c07880ebdfdbf9598bba5777949ff071bf",
+          "heading": "现行规则",
+          "id": 41,
+          "matchKind": "keyword",
+          "path": "新资料/纸鸢配音社.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 9,
+          "text": "录音文件使用48kHz采样率、24bit位深，以WAV保存。\n\n",
+          "title": "新资料/纸鸢配音社.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "纸鸢",
+        "配音",
+        "社",
+        "要求",
+        "采样",
+        "采样率",
+        "位深",
+        "保存",
+        "格式"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N06",
+      "kind": "fact",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/蓝砂实验书屋.md",
+          "新资料/海棠修复室.md",
+          "新资料/南枝织染间.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "蓝砂实验书屋2026年现行闭馆时刻是什么？不要用2025年的安排。",
+      "retrievalEvidenceMs": 5.795459,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -24.14731334624933,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "e148d49cd29fbd3f3197804d798bfe19e3968119adbe285576fa667fe9caf35c",
+          "heading": "现行规则",
+          "id": 49,
+          "matchKind": "keyword",
+          "path": "新资料/蓝砂实验书屋.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 7,
+          "text": "2025年的闭馆时刻为18:00；2026年现行闭馆时刻改为19:30。\n\n",
+          "title": "新资料/蓝砂实验书屋.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "蓝砂",
+        "实验",
+        "书屋",
+        "2026",
+        "年",
+        "现行",
+        "闭馆",
+        "时刻",
+        "不要",
+        "用",
+        "2025",
+        "安排"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N07",
+      "kind": "fact",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/南枝织染间.md",
+          "新资料/纸鸢配音社.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "南枝织染间每批染缸布料上限多少米？下一批前要做什么？",
+      "retrievalEvidenceMs": 1.7435829999999999,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -26.239708990186656,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "047ea9784fc4a6845165f4eae85bf3d38dff7d007a1b4633af324c279a51ffd2",
+          "heading": "现行规则",
+          "id": 58,
+          "matchKind": "keyword",
+          "path": "新资料/南枝织染间.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 7,
+          "text": "染缸每批最多放入7米布料，下一批开始前需清洗缸壁。\n\n",
+          "title": "新资料/南枝织染间.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "南枝织",
+        "染间",
+        "每批",
+        "染缸",
+        "布料",
+        "上限",
+        "米",
+        "下",
+        "一批",
+        "前要",
+        "做"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N08",
+      "kind": "fact",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/向风电台.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "向风电台原始采访音轨与公开剪辑版各保留多久？",
+      "retrievalEvidenceMs": 1.2544170000000001,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -35.94056481331633,
+          "documentId": null,
+          "endLine": 10,
+          "evidence": true,
+          "hash": "bfb461ce2d7ccbfd6a2170d79c321dcc798bc249496525d0fe07d37ed0e59254",
+          "heading": "现行规则",
+          "id": 68,
+          "matchKind": "keyword",
+          "path": "新资料/向风电台.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 9,
+          "text": "原始采访音轨保留180天；公开剪辑版保留2年。\n\n",
+          "title": "新资料/向风电台.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "向风",
+        "电台",
+        "原始",
+        "采访",
+        "音轨",
+        "公开",
+        "剪辑",
+        "剪辑版",
+        "各",
+        "保留"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N09",
+      "kind": "fact",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/海棠修复室.md",
+          "新资料/蓝砂实验书屋.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "海棠修复室普通纸页和带水印纸页的静置时长各是多少？",
+      "retrievalEvidenceMs": 1.4070420000000001,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -30.916597379682074,
+          "documentId": null,
+          "endLine": 10,
+          "evidence": true,
+          "hash": "73367c1dc067653d0765b0b8660257e0bac17d50a3451739b0bdd64db4d24a15",
+          "heading": "现行规则",
+          "id": 5,
+          "matchKind": "keyword",
+          "path": "新资料/海棠修复室.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 9,
+          "text": "普通纸页修复后静置48小时；带水印纸页静置72小时。\n\n",
+          "title": "新资料/海棠修复室.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "海棠",
+        "修复",
+        "室",
+        "普通",
+        "纸页",
+        "带",
+        "水印",
+        "静置",
+        "时长",
+        "各"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N10",
+      "kind": "fact",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/岩星器材站.md",
+          "新资料/蓝砂实验书屋.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "岩星器材站归还时缺了领用卡会怎样？",
+      "retrievalEvidenceMs": 1.619334,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -16.982072706513147,
+          "documentId": null,
+          "endLine": 10,
+          "evidence": true,
+          "hash": "82fc9577fb7e6f1f37dce7ea7d262b4138b532082254f6783162f897cdaf988b",
+          "heading": "现行规则",
+          "id": 14,
+          "matchKind": "keyword",
+          "path": "新资料/岩星器材站.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 9,
+          "text": "归还时同时提交电池盒与领用卡；缺任一项先挂起验收。\n\n",
+          "title": "新资料/岩星器材站.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "岩星",
+        "器材",
+        "站",
+        "归还",
+        "时缺",
+        "领用",
+        "卡会"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N11",
+      "kind": "fact",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/柳桥排练厅.md",
+          "新资料/岩星器材站.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "柳桥排练厅扩声读数超过65分贝时先做什么？",
+      "retrievalEvidenceMs": 1.691083,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -27.83671548743085,
+          "documentId": null,
+          "endLine": 10,
+          "evidence": true,
+          "hash": "4b2ba91bb14fcbce700340e7ec05b3d483599b4f2612c5f80d5c20e6bdc0e5b3",
+          "heading": "现行规则",
+          "id": 23,
+          "matchKind": "keyword",
+          "path": "新资料/柳桥排练厅.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 9,
+          "text": "扩声设备的音量读数超过65分贝时，值班员先降低主增益。\n\n",
+          "title": "新资料/柳桥排练厅.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "柳桥",
+        "排练",
+        "排练厅",
+        "扩声",
+        "读数",
+        "超过",
+        "65",
+        "分贝",
+        "时先",
+        "做"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N12",
+      "kind": "fact",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/澄湖标本室.md",
+          "新资料/南枝织染间.md",
+          "新资料/向风电台.md",
+          "新资料/海棠修复室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "澄湖标本室针插标本储存温度是多少？液浸标本是否用同一规则？",
+      "retrievalEvidenceMs": 3.329125,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -25.4095962145413,
+          "documentId": null,
+          "endLine": 10,
+          "evidence": true,
+          "hash": "ddd889af7af827689b9a687bcc5a84b289347519cc0838fc5771cccce6261524",
+          "heading": "现行规则",
+          "id": 32,
+          "matchKind": "keyword",
+          "path": "新资料/澄湖标本室.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 9,
+          "text": "针插标本储存在18至22摄氏度，液浸标本按独立清单保管。\n\n",
+          "title": "新资料/澄湖标本室.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "澄湖",
+        "标本",
+        "本室",
+        "标本室",
+        "针插",
+        "储存",
+        "温度",
+        "液浸",
+        "用",
+        "同一",
+        "规则"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N13",
+      "kind": "fact",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/南枝织染间.md",
+          "新资料/岩星器材站.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "南枝织染间黄色卡代表什么，能否寄出？",
+      "retrievalEvidenceMs": 1.33125,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -18.131360404438315,
+          "documentId": null,
+          "endLine": 10,
+          "evidence": true,
+          "hash": "047ea9784fc4a6845165f4eae85bf3d38dff7d007a1b4633af324c279a51ffd2",
+          "heading": "现行规则",
+          "id": 59,
+          "matchKind": "keyword",
+          "path": "新资料/南枝织染间.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 9,
+          "text": "未完成色牢度复核的布料挂黄色卡，禁止寄出。\n\n",
+          "title": "新资料/南枝织染间.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "南枝织",
+        "染间",
+        "黄色",
+        "卡",
+        "代表",
+        "寄出"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N14",
+      "kind": "fact",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/向风电台.md",
+          "新资料/柳桥排练厅.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "向风电台每期节目长度及片尾鸣谢时长分别多少？",
+      "retrievalEvidenceMs": 2.469959,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -23.804136170615156,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "bfb461ce2d7ccbfd6a2170d79c321dcc798bc249496525d0fe07d37ed0e59254",
+          "heading": "现行规则",
+          "id": 67,
+          "matchKind": "keyword",
+          "path": "新资料/向风电台.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 7,
+          "text": "每期节目长度为22分钟，片尾鸣谢占其中2分钟。\n\n",
+          "title": "新资料/向风电台.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "向风",
+        "电台",
+        "每期",
+        "节目",
+        "长度",
+        "片尾",
+        "鸣谢",
+        "时",
+        "长",
+        "分别"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N15",
+      "kind": "chart",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/海棠修复室.md",
+          "新资料/岩星器材站.md",
+          "新资料/蓝砂实验书屋.md",
+          "新资料/南枝织染间.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用 chart 柱状图展示海棠修复室四月、五月、六月的修复件数，对比2026年和2025年，保留单位与缺测。",
+      "retrievalEvidenceMs": 4.62375,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -23.569902425234705,
+          "documentId": null,
+          "endLine": 20,
+          "evidence": true,
+          "hash": "73367c1dc067653d0765b0b8660257e0bac17d50a3451739b0bdd64db4d24a15",
+          "heading": "修复件数台账",
+          "id": 8,
+          "matchKind": "keyword",
+          "path": "新资料/海棠修复室.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 11,
+          "text": "## 修复件数台账\n\n指标：修复件数；单位：件。2026年与2025年分列；缺测不是零。\n\n| 月份 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| 四月 | 12 | 10 |\n| 五月 | 14 | 11 |\n| 六月 | 19 | 16 |\n",
+          "title": "新资料/海棠修复室.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "海棠",
+        "修复",
+        "室",
+        "四月",
+        "五月",
+        "六月",
+        "件数",
+        "对比",
+        "2026",
+        "年",
+        "2025",
+        "保留",
+        "单位",
+        "缺测"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N16",
+      "kind": "chart",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/岩星器材站.md",
+          "新资料/向风电台.md",
+          "新资料/纸鸢配音社.md",
+          "新资料/澄湖标本室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用 chart 柱状图展示岩星器材站四月、五月、六月的电池回收量，对比2026年和2025年，保留单位与缺测。",
+      "retrievalEvidenceMs": 4.71,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -30.82989012336309,
+          "documentId": null,
+          "endLine": 20,
+          "evidence": true,
+          "hash": "82fc9577fb7e6f1f37dce7ea7d262b4138b532082254f6783162f897cdaf988b",
+          "heading": "电池回收量台账",
+          "id": 17,
+          "matchKind": "keyword",
+          "path": "新资料/岩星器材站.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 11,
+          "text": "## 电池回收量台账\n\n指标：电池回收量；单位：盒。2026年与2025年分列；缺测不是零。\n\n| 月份 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| 四月 | 8 | 6 |\n| 五月 | 缺测 | 9 |\n| 六月 | 13 | 12 |\n",
+          "title": "新资料/岩星器材站.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "岩星",
+        "器材",
+        "站",
+        "四月",
+        "五月",
+        "六月",
+        "电池",
+        "回收",
+        "量",
+        "对比",
+        "2026",
+        "年",
+        "2025",
+        "保留",
+        "单位",
+        "缺测"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N17",
+      "kind": "chart",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/柳桥排练厅.md",
+          "新资料/岩星器材站.md",
+          "新资料/蓝砂实验书屋.md",
+          "新资料/海棠修复室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用 chart 柱状图展示柳桥排练厅四月、五月、六月的主厅使用时长，对比2026年和2025年，保留单位与缺测。",
+      "retrievalEvidenceMs": 4.617375,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -34.40897065605811,
+          "documentId": null,
+          "endLine": 20,
+          "evidence": true,
+          "hash": "4b2ba91bb14fcbce700340e7ec05b3d483599b4f2612c5f80d5c20e6bdc0e5b3",
+          "heading": "主厅使用时长台账",
+          "id": 26,
+          "matchKind": "keyword",
+          "path": "新资料/柳桥排练厅.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 11,
+          "text": "## 主厅使用时长台账\n\n指标：主厅使用时长；单位：小时。2026年与2025年分列；缺测不是零。\n\n| 月份 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| 四月 | 41 | 38 |\n| 五月 | 46 | 42 |\n| 六月 | 52 | 49 |\n",
+          "title": "新资料/柳桥排练厅.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "柳桥",
+        "排练",
+        "排练厅",
+        "四月",
+        "五月",
+        "六月",
+        "主厅",
+        "使用",
+        "时",
+        "长",
+        "对比",
+        "2026",
+        "年",
+        "2025",
+        "保留",
+        "单位",
+        "缺测"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N18",
+      "kind": "chart",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/纸鸢配音社.md",
+          "新资料/澄湖标本室.md",
+          "新资料/岩星器材站.md",
+          "新资料/南枝织染间.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用 chart 柱状图展示纸鸢配音社四月、五月、六月的录音完成量，对比2026年和2025年，保留单位与缺测。",
+      "retrievalEvidenceMs": 5.151917,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -26.52829271602472,
+          "documentId": null,
+          "endLine": 20,
+          "evidence": true,
+          "hash": "d99eed0eb3d7cc24e3624dcdd4fb33c07880ebdfdbf9598bba5777949ff071bf",
+          "heading": "录音完成量台账",
+          "id": 44,
+          "matchKind": "keyword",
+          "path": "新资料/纸鸢配音社.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 11,
+          "text": "## 录音完成量台账\n\n指标：录音完成量；单位：分钟。2026年与2025年分列；缺测不是零。\n\n| 月份 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| 四月 | 75 | 70 |\n| 五月 | 88 | 81 |\n| 六月 | 91 | 86 |\n",
+          "title": "新资料/纸鸢配音社.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "纸鸢",
+        "配音",
+        "社",
+        "四月",
+        "五月",
+        "六月",
+        "录音",
+        "完成",
+        "量",
+        "对比",
+        "2026",
+        "年",
+        "2025",
+        "保留",
+        "单位",
+        "缺测"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N19",
+      "kind": "chart",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/蓝砂实验书屋.md",
+          "新资料/岩星器材站.md",
+          "新资料/海棠修复室.md",
+          "新资料/南枝织染间.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用 chart 柱状图展示蓝砂实验书屋四月、五月、六月的入馆量，对比2026年和2025年，保留单位与缺测。",
+      "retrievalEvidenceMs": 4.395541000000001,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -23.664173011193462,
+          "documentId": null,
+          "endLine": 20,
+          "evidence": true,
+          "hash": "e148d49cd29fbd3f3197804d798bfe19e3968119adbe285576fa667fe9caf35c",
+          "heading": "入馆量台账",
+          "id": 53,
+          "matchKind": "keyword",
+          "path": "新资料/蓝砂实验书屋.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 11,
+          "text": "## 入馆量台账\n\n指标：入馆量；单位：人。2026年与2025年分列；缺测不是零。\n\n| 月份 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| 四月 | 96 | 82 |\n| 五月 | 103 | 94 |\n| 六月 | 119 | 107 |\n",
+          "title": "新资料/蓝砂实验书屋.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "蓝砂",
+        "实验",
+        "书屋",
+        "四月",
+        "五月",
+        "六月",
+        "入馆量",
+        "对比",
+        "2026",
+        "年",
+        "2025",
+        "保留",
+        "单位",
+        "缺测"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N20",
+      "kind": "chart",
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "新资料/向风电台.md",
+          "新资料/岩星器材站.md",
+          "新资料/纸鸢配音社.md",
+          "新资料/澄湖标本室.md",
+          "新资料/蓝砂实验书屋.md",
+          "新资料/海棠修复室.md",
+          "新资料/南枝织染间.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用 chart 柱状图展示向风电台四月、五月、六月的节目上线量，对比2026年和2025年，保留单位与缺测。",
+      "retrievalEvidenceMs": 4.537249999999999,
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -26.109212959843585,
+          "documentId": null,
+          "endLine": 20,
+          "evidence": true,
+          "hash": "bfb461ce2d7ccbfd6a2170d79c321dcc798bc249496525d0fe07d37ed0e59254",
+          "heading": "节目上线量台账",
+          "id": 71,
+          "matchKind": "keyword",
+          "path": "新资料/向风电台.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 11,
+          "text": "## 节目上线量台账\n\n指标：节目上线量；单位：期。2026年与2025年分列；缺测不是零。\n\n| 月份 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| 四月 | 4 | 3 |\n| 五月 | 6 | 5 |\n| 六月 | 7 | 6 |\n",
+          "title": "新资料/向风电台.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "status": "completed",
+      "terms": [
+        "向风",
+        "电台",
+        "四月",
+        "五月",
+        "六月",
+        "节目",
+        "上线",
+        "量",
+        "对比",
+        "2026",
+        "年",
+        "2025",
+        "保留",
+        "单位",
+        "缺测"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N21",
+      "kind": "cross-document",
+      "metrics": {
+        "allGoldDocumentRank": 2,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 0.5,
+        "sourceCount": 0,
+        "topDocuments": [
+          "新资料/海棠修复室.md",
+          "新资料/柳桥排练厅.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "比较海棠修复室和柳桥排练厅：两处对时长限制的不同规定，分开引用两处资料。",
+      "retrievalEvidenceMs": 2.199791,
+      "sources": [],
+      "status": "completed",
+      "terms": [
+        "比较",
+        "海棠",
+        "修复",
+        "室",
+        "柳桥",
+        "排练",
+        "排练厅",
+        "两处",
+        "对",
+        "时长",
+        "限制",
+        "不同",
+        "规定",
+        "分开",
+        "引用"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N22",
+      "kind": "cross-document",
+      "metrics": {
+        "allGoldDocumentRank": 2,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 0.5,
+        "sourceCount": 0,
+        "topDocuments": [
+          "新资料/岩星器材站.md",
+          "新资料/南枝织染间.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "比较岩星器材站和南枝织染间：两处在条件不满足时的处理方式，分开引用两处资料。",
+      "retrievalEvidenceMs": 3.870375,
+      "sources": [],
+      "status": "completed",
+      "terms": [
+        "比较",
+        "岩星",
+        "器材",
+        "站",
+        "南枝织",
+        "染间",
+        "两处",
+        "在",
+        "条件",
+        "不",
+        "满足",
+        "时",
+        "处理",
+        "方式",
+        "分开",
+        "引用"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N23",
+      "kind": "cross-document",
+      "metrics": {
+        "allGoldDocumentRank": 2,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 0.5,
+        "sourceCount": 0,
+        "topDocuments": [
+          "新资料/澄湖标本室.md",
+          "新资料/蓝砂实验书屋.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "比较澄湖标本室和蓝砂实验书屋：两处对特定标识的约束，分开引用两处资料。",
+      "retrievalEvidenceMs": 2.644833,
+      "sources": [],
+      "status": "completed",
+      "terms": [
+        "比较",
+        "澄湖",
+        "标本",
+        "本室",
+        "标本室",
+        "蓝砂",
+        "实验",
+        "书屋",
+        "两处",
+        "对",
+        "特定",
+        "标识",
+        "约束",
+        "分开",
+        "引用"
+      ]
+    },
+    {
+      "answerable": true,
+      "id": "N24",
+      "kind": "cross-document",
+      "metrics": {
+        "allGoldDocumentRank": 3,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 0.3333333333333333,
+        "sourceCount": 0,
+        "topDocuments": [
+          "新资料/柳桥排练厅.md",
+          "新资料/向风电台.md",
+          "新资料/纸鸢配音社.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "比较纸鸢配音社和向风电台：两处音频工作所要求的格式或保留时长，分开引用两处资料。",
+      "retrievalEvidenceMs": 3.793125,
+      "sources": [],
+      "status": "completed",
+      "terms": [
+        "比较",
+        "纸鸢",
+        "配音",
+        "社和向",
+        "风",
+        "电台",
+        "两处",
+        "音频",
+        "工作",
+        "所",
+        "要求",
+        "格式",
+        "或",
+        "保留",
+        "时",
+        "长",
+        "分开",
+        "引用"
+      ]
+    },
+    {
+      "answerable": false,
+      "id": "N25",
+      "kind": "unsupported",
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "新资料/海棠修复室.md",
+          "新资料/蓝砂实验书屋.md",
+          "新资料/南枝织染间.md",
+          "新资料/向风电台.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "海棠修复室2027年的负责人手机号码是多少？",
+      "retrievalEvidenceMs": 4.081334,
+      "sources": [],
+      "status": "completed",
+      "terms": [
+        "海棠",
+        "修复",
+        "室",
+        "2027",
+        "年",
+        "负责",
+        "责人",
+        "负责人",
+        "手机",
+        "号码",
+        "手机号",
+        "机号码",
+        "手机号码"
+      ]
+    },
+    {
+      "answerable": false,
+      "id": "N26",
+      "kind": "unsupported",
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "新资料/岩星器材站.md",
+          "新资料/蓝砂实验书屋.md",
+          "新资料/海棠修复室.md",
+          "新资料/南枝织染间.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "岩星器材站2027年的负责人手机号码是多少？",
+      "retrievalEvidenceMs": 4.024375,
+      "sources": [],
+      "status": "completed",
+      "terms": [
+        "岩星",
+        "器材",
+        "站",
+        "2027",
+        "年",
+        "负责",
+        "责人",
+        "负责人",
+        "手机",
+        "号码",
+        "手机号",
+        "机号码",
+        "手机号码"
+      ]
+    },
+    {
+      "answerable": false,
+      "id": "N27",
+      "kind": "unsupported",
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "新资料/柳桥排练厅.md",
+          "新资料/蓝砂实验书屋.md",
+          "新资料/海棠修复室.md",
+          "新资料/南枝织染间.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "柳桥排练厅2027年的负责人手机号码是多少？",
+      "retrievalEvidenceMs": 4.2833749999999995,
+      "sources": [],
+      "status": "completed",
+      "terms": [
+        "柳桥",
+        "排练",
+        "排练厅",
+        "2027",
+        "年",
+        "负责",
+        "责人",
+        "负责人",
+        "手机",
+        "号码",
+        "手机号",
+        "机号码",
+        "手机号码"
+      ]
+    },
+    {
+      "answerable": false,
+      "id": "N28",
+      "kind": "unsupported",
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "新资料/澄湖标本室.md",
+          "新资料/蓝砂实验书屋.md",
+          "新资料/海棠修复室.md",
+          "新资料/南枝织染间.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "澄湖标本室2027年的负责人手机号码是多少？",
+      "retrievalEvidenceMs": 4.265375,
+      "sources": [],
+      "status": "completed",
+      "terms": [
+        "澄湖",
+        "标本",
+        "本室",
+        "标本室",
+        "2027",
+        "年",
+        "负责",
+        "责人",
+        "负责人",
+        "手机",
+        "号码",
+        "手机号",
+        "机号码",
+        "手机号码"
+      ]
+    },
+    {
+      "answerable": false,
+      "id": "N29",
+      "kind": "unsupported",
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "新资料/纸鸢配音社.md",
+          "新资料/蓝砂实验书屋.md",
+          "新资料/海棠修复室.md",
+          "新资料/南枝织染间.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "纸鸢配音社2027年的负责人手机号码是多少？",
+      "retrievalEvidenceMs": 4.101167,
+      "sources": [],
+      "status": "completed",
+      "terms": [
+        "纸鸢",
+        "配音",
+        "社",
+        "2027",
+        "年",
+        "负责",
+        "责人",
+        "负责人",
+        "手机",
+        "号码",
+        "手机号",
+        "机号码",
+        "手机号码"
+      ]
+    },
+    {
+      "answerable": false,
+      "id": "N30",
+      "kind": "unsupported",
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "新资料/蓝砂实验书屋.md",
+          "新资料/海棠修复室.md",
+          "新资料/南枝织染间.md",
+          "新资料/向风电台.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "蓝砂实验书屋2027年的负责人手机号码是多少？",
+      "retrievalEvidenceMs": 3.9785410000000003,
+      "sources": [],
+      "status": "completed",
+      "terms": [
+        "蓝砂",
+        "实验",
+        "书屋",
+        "2027",
+        "年",
+        "负责",
+        "责人",
+        "负责人",
+        "手机",
+        "号码",
+        "手机号",
+        "机号码",
+        "手机号码"
+      ]
+    },
+    {
+      "answerable": false,
+      "id": "N31",
+      "kind": "unsupported",
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "新资料/南枝织染间.md",
+          "新资料/蓝砂实验书屋.md",
+          "新资料/海棠修复室.md",
+          "新资料/向风电台.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "南枝织染间2027年的负责人手机号码是多少？",
+      "retrievalEvidenceMs": 4.341,
+      "sources": [],
+      "status": "completed",
+      "terms": [
+        "南枝织",
+        "染间",
+        "2027",
+        "年",
+        "负责",
+        "责人",
+        "负责人",
+        "手机",
+        "号码",
+        "手机号",
+        "机号码",
+        "手机号码"
+      ]
+    },
+    {
+      "answerable": false,
+      "id": "N32",
+      "kind": "unsupported",
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "新资料/向风电台.md",
+          "新资料/蓝砂实验书屋.md",
+          "新资料/海棠修复室.md",
+          "新资料/南枝织染间.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "向风电台2027年的负责人手机号码是多少？",
+      "retrievalEvidenceMs": 4.09475,
+      "sources": [],
+      "status": "completed",
+      "terms": [
+        "向风",
+        "电台",
+        "2027",
+        "年",
+        "负责",
+        "责人",
+        "负责人",
+        "手机",
+        "号码",
+        "手机号",
+        "机号码",
+        "手机号码"
+      ]
+    }
+  ],
+  "summary": {
+    "allTargetsMet": false,
+    "answerable": 24,
+    "completed": 32,
+    "degraded": 0,
+    "goldEvidenceContextRate": 0.7916666666666666,
+    "latencyScope": "Query vectors are batch-precomputed; this is local retrieval/context + rerank only, NOT online total latency",
+    "mrrAt10": 0.9097222222222222,
+    "recallAt5": 1.0,
+    "retrievalEvidenceP50ms": 3.793125,
+    "retrievalEvidenceP95ms": 5.151917,
+    "unsupported": 8,
+    "unsupportedEvidencePositiveRate": 0.0
+  },
+  "version": "0.6.6"
+}

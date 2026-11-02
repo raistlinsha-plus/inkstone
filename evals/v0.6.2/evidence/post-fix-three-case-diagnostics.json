@@ -1,0 +1,885 @@
+{
+  "corpusHash": "584569a0f6d9cb570210b1086eb870e0363d46d624a966744347ba2c11d10a78",
+  "phase": "posthoc diagnostics of already-observed heldout cases; not new blinded evaluation",
+  "productionThresholdsChanged": false,
+  "records": [
+    {
+      "assembledSources": [],
+      "expectedPathCandidates": [
+        {
+          "bm25Rank": 1,
+          "covered": [
+            "林岸",
+            "读书",
+            "书会",
+            "读书会",
+            "一次",
+            "最多",
+            "本书"
+          ],
+          "coveredCount": 7,
+          "endLine": 10,
+          "evidence": false,
+          "heading": "执行规则",
+          "id": 5,
+          "missing": [
+            "最多能",
+            "几本",
+            "几本书",
+            "多久",
+            "归还"
+          ],
+          "path": "资料/01-林岸读书会.md",
+          "startLine": 9,
+          "termCount": 12,
+          "text": "每名成员一次最多借2本书，借期14天。\n\n"
+        },
+        {
+          "bm25Rank": 2,
+          "covered": [
+            "林岸",
+            "读书",
+            "书会",
+            "读书会"
+          ],
+          "coveredCount": 4,
+          "endLine": 2,
+          "evidence": false,
+          "heading": "林岸读书会｜2026年运行手册",
+          "id": 1,
+          "missing": [
+            "一次",
+            "最多",
+            "最多能",
+            "几本",
+            "本书",
+            "几本书",
+            "多久",
+            "归还"
+          ],
+          "path": "资料/01-林岸读书会.md",
+          "startLine": 1,
+          "termCount": 12,
+          "text": "# 林岸读书会｜2026年运行手册\n\n"
+        },
+        {
+          "bm25Rank": 3,
+          "covered": [
+            "林岸",
+            "读书",
+            "书会",
+            "读书会"
+          ],
+          "coveredCount": 4,
+          "endLine": 6,
+          "evidence": false,
+          "heading": "执行规则",
+          "id": 3,
+          "missing": [
+            "一次",
+            "最多",
+            "最多能",
+            "几本",
+            "本书",
+            "几本书",
+            "多久",
+            "归还"
+          ],
+          "path": "资料/01-林岸读书会.md",
+          "startLine": 5,
+          "termCount": 12,
+          "text": "## 执行规则\n\n"
+        },
+        {
+          "bm25Rank": 4,
+          "covered": [
+            "林岸",
+            "读书",
+            "书会",
+            "读书会"
+          ],
+          "coveredCount": 4,
+          "endLine": 4,
+          "evidence": false,
+          "heading": "林岸读书会｜2026年运行手册",
+          "id": 2,
+          "missing": [
+            "一次",
+            "最多",
+            "最多能",
+            "几本",
+            "本书",
+            "几本书",
+            "多久",
+            "归还"
+          ],
+          "path": "资料/01-林岸读书会.md",
+          "startLine": 3,
+          "termCount": 12,
+          "text": "以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n"
+        },
+        {
+          "bm25Rank": 5,
+          "covered": [
+            "林岸",
+            "读书",
+            "书会",
+            "读书会"
+          ],
+          "coveredCount": 4,
+          "endLine": 14,
+          "evidence": false,
+          "heading": "借阅册数季度台账",
+          "id": 7,
+          "missing": [
+            "一次",
+            "最多",
+            "最多能",
+            "几本",
+            "本书",
+            "几本书",
+            "多久",
+            "归还"
+          ],
+          "path": "资料/01-林岸读书会.md",
+          "startLine": 13,
+          "termCount": 12,
+          "text": "## 借阅册数季度台账\n\n"
+        },
+        {
+          "bm25Rank": 6,
+          "covered": [
+            "林岸",
+            "读书",
+            "书会",
+            "读书会"
+          ],
+          "coveredCount": 4,
+          "endLine": 12,
+          "evidence": false,
+          "heading": "执行规则",
+          "id": 6,
+          "missing": [
+            "一次",
+            "最多",
+            "最多能",
+            "几本",
+            "本书",
+            "几本书",
+            "多久",
+            "归还"
+          ],
+          "path": "资料/01-林岸读书会.md",
+          "startLine": 11,
+          "termCount": 12,
+          "text": "丢失纸质书签只需补登记，不收补办费。\n\n"
+        },
+        {
+          "bm25Rank": 7,
+          "covered": [
+            "林岸",
+            "读书",
+            "书会",
+            "读书会"
+          ],
+          "coveredCount": 4,
+          "endLine": 8,
+          "evidence": false,
+          "heading": "执行规则",
+          "id": 4,
+          "missing": [
+            "一次",
+            "最多",
+            "最多能",
+            "几本",
+            "本书",
+            "几本书",
+            "多久",
+            "归还"
+          ],
+          "path": "资料/01-林岸读书会.md",
+          "startLine": 7,
+          "termCount": 12,
+          "text": "常规讨论在周六14:30开始，地点是溪南活动室。\n\n"
+        },
+        {
+          "bm25Rank": 8,
+          "covered": [
+            "林岸",
+            "读书",
+            "书会",
+            "读书会"
+          ],
+          "coveredCount": 4,
+          "endLine": 23,
+          "evidence": false,
+          "heading": "借阅册数季度台账",
+          "id": 9,
+          "missing": [
+            "一次",
+            "最多",
+            "最多能",
+            "几本",
+            "本书",
+            "几本书",
+            "多久",
+            "归还"
+          ],
+          "path": "资料/01-林岸读书会.md",
+          "startLine": 17,
+          "termCount": 12,
+          "text": "| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 18 | 12 |\n| Q2 | 24 | 20 |\n| Q3 | 缺测 | 16 |\n| Q4 | 31 | 25 |\n\n"
+        },
+        {
+          "bm25Rank": 9,
+          "covered": [
+            "林岸",
+            "读书",
+            "书会",
+            "读书会"
+          ],
+          "coveredCount": 4,
+          "endLine": 16,
+          "evidence": false,
+          "heading": "借阅册数季度台账",
+          "id": 8,
+          "missing": [
+            "一次",
+            "最多",
+            "最多能",
+            "几本",
+            "本书",
+            "几本书",
+            "多久",
+            "归还"
+          ],
+          "path": "资料/01-林岸读书会.md",
+          "startLine": 15,
+          "termCount": 12,
+          "text": "指标：借阅册数；单位：册。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n"
+        },
+        {
+          "bm25Rank": 10,
+          "covered": [
+            "林岸",
+            "读书",
+            "书会",
+            "读书会"
+          ],
+          "coveredCount": 4,
+          "endLine": 24,
+          "evidence": false,
+          "heading": "借阅册数季度台账",
+          "id": 10,
+          "missing": [
+            "一次",
+            "最多",
+            "最多能",
+            "几本",
+            "本书",
+            "几本书",
+            "多久",
+            "归还"
+          ],
+          "path": "资料/01-林岸读书会.md",
+          "startLine": 24,
+          "termCount": 12,
+          "text": "范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+        }
+      ],
+      "goldSources": [
+        {
+          "line": 9,
+          "path": "资料/01-林岸读书会.md",
+          "quote": "每名成员一次最多借2本书，借期14天。"
+        }
+      ],
+      "id": "D01-Q2",
+      "question": "林岸读书会一次最多能借几本书、多久归还？",
+      "retrievalQuestion": "林岸读书会一次最多能借几本书、多久归还？",
+      "terms": [
+        "林岸",
+        "读书",
+        "书会",
+        "读书会",
+        "一次",
+        "最多",
+        "最多能",
+        "几本",
+        "本书",
+        "几本书",
+        "多久",
+        "归还"
+      ]
+    },
+    {
+      "assembledSources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -27.847391924268944,
+          "documentId": null,
+          "endLine": 22,
+          "evidence": true,
+          "hash": "d545a7e9637ea270f78da203eeb6204de4adc05d11b91205ac5be532e67fd29f",
+          "heading": "补水量季度台账",
+          "id": 18,
+          "matchKind": "keyword",
+          "path": "资料/02-星渡温室.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 13,
+          "text": "## 补水量季度台账\n\n指标：补水量；单位：升。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 120 | 97 |\n| Q2 | 135 | 110 |\n| Q3 | 128 | 102 |\n| Q4 | 141 | 116 |",
+          "title": "资料/02-星渡温室.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        },
+        {
+          "bm25Rank": 3,
+          "bm25Score": -25.19639657146797,
+          "documentId": null,
+          "endLine": 23,
+          "evidence": true,
+          "hash": "d545a7e9637ea270f78da203eeb6204de4adc05d11b91205ac5be532e67fd29f",
+          "heading": "补水量季度台账",
+          "id": 19,
+          "matchKind": "keyword",
+          "path": "资料/02-星渡温室.md",
+          "rerankScore": null,
+          "score": 0.015873015873015872,
+          "startLine": 13,
+          "text": "## 补水量季度台账\n\n指标：补水量；单位：升。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 120 | 97 |\n| Q2 | 135 | 110 |\n| Q3 | 128 | 102 |\n| Q4 | 141 | 116 |\n",
+          "title": "资料/02-星渡温室.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "expectedPathCandidates": [
+        {
+          "bm25Rank": 1,
+          "covered": [
+            "星渡",
+            "温室",
+            "2026",
+            "2025",
+            "水量",
+            "季度",
+            "单位"
+          ],
+          "coveredCount": 7,
+          "endLine": 16,
+          "evidence": true,
+          "heading": "补水量季度台账",
+          "id": 18,
+          "missing": [
+            "需要",
+            "标明"
+          ],
+          "path": "资料/02-星渡温室.md",
+          "startLine": 15,
+          "termCount": 9,
+          "text": "指标：补水量；单位：升。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n"
+        },
+        {
+          "bm25Rank": 2,
+          "covered": [
+            "星渡",
+            "温室",
+            "水量",
+            "季度"
+          ],
+          "coveredCount": 4,
+          "endLine": 14,
+          "evidence": false,
+          "heading": "补水量季度台账",
+          "id": 17,
+          "missing": [
+            "2026",
+            "2025",
+            "单位",
+            "需要",
+            "标明"
+          ],
+          "path": "资料/02-星渡温室.md",
+          "startLine": 13,
+          "termCount": 9,
+          "text": "## 补水量季度台账\n\n"
+        },
+        {
+          "bm25Rank": 3,
+          "covered": [
+            "星渡",
+            "温室",
+            "2026",
+            "2025",
+            "水量",
+            "季度"
+          ],
+          "coveredCount": 6,
+          "endLine": 23,
+          "evidence": true,
+          "heading": "补水量季度台账",
+          "id": 19,
+          "missing": [
+            "单位",
+            "需要",
+            "标明"
+          ],
+          "path": "资料/02-星渡温室.md",
+          "startLine": 17,
+          "termCount": 9,
+          "text": "| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 120 | 97 |\n| Q2 | 135 | 110 |\n| Q3 | 128 | 102 |\n| Q4 | 141 | 116 |\n\n"
+        },
+        {
+          "bm25Rank": 4,
+          "covered": [
+            "星渡",
+            "温室",
+            "2026",
+            "水量",
+            "季度"
+          ],
+          "coveredCount": 5,
+          "endLine": 24,
+          "evidence": false,
+          "heading": "补水量季度台账",
+          "id": 20,
+          "missing": [
+            "2025",
+            "单位",
+            "需要",
+            "标明"
+          ],
+          "path": "资料/02-星渡温室.md",
+          "startLine": 24,
+          "termCount": 9,
+          "text": "范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+        },
+        {
+          "bm25Rank": 5,
+          "covered": [
+            "星渡",
+            "温室"
+          ],
+          "coveredCount": 2,
+          "endLine": 12,
+          "evidence": false,
+          "heading": "执行规则",
+          "id": 16,
+          "missing": [
+            "2026",
+            "2025",
+            "水量",
+            "季度",
+            "单位",
+            "需要",
+            "标明"
+          ],
+          "path": "资料/02-星渡温室.md",
+          "startLine": 11,
+          "termCount": 9,
+          "text": "温度与含水率传感器每月第一个周一校验。\n\n"
+        },
+        {
+          "bm25Rank": 6,
+          "covered": [
+            "星渡",
+            "温室",
+            "2026"
+          ],
+          "coveredCount": 3,
+          "endLine": 4,
+          "evidence": false,
+          "heading": "星渡温室｜2026年运行手册",
+          "id": 12,
+          "missing": [
+            "2025",
+            "水量",
+            "季度",
+            "单位",
+            "需要",
+            "标明"
+          ],
+          "path": "资料/02-星渡温室.md",
+          "startLine": 3,
+          "termCount": 9,
+          "text": "以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n"
+        },
+        {
+          "bm25Rank": 7,
+          "covered": [
+            "星渡",
+            "温室",
+            "2026"
+          ],
+          "coveredCount": 3,
+          "endLine": 2,
+          "evidence": false,
+          "heading": "星渡温室｜2026年运行手册",
+          "id": 11,
+          "missing": [
+            "2025",
+            "水量",
+            "季度",
+            "单位",
+            "需要",
+            "标明"
+          ],
+          "path": "资料/02-星渡温室.md",
+          "startLine": 1,
+          "termCount": 9,
+          "text": "# 星渡温室｜2026年运行手册\n\n"
+        },
+        {
+          "bm25Rank": 8,
+          "covered": [
+            "星渡",
+            "温室"
+          ],
+          "coveredCount": 2,
+          "endLine": 6,
+          "evidence": false,
+          "heading": "执行规则",
+          "id": 13,
+          "missing": [
+            "2026",
+            "2025",
+            "水量",
+            "季度",
+            "单位",
+            "需要",
+            "标明"
+          ],
+          "path": "资料/02-星渡温室.md",
+          "startLine": 5,
+          "termCount": 9,
+          "text": "## 执行规则\n\n"
+        },
+        {
+          "bm25Rank": 9,
+          "covered": [
+            "星渡",
+            "温室"
+          ],
+          "coveredCount": 2,
+          "endLine": 8,
+          "evidence": false,
+          "heading": "执行规则",
+          "id": 14,
+          "missing": [
+            "2026",
+            "2025",
+            "水量",
+            "季度",
+            "单位",
+            "需要",
+            "标明"
+          ],
+          "path": "资料/02-星渡温室.md",
+          "startLine": 7,
+          "termCount": 9,
+          "text": "晨间灌溉固定在06:40，阴雨日先检查湿度。\n\n"
+        },
+        {
+          "bm25Rank": 10,
+          "covered": [
+            "星渡",
+            "温室"
+          ],
+          "coveredCount": 2,
+          "endLine": 10,
+          "evidence": false,
+          "heading": "执行规则",
+          "id": 15,
+          "missing": [
+            "2026",
+            "2025",
+            "水量",
+            "季度",
+            "单位",
+            "需要",
+            "标明"
+          ],
+          "path": "资料/02-星渡温室.md",
+          "startLine": 9,
+          "termCount": 9,
+          "text": "土壤含水率低于28%时补水，达到36%后停止。\n\n"
+        }
+      ],
+      "goldSources": [
+        {
+          "line": 15,
+          "path": "资料/02-星渡温室.md",
+          "quote": "指标：补水量；单位：升。"
+        }
+      ],
+      "id": "D02-Q4",
+      "question": "请用柱状图对比星渡温室的2026年与2025年补水量，季度和单位都需要标明。",
+      "retrievalQuestion": "星渡温室的2026年与2025年补水量，季度和单位都需要标明",
+      "terms": [
+        "星渡",
+        "温室",
+        "2026",
+        "2025",
+        "水量",
+        "季度",
+        "单位",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "assembledSources": [],
+      "expectedPathCandidates": [
+        {
+          "bm25Rank": 1,
+          "covered": [
+            "青屿",
+            "骑行",
+            "雷雨",
+            "预警"
+          ],
+          "coveredCount": 4,
+          "endLine": 12,
+          "evidence": false,
+          "heading": "执行规则",
+          "id": 26,
+          "missing": [
+            "遇到",
+            "怎样",
+            "安排"
+          ],
+          "path": "资料/03-青屿骑行.md",
+          "startLine": 11,
+          "termCount": 7,
+          "text": "出现雷雨预警即取消骑行，改为室内路线复盘。\n\n"
+        },
+        {
+          "bm25Rank": 2,
+          "covered": [
+            "青屿",
+            "骑行"
+          ],
+          "coveredCount": 2,
+          "endLine": 2,
+          "evidence": false,
+          "heading": "青屿骑行｜2026年运行手册",
+          "id": 21,
+          "missing": [
+            "遇到",
+            "雷雨",
+            "预警",
+            "怎样",
+            "安排"
+          ],
+          "path": "资料/03-青屿骑行.md",
+          "startLine": 1,
+          "termCount": 7,
+          "text": "# 青屿骑行｜2026年运行手册\n\n"
+        },
+        {
+          "bm25Rank": 3,
+          "covered": [
+            "青屿",
+            "骑行"
+          ],
+          "coveredCount": 2,
+          "endLine": 4,
+          "evidence": false,
+          "heading": "青屿骑行｜2026年运行手册",
+          "id": 22,
+          "missing": [
+            "遇到",
+            "雷雨",
+            "预警",
+            "怎样",
+            "安排"
+          ],
+          "path": "资料/03-青屿骑行.md",
+          "startLine": 3,
+          "termCount": 7,
+          "text": "以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n"
+        },
+        {
+          "bm25Rank": 4,
+          "covered": [
+            "青屿",
+            "骑行"
+          ],
+          "coveredCount": 2,
+          "endLine": 6,
+          "evidence": false,
+          "heading": "执行规则",
+          "id": 23,
+          "missing": [
+            "遇到",
+            "雷雨",
+            "预警",
+            "怎样",
+            "安排"
+          ],
+          "path": "资料/03-青屿骑行.md",
+          "startLine": 5,
+          "termCount": 7,
+          "text": "## 执行规则\n\n"
+        },
+        {
+          "bm25Rank": 5,
+          "covered": [
+            "青屿",
+            "骑行",
+            "安排"
+          ],
+          "coveredCount": 3,
+          "endLine": 24,
+          "evidence": false,
+          "heading": "参加人数季度台账",
+          "id": 30,
+          "missing": [
+            "遇到",
+            "雷雨",
+            "预警",
+            "怎样"
+          ],
+          "path": "资料/03-青屿骑行.md",
+          "startLine": 24,
+          "termCount": 7,
+          "text": "范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+        },
+        {
+          "bm25Rank": 6,
+          "covered": [
+            "青屿",
+            "骑行"
+          ],
+          "coveredCount": 2,
+          "endLine": 14,
+          "evidence": false,
+          "heading": "参加人数季度台账",
+          "id": 27,
+          "missing": [
+            "遇到",
+            "雷雨",
+            "预警",
+            "怎样",
+            "安排"
+          ],
+          "path": "资料/03-青屿骑行.md",
+          "startLine": 13,
+          "termCount": 7,
+          "text": "## 参加人数季度台账\n\n"
+        },
+        {
+          "bm25Rank": 7,
+          "covered": [
+            "青屿",
+            "骑行"
+          ],
+          "coveredCount": 2,
+          "endLine": 8,
+          "evidence": false,
+          "heading": "执行规则",
+          "id": 24,
+          "missing": [
+            "遇到",
+            "雷雨",
+            "预警",
+            "怎样",
+            "安排"
+          ],
+          "path": "资料/03-青屿骑行.md",
+          "startLine": 7,
+          "termCount": 7,
+          "text": "集合时间07:10，07:30从东堤广场出发。\n\n"
+        },
+        {
+          "bm25Rank": 8,
+          "covered": [
+            "青屿",
+            "骑行"
+          ],
+          "coveredCount": 2,
+          "endLine": 10,
+          "evidence": false,
+          "heading": "执行规则",
+          "id": 25,
+          "missing": [
+            "遇到",
+            "雷雨",
+            "预警",
+            "怎样",
+            "安排"
+          ],
+          "path": "资料/03-青屿骑行.md",
+          "startLine": 9,
+          "termCount": 7,
+          "text": "报名在活动前一天18:00截止，名额32人。\n\n"
+        },
+        {
+          "bm25Rank": 9,
+          "covered": [
+            "青屿",
+            "骑行"
+          ],
+          "coveredCount": 2,
+          "endLine": 23,
+          "evidence": false,
+          "heading": "参加人数季度台账",
+          "id": 29,
+          "missing": [
+            "遇到",
+            "雷雨",
+            "预警",
+            "怎样",
+            "安排"
+          ],
+          "path": "资料/03-青屿骑行.md",
+          "startLine": 17,
+          "termCount": 7,
+          "text": "| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 21 | 18 |\n| Q2 | 26 | 22 |\n| Q3 | 缺测 | 24 |\n| Q4 | 30 | 27 |\n\n"
+        },
+        {
+          "bm25Rank": 10,
+          "covered": [
+            "青屿",
+            "骑行"
+          ],
+          "coveredCount": 2,
+          "endLine": 16,
+          "evidence": false,
+          "heading": "参加人数季度台账",
+          "id": 28,
+          "missing": [
+            "遇到",
+            "雷雨",
+            "预警",
+            "怎样",
+            "安排"
+          ],
+          "path": "资料/03-青屿骑行.md",
+          "startLine": 15,
+          "termCount": 7,
+          "text": "指标：参加人数；单位：人。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n"
+        }
+      ],
+      "goldSources": [
+        {
+          "line": 11,
+          "path": "资料/03-青屿骑行.md",
+          "quote": "出现雷雨预警即取消骑行，改为室内路线复盘。"
+        }
+      ],
+      "id": "D03-Q3",
+      "question": "青屿骑行遇到雷雨预警怎样安排？",
+      "retrievalQuestion": "青屿骑行遇到雷雨预警怎样安排？",
+      "terms": [
+        "青屿",
+        "骑行",
+        "遇到",
+        "雷雨",
+        "预警",
+        "怎样",
+        "安排"
+      ]
+    }
+  ]
+}

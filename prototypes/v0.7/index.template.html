@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self' data: blob:; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'"
+    />
+    <title>Inkstone · v0.7 陪伴交互原型</title>
+    <link rel="stylesheet" href="prototype.css" />
+    <script src="prototype.js" defer></script>
+  </head>
+  <body>
+    <div class="prototype-ribbon">
+      <span><strong>v0.7 交互原型</strong> · 独立演示数据 · 离线运行</span>
+      <div>
+        <button data-action="guide">查看流程与场景</button
+        ><button data-action="reset">重置演示</button>
+      </div>
+    </div>
+    <header class="titlebar">
+      <div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+      <strong>砚台 <span>Inkstone</span></strong
+      ><span class="title-center">砚间书房 · 一页一程</span
+      ><button data-action="sidebar" aria-label="切换文档列表">◫</button>
+    </header>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="space-heading">
+          <span class="brand-icon">砚</span>
+          <div><strong>砚间书房</strong><small>演示文档空间</small></div>
+          <span>⌄</span>
+        </div>
+        <nav class="sidebar-nav" aria-label="工作导航">
+          <button data-action="home" class="selected">我的文档</button
+          ><button data-action="calendar">日历</button
+          ><button data-action="sources">资料索引</button>
+        </nav>
+        <div class="document-search">
+          <label for="document-search">查找文档</label
+          ><input
+            id="document-search"
+            placeholder="查找演示文档…"
+            autocomplete="off"
+          />
+        </div>
+        <div class="list-caption">空间文档 <span>4 篇</span></div>
+        <div id="doc-list" class="doc-list"></div>
+        <div class="sidebar-foot">
+          <span class="local-dot"></span> 演示数据仅保存在此浏览器
+        </div>
+      </aside>
+      <main class="workspace">
+        <div class="document-top">
+          <div id="breadcrumb"></div>
+          <div class="mode-group" aria-label="演示编辑模式">
+            <button data-action="source" id="source-tab">源码</button
+            ><button data-action="body" id="body-tab" class="active">
+              正文
+            </button>
+          </div>
+        </div>
+        <div class="toolbar">
+          <div class="toolgroup">
+            <button data-action="demo-tool" title="撤销示意">↶</button
+            ><button data-action="demo-tool" title="重做示意">↷</button>
+          </div>
+          <div class="toolgroup">
+            <span class="style-label">正文⌄</span
+            ><button data-action="demo-tool" title="粗体示意"><b>B</b></button
+            ><button data-action="demo-tool" title="斜体示意"><i>I</i></button
+            ><button data-action="demo-tool" title="列表示意">≡</button
+            ><button data-action="demo-tool" title="链接示意">↗</button>
+          </div>
+          <span class="toolbar-spacer"></span
+          ><button id="save-button" data-action="save">保存</button
+          ><button class="complete-button" data-action="confirm-work">
+            ✓ 本次完成
+          </button>
+        </div>
+        <div class="editor-scroll">
+          <article id="editor" class="paper"></article>
+        </div>
+        <footer class="editor-status">
+          <span id="save-status">已保存 · 演示文档</span
+          ><span>Markdown · UTF-8</span>
+        </footer>
+      </main>
+      <aside class="knowledge" aria-label="知识助手">
+        <div class="knowledge-tabs">
+          <button data-action="ask-tab" id="ask-tab" class="selected">
+            ✧ 问答</button
+          ><button data-action="search-tab" id="search-tab">⌕ 检索</button
+          ><button data-action="companion-entry" aria-label="角色与陪伴设置">
+            ⋯
+          </button>
+        </div>
+        <div id="companion"></div>
+        <div id="knowledge-body" class="knowledge-body"></div>
+        <form id="ask-form" class="ask-form">
+          <label for="question">向当前空间提问</label>
+          <div class="scope-pill">当前空间 · BM25 + 向量 · 重排序</div>
+          <textarea
+            id="question"
+            rows="2"
+            placeholder="比较两种阅读活动的参与人数"
+          ></textarea>
+          <div class="ask-bottom">
+            <small>原型使用固定示例，不调用API</small
+            ><button class="primary" type="submit">发送 ↑</button>
+          </div>
+        </form>
+      </aside>
+    </div>
+    <div class="demo-dock" aria-label="原型场景切换">
+      <span>演示场景</span
+      ><button data-action="scenario" data-scenario="first">初次选择</button
+      ><button data-action="scenario" data-scenario="acquaintance">
+        相识前一步</button
+      ><button data-action="scenario" data-scenario="together">
+        同行前一步</button
+      ><button data-action="scenario" data-scenario="api-error">问答失败</button
+      ><button data-action="scenario" data-scenario="reward-error">
+        经历写入失败
+      </button>
+    </div>
+    <dialog id="modal" aria-labelledby="modal-title">
+      <div id="modal-content"></div>
+    </dialog>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

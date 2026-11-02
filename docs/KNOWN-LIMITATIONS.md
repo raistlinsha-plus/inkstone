@@ -1,0 +1,11 @@
+# Known preview limitations
+
+The supported acceptance target is macOS 13+ on Apple Silicon. Other platforms, Developer ID signing, notarization and cross-machine installation are not complete. Native Pinyin candidate confirmation, actual VoiceOver reading and a long-running memory/performance test remain unrun. On this Mac, the final app restored the document space after cold launch; the isolated app passed the approximately 960×640 dual-pane layout and edit/save/quit/reopen checks. v0.6.6 keeps loading through workspace/session restoration and provides failure retry; delayed and failed startup paths are covered by automated regressions. Exact current native scope is finalized in the release record.
+
+RAG reports document recall, evidence availability, citation/answer review and chart semantics separately. The synthetic cases are authored by the same development agent and are not independent user research. A high recall or rerank score does not establish answer correctness. Keyword evidence remains conservative for paraphrases. Vector-only is an evaluation baseline rather than a user-facing mode; it cannot bypass the BM25 evidence policy. API compatibility and provider billing vary. Missing usage/cost data stays unknown.
+
+The app validates constrained chart data and source identity/hash, but does not prove every generated category/period/unit pairing. Confirm results against original sources. An insufficient context budget now skips an oversized source intact rather than sending a clipped table or negative condition.
+
+Companions/CG/story content are only in the separate v0.7 prototype. Document formats remain plain text/Markdown and their structured fences; PDF/DOCX/OCR, background bidirectional sync, multi-user collaboration and cross-space document moves are not shipped.
+
+Current evaluation and release limits are documented in [v0.6.6 release notes](PUBLIC-RELEASE-v0.6.6.md) and [results](../evals/v0.6.6/RESULTS.md); the v0.6.5 readiness assessment remains historical. Eight standalone notices were supplemented with immutable upstream provenance; 20 acquired packages still lack standalone local license text. Signing/notarization and binary redistribution review remain incomplete. Do not interpret this source preview as a production security certification.

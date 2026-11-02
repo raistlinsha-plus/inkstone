@@ -1,0 +1,5 @@
+{
+  "project": "Inkstone",
+  "largeInteger": 9007199254740993,
+  "formats": ["markdown", "json", "mermaid", "mindmap"]
+}

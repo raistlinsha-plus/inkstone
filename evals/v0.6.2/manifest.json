@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "caseCount": 100,
+  "documentCount": 20,
+  "splits": {
+    "calibration": 40,
+    "heldout": 60
+  },
+  "labelIndependenceEstablished": false,
+  "files": {
+    "corpus.json": "584569a0f6d9cb570210b1086eb870e0363d46d624a966744347ba2c11d10a78",
+    "calibration.json": "3a57cfa6668b8059ffb37285a183430033d5fb2c9d88b71ba611b73e5afb3822",
+    "heldout.json": "a31ea77197c3cf37c5d49723d96f186efa7db30d7ee589ddfc3c21e653ec167d",
+    "protocol.json": "b8237d88985488348eed00311bd61f0ad99f6cef6915eb5c8534a296238d6ba3"
+  }
+}

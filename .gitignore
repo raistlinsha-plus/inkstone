@@ -1,0 +1,11 @@
+node_modules/
+.cache/
+.cargo/config.toml
+*.tsbuildinfo
+dist/
+src-tauri/target/
+.DS_Store
+*.log
+.env*
+!\.env.example
+artifacts/

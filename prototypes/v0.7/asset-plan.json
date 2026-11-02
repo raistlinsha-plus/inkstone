@@ -1,0 +1,163 @@
+{
+  "status": "plan-only",
+  "standingCount": 9,
+  "cgCount": 6,
+  "assets": [
+    {
+      "id": "yanzhou.standing.intro.v1",
+      "kind": "standing",
+      "characterId": "yanzhou",
+      "stage": 0,
+      "status": "planned-final-art",
+      "prototype": "inline SVG schematic only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    },
+    {
+      "id": "yanzhou.standing.acquaintance.v1",
+      "kind": "standing",
+      "characterId": "yanzhou",
+      "stage": 1,
+      "status": "planned-final-art",
+      "prototype": "inline SVG schematic only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    },
+    {
+      "id": "yanzhou.standing.together.v1",
+      "kind": "standing",
+      "characterId": "yanzhou",
+      "stage": 2,
+      "status": "planned-final-art",
+      "prototype": "inline SVG schematic only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    },
+    {
+      "id": "yanzhou.cg.1.v1",
+      "kind": "cg",
+      "characterId": "yanzhou",
+      "stage": 1,
+      "title": "留一盏灯",
+      "status": "planned-final-art",
+      "prototype": "inline SVG composition only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    },
+    {
+      "id": "yanzhou.cg.2.v1",
+      "kind": "cg",
+      "characterId": "yanzhou",
+      "stage": 2,
+      "title": "两份批注",
+      "status": "planned-final-art",
+      "prototype": "inline SVG composition only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    },
+    {
+      "id": "zhiwei.standing.intro.v1",
+      "kind": "standing",
+      "characterId": "zhiwei",
+      "stage": 0,
+      "status": "planned-final-art",
+      "prototype": "inline SVG schematic only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    },
+    {
+      "id": "zhiwei.standing.acquaintance.v1",
+      "kind": "standing",
+      "characterId": "zhiwei",
+      "stage": 1,
+      "status": "planned-final-art",
+      "prototype": "inline SVG schematic only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    },
+    {
+      "id": "zhiwei.standing.together.v1",
+      "kind": "standing",
+      "characterId": "zhiwei",
+      "stage": 2,
+      "status": "planned-final-art",
+      "prototype": "inline SVG schematic only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    },
+    {
+      "id": "zhiwei.cg.1.v1",
+      "kind": "cg",
+      "characterId": "zhiwei",
+      "stage": 1,
+      "title": "页边来信",
+      "status": "planned-final-art",
+      "prototype": "inline SVG composition only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    },
+    {
+      "id": "zhiwei.cg.2.v1",
+      "kind": "cg",
+      "characterId": "zhiwei",
+      "stage": 2,
+      "title": "未完的序言",
+      "status": "planned-final-art",
+      "prototype": "inline SVG composition only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    },
+    {
+      "id": "motuan.standing.intro.v1",
+      "kind": "standing",
+      "characterId": "motuan",
+      "stage": 0,
+      "status": "planned-final-art",
+      "prototype": "inline SVG schematic only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    },
+    {
+      "id": "motuan.standing.acquaintance.v1",
+      "kind": "standing",
+      "characterId": "motuan",
+      "stage": 1,
+      "status": "planned-final-art",
+      "prototype": "inline SVG schematic only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    },
+    {
+      "id": "motuan.standing.together.v1",
+      "kind": "standing",
+      "characterId": "motuan",
+      "stage": 2,
+      "status": "planned-final-art",
+      "prototype": "inline SVG schematic only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    },
+    {
+      "id": "motuan.cg.1.v1",
+      "kind": "cg",
+      "characterId": "motuan",
+      "stage": 1,
+      "title": "捡到一枚书签",
+      "status": "planned-final-art",
+      "prototype": "inline SVG composition only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    },
+    {
+      "id": "motuan.cg.2.v1",
+      "kind": "cg",
+      "characterId": "motuan",
+      "stage": 2,
+      "title": "午后共读",
+      "status": "planned-final-art",
+      "prototype": "inline SVG composition only",
+      "source": "not produced",
+      "license": "pending asset provenance review"
+    }
+  ]
+}

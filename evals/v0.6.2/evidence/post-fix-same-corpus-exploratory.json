@@ -1,0 +1,5561 @@
+{
+  "alreadyObservedHeldout": true,
+  "baselineReportHash": "a1a85e0c9a28f458ba091bccceba29386c58da0f68ccde3427d28ba57172eb3e",
+  "calibration": {
+    "records": [
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 44,
+        "elapsedMs": 23.394917,
+        "eligibleSourceCount": 1,
+        "expected": "资料/01-林岸读书会.md",
+        "goldAnswer": "常规讨论在周六14:30开始，地点是溪南活动室。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/01-林岸读书会.md",
+            "quote": "常规讨论在周六14:30开始，地点是溪南活动室。"
+          }
+        ],
+        "id": "D01-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "林岸读书会的常规讨论安排在什么时间？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "林岸读书会的常规讨论安排在什么时间？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/01-林岸读书会.md",
+          "资料/14-池影电影社.md",
+          "资料/12-松塔山居.md",
+          "资料/03-青屿骑行.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 27.893,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D01-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "林岸读书会在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "林岸读书会在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/01-林岸读书会.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 12,
+        "elapsedMs": 10.683583,
+        "eligibleSourceCount": 1,
+        "expected": "资料/02-星渡温室.md",
+        "goldAnswer": "晨间灌溉固定在06:40，阴雨日先检查湿度。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/02-星渡温室.md",
+            "quote": "晨间灌溉固定在06:40，阴雨日先检查湿度。"
+          }
+        ],
+        "id": "D02-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "星渡温室什么时候进行晨间灌溉？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "星渡温室什么时候进行晨间灌溉？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/02-星渡温室.md",
+          "资料/16-石榴种子库.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 11,
+        "elapsedMs": 8.080959,
+        "eligibleSourceCount": 0,
+        "expected": "资料/02-星渡温室.md",
+        "goldAnswer": "土壤含水率低于28%时补水，达到36%后停止。",
+        "goldEvidenceInContext": false,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/02-星渡温室.md",
+            "quote": "土壤含水率低于28%时补水，达到36%后停止。"
+          }
+        ],
+        "id": "D02-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "星渡温室的土壤湿度低到多少才启动补水？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "星渡温室的土壤湿度低到多少才启动补水？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/02-星渡温室.md",
+          "资料/16-石榴种子库.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 14,
+        "elapsedMs": 4.536333,
+        "eligibleSourceCount": 1,
+        "expected": "资料/03-青屿骑行.md",
+        "goldAnswer": "集合时间07:10，07:30从东堤广场出发。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/03-青屿骑行.md",
+            "quote": "集合时间07:10，07:30从东堤广场出发。"
+          }
+        ],
+        "id": "D03-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "青屿骑行的集合与出发时间分别是什么？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "青屿骑行的集合与出发时间分别是什么？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/03-青屿骑行.md",
+          "资料/12-松塔山居.md",
+          "资料/08-白鹭志愿队.md",
+          "资料/02-星渡温室.md",
+          "资料/09-山橙木工坊.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 31.120167000000002,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D03-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "青屿骑行在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "青屿骑行在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/03-青屿骑行.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md",
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 12,
+        "elapsedMs": 5.316541999999999,
+        "eligibleSourceCount": 1,
+        "expected": "资料/04-栖墨展厅.md",
+        "goldAnswer": "周三10:00开放，17:30停止入场，18:00闭馆。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/04-栖墨展厅.md",
+            "quote": "周三10:00开放，17:30停止入场，18:00闭馆。"
+          }
+        ],
+        "id": "D04-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "栖墨展厅周三是否开放、几点关门？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "栖墨展厅周三是否开放、几点关门？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/04-栖墨展厅.md",
+          "资料/14-池影电影社.md",
+          "资料/10-光栎图书角.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 10,
+        "elapsedMs": 8.21475,
+        "eligibleSourceCount": 1,
+        "expected": "资料/04-栖墨展厅.md",
+        "goldAnswer": "纸本文物展柜的照度上限是50勒克斯。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/04-栖墨展厅.md",
+            "quote": "纸本文物展柜的照度上限是50勒克斯。"
+          }
+        ],
+        "id": "D04-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "栖墨展厅纸本文物的照度限制是多少？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "栖墨展厅纸本文物的照度限制是多少？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 18,
+        "elapsedMs": 14.049958,
+        "eligibleSourceCount": 1,
+        "expected": "资料/05-夏禾食堂.md",
+        "goldAnswer": "当日午餐预订在09:45截止，11:30开始取餐。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/05-夏禾食堂.md",
+            "quote": "当日午餐预订在09:45截止，11:30开始取餐。"
+          }
+        ],
+        "id": "D05-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "夏禾食堂午餐预订几点截止？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "夏禾食堂午餐预订几点截止？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/05-夏禾食堂.md",
+          "资料/18-银杉共享工作室.md",
+          "资料/03-青屿骑行.md",
+          "资料/15-月衡社区议事会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 30.705917,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D05-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "夏禾食堂在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "夏禾食堂在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/05-夏禾食堂.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md",
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 10,
+        "elapsedMs": 3.874416,
+        "eligibleSourceCount": 1,
+        "expected": "资料/06-浮桥档案馆.md",
+        "goldAnswer": "活动数字档案从结项日算起保留7年。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/06-浮桥档案馆.md",
+            "quote": "活动数字档案从结项日算起保留7年。"
+          }
+        ],
+        "id": "D06-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "浮桥档案馆数字档案的保留期有多久？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "浮桥档案馆数字档案的保留期有多久？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/06-浮桥档案馆.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 21,
+        "elapsedMs": 11.540083,
+        "eligibleSourceCount": 5,
+        "expected": "资料/06-浮桥档案馆.md",
+        "goldAnswer": "本次移交编号是900719925474099312345，须作为字符串逐字保留。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/06-浮桥档案馆.md",
+            "quote": "本次移交编号是900719925474099312345，须作为字符串逐字保留。"
+          }
+        ],
+        "id": "D06-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "浮桥档案馆的本次移交长编号是什么？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "浮桥档案馆的本次移交长编号是什么？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/06-浮桥档案馆.md",
+          "资料/08-白鹭志愿队.md",
+          "资料/18-银杉共享工作室.md",
+          "资料/04-栖墨展厅.md",
+          "资料/09-山橙木工坊.md",
+          "资料/11-折页出版小组.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 11,
+        "elapsedMs": 9.258584,
+        "eligibleSourceCount": 1,
+        "expected": "资料/07-晨岚观测台.md",
+        "goldAnswer": "雨量每天08:00读取一次，记录前24小时累计值。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/07-晨岚观测台.md",
+            "quote": "雨量每天08:00读取一次，记录前24小时累计值。"
+          }
+        ],
+        "id": "D07-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "晨岚观测台每天何时读取雨量？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "晨岚观测台每天何时读取雨量？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/07-晨岚观测台.md",
+          "资料/13-云岫步道.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 36.658667,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D07-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "晨岚观测台在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "晨岚观测台在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/07-晨岚观测台.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 10,
+        "elapsedMs": 8.711041,
+        "eligibleSourceCount": 1,
+        "expected": "资料/08-白鹭志愿队.md",
+        "goldAnswer": "早班安排4人，09:00与前一班交接。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/08-白鹭志愿队.md",
+            "quote": "早班安排4人，09:00与前一班交接。"
+          }
+        ],
+        "id": "D08-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "白鹭志愿队的早班有几人、何时交接？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "白鹭志愿队的早班有几人、何时交接？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/08-白鹭志愿队.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 13,
+        "elapsedMs": 5.074625,
+        "eligibleSourceCount": 1,
+        "expected": "资料/08-白鹭志愿队.md",
+        "goldAnswer": "每班带班员按封签日期核对急救包。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/08-白鹭志愿队.md",
+            "quote": "每班带班员按封签日期核对急救包。"
+          }
+        ],
+        "id": "D08-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "白鹭志愿队急救包由谁核对？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "白鹭志愿队急救包由谁核对？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/08-白鹭志愿队.md",
+          "资料/11-折页出版小组.md",
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 13,
+        "elapsedMs": 11.97925,
+        "eligibleSourceCount": 1,
+        "expected": "资料/09-山橙木工坊.md",
+        "goldAnswer": "初学者课程每次90分钟，每组最多6人。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/09-山橙木工坊.md",
+            "quote": "初学者课程每次90分钟，每组最多6人。"
+          }
+        ],
+        "id": "D09-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "山橙木工坊的初学者课程多长？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "山橙木工坊的初学者课程多长？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/09-山橙木工坊.md",
+          "资料/17-远汀培训营.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 27.641417,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D09-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "山橙木工坊在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "山橙木工坊在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/09-山橙木工坊.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 13,
+        "elapsedMs": 8.37175,
+        "eligibleSourceCount": 1,
+        "expected": "资料/10-光栎图书角.md",
+        "goldAnswer": "周末开放时段是09:00至19:00。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/10-光栎图书角.md",
+            "quote": "周末开放时段是09:00至19:00。"
+          }
+        ],
+        "id": "D10-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "光栎图书角周末的开放时段是什么？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "光栎图书角周末的开放时段是什么？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/10-光栎图书角.md",
+          "资料/18-银杉共享工作室.md",
+          "资料/14-池影电影社.md",
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 10,
+        "elapsedMs": 5.378375,
+        "eligibleSourceCount": 4,
+        "expected": "资料/10-光栎图书角.md",
+        "goldAnswer": "新书采用类别码、年份和四位流水号组成的编码。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/10-光栎图书角.md",
+            "quote": "新书采用类别码、年份和四位流水号组成的编码。"
+          }
+        ],
+        "id": "D10-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "光栎图书角新书如何编码？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "光栎图书角新书如何编码？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/10-光栎图书角.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 12,
+        "elapsedMs": 5.224875,
+        "eligibleSourceCount": 1,
+        "expected": "资料/11-折页出版小组.md",
+        "goldAnswer": "二校由未参与初校的另一名编辑完成。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/11-折页出版小组.md",
+            "quote": "二校由未参与初校的另一名编辑完成。"
+          }
+        ],
+        "id": "D11-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "折页出版小组的二校由谁完成？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "折页出版小组的二校由谁完成？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/11-折页出版小组.md",
+          "资料/17-远汀培训营.md",
+          "资料/09-山橙木工坊.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 27.890959,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D11-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "折页出版小组在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "折页出版小组在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md",
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 12,
+        "elapsedMs": 9.620167,
+        "eligibleSourceCount": 0,
+        "expected": "资料/12-松塔山居.md",
+        "goldAnswer": "退房最晚时间是次日11:00。",
+        "goldEvidenceInContext": false,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/12-松塔山居.md",
+            "quote": "退房最晚时间是次日11:00。"
+          }
+        ],
+        "id": "D12-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "松塔山居办理退房的最晚时间是什么？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "松塔山居办理退房的最晚时间是什么？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/12-松塔山居.md",
+          "资料/17-远汀培训营.md",
+          "资料/03-青屿骑行.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 10,
+        "elapsedMs": 3.764542,
+        "eligibleSourceCount": 1,
+        "expected": "资料/12-松塔山居.md",
+        "goldAnswer": "无障碍房间需在抵达前至少24小时电话确认。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/12-松塔山居.md",
+            "quote": "无障碍房间需在抵达前至少24小时电话确认。"
+          }
+        ],
+        "id": "D12-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "松塔山居无障碍房间怎样预留？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "松塔山居无障碍房间怎样预留？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 10,
+        "elapsedMs": 10.552041,
+        "eligibleSourceCount": 1,
+        "expected": "资料/13-云岫步道.md",
+        "goldAnswer": "主线全长6.8公里，累计爬升320米。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/13-云岫步道.md",
+            "quote": "主线全长6.8公里，累计爬升320米。"
+          }
+        ],
+        "id": "D13-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "云岫步道的主线全长多少公里？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "云岫步道的主线全长多少公里？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/13-云岫步道.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 25.351542000000002,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D13-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "云岫步道在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "云岫步道在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/13-云岫步道.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 15,
+        "elapsedMs": 9.479916999999999,
+        "eligibleSourceCount": 1,
+        "expected": "资料/14-池影电影社.md",
+        "goldAnswer": "每场放映开始前20分钟开放入场。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/14-池影电影社.md",
+            "quote": "每场放映开始前20分钟开放入场。"
+          }
+        ],
+        "id": "D14-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "池影电影社放映前多久可以入场？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "池影电影社放映前多久可以入场？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/14-池影电影社.md",
+          "资料/04-栖墨展厅.md",
+          "资料/08-白鹭志愿队.md",
+          "资料/12-松塔山居.md",
+          "资料/19-禾川样品仓.md",
+          "资料/07-晨岚观测台.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 10,
+        "elapsedMs": 5.597167,
+        "eligibleSourceCount": 0,
+        "expected": "资料/14-池影电影社.md",
+        "goldAnswer": "放映期间禁止录屏，发现后先提醒停止。",
+        "goldEvidenceInContext": false,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/14-池影电影社.md",
+            "quote": "放映期间禁止录屏，发现后先提醒停止。"
+          }
+        ],
+        "id": "D14-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "池影电影社如何处理未经许可的录屏？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "池影电影社如何处理未经许可的录屏？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/14-池影电影社.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 12,
+        "elapsedMs": 6.98975,
+        "eligibleSourceCount": 1,
+        "expected": "资料/15-月衡社区议事会.md",
+        "goldAnswer": "月度提案在每月20日17:00截止提交。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/15-月衡社区议事会.md",
+            "quote": "月度提案在每月20日17:00截止提交。"
+          }
+        ],
+        "id": "D15-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "月衡社区议事会提案何时截止提交？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "月衡社区议事会提案何时截止提交？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/15-月衡社区议事会.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 25.605292000000002,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D15-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "月衡社区议事会在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "月衡社区议事会在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/15-月衡社区议事会.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md",
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 12,
+        "elapsedMs": 7.005042,
+        "eligibleSourceCount": 1,
+        "expected": "资料/16-石榴种子库.md",
+        "goldAnswer": "干燥柜相对湿度不得超过35%。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/16-石榴种子库.md",
+            "quote": "干燥柜相对湿度不得超过35%。"
+          }
+        ],
+        "id": "D16-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "石榴种子库干燥柜的湿度上限是多少？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "石榴种子库干燥柜的湿度上限是多少？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/16-石榴种子库.md",
+          "资料/04-栖墨展厅.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 14,
+        "elapsedMs": 9.278959,
+        "eligibleSourceCount": 1,
+        "expected": "资料/16-石榴种子库.md",
+        "goldAnswer": "同一批种子每6个月进行一次活力抽查。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/16-石榴种子库.md",
+            "quote": "同一批种子每6个月进行一次活力抽查。"
+          }
+        ],
+        "id": "D16-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "石榴种子库种子活力多久抽查一次？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "石榴种子库种子活力多久抽查一次？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/16-石榴种子库.md",
+          "资料/01-林岸读书会.md",
+          "资料/07-晨岚观测台.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 19,
+        "elapsedMs": 12.234375,
+        "eligibleSourceCount": 1,
+        "expected": "资料/17-远汀培训营.md",
+        "goldAnswer": "完成课程要求出勤率达到80%。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/17-远汀培训营.md",
+            "quote": "完成课程要求出勤率达到80%。"
+          }
+        ],
+        "id": "D17-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "远汀培训营完成课程需要多少出勤率？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "远汀培训营完成课程需要多少出勤率？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/17-远汀培训营.md",
+          "资料/09-山橙木工坊.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 43.652665999999996,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D17-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "远汀培训营在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "远汀培训营在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/17-远汀培训营.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/01-林岸读书会.md",
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 13,
+        "elapsedMs": 14.707833,
+        "eligibleSourceCount": 1,
+        "expected": "资料/18-银杉共享工作室.md",
+        "goldAnswer": "单次最长可预订4小时。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/18-银杉共享工作室.md",
+            "quote": "单次最长可预订4小时。"
+          }
+        ],
+        "id": "D18-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "银杉共享工作室每次最长能预订多久？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "银杉共享工作室每次最长能预订多久？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/18-银杉共享工作室.md",
+          "资料/09-山橙木工坊.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 18,
+        "elapsedMs": 10.0135,
+        "eligibleSourceCount": 1,
+        "expected": "资料/18-银杉共享工作室.md",
+        "goldAnswer": "晚间安静时段从21:00开始，禁止扩音设备。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/18-银杉共享工作室.md",
+            "quote": "晚间安静时段从21:00开始，禁止扩音设备。"
+          }
+        ],
+        "id": "D18-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "银杉共享工作室晚间安静时段从几点开始？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "银杉共享工作室晚间安静时段从几点开始？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/18-银杉共享工作室.md",
+          "资料/10-光栎图书角.md",
+          "资料/03-青屿骑行.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/14-池影电影社.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/05-夏禾食堂.md",
+          "资料/01-林岸读书会.md",
+          "资料/15-月衡社区议事会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 11,
+        "elapsedMs": 7.181542,
+        "eligibleSourceCount": 0,
+        "expected": "资料/19-禾川样品仓.md",
+        "goldAnswer": "未标特殊条件的样品按先进先出原则出库。",
+        "goldEvidenceInContext": false,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/19-禾川样品仓.md",
+            "quote": "未标特殊条件的样品按先进先出原则出库。"
+          }
+        ],
+        "id": "D19-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "禾川样品仓默认采用什么出库顺序？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "禾川样品仓默认采用什么出库顺序？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/19-禾川样品仓.md",
+          "资料/10-光栎图书角.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 22.992458,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D19-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "禾川样品仓在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "禾川样品仓在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/19-禾川样品仓.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md",
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 22,
+        "elapsedMs": 10.003625,
+        "eligibleSourceCount": 1,
+        "expected": "资料/20-雨巷咖啡实验室.md",
+        "goldAnswer": "手冲课程在周日15:00开始。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 7,
+            "path": "资料/20-雨巷咖啡实验室.md",
+            "quote": "手冲课程在周日15:00开始。"
+          }
+        ],
+        "id": "D20-Q1",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "雨巷咖啡实验室手冲课程几点开始？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "雨巷咖啡实验室手冲课程几点开始？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/09-山橙木工坊.md",
+          "资料/14-池影电影社.md",
+          "资料/05-夏禾食堂.md",
+          "资料/18-银杉共享工作室.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 20,
+        "elapsedMs": 10.052916999999999,
+        "eligibleSourceCount": 1,
+        "expected": "资料/20-雨巷咖啡实验室.md",
+        "goldAnswer": "烘焙后第3天进行第一次杯测。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/20-雨巷咖啡实验室.md",
+            "quote": "烘焙后第3天进行第一次杯测。"
+          }
+        ],
+        "id": "D20-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "雨巷咖啡实验室烘焙后多久进行第一次杯测？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "雨巷咖啡实验室烘焙后多久进行第一次杯测？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "calibration",
+        "top10": [
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/16-石榴种子库.md",
+          "资料/02-星渡温室.md",
+          "资料/12-松塔山居.md",
+          "资料/01-林岸读书会.md",
+          "资料/07-晨岚观测台.md",
+          "资料/18-银杉共享工作室.md",
+          "资料/11-折页出版小组.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      }
+    ],
+    "summary": {
+      "answerableCount": 30,
+      "caseCount": 40,
+      "goldEvidenceContextRate": 0.8666666666666667,
+      "localRetrievalEvidenceP50ms": 10.003625,
+      "localRetrievalEvidenceP95ms": 31.120167000000002,
+      "modelLatencyMs": null,
+      "mrrAt10": 1.0,
+      "noContextRefusalProxyRate": 1.0,
+      "recallAt20": 1.0,
+      "recallAt5": 1.0,
+      "unsupportedCount": 10,
+      "unsupportedEvidenceFalsePositiveRate": 0.0
+    }
+  },
+  "caveats": [
+    "Gold-in-context measures evidence availability, not whether a generated answer uses it correctly.",
+    "An unsupported question retrieving context is a refusal-risk proxy; no generated false claim has been observed in this local-only run.",
+    "Target failures are retained. Passing this test means reproducible fixtures/reports, not passing every quality target.",
+    "Timing covers local retrieval/evidence work in temporary files with warm sequential execution; excludes indexing, network, first token and end-to-end latency."
+  ],
+  "corpusHash": "584569a0f6d9cb570210b1086eb870e0363d46d624a966744347ba2c11d10a78",
+  "cost": null,
+  "credentialsRead": false,
+  "externalCalls": 0,
+  "frozenTargets": {
+    "calibrationBaselineHash": "e7c905240b9f908527e7b583b72600cee4ac9c099282042022f3408e6df9e52f",
+    "corpusHash": "584569a0f6d9cb570210b1086eb870e0363d46d624a966744347ba2c11d10a78",
+    "freezeOrder": "calibration baseline saved -> targets persisted -> heldout evaluated",
+    "productionThresholdsChanged": false,
+    "protocolHash": "b8237d88985488348eed00311bd61f0ad99f6cef6915eb5c8534a296238d6ba3",
+    "targets": {
+      "goldEvidenceContextRate": 0.85,
+      "mrrAt10": 0.8,
+      "recallAt5": 0.9,
+      "unsupportedEvidenceFalsePositiveRateMax": 0.1
+    },
+    "tuningPerformed": false,
+    "version": 1
+  },
+  "generation": {
+    "chartSemanticAccuracy": null,
+    "citationSupport": null,
+    "correctRefusal": null,
+    "factualAccuracy": null,
+    "status": "not_run"
+  },
+  "heldout": {
+    "acceptance": {
+      "allTargetsMet": false,
+      "checks": [
+        {
+          "metric": "recallAt5",
+          "passed": true,
+          "targetMin": 0.9,
+          "value": 1.0
+        },
+        {
+          "metric": "mrrAt10",
+          "passed": true,
+          "targetMin": 0.8,
+          "value": 1.0
+        },
+        {
+          "metric": "goldEvidenceContextRate",
+          "passed": false,
+          "targetMin": 0.85,
+          "value": 0.8
+        },
+        {
+          "metric": "unsupportedEvidenceFalsePositiveRate",
+          "passed": true,
+          "targetMax": 0.1,
+          "value": 0.0
+        }
+      ],
+      "notAReleaseQualityCertification": true
+    },
+    "proxyFailureCaseIds": [
+      "D01-Q2",
+      "D03-Q3",
+      "D07-Q2",
+      "D08-Q3",
+      "D12-Q3",
+      "D13-Q3",
+      "D14-Q3",
+      "D15-Q2",
+      "D19-Q2",
+      "D19-Q3"
+    ],
+    "records": [
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 17,
+        "elapsedMs": 8.682291,
+        "eligibleSourceCount": 0,
+        "expected": "资料/01-林岸读书会.md",
+        "goldAnswer": "每名成员一次最多借2本书，借期14天。",
+        "goldEvidenceInContext": false,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/01-林岸读书会.md",
+            "quote": "每名成员一次最多借2本书，借期14天。"
+          }
+        ],
+        "id": "D01-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "林岸读书会一次最多能借几本书、多久归还？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "林岸读书会一次最多能借几本书、多久归还？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/01-林岸读书会.md",
+          "资料/10-光栎图书角.md",
+          "资料/09-山橙木工坊.md",
+          "资料/07-晨岚观测台.md",
+          "资料/16-石榴种子库.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 10,
+        "elapsedMs": 5.359417,
+        "eligibleSourceCount": 1,
+        "expected": "资料/01-林岸读书会.md",
+        "goldAnswer": "丢失纸质书签只需补登记，不收补办费。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/01-林岸读书会.md",
+            "quote": "丢失纸质书签只需补登记，不收补办费。"
+          }
+        ],
+        "id": "D01-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "林岸读书会怎样处理丢失书签？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "林岸读书会怎样处理丢失书签？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 29.089291,
+        "eligibleSourceCount": 3,
+        "expected": "资料/01-林岸读书会.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "借阅册数",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                18,
+                24,
+                null,
+                31
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                12,
+                20,
+                16,
+                25
+              ]
+            }
+          ],
+          "title": "林岸读书会借阅册数",
+          "unit": "册"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/01-林岸读书会.md",
+            "quote": "指标：借阅册数；单位：册。"
+          }
+        ],
+        "id": "D01-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比林岸读书会的2026年与2025年借阅册数，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "林岸读书会的2026年与2025年借阅册数，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/01-林岸读书会.md",
+          "资料/10-光栎图书角.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 15,
+        "elapsedMs": 12.244791,
+        "eligibleSourceCount": 1,
+        "expected": "资料/02-星渡温室.md",
+        "goldAnswer": "温度与含水率传感器每月第一个周一校验。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/02-星渡温室.md",
+            "quote": "温度与含水率传感器每月第一个周一校验。"
+          }
+        ],
+        "id": "D02-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "星渡温室的传感器多久校验一次？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "星渡温室的传感器多久校验一次？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/02-星渡温室.md",
+          "资料/01-林岸读书会.md",
+          "资料/07-晨岚观测台.md",
+          "资料/16-石榴种子库.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 28.409416,
+        "eligibleSourceCount": 2,
+        "expected": "资料/02-星渡温室.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "补水量",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                120,
+                135,
+                128,
+                141
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                97,
+                110,
+                102,
+                116
+              ]
+            }
+          ],
+          "title": "星渡温室补水量",
+          "unit": "升"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/02-星渡温室.md",
+            "quote": "指标：补水量；单位：升。"
+          }
+        ],
+        "id": "D02-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比星渡温室的2026年与2025年补水量，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "星渡温室的2026年与2025年补水量，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/02-星渡温室.md",
+          "资料/11-折页出版小组.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md",
+          "资料/14-池影电影社.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 31.033708,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D02-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "星渡温室在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "星渡温室在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/02-星渡温室.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md",
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 14,
+        "elapsedMs": 21.324375,
+        "eligibleSourceCount": 1,
+        "expected": "资料/03-青屿骑行.md",
+        "goldAnswer": "报名在活动前一天18:00截止，名额32人。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/03-青屿骑行.md",
+            "quote": "报名在活动前一天18:00截止，名额32人。"
+          }
+        ],
+        "id": "D03-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "青屿骑行报名最晚什么时候截止？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "青屿骑行报名最晚什么时候截止？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/03-青屿骑行.md",
+          "资料/12-松塔山居.md",
+          "资料/17-远汀培训营.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 31,
+        "elapsedMs": 21.041875,
+        "eligibleSourceCount": 0,
+        "expected": "资料/03-青屿骑行.md",
+        "goldAnswer": "出现雷雨预警即取消骑行，改为室内路线复盘。",
+        "goldEvidenceInContext": false,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/03-青屿骑行.md",
+            "quote": "出现雷雨预警即取消骑行，改为室内路线复盘。"
+          }
+        ],
+        "id": "D03-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "青屿骑行遇到雷雨预警怎样安排？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "青屿骑行遇到雷雨预警怎样安排？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/03-青屿骑行.md",
+          "资料/08-白鹭志愿队.md",
+          "资料/14-池影电影社.md",
+          "资料/02-星渡温室.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/11-折页出版小组.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 31.91425,
+        "eligibleSourceCount": 2,
+        "expected": "资料/03-青屿骑行.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "参加人数",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                21,
+                26,
+                null,
+                30
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                18,
+                22,
+                24,
+                27
+              ]
+            }
+          ],
+          "title": "青屿骑行参加人数",
+          "unit": "人"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/03-青屿骑行.md",
+            "quote": "指标：参加人数；单位：人。"
+          }
+        ],
+        "id": "D03-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比青屿骑行的2026年与2025年参加人数，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "青屿骑行的2026年与2025年参加人数，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/17-远汀培训营.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 21,
+        "elapsedMs": 13.397375,
+        "eligibleSourceCount": 1,
+        "expected": "资料/04-栖墨展厅.md",
+        "goldAnswer": "撤展先拍摄原位照片，再核对编号并装箱。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/04-栖墨展厅.md",
+            "quote": "撤展先拍摄原位照片，再核对编号并装箱。"
+          }
+        ],
+        "id": "D04-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "栖墨展厅撤展时先做哪一步？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "栖墨展厅撤展时先做哪一步？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/04-栖墨展厅.md",
+          "资料/08-白鹭志愿队.md",
+          "资料/18-银杉共享工作室.md",
+          "资料/13-云岫步道.md",
+          "资料/19-禾川样品仓.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 66.82041699999999,
+        "eligibleSourceCount": 2,
+        "expected": "资料/04-栖墨展厅.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "参观人数",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                82,
+                96,
+                105,
+                112
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                71,
+                80,
+                89,
+                98
+              ]
+            }
+          ],
+          "title": "栖墨展厅参观人数",
+          "unit": "人"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/04-栖墨展厅.md",
+            "quote": "指标：参观人数；单位：人。"
+          }
+        ],
+        "id": "D04-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比栖墨展厅的2026年与2025年参观人数，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "栖墨展厅的2026年与2025年参观人数，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/04-栖墨展厅.md",
+          "资料/03-青屿骑行.md",
+          "资料/17-远汀培训营.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 17.210041,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D04-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "栖墨展厅在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "栖墨展厅在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/04-栖墨展厅.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 10,
+        "elapsedMs": 10.443666,
+        "eligibleSourceCount": 1,
+        "expected": "资料/05-夏禾食堂.md",
+        "goldAnswer": "含花生的菜品必须在标签上显示花生图标和文字。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/05-夏禾食堂.md",
+            "quote": "含花生的菜品必须在标签上显示花生图标和文字。"
+          }
+        ],
+        "id": "D05-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "夏禾食堂如何标识含花生的菜品？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "夏禾食堂如何标识含花生的菜品？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/05-夏禾食堂.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 16,
+        "elapsedMs": 7.101667,
+        "eligibleSourceCount": 1,
+        "expected": "资料/05-夏禾食堂.md",
+        "goldAnswer": "剩余餐食在13:00称重登记，不并入已售份数。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/05-夏禾食堂.md",
+            "quote": "剩余餐食在13:00称重登记，不并入已售份数。"
+          }
+        ],
+        "id": "D05-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "夏禾食堂剩余餐食如何登记？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "夏禾食堂剩余餐食如何登记？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/05-夏禾食堂.md",
+          "资料/12-松塔山居.md",
+          "资料/01-林岸读书会.md",
+          "资料/07-晨岚观测台.md",
+          "资料/09-山橙木工坊.md",
+          "资料/16-石榴种子库.md",
+          "资料/19-禾川样品仓.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 19.339167,
+        "eligibleSourceCount": 2,
+        "expected": "资料/05-夏禾食堂.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "午餐供应量",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                310,
+                340,
+                null,
+                365
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                295,
+                321,
+                330,
+                350
+              ]
+            }
+          ],
+          "title": "夏禾食堂午餐供应量",
+          "unit": "份"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/05-夏禾食堂.md",
+            "quote": "指标：午餐供应量；单位：份。"
+          }
+        ],
+        "id": "D05-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比夏禾食堂的2026年与2025年午餐供应量，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "夏禾食堂的2026年与2025年午餐供应量，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/05-夏禾食堂.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 10,
+        "elapsedMs": 3.3692919999999997,
+        "eligibleSourceCount": 1,
+        "expected": "资料/06-浮桥档案馆.md",
+        "goldAnswer": "清单中的[1]是批次标签字面量，不是知识问答引用编号。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/06-浮桥档案馆.md",
+            "quote": "清单中的[1]是批次标签字面量，不是知识问答引用编号。"
+          }
+        ],
+        "id": "D06-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "浮桥档案馆清单里的[1]是什么意思？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "浮桥档案馆清单里的[1]是什么意思？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/06-浮桥档案馆.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 32.376125,
+        "eligibleSourceCount": 2,
+        "expected": "资料/06-浮桥档案馆.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "移交盒数",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                15,
+                19,
+                21,
+                26
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                12,
+                14,
+                18,
+                22
+              ]
+            }
+          ],
+          "title": "浮桥档案馆移交盒数",
+          "unit": "盒"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/06-浮桥档案馆.md",
+            "quote": "指标：移交盒数；单位：盒。"
+          }
+        ],
+        "id": "D06-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比浮桥档案馆的2026年与2025年移交盒数，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "浮桥档案馆的2026年与2025年移交盒数，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/06-浮桥档案馆.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md",
+          "资料/14-池影电影社.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 16.139625000000002,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D06-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "浮桥档案馆在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "浮桥档案馆在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/06-浮桥档案馆.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 38,
+        "elapsedMs": 18.108875,
+        "eligibleSourceCount": 0,
+        "expected": "资料/07-晨岚观测台.md",
+        "goldAnswer": "缺测记录使用NA，不允许按零毫米补填。",
+        "goldEvidenceInContext": false,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/07-晨岚观测台.md",
+            "quote": "缺测记录使用NA，不允许按零毫米补填。"
+          }
+        ],
+        "id": "D07-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "晨岚观测台降雨缺测怎样标记？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "晨岚观测台降雨缺测怎样标记？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/07-晨岚观测台.md",
+          "资料/03-青屿骑行.md",
+          "资料/13-云岫步道.md",
+          "资料/09-山橙木工坊.md",
+          "资料/11-折页出版小组.md",
+          "资料/17-远汀培训营.md",
+          "资料/19-禾川样品仓.md",
+          "资料/01-林岸读书会.md",
+          "资料/05-夏禾食堂.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 13,
+        "elapsedMs": 5.909707999999999,
+        "eligibleSourceCount": 1,
+        "expected": "资料/07-晨岚观测台.md",
+        "goldAnswer": "风速仪每两周清洁一次，维护日期单独登记。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/07-晨岚观测台.md",
+            "quote": "风速仪每两周清洁一次，维护日期单独登记。"
+          }
+        ],
+        "id": "D07-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "晨岚观测台风速仪多久清洁一次？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "晨岚观测台风速仪多久清洁一次？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/07-晨岚观测台.md",
+          "资料/01-林岸读书会.md",
+          "资料/16-石榴种子库.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 19.017333,
+        "eligibleSourceCount": 3,
+        "expected": "资料/07-晨岚观测台.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "累计雨量",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                63,
+                78,
+                null,
+                91
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                58,
+                66,
+                72,
+                85
+              ]
+            }
+          ],
+          "title": "晨岚观测台累计雨量",
+          "unit": "毫米"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/07-晨岚观测台.md",
+            "quote": "指标：累计雨量；单位：毫米。"
+          }
+        ],
+        "id": "D07-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比晨岚观测台的2026年与2025年累计雨量，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "晨岚观测台的2026年与2025年累计雨量，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/07-晨岚观测台.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 30,
+        "elapsedMs": 11.668750000000001,
+        "eligibleSourceCount": 0,
+        "expected": "资料/08-白鹭志愿队.md",
+        "goldAnswer": "非紧急请假至少提前12小时告知排班员。",
+        "goldEvidenceInContext": false,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/08-白鹭志愿队.md",
+            "quote": "非紧急请假至少提前12小时告知排班员。"
+          }
+        ],
+        "id": "D08-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "白鹭志愿队临时请假需要提前多久说明？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "白鹭志愿队临时请假需要提前多久说明？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/08-白鹭志愿队.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 25.936042,
+        "eligibleSourceCount": 2,
+        "expected": "资料/08-白鹭志愿队.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "服务时长",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                48,
+                56,
+                64,
+                72
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                40,
+                49,
+                55,
+                63
+              ]
+            }
+          ],
+          "title": "白鹭志愿队服务时长",
+          "unit": "小时"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/08-白鹭志愿队.md",
+            "quote": "指标：服务时长；单位：小时。"
+          }
+        ],
+        "id": "D08-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比白鹭志愿队的2026年与2025年服务时长，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "白鹭志愿队的2026年与2025年服务时长，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/08-白鹭志愿队.md",
+          "资料/18-银杉共享工作室.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 19.7145,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D08-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "白鹭志愿队在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "白鹭志愿队在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/08-白鹭志愿队.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 19,
+        "elapsedMs": 4.804459,
+        "eligibleSourceCount": 1,
+        "expected": "资料/09-山橙木工坊.md",
+        "goldAnswer": "使用砂轮前须完成护目镜与防护罩检查。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/09-山橙木工坊.md",
+            "quote": "使用砂轮前须完成护目镜与防护罩检查。"
+          }
+        ],
+        "id": "D09-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "山橙木工坊使用砂轮前必须完成什么？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "山橙木工坊使用砂轮前必须完成什么？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/09-山橙木工坊.md",
+          "资料/05-夏禾食堂.md",
+          "资料/07-晨岚观测台.md",
+          "资料/17-远汀培训营.md",
+          "资料/11-折页出版小组.md",
+          "资料/14-池影电影社.md",
+          "资料/08-白鹭志愿队.md",
+          "资料/12-松塔山居.md",
+          "资料/19-禾川样品仓.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 16,
+        "elapsedMs": 3.794292,
+        "eligibleSourceCount": 1,
+        "expected": "资料/09-山橙木工坊.md",
+        "goldAnswer": "工具借出同时登记工具编号、借用人和归还时刻。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/09-山橙木工坊.md",
+            "quote": "工具借出同时登记工具编号、借用人和归还时刻。"
+          }
+        ],
+        "id": "D09-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "山橙木工坊的工具借出怎样登记？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "山橙木工坊的工具借出怎样登记？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/09-山橙木工坊.md",
+          "资料/12-松塔山居.md",
+          "资料/05-夏禾食堂.md",
+          "资料/01-林岸读书会.md",
+          "资料/07-晨岚观测台.md",
+          "资料/16-石榴种子库.md",
+          "资料/19-禾川样品仓.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 17.84925,
+        "eligibleSourceCount": 2,
+        "expected": "资料/09-山橙木工坊.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "课程场次",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                8,
+                11,
+                null,
+                15
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                7,
+                9,
+                10,
+                13
+              ]
+            }
+          ],
+          "title": "山橙木工坊课程场次",
+          "unit": "场"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/09-山橙木工坊.md",
+            "quote": "指标：课程场次；单位：场。"
+          }
+        ],
+        "id": "D09-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比山橙木工坊的2026年与2025年课程场次，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "山橙木工坊的2026年与2025年课程场次，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/09-山橙木工坊.md",
+          "资料/14-池影电影社.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 11,
+        "elapsedMs": 4.109375,
+        "eligibleSourceCount": 1,
+        "expected": "资料/10-光栎图书角.md",
+        "goldAnswer": "逾期归还只暂停新增借阅，不收现金罚款。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/10-光栎图书角.md",
+            "quote": "逾期归还只暂停新增借阅，不收现金罚款。"
+          }
+        ],
+        "id": "D10-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "光栎图书角逾期归还有罚款吗？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "光栎图书角逾期归还有罚款吗？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/10-光栎图书角.md",
+          "资料/09-山橙木工坊.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 27.913375000000002,
+        "eligibleSourceCount": 2,
+        "expected": "资料/10-光栎图书角.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "新书册数",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                32,
+                41,
+                47,
+                55
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                28,
+                35,
+                40,
+                48
+              ]
+            }
+          ],
+          "title": "光栎图书角新书册数",
+          "unit": "册"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/10-光栎图书角.md",
+            "quote": "指标：新书册数；单位：册。"
+          }
+        ],
+        "id": "D10-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比光栎图书角的2026年与2025年新书册数，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "光栎图书角的2026年与2025年新书册数，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/10-光栎图书角.md",
+          "资料/01-林岸读书会.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 18.23975,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D10-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "光栎图书角在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "光栎图书角在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/10-光栎图书角.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 10,
+        "elapsedMs": 4.2951250000000005,
+        "eligibleSourceCount": 1,
+        "expected": "资料/11-折页出版小组.md",
+        "goldAnswer": "封面在印前联检全部通过后锁版。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/11-折页出版小组.md",
+            "quote": "封面在印前联检全部通过后锁版。"
+          }
+        ],
+        "id": "D11-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "折页出版小组封面何时锁版？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "折页出版小组封面何时锁版？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/11-折页出版小组.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 14,
+        "elapsedMs": 3.020667,
+        "eligibleSourceCount": 1,
+        "expected": "资料/11-折页出版小组.md",
+        "goldAnswer": "参考文献编号调整后，需要同步核对全部交叉引用。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/11-折页出版小组.md",
+            "quote": "参考文献编号调整后，需要同步核对全部交叉引用。"
+          }
+        ],
+        "id": "D11-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "折页出版小组参考文献编号改动怎样处理？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "折页出版小组参考文献编号改动怎样处理？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/11-折页出版小组.md",
+          "资料/04-栖墨展厅.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 19.985458,
+        "eligibleSourceCount": 2,
+        "expected": "资料/11-折页出版小组.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "校对页数",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                140,
+                165,
+                null,
+                190
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                128,
+                150,
+                161,
+                175
+              ]
+            }
+          ],
+          "title": "折页出版小组校对页数",
+          "unit": "页"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/11-折页出版小组.md",
+            "quote": "指标：校对页数；单位：页。"
+          }
+        ],
+        "id": "D11-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比折页出版小组的2026年与2025年校对页数，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "折页出版小组的2026年与2025年校对页数，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md",
+          "资料/14-池影电影社.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 11,
+        "elapsedMs": 6.893917,
+        "eligibleSourceCount": 0,
+        "expected": "资料/12-松塔山居.md",
+        "goldAnswer": "普通遗失物品登记后保管30天。",
+        "goldEvidenceInContext": false,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/12-松塔山居.md",
+            "quote": "普通遗失物品登记后保管30天。"
+          }
+        ],
+        "id": "D12-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "松塔山居遗失物品保管多长时间？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "松塔山居遗失物品保管多长时间？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/12-松塔山居.md",
+          "资料/03-青屿骑行.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 26.092625,
+        "eligibleSourceCount": 2,
+        "expected": "资料/12-松塔山居.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "入住间夜",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                44,
+                58,
+                61,
+                70
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                39,
+                51,
+                56,
+                64
+              ]
+            }
+          ],
+          "title": "松塔山居入住间夜",
+          "unit": "间夜"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/12-松塔山居.md",
+            "quote": "指标：入住间夜；单位：间夜。"
+          }
+        ],
+        "id": "D12-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比松塔山居的2026年与2025年入住间夜，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "松塔山居的2026年与2025年入住间夜，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/12-松塔山居.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/14-池影电影社.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 28.345458999999998,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D12-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "松塔山居在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "松塔山居在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/12-松塔山居.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 10,
+        "elapsedMs": 3.499917,
+        "eligibleSourceCount": 1,
+        "expected": "资料/13-云岫步道.md",
+        "goldAnswer": "北段每天17:00关闭入口。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/13-云岫步道.md",
+            "quote": "北段每天17:00关闭入口。"
+          }
+        ],
+        "id": "D13-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "云岫步道的北段什么时候关闭？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "云岫步道的北段什么时候关闭？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/13-云岫步道.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 10,
+        "elapsedMs": 3.53125,
+        "eligibleSourceCount": 0,
+        "expected": "资料/13-云岫步道.md",
+        "goldAnswer": "发现落石区域先远离坡脚，并按路标联系巡护员。",
+        "goldEvidenceInContext": false,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/13-云岫步道.md",
+            "quote": "发现落石区域先远离坡脚，并按路标联系巡护员。"
+          }
+        ],
+        "id": "D13-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "云岫步道遇到落石区域怎样处理？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "云岫步道遇到落石区域怎样处理？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/13-云岫步道.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 35.950916,
+        "eligibleSourceCount": 2,
+        "expected": "资料/13-云岫步道.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "巡护里程",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                82,
+                94,
+                null,
+                107
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                75,
+                88,
+                90,
+                99
+              ]
+            }
+          ],
+          "title": "云岫步道巡护里程",
+          "unit": "公里"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/13-云岫步道.md",
+            "quote": "指标：巡护里程；单位：公里。"
+          }
+        ],
+        "id": "D13-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比云岫步道的2026年与2025年巡护里程，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "云岫步道的2026年与2025年巡护里程，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/13-云岫步道.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md",
+          "资料/14-池影电影社.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 16,
+        "elapsedMs": 6.958749999999999,
+        "eligibleSourceCount": 0,
+        "expected": "资料/14-池影电影社.md",
+        "goldAnswer": "常规映后交流安排25分钟，嘉宾场另行公告。",
+        "goldEvidenceInContext": false,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/14-池影电影社.md",
+            "quote": "常规映后交流安排25分钟，嘉宾场另行公告。"
+          }
+        ],
+        "id": "D14-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "池影电影社映后交流有多长？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "池影电影社映后交流有多长？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/14-池影电影社.md",
+          "资料/12-松塔山居.md",
+          "资料/02-星渡温室.md",
+          "资料/16-石榴种子库.md",
+          "资料/18-银杉共享工作室.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/11-折页出版小组.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 24.267375,
+        "eligibleSourceCount": 1,
+        "expected": "资料/14-池影电影社.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "放映场次",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                6,
+                8,
+                9,
+                12
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                5,
+                7,
+                8,
+                10
+              ]
+            }
+          ],
+          "title": "池影电影社放映场次",
+          "unit": "场"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/14-池影电影社.md",
+            "quote": "指标：放映场次；单位：场。"
+          }
+        ],
+        "id": "D14-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比池影电影社的2026年与2025年放映场次，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "池影电影社的2026年与2025年放映场次，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/14-池影电影社.md",
+          "资料/09-山橙木工坊.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 12.032791,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D14-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "池影电影社在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "池影电影社在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/14-池影电影社.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/11-折页出版小组.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 12,
+        "elapsedMs": 8.667,
+        "eligibleSourceCount": 0,
+        "expected": "资料/15-月衡社区议事会.md",
+        "goldAnswer": "表决须到会人数过半同意，弃权单独记数。",
+        "goldEvidenceInContext": false,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/15-月衡社区议事会.md",
+            "quote": "表决须到会人数过半同意，弃权单独记数。"
+          }
+        ],
+        "id": "D15-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "月衡社区议事会表决通过需满足什么条件？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "月衡社区议事会表决通过需满足什么条件？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/15-月衡社区议事会.md",
+          "资料/11-折页出版小组.md",
+          "资料/19-禾川样品仓.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 10,
+        "elapsedMs": 2.467333,
+        "eligibleSourceCount": 1,
+        "expected": "资料/15-月衡社区议事会.md",
+        "goldAnswer": "会议纪要在会后3个工作日内公开。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/15-月衡社区议事会.md",
+            "quote": "会议纪要在会后3个工作日内公开。"
+          }
+        ],
+        "id": "D15-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "月衡社区议事会会议纪要何时公开？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "月衡社区议事会会议纪要何时公开？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/15-月衡社区议事会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 29.735083999999997,
+        "eligibleSourceCount": 3,
+        "expected": "资料/15-月衡社区议事会.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "受理提案数",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                11,
+                14,
+                null,
+                18
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                8,
+                10,
+                12,
+                15
+              ]
+            }
+          ],
+          "title": "月衡社区议事会受理提案数",
+          "unit": "项"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/15-月衡社区议事会.md",
+            "quote": "指标：受理提案数；单位：项。"
+          }
+        ],
+        "id": "D15-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比月衡社区议事会的2026年与2025年受理提案数，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "月衡社区议事会的2026年与2025年受理提案数，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/15-月衡社区议事会.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 15,
+        "elapsedMs": 6.493708,
+        "eligibleSourceCount": 1,
+        "expected": "资料/16-石榴种子库.md",
+        "goldAnswer": "取样后登记样本重量、批次号和操作者。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/16-石榴种子库.md",
+            "quote": "取样后登记样本重量、批次号和操作者。"
+          }
+        ],
+        "id": "D16-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "石榴种子库取样后如何归档？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "石榴种子库取样后如何归档？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/16-石榴种子库.md",
+          "资料/12-松塔山居.md",
+          "资料/02-星渡温室.md",
+          "资料/18-银杉共享工作室.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/11-折页出版小组.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 19.655166,
+        "eligibleSourceCount": 2,
+        "expected": "资料/16-石榴种子库.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "入库批次数",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                23,
+                29,
+                34,
+                38
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                20,
+                25,
+                30,
+                35
+              ]
+            }
+          ],
+          "title": "石榴种子库入库批次数",
+          "unit": "批"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/16-石榴种子库.md",
+            "quote": "指标：入库批次数；单位：批。"
+          }
+        ],
+        "id": "D16-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比石榴种子库的2026年与2025年入库批次数，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "石榴种子库的2026年与2025年入库批次数，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/16-石榴种子库.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 28.794041999999997,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D16-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "石榴种子库在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "石榴种子库在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/16-石榴种子库.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 11,
+        "elapsedMs": 2.948792,
+        "eligibleSourceCount": 1,
+        "expected": "资料/17-远汀培训营.md",
+        "goldAnswer": "补交作业最晚可延迟5个自然日。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/17-远汀培训营.md",
+            "quote": "补交作业最晚可延迟5个自然日。"
+          }
+        ],
+        "id": "D17-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "远汀培训营补交作业最晚可延迟几天？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "远汀培训营补交作业最晚可延迟几天？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/17-远汀培训营.md",
+          "资料/18-银杉共享工作室.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 16,
+        "elapsedMs": 2.924708,
+        "eligibleSourceCount": 1,
+        "expected": "资料/17-远汀培训营.md",
+        "goldAnswer": "仅已报名学员可在课程页申请带水印回放。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/17-远汀培训营.md",
+            "quote": "仅已报名学员可在课程页申请带水印回放。"
+          }
+        ],
+        "id": "D17-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "远汀培训营如何申请课程回放？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "远汀培训营如何申请课程回放？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/17-远汀培训营.md",
+          "资料/09-山橙木工坊.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 12.881958000000001,
+        "eligibleSourceCount": 2,
+        "expected": "资料/17-远汀培训营.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "结课人数",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                17,
+                22,
+                null,
+                28
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                14,
+                19,
+                21,
+                25
+              ]
+            }
+          ],
+          "title": "远汀培训营结课人数",
+          "unit": "人"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/17-远汀培训营.md",
+            "quote": "指标：结课人数；单位：人。"
+          }
+        ],
+        "id": "D17-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比远汀培训营的2026年与2025年结课人数，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "远汀培训营的2026年与2025年结课人数，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/17-远汀培训营.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 33,
+        "elapsedMs": 15.064209,
+        "eligibleSourceCount": 5,
+        "expected": "资料/18-银杉共享工作室.md",
+        "goldAnswer": "开始后15分钟仍未签到，预订自动释放。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/18-银杉共享工作室.md",
+            "quote": "开始后15分钟仍未签到，预订自动释放。"
+          }
+        ],
+        "id": "D18-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "银杉共享工作室怎么解除未到场预订？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "银杉共享工作室怎么解除未到场预订？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/18-银杉共享工作室.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/11-折页出版小组.md",
+          "资料/19-禾川样品仓.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 15.170417,
+        "eligibleSourceCount": 2,
+        "expected": "资料/18-银杉共享工作室.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "预订时长",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                96,
+                112,
+                126,
+                140
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                82,
+                98,
+                110,
+                125
+              ]
+            }
+          ],
+          "title": "银杉共享工作室预订时长",
+          "unit": "小时"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/18-银杉共享工作室.md",
+            "quote": "指标：预订时长；单位：小时。"
+          }
+        ],
+        "id": "D18-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比银杉共享工作室的2026年与2025年预订时长，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "银杉共享工作室的2026年与2025年预订时长，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/18-银杉共享工作室.md",
+          "资料/08-白鹭志愿队.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 23.782999999999998,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D18-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "银杉共享工作室在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "银杉共享工作室在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/18-银杉共享工作室.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 30,
+        "elapsedMs": 16.34475,
+        "eligibleSourceCount": 0,
+        "expected": "资料/19-禾川样品仓.md",
+        "goldAnswer": "冷藏区保持在2至8摄氏度。",
+        "goldEvidenceInContext": false,
+        "goldSources": [
+          {
+            "line": 9,
+            "path": "资料/19-禾川样品仓.md",
+            "quote": "冷藏区保持在2至8摄氏度。"
+          }
+        ],
+        "id": "D19-Q2",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "禾川样品仓冷藏区的温度范围是多少？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "禾川样品仓冷藏区的温度范围是多少？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/19-禾川样品仓.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/11-折页出版小组.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 12,
+        "elapsedMs": 8.735542,
+        "eligibleSourceCount": 0,
+        "expected": "资料/19-禾川样品仓.md",
+        "goldAnswer": "包装破损的样品先隔离登记，未复核前不能出库。",
+        "goldEvidenceInContext": false,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/19-禾川样品仓.md",
+            "quote": "包装破损的样品先隔离登记，未复核前不能出库。"
+          }
+        ],
+        "id": "D19-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "禾川样品仓发现包装破损怎样处理？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "禾川样品仓发现包装破损怎样处理？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/19-禾川样品仓.md",
+          "资料/14-池影电影社.md",
+          "资料/13-云岫步道.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 31.186959,
+        "eligibleSourceCount": 2,
+        "expected": "资料/19-禾川样品仓.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "出库箱数",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                38,
+                46,
+                null,
+                57
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                31,
+                40,
+                45,
+                50
+              ]
+            }
+          ],
+          "title": "禾川样品仓出库箱数",
+          "unit": "箱"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/19-禾川样品仓.md",
+            "quote": "指标：出库箱数；单位：箱。"
+          }
+        ],
+        "id": "D19-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比禾川样品仓的2026年与2025年出库箱数，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "禾川样品仓的2026年与2025年出库箱数，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/19-禾川样品仓.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 12,
+        "elapsedMs": 3.9892499999999997,
+        "eligibleSourceCount": 1,
+        "expected": "资料/20-雨巷咖啡实验室.md",
+        "goldAnswer": "豆袋同时标注产地码、烘焙日和三位批次号。",
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 11,
+            "path": "资料/20-雨巷咖啡实验室.md",
+            "quote": "豆袋同时标注产地码、烘焙日和三位批次号。"
+          }
+        ],
+        "id": "D20-Q3",
+        "kind": "factual",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "雨巷咖啡实验室豆袋怎样标注批次？",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "雨巷咖啡实验室豆袋怎样标注批次？",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/16-石榴种子库.md",
+          "资料/06-浮桥档案馆.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": true,
+        "candidateCount": 60,
+        "elapsedMs": 29.774625,
+        "eligibleSourceCount": 3,
+        "expected": "资料/20-雨巷咖啡实验室.md",
+        "goldAnswer": {
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "metric": "咖啡豆用量",
+          "series": [
+            {
+              "name": "2026年",
+              "values": [
+                12,
+                16,
+                18,
+                21
+              ]
+            },
+            {
+              "name": "2025年",
+              "values": [
+                10,
+                13,
+                15,
+                19
+              ]
+            }
+          ],
+          "title": "雨巷咖啡实验室咖啡豆用量",
+          "unit": "千克"
+        },
+        "goldEvidenceInContext": true,
+        "goldSources": [
+          {
+            "line": 15,
+            "path": "资料/20-雨巷咖啡实验室.md",
+            "quote": "指标：咖啡豆用量；单位：千克。"
+          }
+        ],
+        "id": "D20-Q4",
+        "kind": "chart",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "请用柱状图对比雨巷咖啡实验室的2026年与2025年咖啡豆用量，季度和单位都需要标明。",
+        "rank": 1,
+        "recallAt20": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "retrievalQuestion": "雨巷咖啡实验室的2026年与2025年咖啡豆用量，季度和单位都需要标明",
+        "rubric": {
+          "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+          "chartSemantics": "类别固定Q1/Q2/Q3/Q4；系列固定2026年/2025年；保持单位与各值；缺测保持null或表格空缺，不补零；来源编号不等于逐值核验通过。",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/13-云岫步道.md",
+          "资料/06-浮桥档案馆.md",
+          "资料/09-山橙木工坊.md",
+          "资料/10-光栎图书角.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": false
+      },
+      {
+        "answer": null,
+        "answerGeneration": "not_run",
+        "answerable": false,
+        "candidateCount": 60,
+        "elapsedMs": 20.94425,
+        "eligibleSourceCount": 0,
+        "expected": null,
+        "goldAnswer": null,
+        "goldEvidenceInContext": false,
+        "goldSources": [],
+        "id": "D20-Q5",
+        "kind": "unsupported",
+        "manualReview": {
+          "chartLabelsPeriodsUnitsAndMissingValues": null,
+          "citationSupport": null,
+          "correctRefusal": null,
+          "factualSupport": null
+        },
+        "question": "雨巷咖啡实验室在2027年新的收费标准具体是多少？",
+        "rank": null,
+        "recallAt20": false,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "retrievalQuestion": "雨巷咖啡实验室在2027年新的收费标准具体是多少？",
+        "rubric": {
+          "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+          "chartSemantics": "不适用",
+          "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+          "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。"
+        },
+        "split": "heldout",
+        "top10": [
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/19-禾川样品仓.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/17-远汀培训营.md",
+          "资料/01-林岸读书会.md",
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false,
+        "wouldRefuseForNoContext": true
+      }
+    ],
+    "summary": {
+      "answerableCount": 50,
+      "caseCount": 60,
+      "goldEvidenceContextRate": 0.8,
+      "localRetrievalEvidenceP50ms": 16.139625000000002,
+      "localRetrievalEvidenceP95ms": 31.91425,
+      "modelLatencyMs": null,
+      "mrrAt10": 1.0,
+      "noContextRefusalProxyRate": 1.0,
+      "recallAt20": 1.0,
+      "recallAt5": 1.0,
+      "unsupportedCount": 10,
+      "unsupportedEvidenceFalsePositiveRate": 0.0
+    }
+  },
+  "hybrid": {
+    "status": "not_run"
+  },
+  "keychainAccessed": false,
+  "manifestHash": "efbe5f45bf696aa1682b8400be558706a6259dae7b9bd03bfd73e65531679a3b",
+  "phase": "post-fix same-corpus exploratory regression; heldout was already observed, not new blind evaluation",
+  "pipeline": "production local_chunks -> refresh_lexical -> knowledge_query -> lexical_scored (BM25) -> merge_candidates -> mark_lexical_evidence -> answer_context",
+  "productionThresholdsChanged": false,
+  "rankingUnit": "unique document, metrics calculated before UI ordering/cap",
+  "rerank": {
+    "status": "not_run"
+  },
+  "scope": "20 fictional manuals; 40 calibration / 60 frozen heldout questions, author-generated and not independent or externally blinded. No production user data.",
+  "tuningPerformed": false,
+  "vector": {
+    "status": "not_run"
+  },
+  "version": "0.6.2"
+}

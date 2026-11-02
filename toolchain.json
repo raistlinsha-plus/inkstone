@@ -1,0 +1,6 @@
+{
+  "node": "24.14.0",
+  "npm": "11.9.0",
+  "rust": "1.99.1",
+  "target": "aarch64-apple-darwin"
+}

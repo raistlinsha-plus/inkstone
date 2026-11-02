@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "description": "First-run and same-question follow-up evidence; raw reports unchanged; implementation-agent review separate.",
+  "files": {
+    "answer-review-followup.json": "b1bcb39fb7a110e1929dd1dd4d3b436d59b1d8485b6b172bd3db97bdf57dd678",
+    "first-local-new-32.json": "67bf8ca4bc854b78ee780f0be4e0a2bc9e316100c4a8cdd38572f9dd81c29733",
+    "local-baseline-seen-100.json": "5b9d7ea1ea5b04971c6654e1029feb8f3ecc18055f4f093cb59d81431f31b62f",
+    "local-post-fix-seen-100.json": "bf9cc7eba31f6779c7c3968572ed85125efe93f015e87aed485c5e2c387c6c6b",
+    "remote-new-32-1793554952823.json": "eafc8fb7409e2e8b2cb8d26f5be34adbc95da7d7f480f99459c0b4c9260c853e",
+    "remote-new-32-1793555285735.json": "3050c0ed43e6560c6b564e77bd52041eefc18815e552fdd61bb1c221bbcf173f",
+    "remote-seen-100-1793554808601.json": "ed9cd54124fea959f10f81b639abe20bcd2e9e56f25e73c0d94b827654d263c5"
+  }
+}

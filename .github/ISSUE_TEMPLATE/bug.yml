@@ -1,0 +1,24 @@
+name: Bug report
+description: Report a reproducible Inkstone problem
+# No credentials or private documents should be attached.
+title: '[Bug] '
+body:
+  - type: markdown
+    attributes:
+      value: Please use a small synthetic document. Never attach API keys, passwords, your data directory, or an unredacted backup.
+  - type: input
+    id: version
+    attributes:
+      label: Version and macOS / CPU
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps, expected behavior and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Minimal synthetic Markdown and sanitized error

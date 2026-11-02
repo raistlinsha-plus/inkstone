@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "spentAttempts": 204,
+  "spentSeconds": 285,
+  "runs": [
+    {
+      "report": "remote-new-40-1793626996131-932ad041.json",
+      "status": "completed",
+      "reservedAttempts": 240,
+      "reservedSeconds": 1800,
+      "startedAt": "2026-11-02T13:43:16.132Z",
+      "actualAttempts": 95,
+      "finishedAt": "2026-11-02T13:45:17.468Z"
+    },
+    {
+      "report": "remote-new-40-1793627779116-098daad3.json",
+      "status": "completed",
+      "reservedAttempts": 145,
+      "reservedSeconds": 1678,
+      "startedAt": "2026-11-02T13:56:19.117Z",
+      "actualAttempts": 14,
+      "finishedAt": "2026-11-02T13:56:46.519Z"
+    },
+    {
+      "report": "remote-new-40-1793628260326-0d30a017.json",
+      "status": "completed",
+      "reservedAttempts": 131,
+      "reservedSeconds": 1650,
+      "startedAt": "2026-11-02T14:04:20.326Z",
+      "actualAttempts": 95,
+      "finishedAt": "2026-11-02T14:06:34.935Z"
+    }
+  ]
+}

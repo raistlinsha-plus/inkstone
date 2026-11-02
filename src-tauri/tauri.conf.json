@@ -1,0 +1,55 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Inkstone",
+  "version": "0.6.6",
+  "identifier": "local.inkstone.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://127.0.0.1:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "砚台 · Inkstone",
+        "width": 1320,
+        "height": 860,
+        "minWidth": 960,
+        "minHeight": 640,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; connect-src ipc: http://ipc.localhost http://127.0.0.1:1420 ws://127.0.0.1:1420; frame-src 'self' blob:; font-src 'self' data:",
+      "assetProtocol": {
+        "enable": true,
+        "scope": []
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app"
+    ],
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.icns"
+    ],
+    "category": "Productivity",
+    "shortDescription": "本地写作与知识检索",
+    "macOS": {
+      "minimumSystemVersion": "13.0",
+      "signingIdentity": "-"
+    },
+    "resources": {
+      "../LICENSE": "LICENSE",
+      "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
+      "../licenses/": "licenses/",
+      "../README.md": "README.md",
+      "../NOTICE": "NOTICE"
+    }
+  }
+}

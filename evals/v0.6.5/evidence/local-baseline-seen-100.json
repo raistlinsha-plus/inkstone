@@ -1,0 +1,4446 @@
+{
+  "authorIndependent": false,
+  "corpus": "seen-100",
+  "corpusHash": "584569a0f6d9cb570210b1086eb870e0363d46d624a966744347ba2c11d10a78",
+  "externalCalls": 0,
+  "keychainAccessed": false,
+  "oldCasesAlreadyObserved": true,
+  "phase": "baseline",
+  "records": [
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D01-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/01-林岸读书会.md",
+          "资料/14-池影电影社.md",
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "林岸读书会的常规讨论安排在什么时间？",
+      "retrievalEvidenceMs": 7.382833,
+      "retrievalQuestion": "林岸读书会的常规讨论安排在什么时间？",
+      "status": "completed",
+      "terms": [
+        "林岸",
+        "读书",
+        "书会",
+        "读书会",
+        "常规",
+        "讨论",
+        "安排",
+        "在",
+        "时间"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D01-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/01-林岸读书会.md",
+          "资料/10-光栎图书角.md",
+          "资料/09-山橙木工坊.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "林岸读书会一次最多能借几本书、多久归还？",
+      "retrievalEvidenceMs": 2.4096249999999997,
+      "retrievalQuestion": "林岸读书会一次最多能借几本书、多久归还？",
+      "status": "completed",
+      "terms": [
+        "林岸",
+        "读书",
+        "书会",
+        "读书会",
+        "一次",
+        "最多",
+        "最多能",
+        "借",
+        "几本",
+        "本书",
+        "几本书",
+        "多久",
+        "归还"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D01-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "林岸读书会怎样处理丢失书签？",
+      "retrievalEvidenceMs": 1.4543329999999999,
+      "retrievalQuestion": "林岸读书会怎样处理丢失书签？",
+      "status": "completed",
+      "terms": [
+        "林岸",
+        "读书",
+        "书会",
+        "读书会",
+        "怎样",
+        "处理",
+        "丢失",
+        "书签"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D01-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 3,
+        "topDocuments": [
+          "资料/01-林岸读书会.md",
+          "资料/10-光栎图书角.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比林岸读书会的2026年与2025年借阅册数，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.819458,
+      "retrievalQuestion": "林岸读书会的2026年与2025年借阅册数，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "林岸",
+        "读书",
+        "书会",
+        "读书会",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "借阅",
+        "册数",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D01-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/01-林岸读书会.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "林岸读书会在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.764792000000001,
+      "retrievalQuestion": "林岸读书会在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "林岸",
+        "读书",
+        "书会",
+        "读书会",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D02-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/02-星渡温室.md",
+          "资料/16-石榴种子库.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "星渡温室什么时候进行晨间灌溉？",
+      "retrievalEvidenceMs": 1.61725,
+      "retrievalQuestion": "星渡温室什么时候进行晨间灌溉？",
+      "status": "completed",
+      "terms": [
+        "星渡",
+        "温室",
+        "时候",
+        "进行",
+        "晨间",
+        "灌溉"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D02-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/02-星渡温室.md",
+          "资料/16-石榴种子库.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "星渡温室的土壤湿度低到多少才启动补水？",
+      "retrievalEvidenceMs": 1.512459,
+      "retrievalQuestion": "星渡温室的土壤湿度低到多少才启动补水？",
+      "status": "completed",
+      "terms": [
+        "星渡",
+        "温室",
+        "土壤",
+        "湿度",
+        "土壤湿度",
+        "低到",
+        "才",
+        "启动",
+        "补水"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D02-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/02-星渡温室.md",
+          "资料/01-林岸读书会.md",
+          "资料/07-晨岚观测台.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "星渡温室的传感器多久校验一次？",
+      "retrievalEvidenceMs": 1.975375,
+      "retrievalQuestion": "星渡温室的传感器多久校验一次？",
+      "status": "completed",
+      "terms": [
+        "星渡",
+        "温室",
+        "传感",
+        "感器",
+        "传感器",
+        "多久",
+        "校验",
+        "一次"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D02-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/02-星渡温室.md",
+          "资料/11-折页出版小组.md",
+          "资料/03-青屿骑行.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比星渡温室的2026年与2025年补水量，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.597042,
+      "retrievalQuestion": "星渡温室的2026年与2025年补水量，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "星渡",
+        "温室",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "补",
+        "水量",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D02-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/02-星渡温室.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "星渡温室在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.563958,
+      "retrievalQuestion": "星渡温室在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "星渡",
+        "温室",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D03-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/03-青屿骑行.md",
+          "资料/12-松塔山居.md",
+          "资料/08-白鹭志愿队.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "青屿骑行的集合与出发时间分别是什么？",
+      "retrievalEvidenceMs": 1.908375,
+      "retrievalQuestion": "青屿骑行的集合与出发时间分别是什么？",
+      "status": "completed",
+      "terms": [
+        "青屿",
+        "骑行",
+        "集合",
+        "与",
+        "出发",
+        "时间",
+        "分别"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D03-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/03-青屿骑行.md",
+          "资料/12-松塔山居.md",
+          "资料/17-远汀培训营.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "青屿骑行报名最晚什么时候截止？",
+      "retrievalEvidenceMs": 1.849709,
+      "retrievalQuestion": "青屿骑行报名最晚什么时候截止？",
+      "status": "completed",
+      "terms": [
+        "青屿",
+        "骑行",
+        "报名",
+        "最",
+        "晚",
+        "时候",
+        "截止"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D03-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/03-青屿骑行.md",
+          "资料/08-白鹭志愿队.md",
+          "资料/14-池影电影社.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "青屿骑行遇到雷雨预警怎样安排？",
+      "retrievalEvidenceMs": 4.955667,
+      "retrievalQuestion": "青屿骑行遇到雷雨预警怎样安排？",
+      "status": "completed",
+      "terms": [
+        "青屿",
+        "骑行",
+        "遇到",
+        "雷雨",
+        "预警",
+        "怎样",
+        "安排"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D03-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md",
+          "资料/17-远汀培训营.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比青屿骑行的2026年与2025年参加人数，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.365583,
+      "retrievalQuestion": "青屿骑行的2026年与2025年参加人数，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "青屿",
+        "骑行",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "参加",
+        "人数",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D03-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/03-青屿骑行.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "青屿骑行在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.837459,
+      "retrievalQuestion": "青屿骑行在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "青屿",
+        "骑行",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D04-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/04-栖墨展厅.md",
+          "资料/14-池影电影社.md",
+          "资料/10-光栎图书角.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "栖墨展厅周三是否开放、几点关门？",
+      "retrievalEvidenceMs": 1.6962920000000001,
+      "retrievalQuestion": "栖墨展厅周三是否开放、几点关门？",
+      "status": "completed",
+      "terms": [
+        "栖墨",
+        "展厅",
+        "周三",
+        "开放",
+        "几点",
+        "关门"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D04-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "栖墨展厅纸本文物的照度限制是多少？",
+      "retrievalEvidenceMs": 1.429875,
+      "retrievalQuestion": "栖墨展厅纸本文物的照度限制是多少？",
+      "status": "completed",
+      "terms": [
+        "栖墨",
+        "展厅",
+        "纸本",
+        "文物",
+        "照度",
+        "限制"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D04-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/04-栖墨展厅.md",
+          "资料/08-白鹭志愿队.md",
+          "资料/18-银杉共享工作室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "栖墨展厅撤展时先做哪一步？",
+      "retrievalEvidenceMs": 2.973708,
+      "retrievalQuestion": "栖墨展厅撤展时先做哪一步？",
+      "status": "completed",
+      "terms": [
+        "栖墨",
+        "展厅",
+        "撤展",
+        "时",
+        "先",
+        "做",
+        "哪",
+        "一步"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D04-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/04-栖墨展厅.md",
+          "资料/03-青屿骑行.md",
+          "资料/17-远汀培训营.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比栖墨展厅的2026年与2025年参观人数，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.87425,
+      "retrievalQuestion": "栖墨展厅的2026年与2025年参观人数，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "栖墨",
+        "展厅",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "参观",
+        "人数",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D04-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/04-栖墨展厅.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "栖墨展厅在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.576042,
+      "retrievalQuestion": "栖墨展厅在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "栖墨",
+        "展厅",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D05-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/05-夏禾食堂.md",
+          "资料/18-银杉共享工作室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "夏禾食堂午餐预订几点截止？",
+      "retrievalEvidenceMs": 2.2645,
+      "retrievalQuestion": "夏禾食堂午餐预订几点截止？",
+      "status": "completed",
+      "terms": [
+        "夏禾",
+        "食堂",
+        "午餐",
+        "预订",
+        "几点",
+        "截止"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D05-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/05-夏禾食堂.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "夏禾食堂如何标识含花生的菜品？",
+      "retrievalEvidenceMs": 1.348333,
+      "retrievalQuestion": "夏禾食堂如何标识含花生的菜品？",
+      "status": "completed",
+      "terms": [
+        "夏禾",
+        "食堂",
+        "标识",
+        "含",
+        "花生",
+        "菜品"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D05-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/05-夏禾食堂.md",
+          "资料/12-松塔山居.md",
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "夏禾食堂剩余餐食如何登记？",
+      "retrievalEvidenceMs": 2.0860000000000003,
+      "retrievalQuestion": "夏禾食堂剩余餐食如何登记？",
+      "status": "completed",
+      "terms": [
+        "夏禾",
+        "食堂",
+        "剩余",
+        "餐食",
+        "登记"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D05-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/05-夏禾食堂.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比夏禾食堂的2026年与2025年午餐供应量，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.605459,
+      "retrievalQuestion": "夏禾食堂的2026年与2025年午餐供应量，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "夏禾",
+        "食堂",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "午餐",
+        "供应",
+        "供应量",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D05-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/05-夏禾食堂.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "夏禾食堂在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.884416999999999,
+      "retrievalQuestion": "夏禾食堂在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "夏禾",
+        "食堂",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D06-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/06-浮桥档案馆.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "浮桥档案馆数字档案的保留期有多久？",
+      "retrievalEvidenceMs": 1.4375,
+      "retrievalQuestion": "浮桥档案馆数字档案的保留期有多久？",
+      "status": "completed",
+      "terms": [
+        "浮桥",
+        "档案",
+        "档案馆",
+        "数字",
+        "保留",
+        "期有",
+        "多久"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D06-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 5,
+        "topDocuments": [
+          "资料/06-浮桥档案馆.md",
+          "资料/08-白鹭志愿队.md",
+          "资料/18-银杉共享工作室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "浮桥档案馆的本次移交长编号是什么？",
+      "retrievalEvidenceMs": 2.865291,
+      "retrievalQuestion": "浮桥档案馆的本次移交长编号是什么？",
+      "status": "completed",
+      "terms": [
+        "浮桥",
+        "档案",
+        "档案馆",
+        "本次",
+        "移交",
+        "长",
+        "编号"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D06-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/06-浮桥档案馆.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "浮桥档案馆清单里的[1]是什么意思？",
+      "retrievalEvidenceMs": 1.3882079999999999,
+      "retrievalQuestion": "浮桥档案馆清单里的[1]是什么意思？",
+      "status": "completed",
+      "terms": [
+        "浮桥",
+        "档案",
+        "档案馆",
+        "清单",
+        "1",
+        "意思"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D06-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/06-浮桥档案馆.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比浮桥档案馆的2026年与2025年移交盒数，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.522499999999999,
+      "retrievalQuestion": "浮桥档案馆的2026年与2025年移交盒数，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "浮桥",
+        "档案",
+        "档案馆",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "移交",
+        "盒数",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D06-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/06-浮桥档案馆.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "浮桥档案馆在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.537707999999999,
+      "retrievalQuestion": "浮桥档案馆在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "浮桥",
+        "档案",
+        "档案馆",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D07-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/07-晨岚观测台.md",
+          "资料/13-云岫步道.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "晨岚观测台每天何时读取雨量？",
+      "retrievalEvidenceMs": 1.56375,
+      "retrievalQuestion": "晨岚观测台每天何时读取雨量？",
+      "status": "completed",
+      "terms": [
+        "晨岚",
+        "观测",
+        "测台",
+        "观测台",
+        "每天",
+        "何时",
+        "读取",
+        "雨量"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D07-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/07-晨岚观测台.md",
+          "资料/03-青屿骑行.md",
+          "资料/13-云岫步道.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "晨岚观测台降雨缺测怎样标记？",
+      "retrievalEvidenceMs": 6.0457920000000005,
+      "retrievalQuestion": "晨岚观测台降雨缺测怎样标记？",
+      "status": "completed",
+      "terms": [
+        "晨岚",
+        "观测",
+        "测台",
+        "观测台",
+        "降雨",
+        "缺测",
+        "怎样",
+        "标记"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D07-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/07-晨岚观测台.md",
+          "资料/01-林岸读书会.md",
+          "资料/16-石榴种子库.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "晨岚观测台风速仪多久清洁一次？",
+      "retrievalEvidenceMs": 1.8559169999999998,
+      "retrievalQuestion": "晨岚观测台风速仪多久清洁一次？",
+      "status": "completed",
+      "terms": [
+        "晨岚",
+        "观测",
+        "测台",
+        "观测台",
+        "风速",
+        "风速仪",
+        "多久",
+        "清洁",
+        "一次"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D07-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 3,
+        "topDocuments": [
+          "资料/07-晨岚观测台.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比晨岚观测台的2026年与2025年累计雨量，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.52425,
+      "retrievalQuestion": "晨岚观测台的2026年与2025年累计雨量，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "晨岚",
+        "观测",
+        "测台",
+        "观测台",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "累计",
+        "雨量",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D07-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/07-晨岚观测台.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "晨岚观测台在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.570042,
+      "retrievalQuestion": "晨岚观测台在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "晨岚",
+        "观测",
+        "测台",
+        "观测台",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D08-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/08-白鹭志愿队.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "白鹭志愿队的早班有几人、何时交接？",
+      "retrievalEvidenceMs": 1.372625,
+      "retrievalQuestion": "白鹭志愿队的早班有几人、何时交接？",
+      "status": "completed",
+      "terms": [
+        "白鹭",
+        "志愿",
+        "志愿队",
+        "早班",
+        "有",
+        "几人",
+        "何时",
+        "交接"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D08-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/08-白鹭志愿队.md",
+          "资料/11-折页出版小组.md",
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "白鹭志愿队急救包由谁核对？",
+      "retrievalEvidenceMs": 1.6681249999999999,
+      "retrievalQuestion": "白鹭志愿队急救包由谁核对？",
+      "status": "completed",
+      "terms": [
+        "白鹭",
+        "志愿",
+        "志愿队",
+        "急救",
+        "急救包",
+        "由",
+        "谁",
+        "核对"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D08-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/08-白鹭志愿队.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "白鹭志愿队临时请假需要提前多久说明？",
+      "retrievalEvidenceMs": 4.8561250000000005,
+      "retrievalQuestion": "白鹭志愿队临时请假需要提前多久说明？",
+      "status": "completed",
+      "terms": [
+        "白鹭",
+        "志愿",
+        "志愿队",
+        "临时",
+        "请假",
+        "需要",
+        "提前",
+        "多久",
+        "说明"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D08-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/08-白鹭志愿队.md",
+          "资料/18-银杉共享工作室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比白鹭志愿队的2026年与2025年服务时长，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.429625,
+      "retrievalQuestion": "白鹭志愿队的2026年与2025年服务时长，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "白鹭",
+        "志愿",
+        "志愿队",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "服务",
+        "时",
+        "长",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D08-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/08-白鹭志愿队.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "白鹭志愿队在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.477459,
+      "retrievalQuestion": "白鹭志愿队在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "白鹭",
+        "志愿",
+        "志愿队",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D09-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/09-山橙木工坊.md",
+          "资料/17-远汀培训营.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "山橙木工坊的初学者课程多长？",
+      "retrievalEvidenceMs": 1.732875,
+      "retrievalQuestion": "山橙木工坊的初学者课程多长？",
+      "status": "completed",
+      "terms": [
+        "山橙",
+        "木工",
+        "坊",
+        "初学",
+        "学者",
+        "初学者",
+        "课程",
+        "多长"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D09-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/09-山橙木工坊.md",
+          "资料/05-夏禾食堂.md",
+          "资料/07-晨岚观测台.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "山橙木工坊使用砂轮前必须完成什么？",
+      "retrievalEvidenceMs": 2.4858749999999996,
+      "retrievalQuestion": "山橙木工坊使用砂轮前必须完成什么？",
+      "status": "completed",
+      "terms": [
+        "山橙",
+        "木工",
+        "坊",
+        "使用",
+        "砂轮",
+        "前",
+        "必须",
+        "完成"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D09-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/09-山橙木工坊.md",
+          "资料/12-松塔山居.md",
+          "资料/05-夏禾食堂.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "山橙木工坊的工具借出怎样登记？",
+      "retrievalEvidenceMs": 2.127959,
+      "retrievalQuestion": "山橙木工坊的工具借出怎样登记？",
+      "status": "completed",
+      "terms": [
+        "山橙",
+        "木工",
+        "坊",
+        "工具",
+        "借出",
+        "怎样",
+        "登记"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D09-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/09-山橙木工坊.md",
+          "资料/14-池影电影社.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比山橙木工坊的2026年与2025年课程场次，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.340958,
+      "retrievalQuestion": "山橙木工坊的2026年与2025年课程场次，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "山橙",
+        "木工",
+        "坊",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "课程",
+        "场次",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D09-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/09-山橙木工坊.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "山橙木工坊在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.514708,
+      "retrievalQuestion": "山橙木工坊在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "山橙",
+        "木工",
+        "坊",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D10-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/10-光栎图书角.md",
+          "资料/18-银杉共享工作室.md",
+          "资料/14-池影电影社.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "光栎图书角周末的开放时段是什么？",
+      "retrievalEvidenceMs": 1.726834,
+      "retrievalQuestion": "光栎图书角周末的开放时段是什么？",
+      "status": "completed",
+      "terms": [
+        "光栎",
+        "图书",
+        "角",
+        "周末",
+        "开放",
+        "时段"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D10-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 4,
+        "topDocuments": [
+          "资料/10-光栎图书角.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "光栎图书角新书如何编码？",
+      "retrievalEvidenceMs": 1.3545829999999999,
+      "retrievalQuestion": "光栎图书角新书如何编码？",
+      "status": "completed",
+      "terms": [
+        "光栎",
+        "图书",
+        "角",
+        "新书",
+        "编码"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D10-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/10-光栎图书角.md",
+          "资料/09-山橙木工坊.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "光栎图书角逾期归还有罚款吗？",
+      "retrievalEvidenceMs": 1.479833,
+      "retrievalQuestion": "光栎图书角逾期归还有罚款吗？",
+      "status": "completed",
+      "terms": [
+        "光栎",
+        "图书",
+        "角",
+        "逾期",
+        "归还",
+        "有",
+        "罚款"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D10-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/10-光栎图书角.md",
+          "资料/01-林岸读书会.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比光栎图书角的2026年与2025年新书册数，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.431625,
+      "retrievalQuestion": "光栎图书角的2026年与2025年新书册数，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "光栎",
+        "图书",
+        "角",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "新书",
+        "册数",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D10-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/10-光栎图书角.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "光栎图书角在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.491833,
+      "retrievalQuestion": "光栎图书角在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "光栎",
+        "图书",
+        "角",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D11-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/11-折页出版小组.md",
+          "资料/17-远汀培训营.md",
+          "资料/09-山橙木工坊.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "折页出版小组的二校由谁完成？",
+      "retrievalEvidenceMs": 1.6785420000000002,
+      "retrievalQuestion": "折页出版小组的二校由谁完成？",
+      "status": "completed",
+      "terms": [
+        "折页",
+        "出版",
+        "小组",
+        "二校",
+        "由",
+        "谁",
+        "完成"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D11-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/11-折页出版小组.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "折页出版小组封面何时锁版？",
+      "retrievalEvidenceMs": 1.285542,
+      "retrievalQuestion": "折页出版小组封面何时锁版？",
+      "status": "completed",
+      "terms": [
+        "折页",
+        "出版",
+        "小组",
+        "封面",
+        "何时",
+        "锁版"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D11-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/11-折页出版小组.md",
+          "资料/04-栖墨展厅.md",
+          "资料/06-浮桥档案馆.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "折页出版小组参考文献编号改动怎样处理？",
+      "retrievalEvidenceMs": 1.88825,
+      "retrievalQuestion": "折页出版小组参考文献编号改动怎样处理？",
+      "status": "completed",
+      "terms": [
+        "折页",
+        "出版",
+        "小组",
+        "参考",
+        "文献",
+        "参考文献",
+        "编号",
+        "改动",
+        "怎样",
+        "处理"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D11-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比折页出版小组的2026年与2025年校对页数，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.545041000000001,
+      "retrievalQuestion": "折页出版小组的2026年与2025年校对页数，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "折页",
+        "出版",
+        "小组",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "校对",
+        "页数",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D11-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "折页出版小组在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.547458,
+      "retrievalQuestion": "折页出版小组在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "折页",
+        "出版",
+        "小组",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D12-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/12-松塔山居.md",
+          "资料/17-远汀培训营.md",
+          "资料/03-青屿骑行.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "松塔山居办理退房的最晚时间是什么？",
+      "retrievalEvidenceMs": 1.570083,
+      "retrievalQuestion": "松塔山居办理退房的最晚时间是什么？",
+      "status": "completed",
+      "terms": [
+        "松",
+        "塔山",
+        "居",
+        "办理",
+        "退房",
+        "最晚",
+        "时间"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D12-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/12-松塔山居.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "松塔山居无障碍房间怎样预留？",
+      "retrievalEvidenceMs": 1.338042,
+      "retrievalQuestion": "松塔山居无障碍房间怎样预留？",
+      "status": "completed",
+      "terms": [
+        "松",
+        "塔山",
+        "居",
+        "障碍",
+        "无障碍",
+        "房间",
+        "怎样",
+        "预留"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D12-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/12-松塔山居.md",
+          "资料/03-青屿骑行.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "松塔山居遗失物品保管多长时间？",
+      "retrievalEvidenceMs": 1.46475,
+      "retrievalQuestion": "松塔山居遗失物品保管多长时间？",
+      "status": "completed",
+      "terms": [
+        "松",
+        "塔山",
+        "居",
+        "遗失",
+        "物品",
+        "保管",
+        "多长",
+        "时间",
+        "长时间",
+        "多长时间"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D12-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/12-松塔山居.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比松塔山居的2026年与2025年入住间夜，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.442917,
+      "retrievalQuestion": "松塔山居的2026年与2025年入住间夜，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "松",
+        "塔山",
+        "居",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "入住",
+        "间夜",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D12-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/12-松塔山居.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "松塔山居在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.487749999999999,
+      "retrievalQuestion": "松塔山居在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "松",
+        "塔山",
+        "居",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D13-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/13-云岫步道.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "云岫步道的主线全长多少公里？",
+      "retrievalEvidenceMs": 1.337708,
+      "retrievalQuestion": "云岫步道的主线全长多少公里？",
+      "status": "completed",
+      "terms": [
+        "云岫步",
+        "道",
+        "主线",
+        "全长",
+        "公里"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D13-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/13-云岫步道.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "云岫步道的北段什么时候关闭？",
+      "retrievalEvidenceMs": 1.3236249999999998,
+      "retrievalQuestion": "云岫步道的北段什么时候关闭？",
+      "status": "completed",
+      "terms": [
+        "云岫步",
+        "道",
+        "北段",
+        "时候",
+        "关闭"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D13-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/13-云岫步道.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "云岫步道遇到落石区域怎样处理？",
+      "retrievalEvidenceMs": 1.2885,
+      "retrievalQuestion": "云岫步道遇到落石区域怎样处理？",
+      "status": "completed",
+      "terms": [
+        "云岫步",
+        "道",
+        "遇到",
+        "落石",
+        "区域",
+        "怎样",
+        "处理"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D13-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/13-云岫步道.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比云岫步道的2026年与2025年巡护里程，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.457749999999999,
+      "retrievalQuestion": "云岫步道的2026年与2025年巡护里程，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "云岫步",
+        "道",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "巡护",
+        "里程",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D13-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/13-云岫步道.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "云岫步道在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.469499999999999,
+      "retrievalQuestion": "云岫步道在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "云岫步",
+        "道",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D14-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/14-池影电影社.md",
+          "资料/04-栖墨展厅.md",
+          "资料/08-白鹭志愿队.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "池影电影社放映前多久可以入场？",
+      "retrievalEvidenceMs": 2.005,
+      "retrievalQuestion": "池影电影社放映前多久可以入场？",
+      "status": "completed",
+      "terms": [
+        "池影",
+        "电影",
+        "社",
+        "放映",
+        "前",
+        "多久",
+        "入场"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D14-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/14-池影电影社.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "池影电影社如何处理未经许可的录屏？",
+      "retrievalEvidenceMs": 1.335791,
+      "retrievalQuestion": "池影电影社如何处理未经许可的录屏？",
+      "status": "completed",
+      "terms": [
+        "池影",
+        "电影",
+        "社",
+        "处理",
+        "未经",
+        "许可",
+        "未经许可",
+        "录屏"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D14-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/14-池影电影社.md",
+          "资料/12-松塔山居.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "池影电影社映后交流有多长？",
+      "retrievalEvidenceMs": 2.036667,
+      "retrievalQuestion": "池影电影社映后交流有多长？",
+      "status": "completed",
+      "terms": [
+        "池影",
+        "电影",
+        "社映",
+        "后",
+        "交流",
+        "有",
+        "多长"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D14-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/14-池影电影社.md",
+          "资料/09-山橙木工坊.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比池影电影社的2026年与2025年放映场次，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.453084,
+      "retrievalQuestion": "池影电影社的2026年与2025年放映场次，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "池影",
+        "电影",
+        "社的",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "放映",
+        "场次",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D14-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/14-池影电影社.md",
+          "资料/02-星渡温室.md",
+          "资料/03-青屿骑行.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "池影电影社在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.7012920000000005,
+      "retrievalQuestion": "池影电影社在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "池影",
+        "电影",
+        "社在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D15-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/15-月衡社区议事会.md",
+          "资料/03-青屿骑行.md",
+          "资料/05-夏禾食堂.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "月衡社区议事会提案何时截止提交？",
+      "retrievalEvidenceMs": 1.7107080000000001,
+      "retrievalQuestion": "月衡社区议事会提案何时截止提交？",
+      "status": "completed",
+      "terms": [
+        "月衡",
+        "社区",
+        "议事",
+        "议事会",
+        "提案",
+        "何时",
+        "截止",
+        "提交"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D15-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/15-月衡社区议事会.md",
+          "资料/11-折页出版小组.md",
+          "资料/19-禾川样品仓.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "月衡社区议事会表决通过需满足什么条件？",
+      "retrievalEvidenceMs": 1.663084,
+      "retrievalQuestion": "月衡社区议事会表决通过需满足什么条件？",
+      "status": "completed",
+      "terms": [
+        "月衡",
+        "社区",
+        "议事",
+        "议事会",
+        "表决",
+        "通过",
+        "需",
+        "满足",
+        "条件"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D15-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/15-月衡社区议事会.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "月衡社区议事会会议纪要何时公开？",
+      "retrievalEvidenceMs": 1.46025,
+      "retrievalQuestion": "月衡社区议事会会议纪要何时公开？",
+      "status": "completed",
+      "terms": [
+        "月衡",
+        "社区",
+        "议事",
+        "议事会",
+        "会议",
+        "纪要",
+        "会议纪要",
+        "何时",
+        "公开"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D15-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 3,
+        "topDocuments": [
+          "资料/15-月衡社区议事会.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比月衡社区议事会的2026年与2025年受理提案数，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.648208,
+      "retrievalQuestion": "月衡社区议事会的2026年与2025年受理提案数，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "月衡",
+        "社区",
+        "议事",
+        "议事会",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "受理",
+        "提案",
+        "数",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D15-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/15-月衡社区议事会.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "月衡社区议事会在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.753625,
+      "retrievalQuestion": "月衡社区议事会在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "月衡",
+        "社区",
+        "议事",
+        "议事会",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D16-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/16-石榴种子库.md",
+          "资料/04-栖墨展厅.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "石榴种子库干燥柜的湿度上限是多少？",
+      "retrievalEvidenceMs": 1.716041,
+      "retrievalQuestion": "石榴种子库干燥柜的湿度上限是多少？",
+      "status": "completed",
+      "terms": [
+        "石榴",
+        "种子",
+        "库",
+        "干燥",
+        "柜",
+        "湿度",
+        "上限"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D16-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/16-石榴种子库.md",
+          "资料/01-林岸读书会.md",
+          "资料/07-晨岚观测台.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "石榴种子库种子活力多久抽查一次？",
+      "retrievalEvidenceMs": 1.855166,
+      "retrievalQuestion": "石榴种子库种子活力多久抽查一次？",
+      "status": "completed",
+      "terms": [
+        "石榴",
+        "种子",
+        "库",
+        "活力",
+        "种子活力",
+        "多久",
+        "抽查",
+        "一次"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D16-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/16-石榴种子库.md",
+          "资料/12-松塔山居.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "石榴种子库取样后如何归档？",
+      "retrievalEvidenceMs": 1.9152500000000001,
+      "retrievalQuestion": "石榴种子库取样后如何归档？",
+      "status": "completed",
+      "terms": [
+        "石榴",
+        "种子",
+        "库",
+        "取样",
+        "后",
+        "归档"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D16-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/16-石榴种子库.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比石榴种子库的2026年与2025年入库批次数，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.657667,
+      "retrievalQuestion": "石榴种子库的2026年与2025年入库批次数，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "石榴",
+        "种子",
+        "库",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "入库",
+        "批",
+        "次数",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D16-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/16-石榴种子库.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "石榴种子库在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.516916999999999,
+      "retrievalQuestion": "石榴种子库在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "石榴",
+        "种子",
+        "库",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D17-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/17-远汀培训营.md",
+          "资料/09-山橙木工坊.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "远汀培训营完成课程需要多少出勤率？",
+      "retrievalEvidenceMs": 2.430833,
+      "retrievalQuestion": "远汀培训营完成课程需要多少出勤率？",
+      "status": "completed",
+      "terms": [
+        "远汀",
+        "培训",
+        "营",
+        "完成",
+        "课程",
+        "需要",
+        "出勤",
+        "出勤率"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D17-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/17-远汀培训营.md",
+          "资料/18-银杉共享工作室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "远汀培训营补交作业最晚可延迟几天？",
+      "retrievalEvidenceMs": 1.583125,
+      "retrievalQuestion": "远汀培训营补交作业最晚可延迟几天？",
+      "status": "completed",
+      "terms": [
+        "远汀",
+        "培训",
+        "营",
+        "补交",
+        "作业",
+        "最晚",
+        "可",
+        "延迟",
+        "几天"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D17-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/17-远汀培训营.md",
+          "资料/09-山橙木工坊.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "远汀培训营如何申请课程回放？",
+      "retrievalEvidenceMs": 2.0820830000000004,
+      "retrievalQuestion": "远汀培训营如何申请课程回放？",
+      "status": "completed",
+      "terms": [
+        "远汀",
+        "培训",
+        "营",
+        "申请",
+        "课程",
+        "回放"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D17-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/17-远汀培训营.md",
+          "资料/03-青屿骑行.md",
+          "资料/04-栖墨展厅.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比远汀培训营的2026年与2025年结课人数，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.3465,
+      "retrievalQuestion": "远汀培训营的2026年与2025年结课人数，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "远汀",
+        "培训",
+        "营",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "结课",
+        "人数",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D17-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/17-远汀培训营.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "远汀培训营在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.559333,
+      "retrievalQuestion": "远汀培训营在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "远汀",
+        "培训",
+        "营",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D18-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/18-银杉共享工作室.md",
+          "资料/09-山橙木工坊.md",
+          "资料/05-夏禾食堂.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "银杉共享工作室每次最长能预订多久？",
+      "retrievalEvidenceMs": 1.80975,
+      "retrievalQuestion": "银杉共享工作室每次最长能预订多久？",
+      "status": "completed",
+      "terms": [
+        "银杉",
+        "共享",
+        "工作",
+        "工作室",
+        "每次",
+        "最长",
+        "能",
+        "预订",
+        "多久"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D18-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/18-银杉共享工作室.md",
+          "资料/10-光栎图书角.md",
+          "资料/03-青屿骑行.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "银杉共享工作室晚间安静时段从几点开始？",
+      "retrievalEvidenceMs": 2.466417,
+      "retrievalQuestion": "银杉共享工作室晚间安静时段从几点开始？",
+      "status": "completed",
+      "terms": [
+        "银杉",
+        "共享",
+        "工作",
+        "工作室",
+        "晚间",
+        "安静",
+        "时段",
+        "从",
+        "几点",
+        "开始"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D18-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 5,
+        "topDocuments": [
+          "资料/18-银杉共享工作室.md",
+          "资料/05-夏禾食堂.md",
+          "资料/15-月衡社区议事会.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "银杉共享工作室怎么解除未到场预订？",
+      "retrievalEvidenceMs": 5.261042,
+      "retrievalQuestion": "银杉共享工作室怎么解除未到场预订？",
+      "status": "completed",
+      "terms": [
+        "银杉",
+        "共享",
+        "工作",
+        "工作室",
+        "解除",
+        "未",
+        "到场",
+        "预订"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D18-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/18-银杉共享工作室.md",
+          "资料/08-白鹭志愿队.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比银杉共享工作室的2026年与2025年预订时长，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 9.385333,
+      "retrievalQuestion": "银杉共享工作室的2026年与2025年预订时长，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "银杉",
+        "共享",
+        "工作",
+        "工作室",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "预订",
+        "时",
+        "长",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D18-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/18-银杉共享工作室.md",
+          "资料/15-月衡社区议事会.md",
+          "资料/11-折页出版小组.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "银杉共享工作室在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 7.778833,
+      "retrievalQuestion": "银杉共享工作室在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "银杉",
+        "共享",
+        "工作",
+        "工作室",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D19-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/19-禾川样品仓.md",
+          "资料/10-光栎图书角.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "禾川样品仓默认采用什么出库顺序？",
+      "retrievalEvidenceMs": 1.602125,
+      "retrievalQuestion": "禾川样品仓默认采用什么出库顺序？",
+      "status": "completed",
+      "terms": [
+        "禾川",
+        "样品",
+        "仓",
+        "默认",
+        "采用",
+        "出库",
+        "顺序"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D19-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/19-禾川样品仓.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "禾川样品仓冷藏区的温度范围是多少？",
+      "retrievalEvidenceMs": 5.19625,
+      "retrievalQuestion": "禾川样品仓冷藏区的温度范围是多少？",
+      "status": "completed",
+      "terms": [
+        "禾川",
+        "样品",
+        "仓",
+        "冷藏",
+        "区",
+        "温度",
+        "范围"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D19-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/19-禾川样品仓.md",
+          "资料/14-池影电影社.md",
+          "资料/13-云岫步道.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "禾川样品仓发现包装破损怎样处理？",
+      "retrievalEvidenceMs": 1.726417,
+      "retrievalQuestion": "禾川样品仓发现包装破损怎样处理？",
+      "status": "completed",
+      "terms": [
+        "禾川",
+        "样品",
+        "仓",
+        "发现",
+        "包装",
+        "破损",
+        "怎样",
+        "处理"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D19-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 2,
+        "topDocuments": [
+          "资料/19-禾川样品仓.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比禾川样品仓的2026年与2025年出库箱数，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 10.085291999999999,
+      "retrievalQuestion": "禾川样品仓的2026年与2025年出库箱数，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "禾川",
+        "样品",
+        "仓",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "出库",
+        "箱数",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D19-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/19-禾川样品仓.md",
+          "资料/11-折页出版小组.md",
+          "资料/20-雨巷咖啡实验室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "禾川样品仓在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 8.526041,
+      "retrievalQuestion": "禾川样品仓在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "禾川",
+        "样品",
+        "仓",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D20-Q1",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/09-山橙木工坊.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "雨巷咖啡实验室手冲课程几点开始？",
+      "retrievalEvidenceMs": 3.223125,
+      "retrievalQuestion": "雨巷咖啡实验室手冲课程几点开始？",
+      "status": "completed",
+      "terms": [
+        "雨巷",
+        "咖啡",
+        "实验",
+        "实验室",
+        "手冲",
+        "课程",
+        "几点",
+        "开始"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D20-Q2",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/16-石榴种子库.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "雨巷咖啡实验室烘焙后多久进行第一次杯测？",
+      "retrievalEvidenceMs": 2.87175,
+      "retrievalQuestion": "雨巷咖啡实验室烘焙后多久进行第一次杯测？",
+      "status": "completed",
+      "terms": [
+        "雨巷",
+        "咖啡",
+        "实验",
+        "实验室",
+        "烘焙",
+        "后",
+        "多久",
+        "进行",
+        "第一",
+        "一次",
+        "第一次",
+        "杯测"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D20-Q3",
+      "kind": "factual",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/16-石榴种子库.md",
+          "资料/06-浮桥档案馆.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "雨巷咖啡实验室豆袋怎样标注批次？",
+      "retrievalEvidenceMs": 1.846625,
+      "retrievalQuestion": "雨巷咖啡实验室豆袋怎样标注批次？",
+      "status": "completed",
+      "terms": [
+        "雨巷",
+        "咖啡",
+        "实验",
+        "实验室",
+        "豆袋",
+        "怎样",
+        "标注",
+        "批次"
+      ]
+    },
+    {
+      "answerable": true,
+      "generation": "not_run",
+      "id": "D20-Q4",
+      "kind": "chart",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 3,
+        "topDocuments": [
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "请用柱状图对比雨巷咖啡实验室的2026年与2025年咖啡豆用量，季度和单位都需要标明。",
+      "retrievalEvidenceMs": 10.581166,
+      "retrievalQuestion": "雨巷咖啡实验室的2026年与2025年咖啡豆用量，季度和单位都需要标明",
+      "status": "completed",
+      "terms": [
+        "雨巷",
+        "咖啡",
+        "实验",
+        "实验室",
+        "2026",
+        "年",
+        "与",
+        "2025",
+        "咖啡豆",
+        "用量",
+        "季度",
+        "和",
+        "单位",
+        "都",
+        "需要",
+        "标明"
+      ]
+    },
+    {
+      "answerable": false,
+      "generation": "not_run",
+      "id": "D20-Q5",
+      "kind": "unsupported",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "correctRefusal": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": null,
+        "goldEvidenceInContext": false,
+        "noContext": true,
+        "recallAt5": false,
+        "reciprocalRankAt10": 0.0,
+        "sourceCount": 0,
+        "topDocuments": [
+          "资料/20-雨巷咖啡实验室.md",
+          "资料/11-折页出版小组.md",
+          "资料/02-星渡温室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "question": "雨巷咖啡实验室在2027年新的收费标准具体是多少？",
+      "retrievalEvidenceMs": 8.320792,
+      "retrievalQuestion": "雨巷咖啡实验室在2027年新的收费标准具体是多少？",
+      "status": "completed",
+      "terms": [
+        "雨巷",
+        "咖啡",
+        "实验",
+        "实验室",
+        "在",
+        "2027",
+        "年",
+        "新",
+        "收费",
+        "标准",
+        "具体"
+      ]
+    }
+  ],
+  "summary": {
+    "allTargetsMet": false,
+    "answerable": 80,
+    "completed": 100,
+    "goldEvidenceContextRate": 0.825,
+    "latencyScope": "Query vectors are batch-precomputed; this is local retrieval/context + rerank only, NOT online total latency",
+    "mrrAt10": 1.0,
+    "recallAt5": 1.0,
+    "retrievalEvidenceP50ms": 2.4858749999999996,
+    "retrievalEvidenceP95ms": 9.648208,
+    "unsupported": 20,
+    "unsupportedEvidencePositiveRate": 0.0
+  },
+  "targets": {
+    "goldEvidenceContextRateMin": 0.85,
+    "mrrAt10Min": 0.8,
+    "recallAt5Min": 0.9,
+    "unsupportedEvidencePositiveMax": 0.1
+  },
+  "version": "0.6.5"
+}

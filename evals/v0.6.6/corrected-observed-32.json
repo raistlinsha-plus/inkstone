@@ -1,0 +1,850 @@
+{
+  "version": "inkstone-v0.6.6-corrected-observed-32-1",
+  "provenance": "Observed v0.6.5 cases with only N21/N23 gold facts corrected according to published ERRATA. Development regression, never new blind evidence. Original v0.6.5 data and reports unchanged.",
+  "documents": [
+    {
+      "path": "新资料/海棠修复室.md",
+      "text": "# 海棠修复室操作摘录\n\n全部机构与数据为原创虚构样例。\n\n## 现行规则\n\n接收单号为HT-2048，纸页在周二09:20完成登记。\n\n普通纸页修复后静置48小时；带水印纸页静置72小时。\n\n## 修复件数台账\n\n指标：修复件数；单位：件。2026年与2025年分列；缺测不是零。\n\n| 月份 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| 四月 | 12 | 10 |\n| 五月 | 14 | 11 |\n| 六月 | 19 | 16 |\n\n本摘录没有个人联系方式、银行信息或2027年计划。\n"
+    },
+    {
+      "path": "新资料/岩星器材站.md",
+      "text": "# 岩星器材站操作摘录\n\n全部机构与数据为原创虚构样例。\n\n## 现行规则\n\n器材领取在周五16:40截止，超过时点顺延一周。\n\n归还时同时提交电池盒与领用卡；缺任一项先挂起验收。\n\n## 电池回收量台账\n\n指标：电池回收量；单位：盒。2026年与2025年分列；缺测不是零。\n\n| 月份 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| 四月 | 8 | 6 |\n| 五月 | 缺测 | 9 |\n| 六月 | 13 | 12 |\n\n本摘录没有个人联系方式、银行信息或2027年计划。\n"
+    },
+    {
+      "path": "新资料/柳桥排练厅.md",
+      "text": "# 柳桥排练厅操作摘录\n\n全部机构与数据为原创虚构样例。\n\n## 现行规则\n\n主厅预约每次最多110分钟，小厅每次最多70分钟。\n\n扩声设备的音量读数超过65分贝时，值班员先降低主增益。\n\n## 主厅使用时长台账\n\n指标：主厅使用时长；单位：小时。2026年与2025年分列；缺测不是零。\n\n| 月份 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| 四月 | 41 | 38 |\n| 五月 | 46 | 42 |\n| 六月 | 52 | 49 |\n\n本摘录没有个人联系方式、银行信息或2027年计划。\n"
+    },
+    {
+      "path": "新资料/澄湖标本室.md",
+      "text": "# 澄湖标本室操作摘录\n\n全部机构与数据为原创虚构样例。\n\n## 现行规则\n\n批次代码为000728；不得把前导零去掉。\n\n针插标本储存在18至22摄氏度，液浸标本按独立清单保管。\n\n## 完成编目量台账\n\n指标：完成编目量；单位：份。2026年与2025年分列；缺测不是零。\n\n| 月份 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| 四月 | 25 | 21 |\n| 五月 | 29 | 27 |\n| 六月 | 34 | 30 |\n\n本摘录没有个人联系方式、银行信息或2027年计划。\n"
+    },
+    {
+      "path": "新资料/纸鸢配音社.md",
+      "text": "# 纸鸢配音社操作摘录\n\n全部机构与数据为原创虚构样例。\n\n## 现行规则\n\n试音稿在周日20:15收取完毕；正式录音在下周三进行。\n\n录音文件使用48kHz采样率、24bit位深，以WAV保存。\n\n## 录音完成量台账\n\n指标：录音完成量；单位：分钟。2026年与2025年分列；缺测不是零。\n\n| 月份 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| 四月 | 75 | 70 |\n| 五月 | 88 | 81 |\n| 六月 | 91 | 86 |\n\n本摘录没有个人联系方式、银行信息或2027年计划。\n"
+    },
+    {
+      "path": "新资料/蓝砂实验书屋.md",
+      "text": "# 蓝砂实验书屋操作摘录\n\n全部机构与数据为原创虚构样例。\n\n## 现行规则\n\n2025年的闭馆时刻为18:00；2026年现行闭馆时刻改为19:30。\n\n跨馆归还仅限带蓝色标签的图书；红色标签需回原馆。\n\n## 入馆量台账\n\n指标：入馆量；单位：人。2026年与2025年分列；缺测不是零。\n\n| 月份 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| 四月 | 96 | 82 |\n| 五月 | 103 | 94 |\n| 六月 | 119 | 107 |\n\n本摘录没有个人联系方式、银行信息或2027年计划。\n"
+    },
+    {
+      "path": "新资料/南枝织染间.md",
+      "text": "# 南枝织染间操作摘录\n\n全部机构与数据为原创虚构样例。\n\n## 现行规则\n\n染缸每批最多放入7米布料，下一批开始前需清洗缸壁。\n\n未完成色牢度复核的布料挂黄色卡，禁止寄出。\n\n## 完成布料长度台账\n\n指标：完成布料长度；单位：米。2026年与2025年分列；缺测不是零。\n\n| 月份 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| 四月 | 27 | 23 |\n| 五月 | 31 | 29 |\n| 六月 | 38 | 35 |\n\n本摘录没有个人联系方式、银行信息或2027年计划。\n"
+    },
+    {
+      "path": "新资料/向风电台.md",
+      "text": "# 向风电台操作摘录\n\n全部机构与数据为原创虚构样例。\n\n## 现行规则\n\n每期节目长度为22分钟，片尾鸣谢占其中2分钟。\n\n原始采访音轨保留180天；公开剪辑版保留2年。\n\n## 节目上线量台账\n\n指标：节目上线量；单位：期。2026年与2025年分列；缺测不是零。\n\n| 月份 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| 四月 | 4 | 3 |\n| 五月 | 6 | 5 |\n| 六月 | 7 | 6 |\n\n本摘录没有个人联系方式、银行信息或2027年计划。\n"
+    }
+  ],
+  "cases": [
+    {
+      "id": "N01",
+      "split": "new-check",
+      "question": "海棠修复室的接收单号与登记时间是什么？",
+      "expected": "新资料/海棠修复室.md",
+      "answerable": true,
+      "kind": "fact",
+      "goldSources": [
+        {
+          "path": "新资料/海棠修复室.md",
+          "line": 7,
+          "quote": "接收单号为HT-2048，纸页在周二09:20完成登记。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "接收单号为HT-2048，纸页在周二09:20完成登记。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N02",
+      "split": "new-check",
+      "question": "岩星器材站领取截止在何时，超时怎么办？",
+      "expected": "新资料/岩星器材站.md",
+      "answerable": true,
+      "kind": "fact",
+      "goldSources": [
+        {
+          "path": "新资料/岩星器材站.md",
+          "line": 7,
+          "quote": "器材领取在周五16:40截止，超过时点顺延一周。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "器材领取在周五16:40截止，超过时点顺延一周。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N03",
+      "split": "new-check",
+      "question": "柳桥排练厅主厅和小厅分别能预约多长时间？",
+      "expected": "新资料/柳桥排练厅.md",
+      "answerable": true,
+      "kind": "fact",
+      "goldSources": [
+        {
+          "path": "新资料/柳桥排练厅.md",
+          "line": 7,
+          "quote": "主厅预约每次最多110分钟，小厅每次最多70分钟。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "主厅预约每次最多110分钟，小厅每次最多70分钟。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N04",
+      "split": "new-check",
+      "question": "澄湖标本室的批次代码是什么，前导零能否删除？",
+      "expected": "新资料/澄湖标本室.md",
+      "answerable": true,
+      "kind": "fact",
+      "goldSources": [
+        {
+          "path": "新资料/澄湖标本室.md",
+          "line": 7,
+          "quote": "批次代码为000728；不得把前导零去掉。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "批次代码为000728；不得把前导零去掉。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N05",
+      "split": "new-check",
+      "question": "纸鸢配音社要求的采样率、位深和保存格式是什么？",
+      "expected": "新资料/纸鸢配音社.md",
+      "answerable": true,
+      "kind": "fact",
+      "goldSources": [
+        {
+          "path": "新资料/纸鸢配音社.md",
+          "line": 9,
+          "quote": "录音文件使用48kHz采样率、24bit位深，以WAV保存。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "录音文件使用48kHz采样率、24bit位深，以WAV保存。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N06",
+      "split": "new-check",
+      "question": "蓝砂实验书屋2026年现行闭馆时刻是什么？不要用2025年的安排。",
+      "expected": "新资料/蓝砂实验书屋.md",
+      "answerable": true,
+      "kind": "fact",
+      "goldSources": [
+        {
+          "path": "新资料/蓝砂实验书屋.md",
+          "line": 7,
+          "quote": "2025年的闭馆时刻为18:00；2026年现行闭馆时刻改为19:30。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "2025年的闭馆时刻为18:00；2026年现行闭馆时刻改为19:30。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N07",
+      "split": "new-check",
+      "question": "南枝织染间每批染缸布料上限多少米？下一批前要做什么？",
+      "expected": "新资料/南枝织染间.md",
+      "answerable": true,
+      "kind": "fact",
+      "goldSources": [
+        {
+          "path": "新资料/南枝织染间.md",
+          "line": 7,
+          "quote": "染缸每批最多放入7米布料，下一批开始前需清洗缸壁。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "染缸每批最多放入7米布料，下一批开始前需清洗缸壁。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N08",
+      "split": "new-check",
+      "question": "向风电台原始采访音轨与公开剪辑版各保留多久？",
+      "expected": "新资料/向风电台.md",
+      "answerable": true,
+      "kind": "fact",
+      "goldSources": [
+        {
+          "path": "新资料/向风电台.md",
+          "line": 9,
+          "quote": "原始采访音轨保留180天；公开剪辑版保留2年。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "原始采访音轨保留180天；公开剪辑版保留2年。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N09",
+      "split": "new-check",
+      "question": "海棠修复室普通纸页和带水印纸页的静置时长各是多少？",
+      "expected": "新资料/海棠修复室.md",
+      "answerable": true,
+      "kind": "fact",
+      "goldSources": [
+        {
+          "path": "新资料/海棠修复室.md",
+          "line": 9,
+          "quote": "普通纸页修复后静置48小时；带水印纸页静置72小时。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "普通纸页修复后静置48小时；带水印纸页静置72小时。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N10",
+      "split": "new-check",
+      "question": "岩星器材站归还时缺了领用卡会怎样？",
+      "expected": "新资料/岩星器材站.md",
+      "answerable": true,
+      "kind": "fact",
+      "goldSources": [
+        {
+          "path": "新资料/岩星器材站.md",
+          "line": 9,
+          "quote": "归还时同时提交电池盒与领用卡；缺任一项先挂起验收。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "归还时同时提交电池盒与领用卡；缺任一项先挂起验收。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N11",
+      "split": "new-check",
+      "question": "柳桥排练厅扩声读数超过65分贝时先做什么？",
+      "expected": "新资料/柳桥排练厅.md",
+      "answerable": true,
+      "kind": "fact",
+      "goldSources": [
+        {
+          "path": "新资料/柳桥排练厅.md",
+          "line": 9,
+          "quote": "扩声设备的音量读数超过65分贝时，值班员先降低主增益。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "扩声设备的音量读数超过65分贝时，值班员先降低主增益。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N12",
+      "split": "new-check",
+      "question": "澄湖标本室针插标本储存温度是多少？液浸标本是否用同一规则？",
+      "expected": "新资料/澄湖标本室.md",
+      "answerable": true,
+      "kind": "fact",
+      "goldSources": [
+        {
+          "path": "新资料/澄湖标本室.md",
+          "line": 9,
+          "quote": "针插标本储存在18至22摄氏度，液浸标本按独立清单保管。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "针插标本储存在18至22摄氏度，液浸标本按独立清单保管。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N13",
+      "split": "new-check",
+      "question": "南枝织染间黄色卡代表什么，能否寄出？",
+      "expected": "新资料/南枝织染间.md",
+      "answerable": true,
+      "kind": "fact",
+      "goldSources": [
+        {
+          "path": "新资料/南枝织染间.md",
+          "line": 9,
+          "quote": "未完成色牢度复核的布料挂黄色卡，禁止寄出。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "未完成色牢度复核的布料挂黄色卡，禁止寄出。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N14",
+      "split": "new-check",
+      "question": "向风电台每期节目长度及片尾鸣谢时长分别多少？",
+      "expected": "新资料/向风电台.md",
+      "answerable": true,
+      "kind": "fact",
+      "goldSources": [
+        {
+          "path": "新资料/向风电台.md",
+          "line": 7,
+          "quote": "每期节目长度为22分钟，片尾鸣谢占其中2分钟。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "每期节目长度为22分钟，片尾鸣谢占其中2分钟。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N15",
+      "split": "new-check",
+      "question": "请用 chart 柱状图展示海棠修复室四月、五月、六月的修复件数，对比2026年和2025年，保留单位与缺测。",
+      "expected": "新资料/海棠修复室.md",
+      "answerable": true,
+      "kind": "chart",
+      "goldSources": [
+        {
+          "path": "新资料/海棠修复室.md",
+          "line": 13,
+          "quote": "指标：修复件数；单位：件。2026年与2025年分列；缺测不是零。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "指标：修复件数；单位：件。2026年与2025年分列；缺测不是零。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": {
+          "months": [
+            "四月",
+            "五月",
+            "六月"
+          ],
+          "series": {
+            "2026年": [
+              12,
+              14,
+              19
+            ],
+            "2025年": [
+              10,
+              11,
+              16
+            ]
+          },
+          "unit": "件"
+        }
+      }
+    },
+    {
+      "id": "N16",
+      "split": "new-check",
+      "question": "请用 chart 柱状图展示岩星器材站四月、五月、六月的电池回收量，对比2026年和2025年，保留单位与缺测。",
+      "expected": "新资料/岩星器材站.md",
+      "answerable": true,
+      "kind": "chart",
+      "goldSources": [
+        {
+          "path": "新资料/岩星器材站.md",
+          "line": 13,
+          "quote": "指标：电池回收量；单位：盒。2026年与2025年分列；缺测不是零。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "指标：电池回收量；单位：盒。2026年与2025年分列；缺测不是零。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": {
+          "months": [
+            "四月",
+            "五月",
+            "六月"
+          ],
+          "series": {
+            "2026年": [
+              8,
+              null,
+              13
+            ],
+            "2025年": [
+              6,
+              9,
+              12
+            ]
+          },
+          "unit": "盒"
+        }
+      }
+    },
+    {
+      "id": "N17",
+      "split": "new-check",
+      "question": "请用 chart 柱状图展示柳桥排练厅四月、五月、六月的主厅使用时长，对比2026年和2025年，保留单位与缺测。",
+      "expected": "新资料/柳桥排练厅.md",
+      "answerable": true,
+      "kind": "chart",
+      "goldSources": [
+        {
+          "path": "新资料/柳桥排练厅.md",
+          "line": 13,
+          "quote": "指标：主厅使用时长；单位：小时。2026年与2025年分列；缺测不是零。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "指标：主厅使用时长；单位：小时。2026年与2025年分列；缺测不是零。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": {
+          "months": [
+            "四月",
+            "五月",
+            "六月"
+          ],
+          "series": {
+            "2026年": [
+              41,
+              46,
+              52
+            ],
+            "2025年": [
+              38,
+              42,
+              49
+            ]
+          },
+          "unit": "小时"
+        }
+      }
+    },
+    {
+      "id": "N18",
+      "split": "new-check",
+      "question": "请用 chart 柱状图展示纸鸢配音社四月、五月、六月的录音完成量，对比2026年和2025年，保留单位与缺测。",
+      "expected": "新资料/纸鸢配音社.md",
+      "answerable": true,
+      "kind": "chart",
+      "goldSources": [
+        {
+          "path": "新资料/纸鸢配音社.md",
+          "line": 13,
+          "quote": "指标：录音完成量；单位：分钟。2026年与2025年分列；缺测不是零。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "指标：录音完成量；单位：分钟。2026年与2025年分列；缺测不是零。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": {
+          "months": [
+            "四月",
+            "五月",
+            "六月"
+          ],
+          "series": {
+            "2026年": [
+              75,
+              88,
+              91
+            ],
+            "2025年": [
+              70,
+              81,
+              86
+            ]
+          },
+          "unit": "分钟"
+        }
+      }
+    },
+    {
+      "id": "N19",
+      "split": "new-check",
+      "question": "请用 chart 柱状图展示蓝砂实验书屋四月、五月、六月的入馆量，对比2026年和2025年，保留单位与缺测。",
+      "expected": "新资料/蓝砂实验书屋.md",
+      "answerable": true,
+      "kind": "chart",
+      "goldSources": [
+        {
+          "path": "新资料/蓝砂实验书屋.md",
+          "line": 13,
+          "quote": "指标：入馆量；单位：人。2026年与2025年分列；缺测不是零。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "指标：入馆量；单位：人。2026年与2025年分列；缺测不是零。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": {
+          "months": [
+            "四月",
+            "五月",
+            "六月"
+          ],
+          "series": {
+            "2026年": [
+              96,
+              103,
+              119
+            ],
+            "2025年": [
+              82,
+              94,
+              107
+            ]
+          },
+          "unit": "人"
+        }
+      }
+    },
+    {
+      "id": "N20",
+      "split": "new-check",
+      "question": "请用 chart 柱状图展示向风电台四月、五月、六月的节目上线量，对比2026年和2025年，保留单位与缺测。",
+      "expected": "新资料/向风电台.md",
+      "answerable": true,
+      "kind": "chart",
+      "goldSources": [
+        {
+          "path": "新资料/向风电台.md",
+          "line": 13,
+          "quote": "指标：节目上线量；单位：期。2026年与2025年分列；缺测不是零。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "指标：节目上线量；单位：期。2026年与2025年分列；缺测不是零。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": {
+          "months": [
+            "四月",
+            "五月",
+            "六月"
+          ],
+          "series": {
+            "2026年": [
+              4,
+              6,
+              7
+            ],
+            "2025年": [
+              3,
+              5,
+              6
+            ]
+          },
+          "unit": "期"
+        }
+      }
+    },
+    {
+      "id": "N21",
+      "split": "new-check",
+      "question": "比较海棠修复室和柳桥排练厅：两处对时长限制的不同规定，分开引用两处资料。",
+      "expected": "新资料/海棠修复室.md",
+      "answerable": true,
+      "kind": "cross-document",
+      "goldSources": [
+        {
+          "path": "新资料/海棠修复室.md",
+          "line": 9,
+          "quote": "普通纸页修复后静置48小时；带水印纸页静置72小时。"
+        },
+        {
+          "path": "新资料/柳桥排练厅.md",
+          "line": 7,
+          "quote": "主厅预约每次最多110分钟，小厅每次最多70分钟。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "普通纸页修复后静置48小时；带水印纸页静置72小时。",
+          "主厅预约每次最多110分钟，小厅每次最多70分钟。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N22",
+      "split": "new-check",
+      "question": "比较岩星器材站和南枝织染间：两处在条件不满足时的处理方式，分开引用两处资料。",
+      "expected": "新资料/岩星器材站.md",
+      "answerable": true,
+      "kind": "cross-document",
+      "goldSources": [
+        {
+          "path": "新资料/岩星器材站.md",
+          "line": 9,
+          "quote": "归还时同时提交电池盒与领用卡；缺任一项先挂起验收。"
+        },
+        {
+          "path": "新资料/南枝织染间.md",
+          "line": 9,
+          "quote": "未完成色牢度复核的布料挂黄色卡，禁止寄出。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "归还时同时提交电池盒与领用卡；缺任一项先挂起验收。",
+          "未完成色牢度复核的布料挂黄色卡，禁止寄出。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N23",
+      "split": "new-check",
+      "question": "比较澄湖标本室和蓝砂实验书屋：两处对特定标识的约束，分开引用两处资料。",
+      "expected": "新资料/澄湖标本室.md",
+      "answerable": true,
+      "kind": "cross-document",
+      "goldSources": [
+        {
+          "path": "新资料/澄湖标本室.md",
+          "line": 7,
+          "quote": "批次代码为000728；不得把前导零去掉。"
+        },
+        {
+          "path": "新资料/蓝砂实验书屋.md",
+          "line": 9,
+          "quote": "跨馆归还仅限带蓝色标签的图书；红色标签需回原馆。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "批次代码为000728；不得把前导零去掉。",
+          "跨馆归还仅限带蓝色标签的图书；红色标签需回原馆。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N24",
+      "split": "new-check",
+      "question": "比较纸鸢配音社和向风电台：两处音频工作所要求的格式或保留时长，分开引用两处资料。",
+      "expected": "新资料/纸鸢配音社.md",
+      "answerable": true,
+      "kind": "cross-document",
+      "goldSources": [
+        {
+          "path": "新资料/纸鸢配音社.md",
+          "line": 9,
+          "quote": "录音文件使用48kHz采样率、24bit位深，以WAV保存。"
+        },
+        {
+          "path": "新资料/向风电台.md",
+          "line": 9,
+          "quote": "原始采访音轨保留180天；公开剪辑版保留2年。"
+        }
+      ],
+      "rubric": {
+        "facts": [
+          "录音文件使用48kHz采样率、24bit位深，以WAV保存。",
+          "原始采访音轨保留180天；公开剪辑版保留2年。"
+        ],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N25",
+      "split": "new-check",
+      "question": "海棠修复室2027年的负责人手机号码是多少？",
+      "expected": null,
+      "answerable": false,
+      "kind": "unsupported",
+      "goldSources": [],
+      "rubric": {
+        "facts": [],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N26",
+      "split": "new-check",
+      "question": "岩星器材站2027年的负责人手机号码是多少？",
+      "expected": null,
+      "answerable": false,
+      "kind": "unsupported",
+      "goldSources": [],
+      "rubric": {
+        "facts": [],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N27",
+      "split": "new-check",
+      "question": "柳桥排练厅2027年的负责人手机号码是多少？",
+      "expected": null,
+      "answerable": false,
+      "kind": "unsupported",
+      "goldSources": [],
+      "rubric": {
+        "facts": [],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N28",
+      "split": "new-check",
+      "question": "澄湖标本室2027年的负责人手机号码是多少？",
+      "expected": null,
+      "answerable": false,
+      "kind": "unsupported",
+      "goldSources": [],
+      "rubric": {
+        "facts": [],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N29",
+      "split": "new-check",
+      "question": "纸鸢配音社2027年的负责人手机号码是多少？",
+      "expected": null,
+      "answerable": false,
+      "kind": "unsupported",
+      "goldSources": [],
+      "rubric": {
+        "facts": [],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N30",
+      "split": "new-check",
+      "question": "蓝砂实验书屋2027年的负责人手机号码是多少？",
+      "expected": null,
+      "answerable": false,
+      "kind": "unsupported",
+      "goldSources": [],
+      "rubric": {
+        "facts": [],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N31",
+      "split": "new-check",
+      "question": "南枝织染间2027年的负责人手机号码是多少？",
+      "expected": null,
+      "answerable": false,
+      "kind": "unsupported",
+      "goldSources": [],
+      "rubric": {
+        "facts": [],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    },
+    {
+      "id": "N32",
+      "split": "new-check",
+      "question": "向风电台2027年的负责人手机号码是多少？",
+      "expected": null,
+      "answerable": false,
+      "kind": "unsupported",
+      "goldSources": [],
+      "rubric": {
+        "facts": [],
+        "citationSupport": "每项事实引用对应当前来源；不能把来源编号当事实核验",
+        "refusal": "未记载的属性明确说明不足，不从相关时段或相邻对象猜测",
+        "chartSemantics": null
+      }
+    }
+  ]
+}

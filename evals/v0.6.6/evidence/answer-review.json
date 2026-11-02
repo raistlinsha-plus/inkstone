@@ -1,0 +1,240 @@
+{
+  "version": 1,
+  "reviews": [
+    {
+      "report": "remote-new-40-1793626996131-932ad041.json",
+      "reviewer": "implementation agent; not independent human review",
+      "cases": [
+        {
+          "id": "P01",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P06",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P11",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": false,
+          "chartSemantics": null,
+          "notes": "Facts supported; redundant commentary cites heading-only source. Fixed and followed up."
+        },
+        {
+          "id": "P13",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P17",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P19",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": false,
+          "chartSemantics": null,
+          "notes": "Facts supported by [1]/[2]; extra heading-only [3]/[4] and leaked structured S IDs in prose. Citation presentation failure retained; fixed and followed up."
+        },
+        {
+          "id": "P23",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": false,
+          "chartSemantics": null,
+          "notes": "Facts supported; redundant heading-only citations retained as first-run defect."
+        },
+        {
+          "id": "P25",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": "checked exact categories, yearly values, unit, missing null and sourceRefs",
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P26",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": "checked exact categories, yearly values, unit, missing null and sourceRefs",
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P29",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": "checked exact categories, yearly values, unit, missing null and sourceRefs",
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P33",
+          "modelCalled": false,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "No evidence; refusal returned locally without chat call."
+        },
+        {
+          "id": "P37",
+          "modelCalled": false,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "No evidence; refusal returned locally without chat call."
+        }
+      ]
+    },
+    {
+      "report": "remote-new-40-1793627779116-098daad3.json",
+      "reviewer": "implementation agent; not independent human review",
+      "cases": [
+        {
+          "id": "P11",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P19",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P23",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        }
+      ]
+    },
+    {
+      "report": "remote-new-40-1793628260326-0d30a017.json",
+      "reviewer": "implementation agent; not independent human review",
+      "cases": [
+        {
+          "id": "P01",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P06",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P11",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P13",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P17",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P19",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P23",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P25",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": "checked exact categories, yearly values, unit, missing null and sourceRefs",
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P26",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": "checked exact categories, yearly values, unit, missing null and sourceRefs",
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P29",
+          "modelCalled": true,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": "checked exact categories, yearly values, unit, missing null and sourceRefs",
+          "notes": "Compared the answer against the supplied current source text; factual conditions, units and citation targets checked."
+        },
+        {
+          "id": "P33",
+          "modelCalled": false,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "No evidence; refusal returned locally without chat call."
+        },
+        {
+          "id": "P37",
+          "modelCalled": false,
+          "factualSupport": true,
+          "citationPresentation": true,
+          "chartSemantics": null,
+          "notes": "No evidence; refusal returned locally without chat call."
+        }
+      ]
+    }
+  ],
+  "limits": "Synthetic same-author cases; reverse pairs and templates reduce diversity. Manual review is not formal semantic proof. First failure remains; follow-up and final are observed retests."
+}

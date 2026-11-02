@@ -1,0 +1,960 @@
+{
+  "authorIndependent": false,
+  "baselinePreviouslyObserved": true,
+  "corpus": "new-40",
+  "corpusHash": "ba0027974f5bb6f97ba2ecece1eebc448b128890038cfce3613e13750951f7e7",
+  "documentIndexEmbeddingMs": 9480,
+  "endpoint": "https://aihubmix.com/v1",
+  "error": null,
+  "keychainAccessedByEvaluator": false,
+  "models": {
+    "chat": "gpt-4.1-mini",
+    "embedding": "text-embedding-3-small",
+    "rerank": "qwen3-reranker-0.6b"
+  },
+  "pipelineHash": "87e39c5f8ed122e52b33e6863cb85eac2d24a68281bb810fded7c552d06b0132",
+  "protocol": {
+    "authorIndependent": false,
+    "candidateBudget": {
+      "displayed": 12,
+      "equalTotalCostComparison": false,
+      "mergedMaximum": 120,
+      "perBranch": 60,
+      "rerankWindow": 40
+    },
+    "corpora": {
+      "corrected-observed-32": "development regression; not new",
+      "new-40": "same-author frozen check; 8 comparisons include 4 reversed pairs; not 8 independent topics"
+    },
+    "frozenBeforeRetrievalChanges": true,
+    "generationCaseIds": [
+      "P01",
+      "P06",
+      "P11",
+      "P13",
+      "P17",
+      "P19",
+      "P23",
+      "P25",
+      "P26",
+      "P29",
+      "P33",
+      "P37"
+    ],
+    "limits": "Synthetic small corpus, same author, template repetition and reverse pairs; no general accuracy or cross-provider claims. Stop without changing targets if budget is exhausted.",
+    "maxHttpAttemptsAcrossRuns": 240,
+    "maxWallSecondsAcrossRuns": 1800,
+    "models": {
+      "chat": "gpt-4.1-mini",
+      "embedding": "text-embedding-3-small",
+      "rerank": "qwen3-reranker-0.6b"
+    },
+    "onlineLatency": "Query embeddings per question, no batch-precomputed query vectors; online end-to-end includes embedding/local retrieval/rerank/context/generation, indexed document embeddings reported separately.",
+    "targets": {
+      "contextEvidenceRate": 0.85,
+      "scopeVersionCitationErrors": 0,
+      "unsupportedAdmissionCount": 0
+    },
+    "version": 1
+  },
+  "queryVectorReusedAcrossSemanticModes": true,
+  "queryVectorsBatchPrecomputed": false,
+  "records": [
+    {
+      "answer": null,
+      "answerable": true,
+      "chartWarnings": null,
+      "finishReason": "not_run",
+      "generationError": null,
+      "generationMs": 0.0,
+      "generationRequested": false,
+      "id": "P11",
+      "kind": "fact",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "首发样例/鹭湾纸艺社.md",
+          "首发样例/荷汀织物室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "modelCalled": false,
+      "onlineTimingScope": "measured query embedding + local retrieval/rerank/context + generation; same query vector reused across hybrid/rerank, no batch precomputation; excludes document indexing and UI rendering",
+      "onlineTotalMs": 8.672374999999999,
+      "queryEmbeddingMs": 0.0,
+      "question": "鹭湾纸艺社的寄出条件规定是什么？",
+      "rejectedChartCount": null,
+      "rerankStatus": "not-requested",
+      "retrievalEvidenceMs": 8.672374999999999,
+      "retrievalQuestion": "鹭湾纸艺社的寄出条件规定是什么？",
+      "rubric": {
+        "constraints": "保留对象、数值、条件与单位，引用当前来源。",
+        "facts": [
+          "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。"
+        ]
+      },
+      "sources": [
+        {
+          "bm25Rank": 2,
+          "bm25Score": -16.267251576331976,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "3b6b9ec88fee361c9b1e48a2799919c5aab42e646d2eaa45861d7af391aaed7b",
+          "heading": "寄出条件",
+          "id": 49,
+          "matchKind": "keyword",
+          "path": "首发样例/鹭湾纸艺社.md",
+          "rerankScore": null,
+          "score": 0.016129032258064516,
+          "startLine": 7,
+          "text": "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。\n\n",
+          "title": "首发样例/鹭湾纸艺社.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "stageError": null,
+      "status": "completed"
+    },
+    {
+      "answer": null,
+      "answerable": true,
+      "chartWarnings": null,
+      "finishReason": "not_run",
+      "generationError": null,
+      "generationMs": 0.0,
+      "generationRequested": false,
+      "id": "P11",
+      "kind": "fact",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "首发样例/鹭湾纸艺社.md",
+          "首发样例/荷汀织物室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "hybrid",
+      "modelCalled": false,
+      "onlineTimingScope": "measured query embedding + local retrieval/rerank/context + generation; same query vector reused across hybrid/rerank, no batch precomputation; excludes document indexing and UI rendering",
+      "onlineTotalMs": 730.5582079999999,
+      "queryEmbeddingMs": 702.774292,
+      "question": "鹭湾纸艺社的寄出条件规定是什么？",
+      "rejectedChartCount": null,
+      "rerankStatus": "not-requested",
+      "retrievalEvidenceMs": 27.783915999999998,
+      "retrievalQuestion": "鹭湾纸艺社的寄出条件规定是什么？",
+      "rubric": {
+        "constraints": "保留对象、数值、条件与单位，引用当前来源。",
+        "facts": [
+          "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。"
+        ]
+      },
+      "sources": [
+        {
+          "bm25Rank": 2,
+          "bm25Score": -16.267251576331976,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "3b6b9ec88fee361c9b1e48a2799919c5aab42e646d2eaa45861d7af391aaed7b",
+          "heading": "寄出条件",
+          "id": 49,
+          "matchKind": "keyword",
+          "path": "首发样例/鹭湾纸艺社.md",
+          "rerankScore": null,
+          "score": 0.03225806451612903,
+          "startLine": 7,
+          "text": "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。\n\n",
+          "title": "首发样例/鹭湾纸艺社.md",
+          "vectorDistance": 0.8594213724136353,
+          "vectorRank": 2
+        }
+      ],
+      "stageError": null,
+      "status": "completed"
+    },
+    {
+      "answer": "# 鹭湾纸艺社的寄出条件\n\n鹭湾纸艺社规定纸艺作品必须完成防潮复核并取得银色签后，才能寄出；持有白色签的作品禁止寄出[1]。",
+      "answerable": true,
+      "chartWarnings": [],
+      "finishReason": "stop",
+      "generationError": null,
+      "generationMs": 1695.882625,
+      "generationRequested": true,
+      "id": "P11",
+      "kind": "fact",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 1,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 1.0,
+        "sourceCount": 1,
+        "topDocuments": [
+          "首发样例/鹭湾纸艺社.md",
+          "首发样例/荷汀织物室.md",
+          "首发样例/青禾装帧坊.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "rerank",
+      "modelCalled": true,
+      "onlineTimingScope": "measured query embedding + local retrieval/rerank/context + generation; same query vector reused across hybrid/rerank, no batch precomputation; excludes document indexing and UI rendering",
+      "onlineTotalMs": 3890.348376,
+      "queryEmbeddingMs": 702.774292,
+      "question": "鹭湾纸艺社的寄出条件规定是什么？",
+      "rejectedChartCount": 0,
+      "rerankStatus": "applied",
+      "retrievalEvidenceMs": 1491.6914590000001,
+      "retrievalQuestion": "鹭湾纸艺社的寄出条件规定是什么？",
+      "rubric": {
+        "constraints": "保留对象、数值、条件与单位，引用当前来源。",
+        "facts": [
+          "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。"
+        ]
+      },
+      "sources": [
+        {
+          "bm25Rank": 2,
+          "bm25Score": -16.267251576331976,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "3b6b9ec88fee361c9b1e48a2799919c5aab42e646d2eaa45861d7af391aaed7b",
+          "heading": "寄出条件",
+          "id": 49,
+          "matchKind": "reranked",
+          "path": "首发样例/鹭湾纸艺社.md",
+          "rerankScore": 0.9998511075973512,
+          "score": 0.03225806451612903,
+          "startLine": 7,
+          "text": "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。\n\n",
+          "title": "首发样例/鹭湾纸艺社.md",
+          "vectorDistance": 0.8594213724136353,
+          "vectorRank": 2
+        }
+      ],
+      "stageError": null,
+      "status": "completed"
+    },
+    {
+      "answer": null,
+      "answerable": true,
+      "chartWarnings": null,
+      "finishReason": "not_run",
+      "generationError": null,
+      "generationMs": 0.0,
+      "generationRequested": false,
+      "id": "P19",
+      "kind": "cross-document",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 2,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 0.5,
+        "sourceCount": 2,
+        "topDocuments": [
+          "首发样例/鹭湾纸艺社.md",
+          "首发样例/荷汀织物室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "modelCalled": false,
+      "onlineTimingScope": "measured query embedding + local retrieval/rerank/context + generation; same query vector reused across hybrid/rerank, no batch precomputation; excludes document indexing and UI rendering",
+      "onlineTotalMs": 14.024792,
+      "queryEmbeddingMs": 0.0,
+      "question": "比较荷汀织物室与鹭湾纸艺社的寄出条件，分别列出规定并引用来源。",
+      "rejectedChartCount": null,
+      "rerankStatus": "not-requested",
+      "retrievalEvidenceMs": 14.024792,
+      "retrievalQuestion": "比较荷汀织物室与鹭湾纸艺社的寄出条件，分别列出规定并引用来源。",
+      "rubric": {
+        "constraints": "每个对象必须独立支持；仅有一处资料不能称完整比较。",
+        "facts": [
+          "仅完成耐洗复核且取得蓝色签的织物可以寄出；黄色签禁止寄出。",
+          "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。"
+        ]
+      },
+      "sources": [
+        {
+          "bm25Rank": 2,
+          "bm25Score": -19.85093038405555,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "3b6b9ec88fee361c9b1e48a2799919c5aab42e646d2eaa45861d7af391aaed7b",
+          "heading": "寄出条件",
+          "id": 49,
+          "matchKind": "keyword",
+          "path": "首发样例/鹭湾纸艺社.md",
+          "rerankScore": null,
+          "score": 0.016129032258064516,
+          "startLine": 7,
+          "text": "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。\n\n",
+          "title": "首发样例/鹭湾纸艺社.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        },
+        {
+          "bm25Rank": 3,
+          "bm25Score": -19.281339107693324,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "2c7ce8329f130479b1c56c1fb987114d18e5c31f2b6de07313082917955f9749",
+          "heading": "寄出条件",
+          "id": 40,
+          "matchKind": "keyword",
+          "path": "首发样例/荷汀织物室.md",
+          "rerankScore": null,
+          "score": 0.015873015873015872,
+          "startLine": 7,
+          "text": "仅完成耐洗复核且取得蓝色签的织物可以寄出；黄色签禁止寄出。\n\n",
+          "title": "首发样例/荷汀织物室.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "stageError": null,
+      "status": "completed"
+    },
+    {
+      "answer": null,
+      "answerable": true,
+      "chartWarnings": null,
+      "finishReason": "not_run",
+      "generationError": null,
+      "generationMs": 0.0,
+      "generationRequested": false,
+      "id": "P19",
+      "kind": "cross-document",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 2,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 0.5,
+        "sourceCount": 2,
+        "topDocuments": [
+          "首发样例/荷汀织物室.md",
+          "首发样例/鹭湾纸艺社.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "hybrid",
+      "modelCalled": false,
+      "onlineTimingScope": "measured query embedding + local retrieval/rerank/context + generation; same query vector reused across hybrid/rerank, no batch precomputation; excludes document indexing and UI rendering",
+      "onlineTotalMs": 1458.877709,
+      "queryEmbeddingMs": 1433.202125,
+      "question": "比较荷汀织物室与鹭湾纸艺社的寄出条件，分别列出规定并引用来源。",
+      "rejectedChartCount": null,
+      "rerankStatus": "not-requested",
+      "retrievalEvidenceMs": 25.675584,
+      "retrievalQuestion": "比较荷汀织物室与鹭湾纸艺社的寄出条件，分别列出规定并引用来源。",
+      "rubric": {
+        "constraints": "每个对象必须独立支持；仅有一处资料不能称完整比较。",
+        "facts": [
+          "仅完成耐洗复核且取得蓝色签的织物可以寄出；黄色签禁止寄出。",
+          "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。"
+        ]
+      },
+      "sources": [
+        {
+          "bm25Rank": 3,
+          "bm25Score": -19.281339107693324,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "2c7ce8329f130479b1c56c1fb987114d18e5c31f2b6de07313082917955f9749",
+          "heading": "寄出条件",
+          "id": 40,
+          "matchKind": "keyword",
+          "path": "首发样例/荷汀织物室.md",
+          "rerankScore": null,
+          "score": 0.032266458495966696,
+          "startLine": 7,
+          "text": "仅完成耐洗复核且取得蓝色签的织物可以寄出；黄色签禁止寄出。\n\n",
+          "title": "首发样例/荷汀织物室.md",
+          "vectorDistance": 0.9252244234085083,
+          "vectorRank": 1
+        },
+        {
+          "bm25Rank": 2,
+          "bm25Score": -19.85093038405555,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "3b6b9ec88fee361c9b1e48a2799919c5aab42e646d2eaa45861d7af391aaed7b",
+          "heading": "寄出条件",
+          "id": 49,
+          "matchKind": "keyword",
+          "path": "首发样例/鹭湾纸艺社.md",
+          "rerankScore": null,
+          "score": 0.03200204813108039,
+          "startLine": 7,
+          "text": "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。\n\n",
+          "title": "首发样例/鹭湾纸艺社.md",
+          "vectorDistance": 0.9811858534812927,
+          "vectorRank": 3
+        }
+      ],
+      "stageError": null,
+      "status": "completed"
+    },
+    {
+      "answer": "# 荷汀织物室与鹭湾纸艺社的寄出条件比较\n\n| 机构       | 寄出条件                                 | 禁止寄出条件                           | 来源   |\n|------------|----------------------------------------|--------------------------------------|--------|\n| 鹭湾纸艺社 | 纸艺完成防潮复核并取得银色签后才能寄出 | 白色签禁止寄出                       | [1]    |\n| 荷汀织物室 | 仅完成耐洗复核且取得蓝色签的织物可以寄出 | 黄色签禁止寄出                       | [2]    |\n\n- **鹭湾纸艺社**要求完成防潮复核并获得**银色签**后方可寄出，持有白色签的纸艺禁止寄出[1]。\n- **荷汀织物室**要求只允许完成耐洗复核并取得**蓝色签**的织物寄出，持有黄色签的织物禁止寄出[2]。",
+      "answerable": true,
+      "chartWarnings": [],
+      "finishReason": "stop",
+      "generationError": null,
+      "generationMs": 2877.318125,
+      "generationRequested": true,
+      "id": "P19",
+      "kind": "cross-document",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 2,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 0.5,
+        "sourceCount": 2,
+        "topDocuments": [
+          "首发样例/鹭湾纸艺社.md",
+          "首发样例/荷汀织物室.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "rerank",
+      "modelCalled": true,
+      "onlineTimingScope": "measured query embedding + local retrieval/rerank/context + generation; same query vector reused across hybrid/rerank, no batch precomputation; excludes document indexing and UI rendering",
+      "onlineTotalMs": 6747.917375,
+      "queryEmbeddingMs": 1433.202125,
+      "question": "比较荷汀织物室与鹭湾纸艺社的寄出条件，分别列出规定并引用来源。",
+      "rejectedChartCount": 0,
+      "rerankStatus": "applied",
+      "retrievalEvidenceMs": 2437.397125,
+      "retrievalQuestion": "比较荷汀织物室与鹭湾纸艺社的寄出条件，分别列出规定并引用来源。",
+      "rubric": {
+        "constraints": "每个对象必须独立支持；仅有一处资料不能称完整比较。",
+        "facts": [
+          "仅完成耐洗复核且取得蓝色签的织物可以寄出；黄色签禁止寄出。",
+          "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。"
+        ]
+      },
+      "sources": [
+        {
+          "bm25Rank": 2,
+          "bm25Score": -19.85093038405555,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "3b6b9ec88fee361c9b1e48a2799919c5aab42e646d2eaa45861d7af391aaed7b",
+          "heading": "寄出条件",
+          "id": 49,
+          "matchKind": "reranked",
+          "path": "首发样例/鹭湾纸艺社.md",
+          "rerankScore": 0.9993333220481871,
+          "score": 0.03200204813108039,
+          "startLine": 7,
+          "text": "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。\n\n",
+          "title": "首发样例/鹭湾纸艺社.md",
+          "vectorDistance": 0.9811858534812927,
+          "vectorRank": 3
+        },
+        {
+          "bm25Rank": 3,
+          "bm25Score": -19.281339107693324,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "2c7ce8329f130479b1c56c1fb987114d18e5c31f2b6de07313082917955f9749",
+          "heading": "寄出条件",
+          "id": 40,
+          "matchKind": "reranked",
+          "path": "首发样例/荷汀织物室.md",
+          "rerankScore": 0.9985449314117432,
+          "score": 0.032266458495966696,
+          "startLine": 7,
+          "text": "仅完成耐洗复核且取得蓝色签的织物可以寄出；黄色签禁止寄出。\n\n",
+          "title": "首发样例/荷汀织物室.md",
+          "vectorDistance": 0.9252244234085083,
+          "vectorRank": 1
+        }
+      ],
+      "stageError": null,
+      "status": "completed"
+    },
+    {
+      "answer": null,
+      "answerable": true,
+      "chartWarnings": null,
+      "finishReason": "not_run",
+      "generationError": null,
+      "generationMs": 0.0,
+      "generationRequested": false,
+      "id": "P23",
+      "kind": "cross-document",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 2,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 0.5,
+        "sourceCount": 2,
+        "topDocuments": [
+          "首发样例/荷汀织物室.md",
+          "首发样例/鹭湾纸艺社.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "bm25",
+      "modelCalled": false,
+      "onlineTimingScope": "measured query embedding + local retrieval/rerank/context + generation; same query vector reused across hybrid/rerank, no batch precomputation; excludes document indexing and UI rendering",
+      "onlineTotalMs": 9.727334,
+      "queryEmbeddingMs": 0.0,
+      "question": "鹭湾纸艺社和荷汀织物室在寄出条件方面各有什么要求？请分开引用。",
+      "rejectedChartCount": null,
+      "rerankStatus": "not-requested",
+      "retrievalEvidenceMs": 9.727334,
+      "retrievalQuestion": "鹭湾纸艺社和荷汀织物室在寄出条件方面各有什么要求？请分开引用。",
+      "rubric": {
+        "constraints": "每个对象必须独立支持；仅有一处资料不能称完整比较。",
+        "facts": [
+          "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。",
+          "仅完成耐洗复核且取得蓝色签的织物可以寄出；黄色签禁止寄出。"
+        ]
+      },
+      "sources": [
+        {
+          "bm25Rank": 2,
+          "bm25Score": -19.281339107693324,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "2c7ce8329f130479b1c56c1fb987114d18e5c31f2b6de07313082917955f9749",
+          "heading": "寄出条件",
+          "id": 40,
+          "matchKind": "keyword",
+          "path": "首发样例/荷汀织物室.md",
+          "rerankScore": null,
+          "score": 0.016129032258064516,
+          "startLine": 7,
+          "text": "仅完成耐洗复核且取得蓝色签的织物可以寄出；黄色签禁止寄出。\n\n",
+          "title": "首发样例/荷汀织物室.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        },
+        {
+          "bm25Rank": 4,
+          "bm25Score": -16.267251576331976,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "3b6b9ec88fee361c9b1e48a2799919c5aab42e646d2eaa45861d7af391aaed7b",
+          "heading": "寄出条件",
+          "id": 49,
+          "matchKind": "keyword",
+          "path": "首发样例/鹭湾纸艺社.md",
+          "rerankScore": null,
+          "score": 0.015625,
+          "startLine": 7,
+          "text": "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。\n\n",
+          "title": "首发样例/鹭湾纸艺社.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "stageError": null,
+      "status": "completed"
+    },
+    {
+      "answer": null,
+      "answerable": true,
+      "chartWarnings": null,
+      "finishReason": "not_run",
+      "generationError": null,
+      "generationMs": 0.0,
+      "generationRequested": false,
+      "id": "P23",
+      "kind": "cross-document",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 2,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 0.5,
+        "sourceCount": 2,
+        "topDocuments": [
+          "首发样例/荷汀织物室.md",
+          "首发样例/鹭湾纸艺社.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "hybrid",
+      "modelCalled": false,
+      "onlineTimingScope": "measured query embedding + local retrieval/rerank/context + generation; same query vector reused across hybrid/rerank, no batch precomputation; excludes document indexing and UI rendering",
+      "onlineTotalMs": 1954.847625,
+      "queryEmbeddingMs": 1930.545417,
+      "question": "鹭湾纸艺社和荷汀织物室在寄出条件方面各有什么要求？请分开引用。",
+      "rejectedChartCount": null,
+      "rerankStatus": "not-requested",
+      "retrievalEvidenceMs": 24.302208,
+      "retrievalQuestion": "鹭湾纸艺社和荷汀织物室在寄出条件方面各有什么要求？请分开引用。",
+      "rubric": {
+        "constraints": "每个对象必须独立支持；仅有一处资料不能称完整比较。",
+        "facts": [
+          "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。",
+          "仅完成耐洗复核且取得蓝色签的织物可以寄出；黄色签禁止寄出。"
+        ]
+      },
+      "sources": [
+        {
+          "bm25Rank": 2,
+          "bm25Score": -19.281339107693324,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "2c7ce8329f130479b1c56c1fb987114d18e5c31f2b6de07313082917955f9749",
+          "heading": "寄出条件",
+          "id": 40,
+          "matchKind": "keyword",
+          "path": "首发样例/荷汀织物室.md",
+          "rerankScore": null,
+          "score": 0.03225806451612903,
+          "startLine": 7,
+          "text": "仅完成耐洗复核且取得蓝色签的织物可以寄出；黄色签禁止寄出。\n\n",
+          "title": "首发样例/荷汀织物室.md",
+          "vectorDistance": 0.9589157700538635,
+          "vectorRank": 2
+        },
+        {
+          "bm25Rank": 4,
+          "bm25Score": -16.267251576331976,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "3b6b9ec88fee361c9b1e48a2799919c5aab42e646d2eaa45861d7af391aaed7b",
+          "heading": "寄出条件",
+          "id": 49,
+          "matchKind": "keyword",
+          "path": "首发样例/鹭湾纸艺社.md",
+          "rerankScore": null,
+          "score": 0.03149801587301587,
+          "startLine": 7,
+          "text": "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。\n\n",
+          "title": "首发样例/鹭湾纸艺社.md",
+          "vectorDistance": 0.9878959059715271,
+          "vectorRank": 3
+        }
+      ],
+      "stageError": null,
+      "status": "completed"
+    },
+    {
+      "answer": "### 荷汀织物室寄出条件\n- 必须完成耐洗复核并取得蓝色签。\n- 取得黄色签的织物禁止寄出[1]。\n\n### 鹭湾纸艺社寄出条件\n- 必须完成防潮复核并取得银色签。\n- 取得白色签的纸艺禁止寄出[2]。",
+      "answerable": true,
+      "chartWarnings": [],
+      "finishReason": "stop",
+      "generationError": null,
+      "generationMs": 2335.097583,
+      "generationRequested": true,
+      "id": "P23",
+      "kind": "cross-document",
+      "manualReview": {
+        "chartSemantics": null,
+        "citationSupport": null,
+        "factualSupport": null,
+        "notes": null,
+        "reviewer": null
+      },
+      "metrics": {
+        "allGoldDocumentRank": 2,
+        "goldEvidenceInContext": true,
+        "noContext": false,
+        "recallAt5": true,
+        "reciprocalRankAt10": 0.5,
+        "sourceCount": 2,
+        "topDocuments": [
+          "首发样例/荷汀织物室.md",
+          "首发样例/鹭湾纸艺社.md"
+        ],
+        "unsupportedEvidencePositive": false
+      },
+      "mode": "rerank",
+      "modelCalled": true,
+      "onlineTimingScope": "measured query embedding + local retrieval/rerank/context + generation; same query vector reused across hybrid/rerank, no batch precomputation; excludes document indexing and UI rendering",
+      "onlineTotalMs": 5476.866833,
+      "queryEmbeddingMs": 1930.545417,
+      "question": "鹭湾纸艺社和荷汀织物室在寄出条件方面各有什么要求？请分开引用。",
+      "rejectedChartCount": 0,
+      "rerankStatus": "applied",
+      "retrievalEvidenceMs": 1211.223833,
+      "retrievalQuestion": "鹭湾纸艺社和荷汀织物室在寄出条件方面各有什么要求？请分开引用。",
+      "rubric": {
+        "constraints": "每个对象必须独立支持；仅有一处资料不能称完整比较。",
+        "facts": [
+          "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。",
+          "仅完成耐洗复核且取得蓝色签的织物可以寄出；黄色签禁止寄出。"
+        ]
+      },
+      "sources": [
+        {
+          "bm25Rank": 2,
+          "bm25Score": -19.281339107693324,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "2c7ce8329f130479b1c56c1fb987114d18e5c31f2b6de07313082917955f9749",
+          "heading": "寄出条件",
+          "id": 40,
+          "matchKind": "reranked",
+          "path": "首发样例/荷汀织物室.md",
+          "rerankScore": 0.998830497264862,
+          "score": 0.03225806451612903,
+          "startLine": 7,
+          "text": "仅完成耐洗复核且取得蓝色签的织物可以寄出；黄色签禁止寄出。\n\n",
+          "title": "首发样例/荷汀织物室.md",
+          "vectorDistance": 0.9589157700538635,
+          "vectorRank": 2
+        },
+        {
+          "bm25Rank": 4,
+          "bm25Score": -16.267251576331976,
+          "documentId": null,
+          "endLine": 8,
+          "evidence": true,
+          "hash": "3b6b9ec88fee361c9b1e48a2799919c5aab42e646d2eaa45861d7af391aaed7b",
+          "heading": "寄出条件",
+          "id": 49,
+          "matchKind": "reranked",
+          "path": "首发样例/鹭湾纸艺社.md",
+          "rerankScore": 0.9984512329101562,
+          "score": 0.03149801587301587,
+          "startLine": 7,
+          "text": "纸艺完成防潮复核并取得银色签后才能寄出；白色签禁止寄出。\n\n",
+          "title": "首发样例/鹭湾纸艺社.md",
+          "vectorDistance": 0.9878959059715271,
+          "vectorRank": 3
+        }
+      ],
+      "stageError": null,
+      "status": "completed"
+    }
+  ],
+  "selectedCaseIds": [
+    "P11",
+    "P19",
+    "P23"
+  ],
+  "status": "completed",
+  "summary": {
+    "bm25": {
+      "allTargetsMet": false,
+      "answerable": 3,
+      "completed": 3,
+      "degraded": 0,
+      "goldEvidenceContextRate": 1.0,
+      "latencyScope": "Local retrieval/context plus rerank only. Remote rows separately report measured online query embedding and generation; local-only checks have neither.",
+      "mrrAt10": 0.6666666666666666,
+      "recallAt5": 1.0,
+      "retrievalEvidenceP50ms": 9.727334,
+      "retrievalEvidenceP95ms": 14.024792,
+      "unsupported": 0,
+      "unsupportedEvidencePositiveRate": null
+    },
+    "hybrid": {
+      "allTargetsMet": false,
+      "answerable": 3,
+      "completed": 3,
+      "degraded": 0,
+      "goldEvidenceContextRate": 1.0,
+      "latencyScope": "Local retrieval/context plus rerank only. Remote rows separately report measured online query embedding and generation; local-only checks have neither.",
+      "mrrAt10": 0.6666666666666666,
+      "recallAt5": 1.0,
+      "retrievalEvidenceP50ms": 25.675584,
+      "retrievalEvidenceP95ms": 27.783915999999998,
+      "unsupported": 0,
+      "unsupportedEvidencePositiveRate": null
+    },
+    "rerank": {
+      "allTargetsMet": false,
+      "answerable": 3,
+      "completed": 3,
+      "degraded": 0,
+      "goldEvidenceContextRate": 1.0,
+      "latencyScope": "Local retrieval/context plus rerank only. Remote rows separately report measured online query embedding and generation; local-only checks have neither.",
+      "mrrAt10": 0.6666666666666666,
+      "recallAt5": 1.0,
+      "retrievalEvidenceP50ms": 1491.6914590000001,
+      "retrievalEvidenceP95ms": 2437.397125,
+      "unsupported": 0,
+      "unsupportedEvidencePositiveRate": null
+    }
+  },
+  "usage": {
+    "attempts": [
+      {
+        "headersMs": 1744,
+        "httpStatus": 200,
+        "stage": "embeddings",
+        "status": "response"
+      },
+      {
+        "headersMs": 1356,
+        "httpStatus": 200,
+        "stage": "embeddings",
+        "status": "response"
+      },
+      {
+        "headersMs": 1642,
+        "httpStatus": 200,
+        "stage": "embeddings",
+        "status": "response"
+      },
+      {
+        "headersMs": 984,
+        "httpStatus": 200,
+        "stage": "embeddings",
+        "status": "response"
+      },
+      {
+        "headersMs": 959,
+        "httpStatus": 200,
+        "stage": "embeddings",
+        "status": "response"
+      },
+      {
+        "headersMs": 694,
+        "httpStatus": 200,
+        "stage": "embeddings",
+        "status": "response"
+      },
+      {
+        "headersMs": 1468,
+        "httpStatus": 200,
+        "stage": "rerank",
+        "status": "response"
+      },
+      {
+        "headersMs": 1690,
+        "httpStatus": 200,
+        "stage": "chat/completions",
+        "status": "response"
+      },
+      {
+        "headersMs": 1283,
+        "httpStatus": 200,
+        "stage": "embeddings",
+        "status": "response"
+      },
+      {
+        "headersMs": 2412,
+        "httpStatus": 200,
+        "stage": "rerank",
+        "status": "response"
+      },
+      {
+        "headersMs": 1646,
+        "httpStatus": 200,
+        "stage": "chat/completions",
+        "status": "response"
+      },
+      {
+        "headersMs": 1631,
+        "httpStatus": 200,
+        "stage": "embeddings",
+        "status": "response"
+      },
+      {
+        "headersMs": 1172,
+        "httpStatus": 200,
+        "stage": "rerank",
+        "status": "response"
+      },
+      {
+        "headersMs": 2243,
+        "httpStatus": 200,
+        "stage": "chat/completions",
+        "status": "response"
+      }
+    ],
+    "httpAttempts": 14,
+    "maxHttpAttempts": 145,
+    "maxWallSeconds": 1678,
+    "providerBilledCost": null,
+    "tokens": null,
+    "wallMs": 26469
+  },
+  "version": "0.6.6"
+}

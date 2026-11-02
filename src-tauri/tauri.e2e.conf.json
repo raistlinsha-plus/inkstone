@@ -1,0 +1,5 @@
+{
+  "productName": "Inkstone E2E",
+  "identifier": "local.inkstone.desktop.e2e",
+  "app": {"windows": [{"title": "Inkstone · 隔离验收", "width": 1320, "height": 860, "minWidth": 960, "minHeight": 640}]}
+}

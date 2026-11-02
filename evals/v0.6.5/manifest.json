@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "files": {
+    "new-check.json": "52985ce12cd00fa7c424fd9964c84880e0fbf6369ef82bdceb87be370aafda0a",
+    "protocol.json": "31495ede97ea576ab66c8d1e6e8324b47812f0fd3b602892f41334b5da743999"
+  },
+  "caseCount": 32,
+  "answerableCount": 24,
+  "unsupportedCount": 8,
+  "authorIndependence": false
+}

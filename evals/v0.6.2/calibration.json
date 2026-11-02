@@ -1,0 +1,908 @@
+{
+  "version": "inkstone-v0.6.2-synthetic-1",
+  "provenance": "Twenty original fictional operational manuals and 100 authored questions. All facts/numbers are synthetic; same author controls labels and queries. Heldout is a frozen split, not independent or externally blinded. No user documents.",
+  "documents": [
+    {
+      "path": "资料/01-林岸读书会.md",
+      "text": "# 林岸读书会｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n常规讨论在周六14:30开始，地点是溪南活动室。\n\n每名成员一次最多借2本书，借期14天。\n\n丢失纸质书签只需补登记，不收补办费。\n\n## 借阅册数季度台账\n\n指标：借阅册数；单位：册。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 18 | 12 |\n| Q2 | 24 | 20 |\n| Q3 | 缺测 | 16 |\n| Q4 | 31 | 25 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/02-星渡温室.md",
+      "text": "# 星渡温室｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n晨间灌溉固定在06:40，阴雨日先检查湿度。\n\n土壤含水率低于28%时补水，达到36%后停止。\n\n温度与含水率传感器每月第一个周一校验。\n\n## 补水量季度台账\n\n指标：补水量；单位：升。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 120 | 97 |\n| Q2 | 135 | 110 |\n| Q3 | 128 | 102 |\n| Q4 | 141 | 116 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/03-青屿骑行.md",
+      "text": "# 青屿骑行｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n集合时间07:10，07:30从东堤广场出发。\n\n报名在活动前一天18:00截止，名额32人。\n\n出现雷雨预警即取消骑行，改为室内路线复盘。\n\n## 参加人数季度台账\n\n指标：参加人数；单位：人。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 21 | 18 |\n| Q2 | 26 | 22 |\n| Q3 | 缺测 | 24 |\n| Q4 | 30 | 27 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/04-栖墨展厅.md",
+      "text": "# 栖墨展厅｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n周三10:00开放，17:30停止入场，18:00闭馆。\n\n纸本文物展柜的照度上限是50勒克斯。\n\n撤展先拍摄原位照片，再核对编号并装箱。\n\n## 参观人数季度台账\n\n指标：参观人数；单位：人。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 82 | 71 |\n| Q2 | 96 | 80 |\n| Q3 | 105 | 89 |\n| Q4 | 112 | 98 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/05-夏禾食堂.md",
+      "text": "# 夏禾食堂｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n当日午餐预订在09:45截止，11:30开始取餐。\n\n含花生的菜品必须在标签上显示花生图标和文字。\n\n剩余餐食在13:00称重登记，不并入已售份数。\n\n## 午餐供应量季度台账\n\n指标：午餐供应量；单位：份。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 310 | 295 |\n| Q2 | 340 | 321 |\n| Q3 | 缺测 | 330 |\n| Q4 | 365 | 350 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/06-浮桥档案馆.md",
+      "text": "# 浮桥档案馆｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n活动数字档案从结项日算起保留7年。\n\n本次移交编号是900719925474099312345，须作为字符串逐字保留。\n\n清单中的[1]是批次标签字面量，不是知识问答引用编号。\n\n## 移交盒数季度台账\n\n指标：移交盒数；单位：盒。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 15 | 12 |\n| Q2 | 19 | 14 |\n| Q3 | 21 | 18 |\n| Q4 | 26 | 22 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/07-晨岚观测台.md",
+      "text": "# 晨岚观测台｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n雨量每天08:00读取一次，记录前24小时累计值。\n\n缺测记录使用NA，不允许按零毫米补填。\n\n风速仪每两周清洁一次，维护日期单独登记。\n\n## 累计雨量季度台账\n\n指标：累计雨量；单位：毫米。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 63 | 58 |\n| Q2 | 78 | 66 |\n| Q3 | 缺测 | 72 |\n| Q4 | 91 | 85 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/08-白鹭志愿队.md",
+      "text": "# 白鹭志愿队｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n早班安排4人，09:00与前一班交接。\n\n每班带班员按封签日期核对急救包。\n\n非紧急请假至少提前12小时告知排班员。\n\n## 服务时长季度台账\n\n指标：服务时长；单位：小时。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 48 | 40 |\n| Q2 | 56 | 49 |\n| Q3 | 64 | 55 |\n| Q4 | 72 | 63 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/09-山橙木工坊.md",
+      "text": "# 山橙木工坊｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n初学者课程每次90分钟，每组最多6人。\n\n使用砂轮前须完成护目镜与防护罩检查。\n\n工具借出同时登记工具编号、借用人和归还时刻。\n\n## 课程场次季度台账\n\n指标：课程场次；单位：场。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 8 | 7 |\n| Q2 | 11 | 9 |\n| Q3 | 缺测 | 10 |\n| Q4 | 15 | 13 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/10-光栎图书角.md",
+      "text": "# 光栎图书角｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n周末开放时段是09:00至19:00。\n\n新书采用类别码、年份和四位流水号组成的编码。\n\n逾期归还只暂停新增借阅，不收现金罚款。\n\n## 新书册数季度台账\n\n指标：新书册数；单位：册。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 32 | 28 |\n| Q2 | 41 | 35 |\n| Q3 | 47 | 40 |\n| Q4 | 55 | 48 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/11-折页出版小组.md",
+      "text": "# 折页出版小组｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n二校由未参与初校的另一名编辑完成。\n\n封面在印前联检全部通过后锁版。\n\n参考文献编号调整后，需要同步核对全部交叉引用。\n\n## 校对页数季度台账\n\n指标：校对页数；单位：页。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 140 | 128 |\n| Q2 | 165 | 150 |\n| Q3 | 缺测 | 161 |\n| Q4 | 190 | 175 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/12-松塔山居.md",
+      "text": "# 松塔山居｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n退房最晚时间是次日11:00。\n\n无障碍房间需在抵达前至少24小时电话确认。\n\n普通遗失物品登记后保管30天。\n\n## 入住间夜季度台账\n\n指标：入住间夜；单位：间夜。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 44 | 39 |\n| Q2 | 58 | 51 |\n| Q3 | 61 | 56 |\n| Q4 | 70 | 64 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/13-云岫步道.md",
+      "text": "# 云岫步道｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n主线全长6.8公里，累计爬升320米。\n\n北段每天17:00关闭入口。\n\n发现落石区域先远离坡脚，并按路标联系巡护员。\n\n## 巡护里程季度台账\n\n指标：巡护里程；单位：公里。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 82 | 75 |\n| Q2 | 94 | 88 |\n| Q3 | 缺测 | 90 |\n| Q4 | 107 | 99 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/14-池影电影社.md",
+      "text": "# 池影电影社｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n每场放映开始前20分钟开放入场。\n\n放映期间禁止录屏，发现后先提醒停止。\n\n常规映后交流安排25分钟，嘉宾场另行公告。\n\n## 放映场次季度台账\n\n指标：放映场次；单位：场。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 6 | 5 |\n| Q2 | 8 | 7 |\n| Q3 | 9 | 8 |\n| Q4 | 12 | 10 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/15-月衡社区议事会.md",
+      "text": "# 月衡社区议事会｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n月度提案在每月20日17:00截止提交。\n\n表决须到会人数过半同意，弃权单独记数。\n\n会议纪要在会后3个工作日内公开。\n\n## 受理提案数季度台账\n\n指标：受理提案数；单位：项。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 11 | 8 |\n| Q2 | 14 | 10 |\n| Q3 | 缺测 | 12 |\n| Q4 | 18 | 15 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/16-石榴种子库.md",
+      "text": "# 石榴种子库｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n干燥柜相对湿度不得超过35%。\n\n同一批种子每6个月进行一次活力抽查。\n\n取样后登记样本重量、批次号和操作者。\n\n## 入库批次数季度台账\n\n指标：入库批次数；单位：批。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 23 | 20 |\n| Q2 | 29 | 25 |\n| Q3 | 34 | 30 |\n| Q4 | 38 | 35 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/17-远汀培训营.md",
+      "text": "# 远汀培训营｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n完成课程要求出勤率达到80%。\n\n补交作业最晚可延迟5个自然日。\n\n仅已报名学员可在课程页申请带水印回放。\n\n## 结课人数季度台账\n\n指标：结课人数；单位：人。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 17 | 14 |\n| Q2 | 22 | 19 |\n| Q3 | 缺测 | 21 |\n| Q4 | 28 | 25 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/18-银杉共享工作室.md",
+      "text": "# 银杉共享工作室｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n单次最长可预订4小时。\n\n晚间安静时段从21:00开始，禁止扩音设备。\n\n开始后15分钟仍未签到，预订自动释放。\n\n## 预订时长季度台账\n\n指标：预订时长；单位：小时。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 96 | 82 |\n| Q2 | 112 | 98 |\n| Q3 | 126 | 110 |\n| Q4 | 140 | 125 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/19-禾川样品仓.md",
+      "text": "# 禾川样品仓｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n未标特殊条件的样品按先进先出原则出库。\n\n冷藏区保持在2至8摄氏度。\n\n包装破损的样品先隔离登记，未复核前不能出库。\n\n## 出库箱数季度台账\n\n指标：出库箱数；单位：箱。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 38 | 31 |\n| Q2 | 46 | 40 |\n| Q3 | 缺测 | 45 |\n| Q4 | 57 | 50 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    },
+    {
+      "path": "资料/20-雨巷咖啡实验室.md",
+      "text": "# 雨巷咖啡实验室｜2026年运行手册\n\n以下机构、规则和数据均为虚构，仅用于本地检索评测。\n\n## 执行规则\n\n手冲课程在周日15:00开始。\n\n烘焙后第3天进行第一次杯测。\n\n豆袋同时标注产地码、烘焙日和三位批次号。\n\n## 咖啡豆用量季度台账\n\n指标：咖啡豆用量；单位：千克。2026年和2025年为两个独立系列。缺测表示未记录，不是零。\n\n| 季度 | 2026年 | 2025年 |\n| --- | ---: | ---: |\n| Q1 | 12 | 10 |\n| Q2 | 16 | 13 |\n| Q3 | 18 | 15 |\n| Q4 | 21 | 19 |\n\n范围说明：本手册只描述2026年现行安排和表内台账，不含2027年修订方案，也未记载负责人私人联系方式。\n"
+    }
+  ],
+  "cases": [
+    {
+      "id": "D01-Q1",
+      "split": "calibration",
+      "question": "林岸读书会的常规讨论安排在什么时间？",
+      "expected": "资料/01-林岸读书会.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/01-林岸读书会.md",
+          "line": 7,
+          "quote": "常规讨论在周六14:30开始，地点是溪南活动室。"
+        }
+      ],
+      "goldAnswer": "常规讨论在周六14:30开始，地点是溪南活动室。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D01-Q5",
+      "split": "calibration",
+      "question": "林岸读书会在2027年新的收费标准具体是多少？",
+      "expected": null,
+      "kind": "unsupported",
+      "answerable": false,
+      "goldSources": [],
+      "goldAnswer": null,
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D02-Q1",
+      "split": "calibration",
+      "question": "星渡温室什么时候进行晨间灌溉？",
+      "expected": "资料/02-星渡温室.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/02-星渡温室.md",
+          "line": 7,
+          "quote": "晨间灌溉固定在06:40，阴雨日先检查湿度。"
+        }
+      ],
+      "goldAnswer": "晨间灌溉固定在06:40，阴雨日先检查湿度。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D02-Q2",
+      "split": "calibration",
+      "question": "星渡温室的土壤湿度低到多少才启动补水？",
+      "expected": "资料/02-星渡温室.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/02-星渡温室.md",
+          "line": 9,
+          "quote": "土壤含水率低于28%时补水，达到36%后停止。"
+        }
+      ],
+      "goldAnswer": "土壤含水率低于28%时补水，达到36%后停止。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D03-Q1",
+      "split": "calibration",
+      "question": "青屿骑行的集合与出发时间分别是什么？",
+      "expected": "资料/03-青屿骑行.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/03-青屿骑行.md",
+          "line": 7,
+          "quote": "集合时间07:10，07:30从东堤广场出发。"
+        }
+      ],
+      "goldAnswer": "集合时间07:10，07:30从东堤广场出发。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D03-Q5",
+      "split": "calibration",
+      "question": "青屿骑行在2027年新的收费标准具体是多少？",
+      "expected": null,
+      "kind": "unsupported",
+      "answerable": false,
+      "goldSources": [],
+      "goldAnswer": null,
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D04-Q1",
+      "split": "calibration",
+      "question": "栖墨展厅周三是否开放、几点关门？",
+      "expected": "资料/04-栖墨展厅.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/04-栖墨展厅.md",
+          "line": 7,
+          "quote": "周三10:00开放，17:30停止入场，18:00闭馆。"
+        }
+      ],
+      "goldAnswer": "周三10:00开放，17:30停止入场，18:00闭馆。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D04-Q2",
+      "split": "calibration",
+      "question": "栖墨展厅纸本文物的照度限制是多少？",
+      "expected": "资料/04-栖墨展厅.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/04-栖墨展厅.md",
+          "line": 9,
+          "quote": "纸本文物展柜的照度上限是50勒克斯。"
+        }
+      ],
+      "goldAnswer": "纸本文物展柜的照度上限是50勒克斯。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D05-Q1",
+      "split": "calibration",
+      "question": "夏禾食堂午餐预订几点截止？",
+      "expected": "资料/05-夏禾食堂.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/05-夏禾食堂.md",
+          "line": 7,
+          "quote": "当日午餐预订在09:45截止，11:30开始取餐。"
+        }
+      ],
+      "goldAnswer": "当日午餐预订在09:45截止，11:30开始取餐。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D05-Q5",
+      "split": "calibration",
+      "question": "夏禾食堂在2027年新的收费标准具体是多少？",
+      "expected": null,
+      "kind": "unsupported",
+      "answerable": false,
+      "goldSources": [],
+      "goldAnswer": null,
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D06-Q1",
+      "split": "calibration",
+      "question": "浮桥档案馆数字档案的保留期有多久？",
+      "expected": "资料/06-浮桥档案馆.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/06-浮桥档案馆.md",
+          "line": 7,
+          "quote": "活动数字档案从结项日算起保留7年。"
+        }
+      ],
+      "goldAnswer": "活动数字档案从结项日算起保留7年。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D06-Q2",
+      "split": "calibration",
+      "question": "浮桥档案馆的本次移交长编号是什么？",
+      "expected": "资料/06-浮桥档案馆.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/06-浮桥档案馆.md",
+          "line": 9,
+          "quote": "本次移交编号是900719925474099312345，须作为字符串逐字保留。"
+        }
+      ],
+      "goldAnswer": "本次移交编号是900719925474099312345，须作为字符串逐字保留。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D07-Q1",
+      "split": "calibration",
+      "question": "晨岚观测台每天何时读取雨量？",
+      "expected": "资料/07-晨岚观测台.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/07-晨岚观测台.md",
+          "line": 7,
+          "quote": "雨量每天08:00读取一次，记录前24小时累计值。"
+        }
+      ],
+      "goldAnswer": "雨量每天08:00读取一次，记录前24小时累计值。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D07-Q5",
+      "split": "calibration",
+      "question": "晨岚观测台在2027年新的收费标准具体是多少？",
+      "expected": null,
+      "kind": "unsupported",
+      "answerable": false,
+      "goldSources": [],
+      "goldAnswer": null,
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D08-Q1",
+      "split": "calibration",
+      "question": "白鹭志愿队的早班有几人、何时交接？",
+      "expected": "资料/08-白鹭志愿队.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/08-白鹭志愿队.md",
+          "line": 7,
+          "quote": "早班安排4人，09:00与前一班交接。"
+        }
+      ],
+      "goldAnswer": "早班安排4人，09:00与前一班交接。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D08-Q2",
+      "split": "calibration",
+      "question": "白鹭志愿队急救包由谁核对？",
+      "expected": "资料/08-白鹭志愿队.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/08-白鹭志愿队.md",
+          "line": 9,
+          "quote": "每班带班员按封签日期核对急救包。"
+        }
+      ],
+      "goldAnswer": "每班带班员按封签日期核对急救包。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D09-Q1",
+      "split": "calibration",
+      "question": "山橙木工坊的初学者课程多长？",
+      "expected": "资料/09-山橙木工坊.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/09-山橙木工坊.md",
+          "line": 7,
+          "quote": "初学者课程每次90分钟，每组最多6人。"
+        }
+      ],
+      "goldAnswer": "初学者课程每次90分钟，每组最多6人。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D09-Q5",
+      "split": "calibration",
+      "question": "山橙木工坊在2027年新的收费标准具体是多少？",
+      "expected": null,
+      "kind": "unsupported",
+      "answerable": false,
+      "goldSources": [],
+      "goldAnswer": null,
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D10-Q1",
+      "split": "calibration",
+      "question": "光栎图书角周末的开放时段是什么？",
+      "expected": "资料/10-光栎图书角.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/10-光栎图书角.md",
+          "line": 7,
+          "quote": "周末开放时段是09:00至19:00。"
+        }
+      ],
+      "goldAnswer": "周末开放时段是09:00至19:00。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D10-Q2",
+      "split": "calibration",
+      "question": "光栎图书角新书如何编码？",
+      "expected": "资料/10-光栎图书角.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/10-光栎图书角.md",
+          "line": 9,
+          "quote": "新书采用类别码、年份和四位流水号组成的编码。"
+        }
+      ],
+      "goldAnswer": "新书采用类别码、年份和四位流水号组成的编码。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D11-Q1",
+      "split": "calibration",
+      "question": "折页出版小组的二校由谁完成？",
+      "expected": "资料/11-折页出版小组.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/11-折页出版小组.md",
+          "line": 7,
+          "quote": "二校由未参与初校的另一名编辑完成。"
+        }
+      ],
+      "goldAnswer": "二校由未参与初校的另一名编辑完成。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D11-Q5",
+      "split": "calibration",
+      "question": "折页出版小组在2027年新的收费标准具体是多少？",
+      "expected": null,
+      "kind": "unsupported",
+      "answerable": false,
+      "goldSources": [],
+      "goldAnswer": null,
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D12-Q1",
+      "split": "calibration",
+      "question": "松塔山居办理退房的最晚时间是什么？",
+      "expected": "资料/12-松塔山居.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/12-松塔山居.md",
+          "line": 7,
+          "quote": "退房最晚时间是次日11:00。"
+        }
+      ],
+      "goldAnswer": "退房最晚时间是次日11:00。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D12-Q2",
+      "split": "calibration",
+      "question": "松塔山居无障碍房间怎样预留？",
+      "expected": "资料/12-松塔山居.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/12-松塔山居.md",
+          "line": 9,
+          "quote": "无障碍房间需在抵达前至少24小时电话确认。"
+        }
+      ],
+      "goldAnswer": "无障碍房间需在抵达前至少24小时电话确认。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D13-Q1",
+      "split": "calibration",
+      "question": "云岫步道的主线全长多少公里？",
+      "expected": "资料/13-云岫步道.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/13-云岫步道.md",
+          "line": 7,
+          "quote": "主线全长6.8公里，累计爬升320米。"
+        }
+      ],
+      "goldAnswer": "主线全长6.8公里，累计爬升320米。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D13-Q5",
+      "split": "calibration",
+      "question": "云岫步道在2027年新的收费标准具体是多少？",
+      "expected": null,
+      "kind": "unsupported",
+      "answerable": false,
+      "goldSources": [],
+      "goldAnswer": null,
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D14-Q1",
+      "split": "calibration",
+      "question": "池影电影社放映前多久可以入场？",
+      "expected": "资料/14-池影电影社.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/14-池影电影社.md",
+          "line": 7,
+          "quote": "每场放映开始前20分钟开放入场。"
+        }
+      ],
+      "goldAnswer": "每场放映开始前20分钟开放入场。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D14-Q2",
+      "split": "calibration",
+      "question": "池影电影社如何处理未经许可的录屏？",
+      "expected": "资料/14-池影电影社.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/14-池影电影社.md",
+          "line": 9,
+          "quote": "放映期间禁止录屏，发现后先提醒停止。"
+        }
+      ],
+      "goldAnswer": "放映期间禁止录屏，发现后先提醒停止。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D15-Q1",
+      "split": "calibration",
+      "question": "月衡社区议事会提案何时截止提交？",
+      "expected": "资料/15-月衡社区议事会.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/15-月衡社区议事会.md",
+          "line": 7,
+          "quote": "月度提案在每月20日17:00截止提交。"
+        }
+      ],
+      "goldAnswer": "月度提案在每月20日17:00截止提交。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D15-Q5",
+      "split": "calibration",
+      "question": "月衡社区议事会在2027年新的收费标准具体是多少？",
+      "expected": null,
+      "kind": "unsupported",
+      "answerable": false,
+      "goldSources": [],
+      "goldAnswer": null,
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D16-Q1",
+      "split": "calibration",
+      "question": "石榴种子库干燥柜的湿度上限是多少？",
+      "expected": "资料/16-石榴种子库.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/16-石榴种子库.md",
+          "line": 7,
+          "quote": "干燥柜相对湿度不得超过35%。"
+        }
+      ],
+      "goldAnswer": "干燥柜相对湿度不得超过35%。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D16-Q2",
+      "split": "calibration",
+      "question": "石榴种子库种子活力多久抽查一次？",
+      "expected": "资料/16-石榴种子库.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/16-石榴种子库.md",
+          "line": 9,
+          "quote": "同一批种子每6个月进行一次活力抽查。"
+        }
+      ],
+      "goldAnswer": "同一批种子每6个月进行一次活力抽查。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D17-Q1",
+      "split": "calibration",
+      "question": "远汀培训营完成课程需要多少出勤率？",
+      "expected": "资料/17-远汀培训营.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/17-远汀培训营.md",
+          "line": 7,
+          "quote": "完成课程要求出勤率达到80%。"
+        }
+      ],
+      "goldAnswer": "完成课程要求出勤率达到80%。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D17-Q5",
+      "split": "calibration",
+      "question": "远汀培训营在2027年新的收费标准具体是多少？",
+      "expected": null,
+      "kind": "unsupported",
+      "answerable": false,
+      "goldSources": [],
+      "goldAnswer": null,
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D18-Q1",
+      "split": "calibration",
+      "question": "银杉共享工作室每次最长能预订多久？",
+      "expected": "资料/18-银杉共享工作室.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/18-银杉共享工作室.md",
+          "line": 7,
+          "quote": "单次最长可预订4小时。"
+        }
+      ],
+      "goldAnswer": "单次最长可预订4小时。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D18-Q2",
+      "split": "calibration",
+      "question": "银杉共享工作室晚间安静时段从几点开始？",
+      "expected": "资料/18-银杉共享工作室.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/18-银杉共享工作室.md",
+          "line": 9,
+          "quote": "晚间安静时段从21:00开始，禁止扩音设备。"
+        }
+      ],
+      "goldAnswer": "晚间安静时段从21:00开始，禁止扩音设备。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D19-Q1",
+      "split": "calibration",
+      "question": "禾川样品仓默认采用什么出库顺序？",
+      "expected": "资料/19-禾川样品仓.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/19-禾川样品仓.md",
+          "line": 7,
+          "quote": "未标特殊条件的样品按先进先出原则出库。"
+        }
+      ],
+      "goldAnswer": "未标特殊条件的样品按先进先出原则出库。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D19-Q5",
+      "split": "calibration",
+      "question": "禾川样品仓在2027年新的收费标准具体是多少？",
+      "expected": null,
+      "kind": "unsupported",
+      "answerable": false,
+      "goldSources": [],
+      "goldAnswer": null,
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "未记载的信息明确说明资料不足，不根据2026年规则猜2027年收费。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D20-Q1",
+      "split": "calibration",
+      "question": "雨巷咖啡实验室手冲课程几点开始？",
+      "expected": "资料/20-雨巷咖啡实验室.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/20-雨巷咖啡实验室.md",
+          "line": 7,
+          "quote": "手冲课程在周日15:00开始。"
+        }
+      ],
+      "goldAnswer": "手冲课程在周日15:00开始。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    },
+    {
+      "id": "D20-Q2",
+      "split": "calibration",
+      "question": "雨巷咖啡实验室烘焙后多久进行第一次杯测？",
+      "expected": "资料/20-雨巷咖啡实验室.md",
+      "kind": "factual",
+      "answerable": true,
+      "goldSources": [
+        {
+          "path": "资料/20-雨巷咖啡实验室.md",
+          "line": 9,
+          "quote": "烘焙后第3天进行第一次杯测。"
+        }
+      ],
+      "goldAnswer": "烘焙后第3天进行第一次杯测。",
+      "rubric": {
+        "factualSupport": "只陈述金标来源明确提供的事实；不把问题的预设当作事实。",
+        "citationFormat": "资料事实使用[S1]等已有证据编号；长数字字符串和JSON中的[1]不得误改为引用。",
+        "answerability": "应答复已给事实；不因格式要求拒绝有证据的问题。",
+        "chartSemantics": "不适用"
+      }
+    }
+  ]
+}

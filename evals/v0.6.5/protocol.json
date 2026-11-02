@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "frozenBeforeRun": true,
+  "rankingUnit": "distinct document; cross-document cases require all gold paths in top k",
+  "targets": {
+    "recallAt5Min": 0.9,
+    "mrrAt10Min": 0.8,
+    "goldEvidenceContextRateMin": 0.85,
+    "unsupportedEvidencePositiveMax": 0.1
+  },
+  "generationReviewTargets": {
+    "factualSupportMin": 0.9,
+    "citationSupportMin": 0.95,
+    "correctRefusalMin": 0.9,
+    "chartSemanticsMin": 0.9
+  },
+  "candidateLimit": 60,
+  "displayCandidateLimit": 12,
+  "rerankCandidateCount": 40,
+  "rerankMinScore": 0.5,
+  "rerankStrict": false,
+  "contextBlockChars": 2400,
+  "contextTotalChars": 12000,
+  "embeddingBatchSize": 16,
+  "generationCaseIds": [
+    "N01",
+    "N06",
+    "N08",
+    "N16",
+    "N21",
+    "N25"
+  ],
+  "generationModes": [
+    "bm25",
+    "vector",
+    "hybrid",
+    "rerank"
+  ],
+  "maxHttpAttempts": 240,
+  "maxWallSeconds": 1200,
+  "maxRetriesPerLogicalRequest": 3,
+  "cost": null,
+  "notes": [
+    "Old 100 cases already observed: regression only.",
+    "32 new cases frozen before retrieval changes; same author, not independent blind testing.",
+    "vector-only is a diagnostic baseline; original BM25 lexical evidence policy remains unchanged.",
+    "No gold text, expected path or case labels influence production retrieval.",
+    "Missing billing/usage stays unknown; budget is requests and time, not a currency cap.",
+    "A quality miss must remain failed; software test pass is not quality certification."
+  ]
+}
