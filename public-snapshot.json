@@ -1,8 +1,8 @@
 {
   "version": 1,
   "appVersion": "0.6.6",
-  "createdAt": "2026-11-02T16:28:56.412Z",
-  "sourceCommit": "8b528405b84b7becbb52ea51460a360747213570",
+  "createdAt": "2026-11-02T16:56:45.800618+00:00",
+  "sourceCommit": "d868ab9d693fe7790f2e93d445ab944831f65ac5",
   "sourceDirty": false,
   "includesGitHistory": false,
   "excluded": [
@@ -1299,7 +1299,7 @@
     "licenses/supplemental.json": "9bc37e7852302ba3c827f127bf23c9c35824541dbe21959e14493c18de3c4430",
     ".github/ISSUE_TEMPLATE/bug.yml": "b6c94a7adf9929d67e198dbc4ebce999897e645cb03a26fa7f158dbde1641d8e",
     ".github/ISSUE_TEMPLATE/config.yml": "13064e7bea658e01e718b414fbb7b3b244f36411fe25ee2055c151f7b534547a",
-    ".github/workflows/verify.yml": "e06f9878e40d8afe3e249e5c19fc3d1d6ddff7db279016d66aae4f21a2770cf0",
+    ".github/workflows/verify.yml": "7abe61fadbfa556020526fccbab99877c3090409d73bc0aa448bd7308c3cc5b2",
     "src-tauri/src/answer_validation.rs": "9f5e7993b0dd4524c48c0273400bcfbc9444ca73ffc8d21fa113a18035c58b1c",
     "src-tauri/src/calendar.rs": "ac98f58a4e1c9be9a84ef2821e2724b56d77573a321e9ecd3295367c0c9ae917",
     "src-tauri/src/calendar_commands.rs": "c28e083bca22899545c4401bf98916158a75d3038f8d86d54b4d4fea99578b6c",
@@ -1351,7 +1351,7 @@
     "docs/PUBLIC-README.md": "01a61cf352907f3c49ed8f80220e254153384da73ffacc43d546934c13e72b09",
     "docs/README.zh-CN.md": "b0b4f740047ca2adaac83213260d56230e10d77341bae788a82cd8d6fc102e7b",
     "docs/PUBLIC-ARCHITECTURE.md": "3b8b58f8c7581fefcf7bd9770f7cd2b7dbca9e89a19f97db4c86848b0b47c1c0",
-    "docs/PUBLIC-RELEASE-v0.6.6.md": "0688d30c2d8a7a01f7a17ed8d46bd5a2f944fb045a52191630cc2d705d11c083",
+    "docs/PUBLIC-RELEASE-v0.6.6.md": "73cbaab8b31815f57e1e77f75be9934697b993996c5eb8cd821e56d664949f16",
     "docs/PUBLIC-CHANGELOG.md": "c9d224f197a3229ac15e69afb9a7ba10dc541773993b8104958ef95c00f7abc7",
     "docs/assets/v0.6.6/01-workspace.png": "88e133164fcb3d012ec7f388b584b51361c6526aa0980c34f3426eb1bb99c59f",
     "docs/assets/v0.6.6/02-mermaid.png": "89530251a1daee42d930d0635b7bf8dc12bbc3acd67465d08e78e3cfd90e7440",
