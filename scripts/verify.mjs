@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { existsSync } from "node:fs";
 import { affected, digest, reuseDecision, ids } from "./verification/plan.mjs";
+import { failureSummary } from "./verification/diagnostics.mjs";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const publicSnapshot = existsSync(join(root, "public-snapshot.json"));
 const args = process.argv.slice(2);
@@ -79,6 +80,7 @@ const stages = [
     args: [
       "--test",
       "scripts/verification/plan.test.mjs",
+      "scripts/verification/diagnostics.test.mjs",
       "evals/v0.6.6/budget.test.mjs",
     ],
     cwd: root,
@@ -375,6 +377,9 @@ try {
     );
     if (code !== 0) {
       failed = true;
+      console.error(
+        `--- ${stage.id} failure diagnostics (bounded tail) ---\n${failureSummary(await readFile(join(out, log), "utf8"))}`,
+      );
       if (stage.id === "toolchain") break;
     }
   }
