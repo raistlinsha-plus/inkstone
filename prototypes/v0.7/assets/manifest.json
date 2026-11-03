@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "conceptCount": 4,
+  "assets": [
+    {
+      "id": "motuan-concept",
+      "file": "assets/motuan-concept.png",
+      "status": "generated-concept-only",
+      "generatedDate": "2026-11-03",
+      "tool": "OpenAI imagegen",
+      "sha256": "984b84cb0c4a8b20e84d2debfed5478812298f54ccbf7e39f5497d87f13e257b",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "finalStageAsset": false,
+      "licenseStatus": "local design review; final distribution attribution and license to be recorded before release"
+    },
+    {
+      "id": "motuan-study-concept",
+      "file": "assets/motuan-study-concept.png",
+      "status": "generated-concept-only",
+      "generatedDate": "2026-11-03",
+      "tool": "OpenAI imagegen",
+      "sha256": "60e83d0d4b61de468059015dd6c1e4c952021bd7cd545759d21a6f24437fb7e0",
+      "width": 1672,
+      "height": 941,
+      "hasAlpha": false,
+      "finalStageAsset": false,
+      "licenseStatus": "local design review; final distribution attribution and license to be recorded before release"
+    },
+    {
+      "id": "yanzhou-concept",
+      "file": "assets/yanzhou-concept.png",
+      "status": "generated-concept-only",
+      "generatedDate": "2026-11-03",
+      "tool": "OpenAI imagegen",
+      "sha256": "edde7db09fa13276239d2bac27fa81d9b54d4bda32835ca7f96963fa165c6fe4",
+      "width": 1024,
+      "height": 1536,
+      "hasAlpha": true,
+      "finalStageAsset": false,
+      "licenseStatus": "local design review; final distribution attribution and license to be recorded before release"
+    },
+    {
+      "id": "zhiwei-concept",
+      "file": "assets/zhiwei-concept.png",
+      "status": "generated-concept-only",
+      "generatedDate": "2026-11-03",
+      "tool": "OpenAI imagegen",
+      "sha256": "a749d806b500dc5750cc66c85c0f79b7096e13b0e3d975bfd94fce8e35fc56a8",
+      "width": 1024,
+      "height": 1536,
+      "hasAlpha": true,
+      "finalStageAsset": false,
+      "licenseStatus": "local design review; final distribution attribution and license to be recorded before release"
+    }
+  ]
+}

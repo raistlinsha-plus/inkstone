@@ -9,7 +9,7 @@
       "characterId": "yanzhou",
       "stage": 0,
       "status": "planned-final-art",
-      "prototype": "inline SVG schematic only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     },
@@ -19,7 +19,7 @@
       "characterId": "yanzhou",
       "stage": 1,
       "status": "planned-final-art",
-      "prototype": "inline SVG schematic only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     },
@@ -29,7 +29,7 @@
       "characterId": "yanzhou",
       "stage": 2,
       "status": "planned-final-art",
-      "prototype": "inline SVG schematic only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     },
@@ -40,7 +40,7 @@
       "stage": 1,
       "title": "留一盏灯",
       "status": "planned-final-art",
-      "prototype": "inline SVG composition only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     },
@@ -51,7 +51,7 @@
       "stage": 2,
       "title": "两份批注",
       "status": "planned-final-art",
-      "prototype": "inline SVG composition only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     },
@@ -61,7 +61,7 @@
       "characterId": "zhiwei",
       "stage": 0,
       "status": "planned-final-art",
-      "prototype": "inline SVG schematic only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     },
@@ -71,7 +71,7 @@
       "characterId": "zhiwei",
       "stage": 1,
       "status": "planned-final-art",
-      "prototype": "inline SVG schematic only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     },
@@ -81,7 +81,7 @@
       "characterId": "zhiwei",
       "stage": 2,
       "status": "planned-final-art",
-      "prototype": "inline SVG schematic only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     },
@@ -92,7 +92,7 @@
       "stage": 1,
       "title": "页边来信",
       "status": "planned-final-art",
-      "prototype": "inline SVG composition only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     },
@@ -103,7 +103,7 @@
       "stage": 2,
       "title": "未完的序言",
       "status": "planned-final-art",
-      "prototype": "inline SVG composition only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     },
@@ -113,7 +113,7 @@
       "characterId": "motuan",
       "stage": 0,
       "status": "planned-final-art",
-      "prototype": "inline SVG schematic only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     },
@@ -123,7 +123,7 @@
       "characterId": "motuan",
       "stage": 1,
       "status": "planned-final-art",
-      "prototype": "inline SVG schematic only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     },
@@ -133,7 +133,7 @@
       "characterId": "motuan",
       "stage": 2,
       "status": "planned-final-art",
-      "prototype": "inline SVG schematic only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     },
@@ -144,7 +144,7 @@
       "stage": 1,
       "title": "捡到一枚书签",
       "status": "planned-final-art",
-      "prototype": "inline SVG composition only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     },
@@ -155,9 +155,11 @@
       "stage": 2,
       "title": "午后共读",
       "status": "planned-final-art",
-      "prototype": "inline SVG composition only",
+      "prototype": "generated character/study concept reused for interaction review; not the final stage asset",
       "source": "not produced",
       "license": "pending asset provenance review"
     }
-  ]
+  ],
+  "conceptManifest": "assets/manifest.json",
+  "style": "pixel silhouette and ink wash; generated concepts are not final pixel sprites"
 }

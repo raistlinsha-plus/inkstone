@@ -13,9 +13,9 @@
   </head>
   <body>
     <div class="prototype-ribbon">
-      <span><strong>v0.7 交互原型</strong> · 独立演示数据 · 离线运行</span>
+      <span><strong>v0.7 像素水墨原型</strong> · 独立演示数据 · 离线运行</span>
       <div>
-        <button data-action="guide">查看流程与场景</button
+        <button data-action="art-direction">角色美术设定</button><button data-action="guide">查看流程与场景</button
         ><button data-action="reset">重置演示</button>
       </div>
     </div>
@@ -96,7 +96,7 @@
             ⋯
           </button>
         </div>
-        <div id="companion"></div>
+        <div class="chat-header"><div><strong id="chat-title">新会话</strong><small id="chat-scope-label">当前空间</small></div><div class="chat-controls"><button data-action="history">会话</button><button data-action="new-chat">新建</button><button data-action="expand-chat" id="expand-chat">展开问答</button></div><label class="chat-scope">资料范围<select id="chat-scope"><option value="space">当前空间</option><option value="current">当前文档</option></select></label></div><div id="companion"></div>
         <div id="knowledge-body" class="knowledge-body"></div>
         <form id="ask-form" class="ask-form">
           <label for="question">向当前空间提问</label>
