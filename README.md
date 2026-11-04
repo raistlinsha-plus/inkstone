@@ -1,5 +1,7 @@
 # Inkstone · 砚台
 
+**Local development candidate: v0.7.0-rc.1.** Persistent multi-turn conversations, candidate branches and source snapshots, expanded Q&A, opt-in pixel-ink companions, three-stage stories and local data controls are implemented. The current public source release remains v0.6.6. See [candidate delivery and limits](docs/DELIVERY-v0.7.md). Artwork is static release-candidate art; multi-day natural use and native accessibility checks remain pending.
+
 A local Markdown workspace and evidence-based knowledge assistant for **macOS 13+ on Apple Silicon**. Bring your own compatible model API. Version **0.6.6** is the first public **source preview**.
 
 [中文说明](docs/README.zh-CN.md) · [Architecture](docs/PUBLIC-ARCHITECTURE.md) · [Release notes](docs/PUBLIC-RELEASE-v0.6.6.md) · [Known limits](docs/KNOWN-LIMITATIONS.md)
@@ -55,7 +57,7 @@ Graph/chart formats follow the application's data contracts. Chart presence, val
 
 ## Roadmap and contributing
 
-The next production milestone is v0.7: a restrained companion experience with shared work history, stories and character artwork. The separate `prototypes/v0.7` demo uses fictional browser-local state and placeholder compositions; the production app does not yet implement companions, growth, CGs or stories.
+The local v0.7.0-rc.1 candidate implements persistent conversations and opt-in companions, growth, CG albums and stories. The separate `prototypes/v0.7` demo remains a fictional design reference. Natural multi-day use, final sprite animation/artwork review and native accessibility acceptance remain gates before a stable v0.7 release; see the [candidate delivery](docs/DELIVERY-v0.7.md).
 
 [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Limitations](docs/KNOWN-LIMITATIONS.md) · [Evaluation results](evals/v0.6.6/RESULTS.md)
 

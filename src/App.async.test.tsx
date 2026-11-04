@@ -216,6 +216,7 @@ vi.mock("./calendar/ProjectCalendar", () => ({
     </div>
   ),
 }));
+vi.mock("./companion/CompanionDock", () => ({ default: () => null }));
 import App from "./App";
 import { defaultRerankProvider } from "./types";
 
@@ -264,6 +265,7 @@ const view: LibraryView = {
 };
 const disk = new Map<string, FileData>();
 const overrides = new Map<string, (args: Record<string, any>) => unknown>();
+let mockConversation: any = null;
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => {
@@ -489,6 +491,7 @@ beforeEach(() => {
   localStorage.clear();
   disk.clear();
   overrides.clear();
+  mockConversation = null;
   api.confirm.mockResolvedValue(true);
   for (const d of view.documents) disk.set(d.path, file(d.path));
   api.invoke.mockImplementation(
@@ -496,6 +499,82 @@ beforeEach(() => {
       if (overrides.has(command))
         return Promise.resolve(overrides.get(command)!(args));
       switch (command) {
+        case "assistant_list":
+          return Promise.resolve(
+            mockConversation
+              ? [
+                  {
+                    ...mockConversation,
+                    turnCount: mockConversation.turns.length,
+                  },
+                ]
+              : [],
+          );
+        case "assistant_create":
+          mockConversation = {
+            id: "conversation-test",
+            title: "新会话",
+            scope: args.scope,
+            scopeLabel: args.scope
+              ? `当前文档 · ${args.scope}`
+              : "当前空间 · p1",
+            archived: false,
+            draft: "",
+            revision: 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            activeLeafId: null,
+            turns: [],
+          };
+          return Promise.resolve({ ...mockConversation });
+        case "assistant_get":
+          return Promise.resolve(mockConversation);
+        case "assistant_update":
+          mockConversation = {
+            ...mockConversation,
+            ...args,
+            revision: mockConversation.revision + 1,
+          };
+          return Promise.resolve(mockConversation);
+        case "assistant_ask": {
+          const c = mockConversation;
+          // Reuse the original provider fixture while asserting the new durable command boundary.
+          return api
+            .invoke("ask_question", {
+              question: args.question,
+              scope: c.scope,
+              requestId: args.requestId,
+              semantic: args.semantic,
+              retrievalMode: args.retrievalMode,
+            })
+            .then((response: any) => {
+              const candidate = {
+                id: "candidate-" + args.requestId,
+                requestId: args.requestId,
+                status: "complete",
+                createdAt: new Date().toISOString(),
+                error: null,
+                response,
+              };
+              const turn = {
+                id: "turn-" + args.requestId,
+                parentTurnId: args.parentTurnId,
+                question: args.question,
+                createdAt: new Date().toISOString(),
+                selectedCandidateId: candidate.id,
+                candidates: [candidate],
+              };
+              mockConversation = {
+                ...c,
+                title: args.question,
+                draft: "",
+                revision: c.revision + 2,
+                activeLeafId: turn.id,
+                turns: [...c.turns, turn],
+              };
+              return mockConversation;
+            });
+        }
         case "bootstrap":
           return Promise.resolve({ settings, lastWorkspace: null });
         case "open_library":
@@ -980,7 +1059,11 @@ test("an answer keeps its request scope and explicit retrieval mode when control
   fireEvent.change(screen.getByLabelText("资料范围"), {
     target: { value: "workspace" },
   });
-  expect(screen.getByText(/当前文档 · a.md/)).toBeTruthy();
+  expect(
+    within(document.querySelector(".assistant-turn")!).getByText(
+      /当前文档 · a.md/,
+    ),
+  ).toBeTruthy();
 });
 
 test("save answer creates a separate managed Markdown document without replacing current edits", async () => {
@@ -1107,3 +1190,43 @@ test("source replacement and an in-flight file hash never save the old document 
   expect(calls("save_file")).toHaveLength(0);
   expect(screen.queryByText("磁盘文件已变化。")).toBeNull();
 }, 10000);
+
+test("assistant keeps multiple turns and transfers the explicitly selected older answer", async () => {
+  await askSynthetic(syntheticAnswer);
+  await screen.findByRole("heading", { name: "季度分析" });
+  overrides.set("ask_question", () => ({
+    ...syntheticAnswer,
+    text: "## 后续结论\n\n另一轮的回答。",
+  }));
+  fireEvent.change(screen.getByLabelText("向当前空间提问"), {
+    target: { value: "请继续分析第二季度" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+  await screen.findByRole("heading", { name: "后续结论" });
+  const turns = document.querySelectorAll(".assistant-turn");
+  expect(turns).toHaveLength(2);
+  expect(calls("assistant_ask")[1][1]).toMatchObject({
+    parentTurnId: mockConversation.turns[0].id,
+  });
+  fireEvent.click(
+    within(turns[0] as HTMLElement).getByRole("button", { name: "保存为文档" }),
+  );
+  const preview = screen.getByRole("dialog", { name: "保存回答为文档" });
+  expect(preview.textContent).toContain("季度分析");
+  expect(preview.textContent).not.toContain("后续结论");
+});
+
+test("question composer protects IME Enter and Shift+Enter while Enter sends", async () => {
+  await askSynthetic(syntheticAnswer);
+  await screen.findByRole("heading", { name: "季度分析" });
+  const input = screen.getByLabelText("向当前空间提问");
+  fireEvent.change(input, { target: { value: "追问资料" } });
+  fireEvent.keyDown(input, { key: "Enter", isComposing: true, keyCode: 229 });
+  fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
+  expect(calls("assistant_ask")).toHaveLength(1);
+  await waitFor(() =>
+    expect(input.hasAttribute("data-ime-composing")).toBe(false),
+  );
+  fireEvent.keyDown(input, { key: "Enter" });
+  await waitFor(() => expect(calls("assistant_ask")).toHaveLength(2));
+});

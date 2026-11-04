@@ -1,0 +1,453 @@
+/** DEV/QA ONLY. Injected into an isolated browser context by qa-v07-browser.mjs.
+ * This emulates IPC for presentation checks. It is never imported by the app. */
+export function installV07Fixture() {
+  const key = "inkstone-v07-ui-qa-store",
+    clone = (x) => JSON.parse(JSON.stringify(x));
+  const root = "/qa/inkstone-v07",
+    now = () => new Date().toISOString(),
+    stats = {
+      documents: 2,
+      chunks: 2,
+      vectors: 2,
+      vectorDocuments: 2,
+      embeddingReady: true,
+    };
+  const base = {
+    spaces: [{ id: "qa-space", title: "北岸阅读计划（合成）" }],
+    documents: [
+      {
+        id: "doc-1",
+        projectId: "qa-space",
+        path: "documents/doc-1/阅读活动方案.md",
+        title: "阅读活动方案.md",
+        source: "",
+        updated: 1,
+        opened: 1,
+        status: "ready",
+      },
+      {
+        id: "doc-2",
+        projectId: "qa-space",
+        path: "documents/doc-2/复盘.md",
+        title: "复盘.md",
+        source: "",
+        updated: 1,
+        opened: 0,
+        status: "ready",
+      },
+    ],
+    conversations: [],
+    files: {
+      "documents/doc-1/阅读活动方案.md": {
+        content:
+          "# 北岸阅读活动\n\n本页所有资料均为虚构，供UI验收使用。\n\n## 两种活动\n\n| 方案 | 时间 | 人数 |\n| --- | --- | --- |\n| 甲 | 周二 | 120 |\n| 乙 | 周四 | 80 |\n\n资料未提供满意度、费用或长期效果。",
+        hash: "qa-hash-reading",
+      },
+      "documents/doc-2/复盘.md": {
+        content: "# 复盘\n\n下一步补充满意度和成本指标。",
+        hash: "qa-hash-review",
+      },
+    },
+    companion: {
+      generation: "qa-generation",
+      revision: 0,
+      timezone: "Asia/Shanghai",
+      settings: {
+        enabled: true,
+        characterId: "motuan",
+        mode: "focus",
+        reducedMotion: true,
+        compact: true,
+      },
+      events: 0,
+      days: 0,
+      roles: { motuan: { read: [0], choices: {}, outfit: 0 } },
+      cards: [],
+      preferences: [],
+      pending: [],
+      eligible: null,
+    },
+  };
+  let store;
+  try {
+    store = JSON.parse(localStorage.getItem(key) || "null") || base;
+  } catch {
+    store = base;
+  }
+  const persist = () => localStorage.setItem(key, JSON.stringify(store)),
+    callbacks = new Map(),
+    listeners = new Map(),
+    cancelled = new Set();
+  let nextCallback = 1,
+    nextListener = 1;
+  const send = (event, payload) => {
+    for (const v of listeners.values())
+      if (v.event === event)
+        callbacks.get(v.handler)?.({ event, id: v.id, payload });
+  };
+  const provider = {
+    enabled: true,
+    baseUrl: "https://example.invalid/v1",
+    model: "QA fixture (no network model)",
+    dimensions: 4,
+    maxInputChars: 1800,
+    batchSize: 8,
+    contextChars: 16000,
+  };
+  const settings = {
+    embedding: provider,
+    chat: provider,
+    rerank: {
+      enabled: false,
+      endpoint: "",
+      protocol: "cohere",
+      model: "",
+      candidateCount: 40,
+      timeoutMs: 3000,
+      maxInputChars: 2400,
+      minScore: 0.5,
+      strict: false,
+    },
+    hasEmbeddingKey: false,
+    hasChatKey: false,
+    hasRerankKey: false,
+  };
+  const ws = () => ({
+    root,
+    name: "北岸阅读计划（合成）",
+    managedProjectId: "qa-space",
+    files: [],
+    stats,
+  });
+  const source = () => ({
+    id: 1,
+    path: store.documents[0].path,
+    text: "甲方案：周二，120人。乙方案：周四，80人。资料未提供满意度、费用或长期效果。",
+    heading: "两种活动",
+    startLine: 7,
+    endLine: 11,
+    hash: store.files[store.documents[0].path].hash,
+    score: 1,
+    evidence: true,
+    title: "阅读活动方案.md",
+    documentId: "doc-1",
+  });
+  async function invoke(command, args = {}) {
+    window.__INKSTONE_QA_CALLS__.push({ command, args: clone(args) });
+    if (command === "plugin:event|listen") {
+      const id = nextListener++;
+      listeners.set(id, { id, event: args.event, handler: args.handler });
+      return id;
+    }
+    if (command === "plugin:event|unlisten") {
+      listeners.delete(args.eventId);
+      return;
+    }
+    if (command.startsWith("plugin:")) return null;
+    if (command === "bootstrap") return { settings, lastWorkspace: null };
+    if (command === "open_library") return ws();
+    if (command === "library_list")
+      return {
+        projects: store.spaces,
+        documents: store.documents,
+        pendingImports: [],
+      };
+    if (command === "library_recovery_report")
+      return { checkedAt: Date.now(), items: [] };
+    if (command === "workspace_index_status")
+      return {
+        checkedAt: Date.now(),
+        embeddingProfile: "qa",
+        documents: store.documents.map((d) => ({
+          path: d.path,
+          title: d.title,
+          documentId: d.id,
+          included: true,
+          sourceHash: store.files[d.path].hash,
+          indexedHash: store.files[d.path].hash,
+          keywordState: "ready",
+          vectorState: "ready",
+        })),
+      };
+    if (command === "workspace_pins") return [];
+    if (command === "index_stats") return stats;
+    if (command === "list_files") return [];
+    if (command === "read_file") {
+      const f = store.files[args.path];
+      if (!f) throw Error("QA fixture source unavailable");
+      return {
+        path: args.path,
+        content: f.content,
+        hash: f.hash,
+        draft: null,
+        missing: false,
+      };
+    }
+    if (command === "file_hash") return store.files[args.path]?.hash;
+    if (
+      command === "save_draft" ||
+      command === "discard_draft" ||
+      command === "library_mark_open"
+    )
+      return;
+    if (command === "save_file") {
+      store.files[args.path] = {
+        content: args.content,
+        hash: "qa-save-" + Date.now(),
+      };
+      persist();
+      return {
+        hash: store.files[args.path].hash,
+        indexStale: true,
+        warning: null,
+      };
+    }
+    if (command === "library_create_document") {
+      const id = "qa-answer-" + Date.now(),
+        path = `documents/${id}/${args.title}`;
+      const d = {
+        id,
+        projectId: "qa-space",
+        path,
+        title: args.title,
+        source: "",
+        updated: Date.now() / 1000,
+        opened: 0,
+        status: "ready",
+      };
+      store.documents.push(d);
+      store.files[path] = { content: args.content, hash: "qa-answer-hash" };
+      persist();
+      return clone(d);
+    }
+    if (command === "assistant_list")
+      return clone(
+        store.conversations
+          .filter((c) => args.includeArchived || !c.archived)
+          .map((c) => ({ ...c, turnCount: c.turns.length }))
+          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+      );
+    if (command === "assistant_create") {
+      const c = {
+        id: crypto.randomUUID(),
+        title: args.title || "新会话",
+        scope: args.scope ?? null,
+        scopeLabel: args.scope
+          ? "当前文档 · " + args.scope.split("/").at(-1)
+          : "当前空间 · 北岸阅读计划（合成）",
+        archived: false,
+        draft: "",
+        revision: 0,
+        createdAt: now(),
+        updatedAt: now(),
+        activeLeafId: null,
+        turns: [],
+      };
+      store.conversations.push(c);
+      persist();
+      return clone(c);
+    }
+    if (command.startsWith("assistant_")) {
+      const c = store.conversations.find((c) => c.id === args.conversationId);
+      if (!c) throw Error("会话已删除或不属于本空间");
+      if (command === "assistant_get") return clone(c);
+      if (command === "assistant_update") {
+        for (const k of ["title", "archived", "draft", "activeLeafId"])
+          if (args[k] !== undefined) c[k] = args[k];
+        c.revision++;
+        c.updatedAt = now();
+        persist();
+        return clone(c);
+      }
+      if (command === "assistant_delete") {
+        store.conversations = store.conversations.filter((x) => x.id !== c.id);
+        persist();
+        return;
+      }
+      if (command === "assistant_export")
+        return {
+          json: JSON.stringify(c, null, 2),
+          markdown: c.turns
+            .map(
+              (t) =>
+                "## " +
+                t.question +
+                "\n\n" +
+                (t.candidates.at(-1)?.response?.text || ""),
+            )
+            .join("\n\n"),
+        };
+      if (command === "assistant_select_candidate") {
+        c.turns.find((t) => t.id === args.turnId).selectedCandidateId =
+          args.candidateId;
+        c.revision++;
+        persist();
+        return clone(c);
+      }
+      if (command === "assistant_ask") {
+        c.draft = "";
+        const t = args.regenerateTurnId
+          ? c.turns.find((t) => t.id === args.regenerateTurnId)
+          : {
+              id: crypto.randomUUID(),
+              parentTurnId: args.parentTurnId ?? null,
+              question: args.question,
+              createdAt: now(),
+              selectedCandidateId: null,
+              candidates: [],
+            };
+        if (!args.regenerateTurnId) c.turns.push(t);
+        const candidate = {
+          id: crypto.randomUUID(),
+          requestId: args.requestId,
+          requestedMode: args.retrievalMode,
+          status: "generating",
+          createdAt: now(),
+          error: null,
+          response: null,
+        };
+        t.candidates.push(candidate);
+        t.selectedCandidateId = candidate.id;
+        c.activeLeafId = t.id;
+        if (c.title === "新会话") c.title = c.turns[0].question.slice(0, 30);
+        c.revision++;
+        persist();
+        const insufficient = /满意|更好/.test(t.question),
+          text = insufficient
+            ? "## 资料不足以判断满意度\n\n当前资料只记录时间和人数，没有满意度指标。人数较多不等于更受欢迎。\n\n建议补充问卷样本与调查口径。"
+            : "## 甲方案参与人数较多\n\n甲方案为 **120人**，乙方案为 **80人**，相差 **40人**。[S1]\n\n| 方案 | 时间 | 人数 |\n| --- | --- | --- |\n| 甲 | 周二 | 120 |\n| 乙 | 周四 | 80 |\n\n资料不足以判断满意度或方案优劣。";
+        send("chat-status", {
+          requestId: args.requestId,
+          stage: "retrieving",
+          detail: "QA合成协议桩：正在检索",
+        });
+        send("chat-sources", {
+          requestId: args.requestId,
+          sources: [source()],
+        });
+        let partial = "";
+        for (let i = 0; i < text.length; i += 12) {
+          await new Promise((r) => setTimeout(r, 30));
+          if (cancelled.has(args.requestId)) break;
+          const delta = text.slice(i, i + 12);
+          partial += delta;
+          send("chat-delta", { requestId: args.requestId, delta });
+        }
+        candidate.status = cancelled.has(args.requestId)
+          ? "stopped"
+          : "complete";
+        candidate.response = {
+          text: partial,
+          finishReason:
+            candidate.status === "stopped"
+              ? "cancelled"
+              : insufficient
+                ? "no_evidence"
+                : "stop",
+          sources: [source()],
+          warning: null,
+          retrievalMode: "bm25",
+          rerankStatus: "not-requested",
+          model: "QA fixture · no provider request",
+          chartWarnings: [],
+          rejectedCharts: [],
+        };
+        c.revision++;
+        c.updatedAt = now();
+        persist();
+        return clone(c);
+      }
+    }
+    if (command === "cancel_chat") {
+      cancelled.add(args.requestId);
+      return;
+    }
+    if (command === "companion_state") return clone(store.companion);
+    if (command === "companion_settings") {
+      Object.assign(store.companion.settings, args.input);
+      store.companion.revision++;
+      persist();
+      return clone(store.companion);
+    }
+    if (command === "companion_preview")
+      return {
+        token: "qa-preview",
+        eventId: "qa-event",
+        suggestedText: "完成一份资料整理（合成UI验收）",
+        day: "2026-11-05",
+        canRevise: false,
+        expiresAt: Date.now() / 1000 + 900,
+        context: {
+          generation: store.companion.generation,
+          revision: store.companion.revision,
+        },
+      };
+    if (command === "companion_confirm") {
+      const s = store.companion;
+      if (!s.cards.some((c) => c.id === args.input.eventId)) {
+        s.events++;
+        s.days = 1;
+        s.cards.push({
+          id: args.input.eventId,
+          text: args.input.text,
+          spaceId: "qa-space",
+          day: "2026-11-05",
+          characterId: s.settings.characterId,
+          kind: args.input.kind,
+        });
+      }
+      s.revision++;
+      persist();
+      return { status: "counted", snapshot: clone(s) };
+    }
+    if (command === "companion_story") {
+      const s = store.companion,
+        id = args.input.characterId;
+      s.roles[id] ||= { read: [], choices: {}, outfit: 0 };
+      if (!s.roles[id].read.includes(args.input.stage))
+        s.roles[id].read.push(args.input.stage);
+      s.roles[id].outfit = args.input.stage;
+      s.revision++;
+      persist();
+      return clone(s);
+    }
+    if (command === "companion_export")
+      return JSON.stringify(store.companion, null, 2);
+    window.__INKSTONE_QA_UNKNOWN__.push(command);
+    return null;
+  }
+  window.__INKSTONE_QA_CALLS__ = [];
+  window.__INKSTONE_QA_UNKNOWN__ = [];
+  window.__TAURI_INTERNALS__ = {
+    invoke,
+    transformCallback(fn) {
+      const id = nextCallback++;
+      callbacks.set(id, fn);
+      return id;
+    },
+    unregisterCallback(id) {
+      callbacks.delete(id);
+    },
+    convertFileSrc(path) {
+      return path;
+    },
+    metadata: {
+      currentWindow: { label: "main" },
+      currentWebview: { label: "main", windowLabel: "main" },
+    },
+  };
+  localStorage.setItem("inkstone:workspaceMode", "library");
+  localStorage.setItem("inkstone:panel-open", "true");
+  localStorage.setItem(
+    "inkstone:session:" + root,
+    JSON.stringify({ path: store.documents[0].path, mode: "visual" }),
+  );
+  persist();
+  window.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
+    unregisterListener(_event, id) {
+      listeners.delete(id);
+    },
+  };
+  window.isTauri = true;
+  window.__INKSTONE_QA_FIXTURE__ = true;
+}

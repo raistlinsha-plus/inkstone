@@ -1,9 +1,12 @@
 mod answer_validation;
+mod assistant;
+mod assistant_commands;
 mod calendar;
 mod calendar_commands;
+mod companion;
+mod companion_commands;
 mod credentials;
 mod db;
-mod evidence;
 #[cfg(feature = "desktop-e2e")]
 mod desktop_test;
 mod documents;
@@ -17,6 +20,9 @@ mod evaluation_v062;
 mod evaluation_v065;
 #[cfg(test)]
 mod evaluation_v066;
+#[cfg(test)]
+mod evaluation_v07;
+mod evidence;
 mod files;
 mod library;
 mod library_commands;
@@ -913,7 +919,18 @@ async fn save_file(
     if ws.root != PathBuf::from(workspace_root) {
         return Err("工作区已变化，未保存到其他目录。请重新打开文档。".into());
     }
-    let result = documents::save(&ws, &state.data_dir, &path, &content, &expected_hash)?;
+    let mut result = documents::save(&ws, &state.data_dir, &path, &content, &expected_hash)?;
+    if result.hash != expected_hash {
+        if let Err(error) = companion::record_save(&state.data_dir, &ws, &path, &result.hash) {
+            let warning = format!("正文已保存；同伴操作凭据暂未保存：{error}");
+            result.warning = Some(
+                result
+                    .warning
+                    .map(|prior| format!("{prior}\n{warning}"))
+                    .unwrap_or(warning),
+            );
+        }
+    }
     Ok(result)
 }
 #[tauri::command]
@@ -1639,37 +1656,82 @@ async fn ask_question(
     semantic: Option<bool>,
     retrieval_mode: Option<String>,
 ) -> Result<ChatResponse, String> {
+    let _guard = begin_chat(&state, &request_id)?;
+    ask_pipeline(
+        &app,
+        &state,
+        &question,
+        &question,
+        scope,
+        &request_id,
+        semantic,
+        retrieval_mode,
+        None,
+    )
+    .await
+}
+fn begin_chat<'a>(state: &'a AppState, request_id: &str) -> Result<BusyGuard<'a>, String> {
     if state.chat_busy.swap(true, Ordering::SeqCst) {
         return Err("已有回答正在生成".into());
     }
-    let _guard = BusyGuard(&state.chat_busy, &state.chat_request);
+    let guard = BusyGuard(&state.chat_busy, &state.chat_request);
     {
         let mut active = state.chat_request.lock().map_err(|_| "内部状态不可用")?;
         state.cancel_chat.store(false, Ordering::SeqCst);
-        *active = Some(request_id.clone());
+        *active = Some(request_id.to_string());
     }
+    Ok(guard)
+}
+async fn ask_pipeline(
+    app: &tauri::AppHandle,
+    state: &AppState,
+    retrieval_question: &str,
+    prompt_question: &str,
+    scope: Option<String>,
+    request_id: &str,
+    semantic: Option<bool>,
+    retrieval_mode: Option<String>,
+    followup_gate: Option<&assistant::grounding::FollowupGate>,
+) -> Result<ChatResponse, String> {
+    let generation = state.workspace_generation.load(Ordering::SeqCst);
     let config = settings(&state)?.chat;
     if !config.enabled {
         return Err("请在模型设置中启用问答服务".into());
     }
-    let found = search_inner(
+    let mut found = search_inner(
         &state,
-        &question,
+        retrieval_question,
         scope.as_deref(),
         semantic.unwrap_or(true),
         retrieval_mode.as_deref(),
         &state.cancel_chat,
-        Some((&app, &request_id)),
+        Some((app, request_id)),
     )
     .await?;
+    if generation != state.workspace_generation.load(Ordering::SeqCst) {
+        return Err("资料空间已变化，已撤回旧回答".into());
+    }
+    if let Some(gate) = followup_gate {
+        assistant::grounding::tighten(gate, &mut found.results);
+        found.evidence_count = found.results.iter().filter(|r| r.evidence).count();
+    }
     let actual_mode = found.retrieval_mode.clone();
     let rerank_status = found.rerank_status.clone();
     let context_workspace = workspace(&state)?;
+    let (prompt_question, preference_warning) =
+        match companion::format_preferences(&state.data_dir, &context_workspace) {
+            Ok(value) if !value.is_empty() => (format!("{prompt_question}\n\n{value}"), None),
+            Ok(_) => (prompt_question.to_string(), None),
+            Err(_) => (
+                prompt_question.to_string(),
+                Some("角色表达偏好暂不可用，本轮按默认格式回答。".to_string()),
+            ),
+        };
     let sources = retrieval::generation_context(
         &context_workspace,
         &found.results,
         config.context_chars.saturating_sub(
-            question.chars().count() + providers::ANSWER_SYSTEM.chars().count() + 500,
+            prompt_question.chars().count() + providers::ANSWER_SYSTEM.chars().count() + 500,
         ),
         scope.is_some(),
     );
@@ -1680,7 +1742,8 @@ async fn ask_question(
     if state.cancel_chat.load(Ordering::SeqCst) {
         return Err("已停止生成".into());
     }
-    let current = sources_current(&state, &context_workspace, &sources);
+    let current = generation == state.workspace_generation.load(Ordering::SeqCst)
+        && sources_current(state, &context_workspace, &sources);
     if state.cancel_chat.load(Ordering::SeqCst) {
         return Err("已停止生成".into());
     }
@@ -1701,14 +1764,14 @@ async fn ask_question(
     let _ = app.emit(
         "chat-sources",
         ChatSourcesEvent {
-            request_id: request_id.clone(),
+            request_id: request_id.to_string(),
             sources: sources.clone(),
         },
     );
     let _ = app.emit(
         "chat-status",
         ChatStatusEvent {
-            request_id: request_id.clone(),
+            request_id: request_id.to_string(),
             stage: "generating".into(),
             detail: "正在依据已保存且版本校验通过的资料生成回答".into(),
         },
@@ -1717,17 +1780,18 @@ async fn ask_question(
         &state.client,
         &config,
         key.as_deref(),
-        &question,
+        &prompt_question,
         &sources,
         &state.cancel_chat,
-        Some(&app),
-        &request_id,
+        Some(app),
+        request_id,
     )
     .await;
     if state.cancel_chat.load(Ordering::SeqCst) {
         return Err("已停止生成".into());
     }
-    let current = sources_current(&state, &context_workspace, &sources);
+    let current = generation == state.workspace_generation.load(Ordering::SeqCst)
+        && sources_current(state, &context_workspace, &sources);
     if state.cancel_chat.load(Ordering::SeqCst) {
         return Err("已停止生成".into());
     }
@@ -1736,7 +1800,11 @@ async fn ask_question(
     }
     let output = output?;
     let chart_audit = answer_validation::audit_charts(&output.text, &sources);
-    let mut warnings = found.warning.into_iter().collect::<Vec<_>>();
+    let mut warnings = found
+        .warning
+        .into_iter()
+        .chain(preference_warning)
+        .collect::<Vec<_>>();
     if output.finish_reason == "length" {
         warnings.push("回答达到输出长度限制，内容已截断。请缩小问题范围后重试。".into());
     } else if output.finish_reason != "stop" {
@@ -2382,6 +2450,23 @@ pub fn run() {
             clear_index,
             search,
             cancel_search,
+            assistant_commands::assistant_list,
+            assistant_commands::assistant_create,
+            assistant_commands::assistant_get,
+            assistant_commands::assistant_update,
+            assistant_commands::assistant_delete,
+            assistant_commands::assistant_export,
+            assistant_commands::assistant_select_candidate,
+            assistant_commands::assistant_ask,
+            companion_commands::companion_state,
+            companion_commands::companion_settings,
+            companion_commands::companion_preview,
+            companion_commands::companion_confirm,
+            companion_commands::companion_story,
+            companion_commands::companion_card,
+            companion_commands::companion_preference,
+            companion_commands::companion_reset,
+            companion_commands::companion_export,
             ask_question,
             cancel_chat,
             export_svg,

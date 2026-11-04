@@ -3,6 +3,7 @@ import App from "./App";
 import "./styles.css";
 import "./polish.css";
 import "./space.css";
+import "./assistant/assistant.css";
 
 if (
   import.meta.env.DEV &&

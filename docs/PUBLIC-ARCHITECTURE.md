@@ -1,6 +1,6 @@
 # Architecture and technology
 
-Version 0.6.6. Inkstone is a local desktop application; it has no required hosted document server, account service or bundled model weights.
+Local candidate v0.7.0-rc.1; public source preview v0.6.6. Inkstone is a local desktop application; it has no required hosted document server, account service or bundled model weights. Candidate acceptance and remaining gates are recorded in [the delivery](DELIVERY-v0.7.md).
 
 | Layer | Components and responsibility |
 | --- | --- |
@@ -8,7 +8,7 @@ Version 0.6.6. Inkstone is a local desktop application; it has no required hoste
 | Frontend | React 19 / TypeScript; app composition and typed IPC, document session, source/visual editor and worker-based parsing |
 | Editing and presentation | CodeMirror 6, Milkdown 7; shared Markdown content contracts; JSON trees, Mermaid, Markmap, FullCalendar and constrained ECharts |
 | Local backend | Rust: safe file writes, stable document/space identity, source updates, history, backups, indexing and remote provider calls |
-| Storage | UTF-8 document files/images/history plus SQLite catalog and index; FTS5, jieba tokenization and sqlite-vec |
+| Storage | UTF-8 document files/images/history plus SQLite catalog/index and independent assistant/companion stores; FTS5, jieba tokenization and sqlite-vec |
 | Models | User-configured OpenAI-compatible embedding/chat and Cohere-compatible reranking over HTTPS; loopback HTTP allowed |
 
 A **space** is the main product unit. It can hold managed copies imported from several folders. A directory is a source or advanced direct-edit mode. The retrieval index is rebuildable derived data, not a second document truth.
@@ -36,4 +36,8 @@ Renderer frames and chart formats are constrained rather than arbitrary executab
 
 Default verification runs local synthetic tests, types, worker checks, builds and document checks. `desktop-e2e` is a separate test identity with system credentials disabled and only loopback model stubs permitted; production builds exclude that feature. Real service evaluations are opt-in, bounded and recorded separately. `toolchain.json` and lockfiles define verified versions.
 
-The v0.7 companion prototype is separate from the production architecture. A future companion store must not become a second writable document state or alter factual evidence rules.
+`src/assistant` owns conversation UI and streaming buffers; Rust `assistant` stores frozen space/document scope, drafts, branches, candidate answers and source snapshots in `assistant.sqlite3` (schema 1). Follow-ups reuse revalidated source identities, while the current question independently constrains requested attributes. At most six previous user questions, bounded to 4,000 characters, can enter the generation prompt; old model claims do not become evidence.
+
+`src/companion` and Rust `companion` use `companion.sqlite3` (schema 1) for opt-in settings, story progress, confirmed experiences and presentation preferences. Only a valid changed-document save can create a short-lived preview token. Explicit user confirmation persists intent before awarding deduplicated growth; retries are idempotent. Stories and experiences never become retrieval evidence, and preferences cannot change factual eligibility. Candidate art is static; final sprite animation and multi-day natural acceptance remain pending.
+
+Backup format 2 includes consistent snapshots of both stores under the maintenance write barrier, validates semantic contents and rechecks the source before publication. Format 1 remains readable and explicitly reports missing new stores. Catalog/index remain schema 3; restore still previews into a new directory. The standalone `prototypes/v0.7` demo remains a synthetic design reference.

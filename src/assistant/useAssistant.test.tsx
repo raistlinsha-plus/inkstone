@@ -1,0 +1,237 @@
+// @vitest-environment jsdom
+import { act, renderHook, waitFor, cleanup } from "@testing-library/react";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { useAssistant } from "./useAssistant";
+import { branchTurns, type Conversation } from "./types";
+const api = vi.hoisted(() => ({ invoke: vi.fn() }));
+vi.mock("@tauri-apps/api/core", () => ({ invoke: api.invoke }));
+const make = (id = "c1", scope: string | null = null): Conversation => ({
+  id,
+  title: id,
+  scope,
+  scopeLabel: scope ? `当前文档 · ${scope}` : "当前空间",
+  archived: false,
+  draft: "",
+  revision: 0,
+  createdAt: "2026-11-05T00:00:00Z",
+  updatedAt: "2026-11-05T00:00:00Z",
+  activeLeafId: null,
+  turns: [],
+});
+function deferred<T>() {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+}
+beforeEach(() => {
+  api.invoke.mockReset();
+  api.invoke.mockImplementation((name: string, args: any) => {
+    if (name === "assistant_list") return Promise.resolve([]);
+    if (name === "assistant_create")
+      return Promise.resolve(make("created", args.scope));
+    if (name === "assistant_update")
+      return Promise.resolve({
+        ...make(),
+        ...args,
+        revision: args.expectedRevision + 1,
+      });
+    if (name === "assistant_ask")
+      return Promise.resolve({ ...make(args.conversationId), revision: 2 });
+    return Promise.resolve(make());
+  });
+});
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
+async function ready() {
+  const h = renderHook(({ root }) => useAssistant(root), {
+    initialProps: { root: "/space/a" },
+  });
+  await waitFor(() => expect(h.result.current.loading).toBe(false));
+  return h;
+}
+test("restores the latest unarchived conversation and its backend draft", async () => {
+  api.invoke.mockImplementation((name: string) =>
+    Promise.resolve(
+      name === "assistant_list"
+        ? [{ ...make(), turnCount: 1 }]
+        : { ...make(), draft: "留下的问题" },
+    ),
+  );
+  const h = await ready();
+  expect(h.result.current.conversation?.draft).toBe("留下的问题");
+});
+test("late history from a previous workspace cannot replace the current space", async () => {
+  const old = deferred<Conversation>();
+  api.invoke.mockImplementation((name: string) =>
+    name === "assistant_list"
+      ? Promise.resolve([{ ...make(), turnCount: 1 }])
+      : old.promise,
+  );
+  const h = renderHook(({ root }) => useAssistant(root), {
+    initialProps: { root: "/space/a" },
+  });
+  await waitFor(() =>
+    expect(
+      api.invoke.mock.calls.some(([name]) => name === "assistant_get"),
+    ).toBe(true),
+  );
+  api.invoke.mockImplementation((name: string) =>
+    Promise.resolve(name === "assistant_list" ? [] : make("b")),
+  );
+  h.rerender({ root: "/space/b" });
+  await act(async () => old.resolve(make("old")));
+  expect(h.result.current.conversation).toBeNull();
+});
+test("new questions default to the durable active branch and send frozen scope", async () => {
+  const h = await ready();
+  await act(async () => {
+    await h.result.current.create("notes/a.md");
+  });
+  const c = { ...make("created", "notes/a.md"), activeLeafId: "parent-1" };
+  api.invoke.mockImplementation((name: string, args: any) =>
+    Promise.resolve(
+      name === "assistant_list"
+        ? []
+        : name === "assistant_get"
+          ? c
+          : name === "assistant_ask"
+            ? { ...c, revision: 2 }
+            : c,
+    ),
+  );
+  await act(async () => {
+    await h.result.current.load(c.id);
+    await h.result.current.start(c.scope, {
+      question: "它们有什么差异？",
+      requestId: "r1",
+      semantic: true,
+      retrievalMode: "hybrid",
+    });
+  });
+  const args = api.invoke.mock.calls.find(
+    ([name]) => name === "assistant_ask",
+  )?.[1];
+  expect(args).toMatchObject({
+    conversationId: "created",
+    parentTurnId: "parent-1",
+    question: "它们有什么差异？",
+    expectedRevision: 0,
+  });
+});
+test("a late answer cannot populate another workspace", async () => {
+  const h = await ready();
+  await act(async () => {
+    await h.result.current.create(null);
+  });
+  const pending = deferred<Conversation>();
+  api.invoke.mockImplementation((name: string) =>
+    name === "assistant_ask" ? pending.promise : Promise.resolve([]),
+  );
+  let request!: Promise<Conversation>;
+  act(() => {
+    request = h.result.current.start(null, {
+      question: "问题",
+      requestId: "r1",
+      semantic: false,
+      retrievalMode: "keyword",
+    });
+  });
+  await waitFor(() =>
+    expect(
+      api.invoke.mock.calls.some(([name]) => name === "assistant_ask"),
+    ).toBe(true),
+  );
+  h.rerender({ root: "/space/b" });
+  await act(async () => {
+    pending.resolve(make("old"));
+    await expect(request).rejects.toThrow("空间已变化");
+  });
+  expect(h.result.current.conversation).toBeNull();
+});
+test("explicit edit uses the previous parent while regeneration keeps the turn identity", async () => {
+  const h = await ready();
+  await act(async () => {
+    await h.result.current.start(null, {
+      question: "修改后",
+      parentTurnId: null,
+      regenerateTurnId: "turn-one",
+      requestId: "edit",
+      semantic: false,
+      retrievalMode: "keyword",
+    });
+  });
+  expect(
+    api.invoke.mock.calls.find(([name]) => name === "assistant_ask")?.[1],
+  ).toMatchObject({ parentTurnId: null, regenerateTurnId: "turn-one" });
+});
+test("a scope change creates a separate conversation instead of mutating the old range", async () => {
+  const h = await ready();
+  await act(async () => {
+    await h.result.current.create("one.md");
+    await h.result.current.start("two.md", {
+      question: "比较",
+      requestId: "r1",
+      semantic: false,
+      retrievalMode: "keyword",
+    });
+  });
+  expect(
+    api.invoke.mock.calls
+      .filter(([name]) => name === "assistant_create")
+      .map(([, args]) => args.scope),
+  ).toEqual(["one.md", "two.md"]);
+});
+test("draft flush persists typed input in the database rather than localStorage", async () => {
+  const h = await ready();
+  await act(async () => {
+    h.result.current.saveDraft("one.md", "未发送的问题");
+    await h.result.current.flushDraft();
+  });
+  expect(
+    api.invoke.mock.calls.find(
+      ([name, args]) => name === "assistant_update" && args.draft,
+    )?.[1],
+  ).toMatchObject({ draft: "未发送的问题", expectedRevision: 0 });
+  expect(localStorage.length).toBe(0);
+});
+test("branch traversal keeps ancestors, omits another branch and terminates malformed cycles", () => {
+  const turn = (id: string, parentTurnId: string | null) => ({
+    id,
+    parentTurnId,
+    question: id,
+    createdAt: "",
+    selectedCandidateId: null,
+    candidates: [],
+  });
+  const c = {
+    ...make(),
+    activeLeafId: "b",
+    turns: [turn("a", null), turn("b", "a"), turn("other", "a")],
+  };
+  expect(branchTurns(c).map((t) => t.id)).toEqual(["a", "b"]);
+  c.turns[0].parentTurnId = "b";
+  expect(branchTurns(c)).toHaveLength(2);
+});
+
+test("deleting a conversation cancels its pending draft so it cannot resurrect on flush", async () => {
+  const h = await ready();
+  await act(async () => {
+    await h.result.current.create(null);
+  });
+  act(() => h.result.current.saveDraft(null, "即将删除的草稿"));
+  await act(async () => {
+    await h.result.current.remove();
+    await h.result.current.flushDraft();
+  });
+  expect(h.result.current.conversation).toBeNull();
+  expect(
+    api.invoke.mock.calls.filter(([name]) => name === "assistant_create"),
+  ).toHaveLength(1);
+  expect(
+    api.invoke.mock.calls.some(
+      ([name, args]) => name === "assistant_update" && args.draft,
+    ),
+  ).toBe(false);
+});

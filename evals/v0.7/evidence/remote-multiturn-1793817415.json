@@ -1,0 +1,124 @@
+{
+  "authorIndependent": false,
+  "error": null,
+  "fixtureHash": "b3f2ff99c8b51397cfef4f0c8a15fd92813045c5b88ef4265544be232e7f1322",
+  "keychainAccessedByEvaluator": false,
+  "manualReview": {
+    "factAndCitationSupport": null,
+    "reviewer": null
+  },
+  "mode": "BM25 local retrieval + configured remote chat; no embedding or rerank validation",
+  "model": "gpt-4.1-mini",
+  "pipelineHash": "cf35feb0e35bf73648e747d429581b5b6c0e368355f9f40cfc082ae7838c52c4",
+  "records": [
+    {
+      "answer": "青禾方案2026年11月10日的活动详情如下：\n\n- 活动地点：东侧阅览室\n- 报名人数：120人\n- 参与年龄：18岁以上\n- 报名渠道：阅读室登记台\n- 活动时长：90分钟 [1]",
+      "citationMarkerPresent": true,
+      "elapsedMs": 3182,
+      "expectedFactMarkersPresent": true,
+      "finishReason": "stop",
+      "groundedQuestion": "青禾方案2026年11月10日的活动地点、报名人数、参与年龄、报名渠道和活动时长分别是什么？",
+      "manualReview": null,
+      "modelCalled": true,
+      "promptQuestion": "青禾方案2026年11月10日的活动地点、报名人数、参与年龄、报名渠道和活动时长分别是什么？",
+      "question": "青禾方案2026年11月10日的活动地点、报名人数、参与年龄、报名渠道和活动时长分别是什么？",
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -0.000015658929254979505,
+          "documentId": null,
+          "endLine": 3,
+          "evidence": true,
+          "hash": "2acfbe711957bd426eb138727fbfbbb41a7399bf2067decaa395b9d7cfc5cdba",
+          "heading": "青屿阅读室的青禾方案",
+          "id": 2,
+          "matchKind": "keyword",
+          "path": "青屿阅读室青禾方案.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 3,
+          "text": "青屿阅读室青禾方案于2026年11月10日举办，活动地点是东侧阅览室。报名人数为120人，参与年龄为18岁以上，报名渠道是阅读室登记台，活动时长为90分钟。\n",
+          "title": "青屿阅读室青禾方案.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "turn": 1
+    },
+    {
+      "answer": "青禾方案2026年11月10日的报名人数是120人[1]。",
+      "citationMarkerPresent": true,
+      "elapsedMs": 1607,
+      "expectedFactMarkersPresent": true,
+      "finishReason": "stop",
+      "groundedQuestion": "它的报名人数是多少？",
+      "manualReview": null,
+      "modelCalled": true,
+      "promptQuestion": "此前用户问题（仅作会话指代语境，不是资料事实或证据）：\n1：青禾方案2026年11月10日的活动地点、报名人数、参与年龄、报名渠道和活动时长分别是什么？\n\n当前用户问题：它的报名人数是多少？\n只以本轮资料作为事实依据；此前问题里的断言也必须核对资料。",
+      "question": "它的报名人数是多少？",
+      "sources": [
+        {
+          "bm25Rank": 1,
+          "bm25Score": -0.000011732800642899868,
+          "documentId": null,
+          "endLine": 3,
+          "evidence": true,
+          "hash": "2acfbe711957bd426eb138727fbfbbb41a7399bf2067decaa395b9d7cfc5cdba",
+          "heading": "青屿阅读室的青禾方案",
+          "id": 2,
+          "matchKind": "keyword",
+          "path": "青屿阅读室青禾方案.md",
+          "rerankScore": null,
+          "score": 0.01639344262295082,
+          "startLine": 3,
+          "text": "青屿阅读室青禾方案于2026年11月10日举办，活动地点是东侧阅览室。报名人数为120人，参与年龄为18岁以上，报名渠道是阅读室登记台，活动时长为90分钟。\n",
+          "title": "青屿阅读室青禾方案.md",
+          "vectorDistance": null,
+          "vectorRank": null
+        }
+      ],
+      "turn": 2
+    },
+    {
+      "answer": "资料没有提供该方案的预算，无法从当前资料确定。",
+      "citationMarkerPresent": true,
+      "elapsedMs": 9,
+      "expectedFactMarkersPresent": true,
+      "finishReason": "no_evidence",
+      "groundedQuestion": "它的预算是多少？",
+      "manualReview": null,
+      "modelCalled": false,
+      "promptQuestion": "此前用户问题（仅作会话指代语境，不是资料事实或证据）：\n1：青禾方案2026年11月10日的活动地点、报名人数、参与年龄、报名渠道和活动时长分别是什么？\n2：它的报名人数是多少？\n\n当前用户问题：它的预算是多少？\n只以本轮资料作为事实依据；此前问题里的断言也必须核对资料。",
+      "question": "它的预算是多少？",
+      "sources": [],
+      "turn": 3
+    }
+  ],
+  "scope": "actual assistant history ownership and live retrieval/evidence/context/provider primitives; no UI/AppState/Keychain integration claim",
+  "startedAtUnix": 1793817428,
+  "status": "completed",
+  "syntheticOnly": true,
+  "usage": {
+    "attempts": [
+      {
+        "headersMs": 3004,
+        "httpStatus": 200,
+        "stage": "chat/completions",
+        "status": "response"
+      },
+      {
+        "headersMs": 1574,
+        "httpStatus": 200,
+        "stage": "chat/completions",
+        "status": "response"
+      }
+    ],
+    "httpAttempts": 2,
+    "maxHttpAttempts": 4,
+    "maxWallSeconds": 180,
+    "providerBilledCost": null,
+    "tokens": null,
+    "wallMs": 4839
+  },
+  "version": "0.7"
+}

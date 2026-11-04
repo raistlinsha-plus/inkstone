@@ -148,7 +148,7 @@ impl Drop for SnapshotGuard {
         }
     }
 }
-const FORMAT: u32 = 1;
+const FORMAT: u32 = 2;
 const MAX_TOTAL: u64 = 2 * 1024 * 1024 * 1024;
 const MAX_FILE: u64 = 128 * 1024 * 1024;
 const MAX_FILES: usize = 50000;
@@ -175,6 +175,13 @@ struct DraftLocation {
     project: String,
     path: String,
 }
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StoreSnapshot {
+    path: String,
+    schema_version: i64,
+    resource_version: String,
+}
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Manifest {
@@ -185,6 +192,8 @@ struct Manifest {
     files: Vec<Entry>,
     drafts: Vec<DraftLocation>,
     excluded: Vec<String>,
+    #[serde(default)]
+    stores: Vec<StoreSnapshot>,
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -211,7 +220,18 @@ pub struct BackupValidation {
     warnings: Vec<String>,
 }
 fn warnings() -> Vec<String> {
-    vec!["备份包含所有受管理空间、正文、附件、历史与恢复草稿；不含外部原件、未应用的块表单、系统设置和凭据。".into(),"知识索引和日历投影可重建；恢复到新目录仅作预演，不切换或覆盖当前资料库。".into()]
+    vec!["备份包含所有受管理空间、正文、附件、历史与恢复草稿；会话与角色数据范围按备份清单逐项说明；不含外部原件、未应用的块表单、系统设置和凭据。".into(),"知识索引和日历投影可重建；恢复到新目录仅作预演，不切换或覆盖当前资料库。".into()]
+}
+fn manifest_warnings(manifest: &Manifest) -> Vec<String> {
+    let mut result = warnings();
+    for (name, label) in [("assistant.sqlite3", "知识会话历史和草稿"), ("companion.sqlite3", "角色进度、偏好和待处理经历")] {
+        if manifest.stores.iter().any(|s| s.path == name) {
+            result.push(format!("此备份包含{label}，恢复可能带回以前删除的记录；不会自动合并当前数据。"));
+        } else {
+            result.push(format!("此备份不包含{label}；恢复预演不会补建这些数据。"));
+        }
+    }
+    result
 }
 fn validate_name(name: &str) -> Result<(), String> {
     if name.is_empty()
@@ -227,6 +247,7 @@ fn validate_name(name: &str) -> Result<(), String> {
         && !name.starts_with("library/projects/")
         && !name.starts_with("library/history/")
         && !name.starts_with("drafts/")
+        && !matches!(name, "assistant.sqlite3" | "companion.sqlite3")
     {
         return Err("备份包含范围外的条目".into());
     }
@@ -311,6 +332,30 @@ fn catalog_check(path: &Path, schema: i64) -> Result<(), String> {
         return Err("备份目录身份关联无效".into());
     }
     Ok(())
+}
+fn auxiliary_check(path: &Path, schema: i64) -> Result<(), String> {
+    let c = sql_read(path)?;
+    let version: i64 = c.pragma_query_value(None, "user_version", |r| r.get(0)).map_err(err)?;
+    if version != schema || version != 1 { return Err("角色或会话数据库版本不兼容".into()); }
+    let quick: String = c.query_row("PRAGMA quick_check", [], |r| r.get(0)).map_err(err)?;
+    if quick != "ok" { return Err("角色或会话数据库完整性检查未通过".into()); }
+    if c.prepare("PRAGMA foreign_key_check").map_err(err)?.query([]).map_err(err)?.next().map_err(err)?.is_some() {
+        return Err("角色或会话数据关联无效".into());
+    }
+    Ok(())
+}
+fn auxiliary_members(data: &Path) -> Result<BTreeSet<String>, String> {
+    let mut found = BTreeSet::new();
+    for name in ["assistant.sqlite3", "companion.sqlite3"] {
+        let path = data.join(name);
+        match fs::symlink_metadata(&path) {
+            Ok(m) if m.is_file() && !m.file_type().is_symlink() => { found.insert(name.into()); },
+            Ok(_) => return Err("角色或会话数据库必须是普通文件".into()),
+            Err(e) if e.kind()==std::io::ErrorKind::NotFound => {},
+            Err(e) => return Err(err(e)),
+        }
+    }
+    Ok(found)
 }
 // Logical rows, not SQLite page bytes/data_version: normal library::conn() calls may
 // repeat harmless PRAGMAs. A read transaction keeps each digest internally consistent.
@@ -431,6 +476,22 @@ fn create_backup_with_hook(
         let catalog_hash = catalog_digest(&catalog)?;
         let members = source_members(data)?;
         let mut sources = vec![("library/catalog.sqlite3".to_string(), catalog)];
+        let auxiliary_names = auxiliary_members(data)?;
+        let mut auxiliary_digests = vec![];
+        let mut stores = vec![];
+        for name in &auxiliary_names {
+            let source = data.join(name);
+            auxiliary_check(&source, 1)?;
+            let digest = catalog_digest(&source)?;
+            let snapshot = stage.join(name);
+            drop(private_file(&snapshot)?);
+            sql_read(&source)?.execute("VACUUM INTO ?1", [snapshot.to_string_lossy().as_ref()]).map_err(err)?;
+            auxiliary_check(&snapshot, 1)?;
+            if catalog_digest(&snapshot)? != digest { return Err("会话或角色快照发生变化，请重试".into()); }
+            sources.push((name.clone(), snapshot));
+            stores.push(StoreSnapshot { path: name.clone(), schema_version: 1, resource_version: env!("CARGO_PKG_VERSION").into() });
+            auxiliary_digests.push((name.clone(), digest));
+        }
         add_source(&mut sources, data, &data.join("library/projects"))?;
         add_source(&mut sources, data, &data.join("library/history"))?;
         let view = library::list(data)?;
@@ -487,6 +548,7 @@ fn create_backup_with_hook(
             schema_version: schema,
             files: entries,
             drafts,
+            stores,
             excluded: vec![
                 "external-originals".into(),
                 "settings-and-credentials".into(),
@@ -519,6 +581,11 @@ fn create_backup_with_hook(
         // An external editor does not enter the application gate. Recheck all earlier
         // files and directory membership after the entire archive has been validated.
         recheck_sources(data, &sources, &manifest, &members, &catalog_hash)?;
+        if auxiliary_members(data)? != auxiliary_names { return Err("备份期间会话或角色数据库清单变化".into()); }
+        for (name, digest) in &auxiliary_digests {
+            auxiliary_check(&data.join(name), 1)?;
+            if catalog_digest(&data.join(name))? != *digest { return Err("备份期间会话或角色资料发生变化，请重试".into()); }
+        }
         secure_tree(&stage)?;
         // A hard link publishes without replacing a concurrently created target.
         fs::hard_link(&archive, &target).map_err(|_| "无法发布备份，目标可能已存在或磁盘不支持")?;
@@ -529,7 +596,7 @@ fn create_backup_with_hook(
             created_at: manifest.created_at,
             manifest_hash: files::hash(&raw),
             mode: "backup".into(),
-            warnings: warnings(),
+            warnings: manifest_warnings(&manifest),
         })
     })();
     let _ = fs::remove_dir_all(&stage);
@@ -546,7 +613,7 @@ fn read_manifest(zip: &mut ZipArchive<File>) -> Result<(Manifest, Vec<u8>), Stri
     }
     file.read_to_end(&mut raw).map_err(err)?;
     let m: Manifest = serde_json::from_slice(&raw).map_err(|_| "备份清单格式无效")?;
-    if m.format != FORMAT || !(1..=3).contains(&m.schema_version) {
+    if !(1..=FORMAT).contains(&m.format) || !(1..=3).contains(&m.schema_version) {
         return Err("备份格式或目录版本不兼容".into());
     }
     Ok((m, raw))
@@ -566,6 +633,16 @@ fn inspect(zip: &mut ZipArchive<File>, manifest: &Manifest) -> Result<(), String
     }
     if !known.contains_key("library/catalog.sqlite3") {
         return Err("清单缺少目录数据库".into());
+    }
+    let mut store_paths = HashSet::new();
+    for store in &manifest.stores {
+        if manifest.format < 2 || !matches!(store.path.as_str(), "assistant.sqlite3" | "companion.sqlite3")
+            || store.schema_version != 1 || !store_paths.insert(store.path.clone()) || !known.contains_key(&store.path) {
+            return Err("角色或会话备份声明无效".into());
+        }
+    }
+    for name in ["assistant.sqlite3", "companion.sqlite3"] {
+        if known.contains_key(name) != store_paths.contains(name) { return Err("角色或会话备份清单不一致".into()); }
     }
     let mut seen = HashSet::new();
     for i in 0..zip.len() {
@@ -629,6 +706,12 @@ fn extract(zip: &mut ZipArchive<File>, m: &Manifest, stage: &Path) -> Result<(),
 }
 fn restored_catalog_check(stage: &Path, m: &Manifest) -> Result<(), String> {
     catalog_check(&stage.join("library/catalog.sqlite3"), m.schema_version)?;
+    for store in &m.stores {
+        let path = stage.join(&store.path);
+        auxiliary_check(&path, store.schema_version)?;
+        if store.path == "assistant.sqlite3" { crate::assistant::validate_snapshot(&path)?; }
+        if store.path == "companion.sqlite3" { crate::companion::validate_snapshot(&path)?; }
+    }
     let c = sql_read(&stage.join("library/catalog.sqlite3"))?;
     let mut q = c
         .prepare("SELECT project,path,status FROM documents")
@@ -756,7 +839,7 @@ pub fn validate_backup(path: &Path) -> Result<BackupValidation, String> {
                 schema_version: m.schema_version,
                 manifest_hash: files::hash(raw),
                 issues: vec![],
-                warnings: warnings(),
+                warnings: manifest_warnings(m),
             })
         })();
         let _ = fs::remove_dir_all(&stage);
@@ -835,7 +918,7 @@ fn restore_backup_with_hook(
                 created_at: m.created_at,
                 manifest_hash: files::hash(raw),
                 mode: "restore-preview".into(),
-                warnings: warnings(),
+                warnings: manifest_warnings(m),
             })
         })();
         if stage.exists() {
@@ -985,7 +1068,7 @@ mod tests {
         assert!(restore_backup(&file, &out.path().join("bad"), data.path()).is_err());
         assert!(!out.path().join("bad").exists());
     }
-    fn rewrite_archive(source: &Path, target: &Path, mutate: impl Fn(&str, &mut Vec<u8>)) {
+    pub(super) fn rewrite_archive(source: &Path, target: &Path, mutate: impl Fn(&str, &mut Vec<u8>)) {
         let mut archive = ZipArchive::new(File::open(source).unwrap()).unwrap();
         let mut entries = vec![];
         for i in 0..archive.len() {
@@ -1331,6 +1414,7 @@ mod tests {
             }],
             drafts: vec![],
             excluded: vec![],
+            stores: vec![],
         };
         z.start_file("manifest.json", SimpleFileOptions::default())
             .unwrap();
@@ -1340,3 +1424,7 @@ mod tests {
         assert!(!out.path().join("escape").exists());
     }
 }
+
+#[cfg(test)]
+#[path = "maintenance_v07_tests.rs"]
+mod v07_tests;

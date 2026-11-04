@@ -2,6 +2,11 @@
 
 Historical versions below describe local development deliveries, not earlier public GitHub releases. v0.6.6 is the first public source preview. See [release notes](docs/PUBLIC-RELEASE-v0.6.6.md).
 
+## v0.7.0-rc.1 · 2026-11-05
+
+生产候选新增独立持久会话、多轮追问、问题分支/候选、来源快照、草稿与历史管理，展开阅读与安全回答落地；当前追问属性独立门控，历史词项不稀释新缺项。三角色三阶段、九章、经历/偏好/数据控制与15张静态候选插画接入。备份format2纳入会话和角色库并兼容旧格式；catalog/index仍schema3。完整门槛前端260、Rust164/6忽略，三题真实服务冒烟2次HTTP200，五次隔离冷启动通过；本机界面补验因锁屏待完成，详见[候选交付](docs/DELIVERY-v0.7.md)。自然多日试用、动画/像素整理及正式发行门槛仍待后续。
+
+
 ## 0.6.6 · 2026-11-03
 
 - Keep startup loading through workspace/list/session restoration; distinguish failure from an empty library, support retry, and remember pane visibility. Restore dialog trigger focus even when child inputs auto-focus.

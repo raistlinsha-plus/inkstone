@@ -30,6 +30,21 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Answer from "./Answer";
+import CompanionDock from "./companion/CompanionDock";
+import { useAssistant } from "./assistant/useAssistant";
+import { createStreamBuffer } from "./assistant/streamBuffer";
+import {
+  ConversationHeader,
+  ConversationTimeline,
+  EvidencePreview,
+  answerRecord,
+  type AnswerRecord,
+} from "./assistant/ConversationPanel";
+import {
+  selectedCandidate,
+  type Conversation,
+  type Turn,
+} from "./assistant/types";
 import {
   answerFileName,
   answerMarkdown,
@@ -228,6 +243,8 @@ export default function App() {
   >([]);
   const [, redrawCalendar] = useState(0);
   const [question, setQuestion] = useState("");
+  const questionRef = useRef(question);
+  questionRef.current = question;
   const [asked, setAsked] = useState("");
   const [answer, setAnswer] = useState("");
   const [answerSources, setAnswerSources] = useState<SearchResult[]>([]);
@@ -239,6 +256,32 @@ export default function App() {
   const [answerChartWarnings, setAnswerChartWarnings] = useState<string[]>([]);
   const [rejectedCharts, setRejectedCharts] = useState<number[]>([]);
   const [chatStage, setChatStage] = useState("");
+  const assistant = useAssistant(workspace?.root);
+  const [assistantExpanded, setAssistantExpanded] = useState(false);
+  const [evidencePreview, setEvidencePreview] = useState<SearchResult | null>(
+    null,
+  );
+  const [assistantScopeChanged, setAssistantScopeChanged] = useState(false);
+  const [branchParent, setBranchParent] = useState<string | null | undefined>();
+  const [assistantRunError, setAssistantRunError] = useState("");
+  useEffect(() => {
+    setQuestion("");
+    setBranchParent(undefined);
+    setAssistantScopeChanged(false);
+    setAssistantRunError("");
+    setEvidencePreview(null);
+  }, [workspace?.root]);
+
+  useEffect(() => {
+    const next = assistant.conversation;
+    if (next && !chatInFlight.current) {
+      setQuestion((old) => old || next.draft);
+      setScope(next.scope ? "current" : "workspace");
+      setAssistantScopeChanged(false);
+      setBranchParent(undefined);
+    }
+  }, [assistant.conversation?.id]);
+
   const [answerExpanded, setAnswerExpanded] = useState(false);
   const [answerTransfer, setAnswerTransfer] = useState<null | {
     kind: "save" | "insert";
@@ -253,6 +296,18 @@ export default function App() {
   const answerTransferRef = useRef(answerTransfer);
   answerTransferRef.current = answerTransfer;
   const requestRef = useRef("");
+  const stoppedRequest = useRef("");
+  const chatEventsReady = useRef<Promise<unknown>>(Promise.resolve());
+  const streamBuffer = useRef<ReturnType<typeof createStreamBuffer> | null>(
+    null,
+  );
+  if (!streamBuffer.current)
+    streamBuffer.current = createStreamBuffer((id, delta) => {
+      if (requestRef.current === id && stoppedRequest.current !== id)
+        setAnswer((old) => old + delta);
+    });
+  useEffect(() => () => streamBuffer.current?.clear(), []);
+
   const chatInFlight = useRef(false);
   const [indexOpen, setIndexOpen] = useState(false);
   const [pins, setPins] = useState<string[]>([]);
@@ -601,7 +656,10 @@ export default function App() {
       requestId: string;
       sources: SearchResult[];
     }>("chat-sources", (event) => {
-      if (event.payload.requestId === requestRef.current)
+      if (
+        event.payload.requestId === requestRef.current &&
+        stoppedRequest.current !== event.payload.requestId
+      )
         setAnswerSources(event.payload.sources);
     });
     const statusListener = listen<{
@@ -609,16 +667,30 @@ export default function App() {
       stage: string;
       detail: string;
     }>("chat-status", (event) => {
-      if (event.payload.requestId === requestRef.current)
+      if (
+        event.payload.requestId === requestRef.current &&
+        stoppedRequest.current !== event.payload.requestId
+      )
         setChatStage(event.payload.detail);
     });
     const unlisten = listen<{ requestId: string; delta: string }>(
       "chat-delta",
       (event) => {
-        if (event.payload.requestId === requestRef.current)
-          setAnswer((old) => old + event.payload.delta);
+        if (
+          event.payload.requestId === requestRef.current &&
+          stoppedRequest.current !== event.payload.requestId
+        )
+          streamBuffer.current?.push(
+            event.payload.requestId,
+            event.payload.delta,
+          );
       },
     );
+    chatEventsReady.current = Promise.all([
+      sourceListener,
+      statusListener,
+      unlisten,
+    ]);
     void invoke("bootstrap")
       .then(async (boot) => {
         if (disposed) return;
@@ -678,6 +750,9 @@ export default function App() {
     rememberPosition();
   }, [mode]);
   async function persistDraft() {
+    await assistant
+      .flushDraft()
+      .catch((e) => notify("问答草稿未保存：" + displayError(e)));
     const doc = syncEditor(),
       root = workspaceRef.current?.root;
     if (!doc || (doc.content === doc.saved && !doc.conflict)) {
@@ -1882,14 +1957,52 @@ export default function App() {
       }
     }
   }
-  async function ask() {
-    if (!workspace || navigationBlocked() || !question.trim()) return;
+  function activateConversation(next: Conversation) {
+    setScope(next.scope ? "current" : "workspace");
+    setAssistantScopeChanged(false);
+    setQuestion(next.draft);
+    setBranchParent(undefined);
+    setAssistantRunError("");
+  }
+  async function newConversation() {
+    if (chatBusy) return;
+    try {
+      await assistant.flushDraft();
+      assistant.clear();
+      setQuestion("");
+      setAsked("");
+      setAnswer("");
+      setBranchParent(undefined);
+      setAssistantScopeChanged(true);
+      setAssistantRunError("");
+    } catch (e) {
+      fail(e);
+    }
+  }
+  function currentAssistantScope() {
+    return assistant.conversation && !assistantScopeChanged
+      ? assistant.conversation.scope
+      : scope === "current"
+        ? (document?.path ?? null)
+        : null;
+  }
+  async function ask(options?: { retry: Turn }) {
+    const prompt = options?.retry.question ?? question;
+    if (
+      !workspace ||
+      assistant.loading ||
+      navigationBlocked() ||
+      !prompt.trim()
+    )
+      return;
     const epoch = workspaceEpoch.current,
       navigation = openSequence.current;
-    const range = calendarQueryRange(question);
-    if (range) {
-      await routeDateQuery(range);
-      return;
+    if (!options?.retry) {
+      const range = calendarQueryRange(prompt);
+      if (range) {
+        await routeDateQuery(range);
+        return;
+      }
     }
     if (
       epoch !== workspaceEpoch.current ||
@@ -1901,22 +2014,28 @@ export default function App() {
       setSettingsOpen(true);
       return;
     }
-    if (scope === "current" && !document) {
+    if (scope === "current" && !document && !assistant.conversation?.scope) {
       notify("请先打开一篇文档");
       return;
     }
-    const id = crypto.randomUUID();
+    const id = crypto.randomUUID(),
+      frozenScope = options?.retry
+        ? (assistant.conversation?.scope ?? null)
+        : currentAssistantScope();
+    streamBuffer.current?.clear();
     requestRef.current = id;
+    stoppedRequest.current = "";
     chatInFlight.current = true;
-    setAsked(question);
+    setAsked(prompt);
+    if (!options?.retry) setQuestion("");
+    setAssistantRunError("");
     const snapshot: AnswerSnapshot = {
       id,
       workspaceRoot: workspace.root,
-      scopeLabel:
-        scope === "current"
-          ? `当前文档 · ${basename(document!.path)}`
-          : `当前空间 · ${workspace.name}`,
-      scopePath: scope === "current" ? document!.path : null,
+      scopeLabel: frozenScope
+        ? `当前文档 · ${basename(frozenScope)}`
+        : `当前空间 · ${workspace.name}`,
+      scopePath: frozenScope,
       mode: retrievalMode,
       model: settings.chat.model,
       createdAt: new Date().toISOString(),
@@ -1931,42 +2050,59 @@ export default function App() {
     setAnswerWarning("");
     setChatBusy(true);
     try {
-      const response = await invoke("ask_question", {
-        question,
-        scope: scope === "current" ? document?.path : null,
+      await chatEventsReady.current;
+      if (stoppedRequest.current === id)
+        throw Error("已停止生成，问题未发送。");
+      const next = await assistant.start(frozenScope, {
+        question: prompt,
+        parentTurnId: options?.retry
+          ? options.retry.parentTurnId
+          : branchParent,
+        regenerateTurnId: options?.retry?.id,
         requestId: id,
         semantic,
         retrievalMode,
       });
       if (requestRef.current !== id || epoch !== workspaceEpoch.current) return;
-      setAnswer(response.text);
-      setAnswerSources(response.sources);
-      setAnswerSnapshot({
-        ...snapshot,
-        model: response.model ?? snapshot.model,
-        finishReason: response.finishReason,
-        retrievalMode: response.retrievalMode,
-        rerankStatus: response.rerankStatus,
-      });
-      setAnswerComplete(
-        ["stop", "no_evidence"].includes(response.finishReason),
-      );
-      setAnswerChartWarnings(response.chartWarnings ?? []);
-      setRejectedCharts(response.rejectedCharts ?? []);
+      streamBuffer.current?.clear();
+      const turn =
+          next.turns.find((t) => t.id === next.activeLeafId) ??
+          next.turns.at(-1),
+        candidate = turn && selectedCandidate(turn);
+      if (candidate && turn) {
+        const record = answerRecord(
+          next,
+          turn,
+          candidate,
+          workspace.root,
+          retrievalMode,
+        );
+        setAnswer(record.text);
+        setAnswerSources(record.sources);
+        setAnswerSnapshot(record.snapshot);
+        setAnswerComplete(record.complete);
+        setAnswerChartWarnings(record.chartWarnings);
+        setRejectedCharts(record.rejectedCharts);
+        setAnswerWarning(record.warning);
+      }
+      setBranchParent(undefined);
+      if (!options?.retry) setAssistantScopeChanged(false);
       setChatStage("");
-      setAnswerWarning(response.warning ?? "");
-      setQuestion("");
     } catch (e) {
       if (requestRef.current === id && epoch === workspaceEpoch.current) {
+        setAssistantRunError(displayError(e));
         setAnswerWarning(displayError(e));
         setAnswerSnapshot({ ...snapshot, finishReason: "error" });
         setChatStage("");
       }
     } finally {
       if (requestRef.current === id) {
+        streamBuffer.current?.clear();
         requestRef.current = "";
         chatInFlight.current = false;
         setChatBusy(false);
+        if (questionRef.current.trim())
+          assistant.saveDraft(frozenScope, questionRef.current);
       }
     }
   }
@@ -1980,17 +2116,20 @@ export default function App() {
       /* optional preference */
     }
   }
-  async function copyAnswer() {
+  async function copyAnswer(record?: AnswerRecord) {
     try {
       await navigator.clipboard.writeText(
         answerMarkdown(
-          answer,
-          asked,
-          answerSources,
-          answerSnapshot,
+          record?.text ?? answer,
+          record?.question ?? asked,
+          record?.sources ?? answerSources,
+          record?.snapshot ?? answerSnapshot,
           "",
           false,
-          { incomplete: !answerComplete, rejectedCharts },
+          {
+            incomplete: !(record?.complete ?? answerComplete),
+            rejectedCharts: record?.rejectedCharts ?? rejectedCharts,
+          },
         ),
       );
       notify("已复制 Markdown 与来源记录");
@@ -2003,8 +2142,12 @@ export default function App() {
     answerTransferRef.current = null;
     setAnswerTransfer(null);
   }
-  function prepareAnswerTransfer(kind: "save" | "insert") {
-    if (navigationBlocked() || !workspace || !answer.trim()) return;
+  function prepareAnswerTransfer(
+    kind: "save" | "insert",
+    record?: AnswerRecord,
+  ) {
+    if (navigationBlocked() || !workspace || !(record?.text ?? answer).trim())
+      return;
     try {
       const live = syncEditor();
       const target =
@@ -2019,20 +2162,23 @@ export default function App() {
         path: live?.path,
         target,
         content: answerMarkdown(
-          answer,
-          asked,
-          answerSources,
-          answerSnapshot,
+          record?.text ?? answer,
+          record?.question ?? asked,
+          record?.sources ?? answerSources,
+          record?.snapshot ?? answerSnapshot,
           kind === "insert"
             ? live!.path
             : workspace.managedProjectId
               ? "documents/new/回答.md"
               : "回答.md",
           kind === "save",
-          { incomplete: !answerComplete, rejectedCharts },
+          {
+            incomplete: !(record?.complete ?? answerComplete),
+            rejectedCharts: record?.rejectedCharts ?? rejectedCharts,
+          },
         ),
       };
-      setAnswerTitle(answerFileName(asked));
+      setAnswerTitle(answerFileName(record?.question ?? asked));
       setAnswerTransferError("");
       setAnswerSavedPath("");
       answerTransferRef.current = transfer;
@@ -2121,6 +2267,128 @@ export default function App() {
     }
   }
 
+  const activeAssistantTurn = assistant.conversation?.turns.find(
+    (t) => t.id === assistant.conversation?.activeLeafId,
+  );
+  const activeAssistantCandidate =
+    activeAssistantTurn && selectedCandidate(activeAssistantTurn);
+  const assistantActivity = chatBusy
+    ? "working"
+    : assistantRunError ||
+        activeAssistantCandidate?.status === "failed" ||
+        activeAssistantCandidate?.status === "source_changed"
+      ? "blocked"
+      : activeAssistantCandidate?.status === "stopped" ||
+          activeAssistantCandidate?.response?.finishReason === "no_evidence" ||
+          (activeAssistantCandidate?.status === "complete" &&
+            activeAssistantCandidate.response?.finishReason !== "stop")
+        ? "needs_input"
+        : activeAssistantCandidate?.status === "complete"
+          ? "ready"
+          : "idle";
+  const assistantActivityText = chatBusy
+    ? chatStage || "正在组织回答…"
+    : assistantActivity === "blocked"
+      ? "问答暂未完成，请查看原因"
+      : activeAssistantCandidate?.status === "stopped"
+        ? "生成已停止，可重试"
+        : activeAssistantCandidate?.response?.finishReason === "no_evidence"
+          ? "资料不足，可补充资料"
+          : assistantActivity === "needs_input"
+            ? "回答尚未完成，可重新生成"
+            : assistantActivity === "ready"
+              ? "回答已就绪，可查看来源"
+              : "安静陪读";
+
+  const retrievalControls = (
+    <>
+      <div className="scope-row">
+        <span>资料范围</span>
+        <select
+          aria-label="资料范围"
+          value={scope}
+          disabled={chatBusy}
+          onChange={(e) => {
+            setScope(e.target.value as "workspace" | "current");
+            setAssistantScopeChanged(true);
+            setBranchParent(undefined);
+          }}
+        >
+          <option value="workspace">当前空间</option>
+          <option value="current" disabled={!document}>
+            当前文档
+          </option>
+        </select>
+      </div>
+      <div className="retrieval-choice">
+        <label>
+          检索方式
+          <select
+            aria-label="检索方式"
+            value={retrievalMode}
+            disabled={chatBusy || queryBusy}
+            onChange={(e) => {
+              cancelSearch();
+              setResults([]);
+              setSearched(false);
+              setRetrievalMode(e.target.value as typeof retrievalMode);
+            }}
+          >
+            <option value="keyword">本地关键词</option>
+            <option value="hybrid">BM25 + 向量</option>
+            <option value="rerank" disabled={!settings?.rerank.enabled}>
+              混合检索 + 重排
+            </option>
+          </select>
+        </label>
+        <p>
+          {retrievalMode === "keyword"
+            ? "检索在本机进行；问答仍会将证据发送给问答模型。"
+            : retrievalMode === "hybrid"
+              ? "问题会发送给向量模型；问答另发送选定证据。"
+              : "问题与候选资料会发送给重排模型。"}
+        </p>
+        {retrievalMode !== "keyword" && (
+          <div className="retrieval-readiness" role="status">
+            {!settings?.embedding.enabled
+              ? "向量未启用：本次可使用本地关键词检索。"
+              : !indexSnapshot || indexSnapshotError || indexSnapshotLoading
+                ? "向量准备情况尚未核对或正在重新核对。"
+                : !indexSnapshot.documents.some(
+                      (d) =>
+                        d.included &&
+                        (scope !== "current" || d.path === document?.path),
+                    )
+                  ? "当前范围尚未建立可用向量；可先使用本地关键词或显式建库。"
+                  : indexSnapshot.documents
+                        .filter(
+                          (d) =>
+                            scope !== "current" || d.path === document?.path,
+                        )
+                        .some((d) => d.included && d.vectorState !== "ready")
+                    ? "部分文档缺少当前向量或需要更新；实际检索方式以结果说明为准。"
+                    : "已核对的纳入文档具有当前模型向量。"}
+            <button
+              disabled={chatBusy || queryBusy}
+              onClick={() => setIndexOpen(true)}
+            >
+              查看准备情况
+            </button>
+          </div>
+        )}
+        {panel === "ask" && (dirty || indexDirty) && (
+          <p className="index-note" role="status">
+            回答依据已保存并入库的版本。
+            {dirty ? "当前编辑尚未保存。" : "索引待更新。"}
+            <button onClick={() => setIndexOpen(true)} disabled={chatBusy}>
+              查看索引
+            </button>
+          </p>
+        )}
+      </div>
+    </>
+  );
+
   return (
     <div
       {...imeBoundary}
@@ -2152,7 +2420,9 @@ export default function App() {
             </button>
           </div>
         )}
-      <div className="main-layout">
+      <div
+        className={`main-layout ${assistantExpanded && panelOpen && panel === "ask" ? "assistant-expanded" : ""}`}
+      >
         <aside className="sidebar sidebar-compact" aria-label="文档空间导航">
           <div className="space-sidebar-heading">
             <strong>Inkstone</strong>
@@ -2706,97 +2976,23 @@ export default function App() {
                 <PanelRightClose size={15} />
               </button>
             </div>
-            <div className="scope-row">
-              <span>资料范围</span>
-              <select
-                aria-label="资料范围"
-                value={scope}
-                disabled={chatBusy}
-                onChange={(e) =>
-                  setScope(e.target.value as "workspace" | "current")
-                }
-              >
-                <option value="workspace">当前空间</option>
-                <option value="current" disabled={!document}>
-                  当前文档
-                </option>
-              </select>
-            </div>
-            <div className="retrieval-choice">
-              <label>
-                检索方式
-                <select
-                  aria-label="检索方式"
-                  value={retrievalMode}
-                  disabled={chatBusy || queryBusy}
-                  onChange={(e) => {
-                    cancelSearch();
-                    setResults([]);
-                    setSearched(false);
-                    setRetrievalMode(e.target.value as typeof retrievalMode);
-                  }}
-                >
-                  <option value="keyword">本地关键词</option>
-                  <option value="hybrid">BM25 + 向量</option>
-                  <option value="rerank" disabled={!settings?.rerank.enabled}>
-                    混合检索 + 重排
-                  </option>
-                </select>
-              </label>
-              <p>
-                {retrievalMode === "keyword"
-                  ? "检索在本机进行；问答仍会将证据发送给问答模型。"
-                  : retrievalMode === "hybrid"
-                    ? "问题会发送给向量模型；问答另发送选定证据。"
-                    : "问题与候选资料会发送给重排模型。"}
-              </p>
-              {retrievalMode !== "keyword" && (
-                <div className="retrieval-readiness" role="status">
-                  {!settings?.embedding.enabled
-                    ? "向量未启用：本次可使用本地关键词检索。"
-                    : !indexSnapshot ||
-                        indexSnapshotError ||
-                        indexSnapshotLoading
-                      ? "向量准备情况尚未核对或正在重新核对。"
-                      : !indexSnapshot.documents.some(
-                            (d) =>
-                              d.included &&
-                              (scope !== "current" ||
-                                d.path === document?.path),
-                          )
-                        ? "当前范围尚未建立可用向量；可先使用本地关键词或显式建库。"
-                        : indexSnapshot.documents
-                              .filter(
-                                (d) =>
-                                  scope !== "current" ||
-                                  d.path === document?.path,
-                              )
-                              .some(
-                                (d) => d.included && d.vectorState !== "ready",
-                              )
-                          ? "部分文档缺少当前向量或需要更新；实际检索方式以结果说明为准。"
-                          : "已核对的纳入文档具有当前模型向量。"}
-                  <button
-                    disabled={chatBusy || queryBusy}
-                    onClick={() => setIndexOpen(true)}
-                  >
-                    查看准备情况
-                  </button>
-                </div>
-              )}
-              {panel === "ask" && (dirty || indexDirty) && (
-                <p className="index-note" role="status">
-                  回答依据已保存并入库的版本。
-                  {dirty ? "当前编辑尚未保存。" : "索引待更新。"}
-                  <button
-                    onClick={() => setIndexOpen(true)}
-                    disabled={chatBusy}
-                  >
-                    查看索引
-                  </button>
-                </p>
-              )}
-            </div>
+            {panel === "ask" ? (
+              <details className="assistant-configuration">
+                <summary>
+                  资料与检索设置 ·{" "}
+                  {assistant.conversation && !assistantScopeChanged
+                    ? assistant.conversation.scopeLabel
+                    : scope === "current"
+                      ? `当前文档 · ${document ? basename(document.path) : "未选择"}`
+                      : "当前空间"}{" "}
+                  · {modeLabel(retrievalMode)}
+                  {dirty || indexDirty ? " · 版本待更新" : ""}
+                </summary>
+                {retrievalControls}
+              </details>
+            ) : (
+              retrievalControls
+            )}
             {panel === "search" ? (
               <>
                 <form
@@ -2895,98 +3091,80 @@ export default function App() {
               </>
             ) : (
               <>
-                <div className="panel-scroll ask-scroll">
-                  {asked ? (
-                    <>
-                      <div className="question-bubble">{asked}</div>
-                      {answerSnapshot && (
-                        <div className="answer-context">
-                          {answerSnapshot.scopeLabel}
-                          <br />
-                          {answerExecution(answerSnapshot)}
-                        </div>
-                      )}
-                      {chatBusy && (
-                        <div className="retrieval-status" role="status">
-                          {chatStage || "正在组织回答…"}
-                        </div>
-                      )}
-                      <div className="assistant-label">
-                        <span className="mini-mark">
-                          <Sparkles size={13} />
-                        </span>
-                        砚台
-                        {chatBusy && (
-                          <LoaderCircle size={12} className="spin" />
-                        )}
-                      </div>
-                      {answer ? (
-                        <Answer
-                          text={answer}
-                          sources={answerSources}
-                          onOpen={(s) => void openPath(s.path, s)}
-                          pending={chatBusy || !answerComplete}
-                          rejectedCharts={rejectedCharts}
-                          viewKey={`answer:${answerSnapshot?.id ?? ""}`}
-                          onError={notify}
-                        />
-                      ) : (
-                        chatBusy && (
-                          <div className="thinking">
-                            正在查找资料并组织回答…
-                          </div>
-                        )
-                      )}
-                      {answer && (
-                        <div className="answer-actions">
-                          <button onClick={() => setAnswerExpanded(true)}>
-                            展开阅读
-                          </button>
-                          <button
-                            disabled={chatBusy}
-                            onClick={() => void copyAnswer()}
-                          >
-                            复制 Markdown
-                          </button>
-                          <button
-                            disabled={chatBusy || !workspace}
-                            onClick={() => prepareAnswerTransfer("save")}
-                          >
-                            保存为文档
-                          </button>
-                          <button
-                            disabled={
-                              chatBusy ||
-                              !document ||
-                              documentKind(document.path) !== "markdown"
-                            }
-                            onClick={() => prepareAnswerTransfer("insert")}
-                          >
-                            插入正文
-                          </button>
-                        </div>
-                      )}
-                      {answerChartWarnings.map((warning, i) => (
-                        <div className="panel-warning" key={i}>
-                          {warning}
-                        </div>
-                      ))}
-                      {answerWarning && (
-                        <div className="panel-warning">{answerWarning}</div>
-                      )}
-                      {answerSources.length > 0 && (
-                        <>
-                          <div className="results-label">
-                            参考资料 · {answerSources.length}
-                          </div>
-                          <Sources
-                            items={answerSources}
-                            onOpen={(s) => void openPath(s.path, s)}
-                          />
-                        </>
-                      )}
-                    </>
-                  ) : (
+                <ConversationHeader
+                  controller={assistant}
+                  disabled={chatBusy || assistant.loading}
+                  expanded={assistantExpanded}
+                  onExpand={() => setAssistantExpanded(!assistantExpanded)}
+                  onNew={() => void newConversation()}
+                  onActivate={activateConversation}
+                  onError={fail}
+                />
+                <CompanionDock
+                  workspace={workspace}
+                  documentPath={document?.path ?? null}
+                  documentHash={document?.hash ?? null}
+                  saved={!dirty}
+                  activity={assistantActivity}
+                  activityText={assistantActivityText}
+                />
+                {assistantRunError && (
+                  <div className="panel-warning" role="alert">
+                    {assistantRunError}
+                  </div>
+                )}
+                {branchParent !== undefined && (
+                  <div className="assistant-draft-hint">
+                    正在修改问题，发送后保留原分支。
+                    <button onClick={() => setBranchParent(undefined)}>
+                      取消分支编辑
+                    </button>
+                  </div>
+                )}
+                {assistant.conversation?.turns.length || chatBusy ? (
+                  <ConversationTimeline
+                    conversation={assistant.conversation}
+                    root={workspace?.root ?? ""}
+                    mode={retrievalMode}
+                    busy={chatBusy}
+                    live={
+                      chatBusy
+                        ? {
+                            question: asked,
+                            text: answer,
+                            sources: answerSources,
+                            snapshot: answerSnapshot,
+                            complete: false,
+                            rejectedCharts,
+                            chartWarnings: answerChartWarnings,
+                            warning: chatStage || answerWarning,
+                          }
+                        : null
+                    }
+                    onOpen={setEvidencePreview}
+                    onCopy={(record) => void copyAnswer(record)}
+                    onTransfer={prepareAnswerTransfer}
+                    onRetry={(turn) => void ask({ retry: turn })}
+                    onEdit={(turn) => {
+                      setAssistantScopeChanged(false);
+                      setScope(
+                        assistant.conversation?.scope ? "current" : "workspace",
+                      );
+                      setQuestion(turn.question);
+                      setBranchParent(turn.parentTurnId);
+                    }}
+                    onSelect={(turn, candidate) =>
+                      void assistant.select(turn.id, candidate.id).catch(fail)
+                    }
+                    onBranch={(turn) =>
+                      void assistant
+                        .update({ activeLeafId: turn.id })
+                        .catch(fail)
+                    }
+                    onError={fail}
+                  />
+                ) : (
+                  <div className="panel-scroll ask-scroll">
                     <div className="panel-empty">
                       <div className="orbit-icon">
                         <Sparkles size={26} strokeWidth={1.4} />
@@ -2994,11 +3172,18 @@ export default function App() {
                         <i />
                       </div>
                       <h3>向自己的知识提问</h3>
-                      <p>
-                        让散落的片段形成回答，
-                        <br />
-                        每一处引用，都能回到原文。
-                      </p>
+                      <p>从一个问题开始，逐轮核对资料与判断。</p>
+                      <div className="example-searches">
+                        {[
+                          "比较资料中的两种方案，列出相同点与差异",
+                          "总结这些资料，并注明尚未确定的部分",
+                          "当前资料还缺少哪些信息？",
+                        ].map((text) => (
+                          <button key={text} onClick={() => setQuestion(text)}>
+                            {text}
+                          </button>
+                        ))}
+                      </div>
                       {!settings?.chat.enabled && (
                         <button
                           className="button small"
@@ -3009,8 +3194,8 @@ export default function App() {
                         </button>
                       )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
                 <form
                   className="ask-form"
                   onSubmit={(e) => {
@@ -3022,12 +3207,19 @@ export default function App() {
                     aria-label="向当前空间提问"
                     value={question}
                     maxLength={1500}
+                    disabled={assistant.loading}
                     placeholder="向你的资料提问…"
-                    onChange={(e) => setQuestion(e.target.value)}
+                    onChange={(e) => {
+                      setQuestion(e.target.value);
+                      assistant.saveDraft(
+                        currentAssistantScope(),
+                        e.target.value,
+                      );
+                    }}
                     onKeyDown={(e) => {
                       if (
                         !isImeEvent(e.nativeEvent) &&
-                        (e.metaKey || e.ctrlKey) &&
+                        !e.shiftKey &&
                         e.key === "Enter"
                       ) {
                         e.preventDefault();
@@ -3036,7 +3228,7 @@ export default function App() {
                     }}
                   />
                   <div>
-                    <span>基于当前资料索引 · ⌘↵</span>
+                    <span>基于会话固定范围 · Enter发送 / Shift+Enter换行</span>
                     {chatBusy ? (
                       <button
                         type="button"
@@ -3044,6 +3236,8 @@ export default function App() {
                         title="停止生成"
                         aria-label="停止生成"
                         onClick={() => {
+                          stoppedRequest.current = requestRef.current;
+                          streamBuffer.current?.clear();
                           setChatStage("正在停止生成…");
                           void invoke("cancel_chat", {
                             requestId: requestRef.current,
@@ -3057,7 +3251,9 @@ export default function App() {
                         className="send-button"
                         title="发送问题"
                         aria-label="发送问题"
-                        disabled={!workspace || !question.trim()}
+                        disabled={
+                          !workspace || assistant.loading || !question.trim()
+                        }
                       >
                         <ArrowUp size={17} />
                       </button>
@@ -3092,6 +3288,18 @@ export default function App() {
           <Check size={15} />
           {toast}
         </div>
+      )}
+      {evidencePreview && (
+        <EvidencePreview
+          source={evidencePreview}
+          busy={chatBusy}
+          onClose={() => setEvidencePreview(null)}
+          onOpen={() => {
+            const source = evidencePreview;
+            setEvidencePreview(null);
+            void openPath(source.path, source);
+          }}
+        />
       )}
       {settingsOpen && settings && (
         <SettingsModal
