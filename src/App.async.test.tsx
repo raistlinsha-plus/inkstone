@@ -1230,3 +1230,89 @@ test("question composer protects IME Enter and Shift+Enter while Enter sends", a
   fireEvent.keyDown(input, { key: "Enter" });
   await waitFor(() => expect(calls("assistant_ask")).toHaveLength(2));
 });
+
+test("pre-begin send failure preserves the question and its durable draft for retry", async () => {
+  overrides.set("assistant_ask", () => Promise.reject(Error("发送前存储失败")));
+  overrides.set("bootstrap", () => ({
+    settings: {
+      ...settings,
+      chat: { ...settings.chat, enabled: true, model: "fixture" },
+    },
+    lastWorkspace: null,
+  }));
+  await boot();
+  await openDocument("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "切换知识侧栏" }));
+  fireEvent.click(screen.getByRole("button", { name: "问答" }));
+  const input = screen.getByLabelText("向当前空间提问") as HTMLTextAreaElement;
+  fireEvent.change(input, { target: { value: "还未发送的重要问题" } });
+  fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+  await screen.findAllByText("发送前存储失败");
+  expect(input.value).toBe("还未发送的重要问题");
+  expect(mockConversation.draft).toBe("还未发送的重要问题");
+  expect(mockConversation.turns).toHaveLength(0);
+  expect(
+    (screen.getByRole("button", { name: "发送问题" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(false);
+});
+
+test("rapid space navigation flushes question drafts even when the document is clean", async () => {
+  let project = "p1";
+  overrides.set("open_library", (args) => {
+    project = args.projectId ?? "p1";
+    return workspace(project);
+  });
+  overrides.set("assistant_list", () =>
+    project === "p1" && mockConversation
+      ? [{ ...mockConversation, turnCount: 0 }]
+      : [],
+  );
+
+  await boot();
+  await openDocument("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "切换知识侧栏" }));
+  fireEvent.click(screen.getByRole("button", { name: "问答" }));
+  fireEvent.change(screen.getByLabelText("向当前空间提问"), {
+    target: { value: "切换前的问题" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "项目 p2" }));
+  await screen.findByRole("button", { name: "打开 c.md" });
+  expect(mockConversation.draft).toBe("切换前的问题");
+  const save = api.invoke.mock.calls.findIndex(
+    ([n, a]) => n === "assistant_update" && a.draft === "切换前的问题",
+  );
+  const open = api.invoke.mock.calls.findIndex(
+    ([n, a]) => n === "open_library" && a.projectId === "p2",
+  );
+  expect(save).toBeGreaterThan(-1);
+  expect(save).toBeLessThan(open);
+  fireEvent.click(screen.getByRole("button", { name: "项目 p1" }));
+  await screen.findByRole("button", { name: "打开 a.md" });
+  await waitFor(() =>
+    expect(
+      (screen.getByLabelText("向当前空间提问") as HTMLTextAreaElement).value,
+    ).toBe("切换前的问题"),
+  );
+});
+
+test("failed question draft persistence blocks space navigation and retains the input", async () => {
+  await boot();
+  await openDocument("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "切换知识侧栏" }));
+  fireEvent.click(screen.getByRole("button", { name: "问答" }));
+  overrides.set("assistant_update", () =>
+    Promise.reject(Error("磁盘暂不可写")),
+  );
+  fireEvent.change(screen.getByLabelText("向当前空间提问"), {
+    target: { value: "不能丢的问题" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "项目 p2" }));
+  await screen.findByText(/已保留当前空间/);
+  expect(calls("open_library").some(([, a]) => a.projectId === "p2")).toBe(
+    false,
+  );
+  expect(
+    (screen.getByLabelText("向当前空间提问") as HTMLTextAreaElement).value,
+  ).toBe("不能丢的问题");
+});

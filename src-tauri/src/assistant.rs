@@ -257,27 +257,39 @@ pub fn list(
     include_archived: bool,
     query: &str,
 ) -> Result<Vec<Summary>, String> {
+    list_page(data, workspace, include_archived, query, 0)
+}
+pub fn list_page(
+    data: &Path,
+    workspace: &str,
+    include_archived: bool,
+    query: &str,
+    offset: u32,
+) -> Result<Vec<Summary>, String> {
     let _permit = maintenance::mutation(data)?;
     let c = open(data)?;
     if query.chars().count() > 200 {
         return Err("会话搜索最多200字".into());
     }
-    let mut st=c.prepare("SELECT c.id,c.title,c.scope,c.scope_label,c.archived,c.revision,c.created_at,c.updated_at,c.active_leaf_id,(SELECT COUNT(*) FROM turns t WHERE t.conversation_id=c.id) FROM conversations c WHERE c.workspace_id=? AND (? OR c.archived=0) AND instr(lower(c.title),lower(?))>0 ORDER BY c.updated_at DESC,c.rowid DESC LIMIT 200").map_err(err)?;
+    let mut st=c.prepare("SELECT c.id,c.title,c.scope,c.scope_label,c.archived,c.revision,c.created_at,c.updated_at,c.active_leaf_id,(SELECT COUNT(*) FROM turns t WHERE t.conversation_id=c.id) FROM conversations c WHERE c.workspace_id=? AND (? OR c.archived=0) AND instr(lower(c.title),lower(?))>0 ORDER BY c.updated_at DESC,c.rowid DESC LIMIT 200 OFFSET ?").map_err(err)?;
     let rows = st
-        .query_map(params![workspace, include_archived, query.trim()], |r| {
-            Ok(Summary {
-                id: r.get(0)?,
-                title: r.get(1)?,
-                scope: r.get(2)?,
-                scope_label: r.get(3)?,
-                archived: r.get(4)?,
-                revision: r.get(5)?,
-                created_at: r.get(6)?,
-                updated_at: r.get(7)?,
-                active_leaf_id: r.get(8)?,
-                turn_count: r.get(9)?,
-            })
-        })
+        .query_map(
+            params![workspace, include_archived, query.trim(), offset],
+            |r| {
+                Ok(Summary {
+                    id: r.get(0)?,
+                    title: r.get(1)?,
+                    scope: r.get(2)?,
+                    scope_label: r.get(3)?,
+                    archived: r.get(4)?,
+                    revision: r.get(5)?,
+                    created_at: r.get(6)?,
+                    updated_at: r.get(7)?,
+                    active_leaf_id: r.get(8)?,
+                    turn_count: r.get(9)?,
+                })
+            },
+        )
         .map_err(err)?;
     rows.map(|r| r.map_err(err)).collect()
 }

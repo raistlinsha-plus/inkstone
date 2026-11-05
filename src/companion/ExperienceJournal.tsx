@@ -19,10 +19,12 @@ export default function ExperienceJournal({
   onCard: (id: string, text: string | null) => Promise<boolean>;
 }) {
   const [editing, setEditing] = useState<ExperienceCard | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const cards = snapshot.cards.filter((c) => !spaceId || c.spaceId === spaceId);
   return (
     <>
-      <h3>当前空间的经历卡</h3>
+      <h3>{spaceId ? "当前空间的经历卡" : "所有空间的经历卡"}</h3>
       <p>
         普通保存不计成长；确认后每日最多两条，同一文档同日只计一次。时区：
         {snapshot.timezone}
@@ -57,6 +59,7 @@ export default function ExperienceJournal({
             <>
               <textarea
                 aria-label="修改经历卡"
+                disabled={busy || saving}
                 maxLength={160}
                 value={editing.text}
                 onChange={(e) =>
@@ -64,15 +67,27 @@ export default function ExperienceJournal({
                 }
               />
               <button
-                disabled={busy}
-                onClick={() => {
-                  onCard(c.id, editing.text);
-                  setEditing(null);
+                disabled={busy || saving || !editing.text.trim()}
+                onClick={async () => {
+                  if (saving) return;
+                  setSaving(true);
+                  setSaveError("");
+                  try {
+                    if (await onCard(c.id, editing.text)) setEditing(null);
+                    else setSaveError("修改尚未保存，文字已保留，请重试。");
+                  } catch {
+                    setSaveError("修改尚未保存，文字已保留，请重试。");
+                  } finally {
+                    setSaving(false);
+                  }
                 }}
               >
-                保存修改
+                {saving ? "正在保存…" : "保存修改"}
               </button>
-              <button onClick={() => setEditing(null)}>取消</button>
+              <button disabled={saving} onClick={() => setEditing(null)}>
+                取消
+              </button>
+              {saveError && <p role="alert">{saveError}</p>}
             </>
           ) : (
             <>
@@ -81,7 +96,15 @@ export default function ExperienceJournal({
                 {c.kind === "revision" ? "复盘" : "完成"}
               </small>
               <p>{c.text}</p>
-              <button onClick={() => setEditing({ ...c })}>编辑</button>
+              <button
+                disabled={saving}
+                onClick={() => {
+                  setSaveError("");
+                  setEditing({ ...c });
+                }}
+              >
+                编辑
+              </button>
               <button disabled={busy} onClick={() => onCard(c.id, null)}>
                 删除卡片文字
               </button>

@@ -1,6 +1,9 @@
 //! Deterministic referents for follow-ups. Old questions/answers cannot supply attributes.
 use super::*;
-use crate::{db, models::SearchResult};
+use crate::{
+    db,
+    models::{FileEntry, SearchResult},
+};
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
@@ -131,6 +134,39 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
             clarification: None,
         });
     };
+    // On a new conversation there is no previous source to resolve. A fixed
+    // single-document range or an explicitly named current document is enough
+    // to run ordinary retrieval, whose evidence checks remain unchanged.
+    if referents.is_empty() {
+        let q = started.grounded_question.trim_start();
+        let local_pointer = ["这份", "这篇", "这个文档", "此文档", "当前文档"]
+            .iter()
+            .any(|p| q.starts_with(p));
+        let tree = if let Some(project) = library::project_at_root(data, &ws.root) {
+            library::flat_tree(data, &project)?
+        } else {
+            files::list_tree(&ws.root)?
+        };
+        fn named(entries: &[FileEntry], q: &str, scope: Option<&str>) -> bool {
+            entries.iter().any(|e| {
+                if e.directory {
+                    return named(&e.children, q, scope);
+                }
+                let stem = Path::new(&e.name)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("");
+                scope.is_none_or(|s| s == e.path) && stem.chars().count() >= 2 && q.contains(stem)
+            })
+        }
+        if (local_pointer && started.scope.is_some()) || named(&tree, q, started.scope.as_deref()) {
+            return Ok(Prepared {
+                retrieval_question: started.grounded_question.clone(),
+                gate: None,
+                clarification: None,
+            });
+        }
+    }
     let terms = attributes(&started.grounded_question);
     let clarify = |message: &str| {
         Ok(Prepared {

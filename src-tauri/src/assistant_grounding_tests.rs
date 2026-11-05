@@ -151,3 +151,48 @@ fn explicit_subject_prefixes_are_not_mistaken_for_a_missing_pronoun() {
     assert!(is_followup("那它的预算呢", true));
     assert!(is_followup("分别列出报名人数", true));
 }
+
+#[test]
+fn first_question_resolves_fixed_document_or_explicit_name_but_not_unsupported_pronouns() {
+    let data = tempfile::tempdir().unwrap();
+    let doc = library::create_document(
+        data.path(),
+        "inbox",
+        "青禾方案.md",
+        "报名人数120人，未提供预算。",
+    )
+    .unwrap();
+    let ws = crate::documents::library_workspace(data.path(), "inbox").unwrap();
+    let space = workspace_id(data.path(), &ws);
+    for (scope, q, clarify) in [
+        (
+            Some(doc.path.clone()),
+            "这份青禾方案的报名人数是多少？",
+            false,
+        ),
+        (Some(doc.path.clone()), "这份文档的预算是多少？", false),
+        (None, "这份青禾方案的报名人数是多少？", false),
+        (None, "它们的预算是多少？", true),
+    ] {
+        let c = create(data.path(), &space, scope, "当前范围".into(), None).unwrap();
+        let s = begin_with_mode(
+            data.path(),
+            &space,
+            &c.id,
+            c.revision,
+            q,
+            None,
+            None,
+            &Uuid::new_v4().to_string(),
+            "keyword",
+        )
+        .unwrap();
+        let prepared = prepare(data.path(), &ws, &s).unwrap();
+        assert_eq!(prepared.clarification.is_some(), clarify, "{q}");
+        assert!(prepared.retrieval_question.contains(if q.contains("预算") {
+            "预算"
+        } else {
+            "报名人数"
+        }));
+    }
+}

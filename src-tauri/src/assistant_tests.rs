@@ -355,3 +355,62 @@ fn context_budget_is_six_questions_and_four_thousand_characters() {
         0
     );
 }
+
+#[test]
+fn history_search_reaches_older_pages_and_respects_workspace_and_archive() {
+    let data = tempfile::tempdir().unwrap();
+    let old = make(data.path(), "space-a");
+    update(
+        data.path(),
+        "space-a",
+        &old.id,
+        old.revision,
+        Some("旧专题独特标题".into()),
+        None,
+        None,
+        None,
+    )
+    .unwrap();
+    for _ in 0..201 {
+        make(data.path(), "space-a");
+    }
+    assert_eq!(
+        list_page(data.path(), "space-a", false, "", 0)
+            .unwrap()
+            .len(),
+        200
+    );
+    assert_eq!(
+        list_page(data.path(), "space-a", false, "", 200)
+            .unwrap()
+            .len(),
+        2
+    );
+    assert_eq!(
+        list(data.path(), "space-a", false, "独特标题").unwrap()[0].id,
+        old.id
+    );
+    assert!(list(data.path(), "space-b", true, "独特标题")
+        .unwrap()
+        .is_empty());
+    update(
+        data.path(),
+        "space-a",
+        &old.id,
+        1,
+        None,
+        Some(true),
+        None,
+        None,
+    )
+    .unwrap();
+    assert!(list(data.path(), "space-a", false, "独特标题")
+        .unwrap()
+        .is_empty());
+    assert_eq!(
+        list(data.path(), "space-a", true, "独特标题")
+            .unwrap()
+            .len(),
+        1
+    );
+}

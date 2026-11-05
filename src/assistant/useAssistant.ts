@@ -7,6 +7,7 @@ export function useAssistant(root: string | undefined) {
   const [conversation, setConversation] = useState<Conversation | null>(null),
     [summaries, setSummaries] = useState<ConversationSummary[]>([]),
     [error, setError] = useState(""),
+    [draftError, setDraftError] = useState(""),
     [loading, setLoading] = useState(false);
   const current = useRef<Conversation | null>(null),
     generation = useRef(0),
@@ -29,11 +30,25 @@ export function useAssistant(root: string | undefined) {
     if (epoch === generation.current)
       setSummaries(Array.isArray(rows) ? rows : []);
   }, []);
+  const search = useCallback(
+    async (includeArchived: boolean, query: string, offset = 0) => {
+      const epoch = generation.current;
+      const rows = await invoke<ConversationSummary[]>("assistant_list", {
+        includeArchived,
+        query,
+        offset,
+      });
+      if (epoch !== generation.current) throw Error("空间已变化");
+      return Array.isArray(rows) ? rows : [];
+    },
+    [],
+  );
   useEffect(() => {
     ++generation.current;
     install(null);
     setSummaries([]);
     setError("");
+    setDraftError("");
     pendingDraft.current = null;
     if (draftTimer.current) clearTimeout(draftTimer.current);
     let active = true;
@@ -144,53 +159,88 @@ export function useAssistant(root: string | undefined) {
     if (draftTimer.current) clearTimeout(draftTimer.current);
     draftTimer.current = null;
     const draft = pendingDraft.current;
-    pendingDraft.current = null;
     if (!draft || !rootRef.current) return;
-    if (!current.current || current.current.scope !== draft.scope)
-      await create(draft.scope);
-    if (current.current?.draft !== draft.text)
-      await update({ draft: draft.text });
-  }, [create, update]);
+    const epoch = generation.current;
+    try {
+      // One queue owns begin/finish and draft revisions. Read the revision only
+      // when this job runs, after any generating candidate has been installed.
+      await serial(async () => {
+        if (
+          !current.current ||
+          current.current.archived ||
+          current.current.scope !== draft.scope
+        ) {
+          const next = await invoke<Conversation>("assistant_create", {
+            scope: draft.scope,
+          });
+          if (epoch !== generation.current) throw Error("空间已变化");
+          if (!next?.id) throw Error("会话服务暂不可用");
+          install(next);
+        }
+        const c = current.current!;
+        if (c.draft !== draft.text) {
+          const next = await invoke<Conversation>("assistant_update", {
+            conversationId: c.id,
+            expectedRevision: c.revision,
+            draft: draft.text,
+          });
+          if (epoch !== generation.current) throw Error("空间已变化");
+          install(next);
+        }
+      });
+      if (epoch === generation.current) {
+        if (pendingDraft.current === draft) pendingDraft.current = null;
+        setDraftError("");
+        await list().catch((e) => setError(String(e)));
+      }
+    } catch (e) {
+      if (epoch === generation.current)
+        setDraftError("问答草稿未保存：" + String(e));
+      throw e;
+    }
+  }, [serial, install, list]);
   const saveDraft = useCallback(
     (scope: string | null, text: string) => {
       pendingDraft.current = { scope, text };
       if (draftTimer.current) clearTimeout(draftTimer.current);
       draftTimer.current = setTimeout(() => {
-        void flushDraft().catch((e) => setError(String(e)));
+        void flushDraft().catch(() => {
+          /* retained for explicit retry */
+        });
       }, 600);
     },
     [flushDraft],
   );
   const start = useCallback(
     async (scope: string | null, input: StartQuestion) => {
-      if (draftTimer.current) clearTimeout(draftTimer.current);
-      pendingDraft.current = null;
-      await queue.current.catch(() => {});
+      await flushDraft();
       if (
         !current.current ||
         current.current.archived ||
         current.current.scope !== scope
       )
         await create(scope);
-      const c = current.current!;
-      const epoch = generation.current;
-      setError("");
-      const next = await invoke<Conversation>("assistant_ask", {
-        ...input,
-        conversationId: c.id,
-        expectedRevision: c.revision,
-        parentTurnId:
-          input.parentTurnId === undefined
-            ? c.activeLeafId
-            : input.parentTurnId,
-        regenerateTurnId: input.regenerateTurnId ?? null,
+      return serial(async () => {
+        const c = current.current!;
+        const epoch = generation.current;
+        setError("");
+        const next = await invoke<Conversation>("assistant_ask", {
+          ...input,
+          conversationId: c.id,
+          expectedRevision: c.revision,
+          parentTurnId:
+            input.parentTurnId === undefined
+              ? c.activeLeafId
+              : input.parentTurnId,
+          regenerateTurnId: input.regenerateTurnId ?? null,
+        });
+        if (epoch !== generation.current) throw Error("空间已变化");
+        install(next);
+        await list().catch((e) => setError(String(e)));
+        return next;
       });
-      if (epoch !== generation.current) throw Error("空间已变化");
-      install(next);
-      await list().catch((e) => setError(String(e)));
-      return next;
     },
-    [create, install, list],
+    [create, install, list, serial, flushDraft],
   );
   const select = useCallback(
     (turnId: string, candidateId: string) =>
@@ -230,13 +280,16 @@ export function useAssistant(root: string | undefined) {
     pendingDraft.current = null;
     install(null);
     setError("");
+    setDraftError("");
   }, [install]);
   return {
+    workspaceKey: root,
     conversation,
     summaries,
-    error,
+    error: draftError || error,
     loading,
     list,
+    search,
     create,
     load,
     update,

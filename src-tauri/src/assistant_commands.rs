@@ -1,6 +1,6 @@
 use crate::{assistant, files, library, models::*, workspace, AppState};
 use std::{path::Path, sync::atomic::Ordering};
-use tauri::State;
+use tauri::{Emitter, State};
 
 fn context(state: &AppState) -> Result<(Workspace, String), String> {
     let ws = workspace(state)?;
@@ -38,13 +38,15 @@ pub fn assistant_list(
     state: State<'_, AppState>,
     include_archived: Option<bool>,
     query: Option<String>,
+    offset: Option<u32>,
 ) -> Result<Vec<assistant::Summary>, String> {
     let (_, id) = context(&state)?;
-    assistant::list(
+    assistant::list_page(
         &state.data_dir,
         &id,
         include_archived.unwrap_or(false),
         query.as_deref().unwrap_or(""),
+        offset.unwrap_or(0),
     )
 }
 #[tauri::command]
@@ -155,6 +157,12 @@ pub async fn assistant_ask(
                 "hybrid"
             }),
     )?;
+    // Acknowledgement follows durable acceptance. UI retains the input on all
+    // failures before begin; a dropped event falls back to the final response.
+    let _ = app.emit(
+        "assistant-accepted",
+        serde_json::json!({"requestId":request_id}),
+    );
     let prepared = assistant::grounding::prepare(&state.data_dir, &ws, &started);
     let result = match prepared {
         Ok(prepared) if prepared.clarification.is_some() => Ok(ChatResponse {

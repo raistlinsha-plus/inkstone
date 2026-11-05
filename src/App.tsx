@@ -297,6 +297,28 @@ export default function App() {
   answerTransferRef.current = answerTransfer;
   const requestRef = useRef("");
   const stoppedRequest = useRef("");
+  const submittedQuestion = useRef<{
+    id: string;
+    text: string;
+    cleared: boolean;
+    retry: boolean;
+  } | null>(null);
+  function acceptQuestion(id: string) {
+    const submitted = submittedQuestion.current;
+    if (
+      !submitted ||
+      submitted.id !== id ||
+      submitted.cleared ||
+      submitted.retry
+    )
+      return;
+    submitted.cleared = true;
+    // Clear only the exact submitted value, after the backend has persisted it.
+    if (questionRef.current === submitted.text) {
+      questionRef.current = "";
+      setQuestion("");
+    }
+  }
   const chatEventsReady = useRef<Promise<unknown>>(Promise.resolve());
   const streamBuffer = useRef<ReturnType<typeof createStreamBuffer> | null>(
     null,
@@ -652,6 +674,13 @@ export default function App() {
       return () => parser.current?.terminate();
     }
     let disposed = false;
+    const acceptedListener = listen<{ requestId: string }>(
+      "assistant-accepted",
+      (event) => {
+        if (event.payload.requestId === requestRef.current)
+          acceptQuestion(event.payload.requestId);
+      },
+    );
     const sourceListener = listen<{
       requestId: string;
       sources: SearchResult[];
@@ -690,6 +719,7 @@ export default function App() {
       sourceListener,
       statusListener,
       unlisten,
+      acceptedListener,
     ]);
     void invoke("bootstrap")
       .then(async (boot) => {
@@ -730,6 +760,7 @@ export default function App() {
       void unlisten.then((fn) => fn());
       void statusListener.then((stop) => stop());
       void sourceListener.then((fn) => fn());
+      void acceptedListener.then((fn) => fn());
       parser.current?.terminate();
     };
   }, [startupAttempt]);
@@ -750,9 +781,6 @@ export default function App() {
     rememberPosition();
   }, [mode]);
   async function persistDraft() {
-    await assistant
-      .flushDraft()
-      .catch((e) => notify("问答草稿未保存：" + displayError(e)));
     const doc = syncEditor(),
       root = workspaceRef.current?.root;
     if (!doc || (doc.content === doc.saved && !doc.conflict)) {
@@ -955,6 +983,12 @@ export default function App() {
         }
         if (importBusyRef.current)
           await invoke("cancel_import").catch(() => {});
+        if (chatInFlight.current && requestRef.current)
+          await invoke("cancel_chat", { requestId: requestRef.current });
+        if (questionRef.current.trim())
+          assistant.saveDraft(currentAssistantScope(), questionRef.current);
+        // A failed assistant draft must cancel exit, just like a document draft.
+        await assistant.flushDraft();
         cancelSearch();
         await invoke("quit_app");
       } catch (e) {
@@ -1000,6 +1034,12 @@ export default function App() {
     return () => window.removeEventListener("keydown", handler);
   });
   async function mayLeave() {
+    try {
+      await assistant.flushDraft();
+    } catch (e) {
+      fail(`问答草稿未保存，已保留当前空间：${displayError(e)}`);
+      return false;
+    }
     try {
       await saveCurrent();
       return true;
@@ -2027,7 +2067,12 @@ export default function App() {
     stoppedRequest.current = "";
     chatInFlight.current = true;
     setAsked(prompt);
-    if (!options?.retry) setQuestion("");
+    submittedQuestion.current = {
+      id,
+      text: prompt,
+      cleared: false,
+      retry: !!options?.retry,
+    };
     setAssistantRunError("");
     const snapshot: AnswerSnapshot = {
       id,
@@ -2064,6 +2109,7 @@ export default function App() {
         retrievalMode,
       });
       if (requestRef.current !== id || epoch !== workspaceEpoch.current) return;
+      acceptQuestion(id);
       streamBuffer.current?.clear();
       const turn =
           next.turns.find((t) => t.id === next.activeLeafId) ??
@@ -2101,6 +2147,7 @@ export default function App() {
         requestRef.current = "";
         chatInFlight.current = false;
         setChatBusy(false);
+        submittedQuestion.current = null;
         if (questionRef.current.trim())
           assistant.saveDraft(frozenScope, questionRef.current);
       }
@@ -2300,6 +2347,12 @@ export default function App() {
               ? "回答已就绪，可查看来源"
               : "安静陪读";
 
+  const retrievalScopePath =
+    panel === "ask"
+      ? currentAssistantScope()
+      : scope === "current"
+        ? document?.path
+        : null;
   const retrievalControls = (
     <>
       <div className="scope-row">
@@ -2357,13 +2410,14 @@ export default function App() {
                 : !indexSnapshot.documents.some(
                       (d) =>
                         d.included &&
-                        (scope !== "current" || d.path === document?.path),
+                        (!retrievalScopePath || d.path === retrievalScopePath),
                     )
                   ? "当前范围尚未建立可用向量；可先使用本地关键词或显式建库。"
                   : indexSnapshot.documents
                         .filter(
                           (d) =>
-                            scope !== "current" || d.path === document?.path,
+                            !retrievalScopePath ||
+                            d.path === retrievalScopePath,
                         )
                         .some((d) => d.included && d.vectorState !== "ready")
                     ? "部分文档缺少当前向量或需要更新；实际检索方式以结果说明为准。"
@@ -3179,7 +3233,17 @@ export default function App() {
                           "总结这些资料，并注明尚未确定的部分",
                           "当前资料还缺少哪些信息？",
                         ].map((text) => (
-                          <button key={text} onClick={() => setQuestion(text)}>
+                          <button
+                            key={text}
+                            onClick={() => {
+                              questionRef.current = text;
+                              setQuestion(text);
+                              assistant.saveDraft(
+                                currentAssistantScope(),
+                                text,
+                              );
+                            }}
+                          >
                             {text}
                           </button>
                         ))}
@@ -3210,6 +3274,7 @@ export default function App() {
                     disabled={assistant.loading}
                     placeholder="向你的资料提问…"
                     onChange={(e) => {
+                      questionRef.current = e.target.value;
                       setQuestion(e.target.value);
                       assistant.saveDraft(
                         currentAssistantScope(),

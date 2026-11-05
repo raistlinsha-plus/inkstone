@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   Expand,
@@ -9,7 +9,7 @@ import {
   X,
 } from "lucide-react";
 import ModalDialog from "../ModalDialog";
-import type { Conversation } from "./types";
+import type { Conversation, ConversationSummary } from "./types";
 import type { AssistantController } from "./useAssistant";
 export function ConversationHeader({
   controller,
@@ -37,6 +37,55 @@ export function ConversationHeader({
     [exportText, setExportText] = useState(""),
     [working, setWorking] = useState(false);
   const [exportJson, setExportJson] = useState("");
+  const [rows, setRows] = useState<ConversationSummary[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const searchSequence = useRef(0);
+  useEffect(() => {
+    const sequence = ++searchSequence.current;
+    if (dialog !== "history") return;
+    setSearching(true);
+    setRows([]);
+    setSearchError("");
+    const timer = setTimeout(() => {
+      void controller
+        .search(archived, filter, 0)
+        .then((next) => {
+          if (sequence !== searchSequence.current) return;
+          setRows(next);
+          setHasMore(next.length === 200);
+        })
+        .catch((e) => {
+          if (sequence === searchSequence.current) setSearchError(String(e));
+        })
+        .finally(() => {
+          if (sequence === searchSequence.current) setSearching(false);
+        });
+    }, 200);
+    return () => {
+      clearTimeout(timer);
+      ++searchSequence.current;
+    };
+  }, [dialog, filter, archived, controller.search, controller.workspaceKey]);
+  async function loadMore() {
+    const sequence = searchSequence.current;
+    setSearching(true);
+    setSearchError("");
+    try {
+      const next = await controller.search(archived, filter, rows.length);
+      if (sequence !== searchSequence.current) return;
+      setRows((old) => [
+        ...old,
+        ...next.filter((r) => !old.some((x) => x.id === r.id)),
+      ]);
+      setHasMore(next.length === 200);
+    } catch (e) {
+      if (sequence === searchSequence.current) setSearchError(String(e));
+    } finally {
+      if (sequence === searchSequence.current) setSearching(false);
+    }
+  }
   const c = controller.conversation;
   async function run(fn: () => Promise<void>) {
     setWorking(true);
@@ -64,7 +113,6 @@ export function ConversationHeader({
             disabled={disabled}
             onClick={() => {
               setDialog("history");
-              void controller.list().catch(onError);
             }}
             title="会话历史"
           >
@@ -131,6 +179,12 @@ export function ConversationHeader({
       {controller.error && (
         <div className="panel-warning" role="alert">
           {controller.error}
+          <button
+            disabled={disabled || working}
+            onClick={() => void run(() => controller.flushDraft())}
+          >
+            重试保存草稿
+          </button>
         </div>
       )}
       {dialog && (
@@ -172,6 +226,7 @@ export function ConversationHeader({
                 查找会话
                 <input
                   autoFocus
+                  maxLength={200}
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
                   placeholder="搜索本空间会话标题…"
@@ -186,41 +241,44 @@ export function ConversationHeader({
                 显示已归档会话
               </label>
               <div className="assistant-history-list">
-                {controller.summaries
-                  .filter(
-                    (row) =>
-                      (archived || !row.archived) &&
-                      row.title.toLowerCase().includes(filter.toLowerCase()),
-                  )
-                  .map((row) => (
-                    <button
-                      key={row.id}
-                      disabled={working}
-                      aria-current={c?.id === row.id ? "true" : undefined}
-                      onClick={() =>
-                        void run(async () => {
-                          await controller.flushDraft();
-                          const next = await controller.load(row.id);
-                          if (next) {
-                            onActivate(next);
-                            setDialog(null);
-                          }
-                        })
-                      }
-                    >
-                      <strong>{row.title}</strong>
-                      <small>
-                        {row.scopeLabel} · {row.turnCount}轮
-                        {row.archived ? " · 已归档" : ""}
-                      </small>
-                    </button>
-                  ))}
-                {!controller.summaries.some(
-                  (row) =>
-                    (archived || !row.archived) &&
-                    row.title.toLowerCase().includes(filter.toLowerCase()),
-                ) && <p className="muted">本空间暂无匹配会话。</p>}
+                {rows.map((row) => (
+                  <button
+                    key={row.id}
+                    disabled={working}
+                    aria-current={c?.id === row.id ? "true" : undefined}
+                    onClick={() =>
+                      void run(async () => {
+                        await controller.flushDraft();
+                        const next = await controller.load(row.id);
+                        if (next) {
+                          onActivate(next);
+                          setDialog(null);
+                        }
+                      })
+                    }
+                  >
+                    <strong>{row.title}</strong>
+                    <small>
+                      {row.scopeLabel} · {row.turnCount}轮
+                      {row.archived ? " · 已归档" : ""}
+                    </small>
+                  </button>
+                ))}
+                {!searching && !searchError && !rows.length && (
+                  <p className="muted">本空间暂无匹配会话。</p>
+                )}
               </div>
+              {searchError && <p role="alert">{searchError}</p>}
+              <p className="muted" role="status">
+                {searching
+                  ? "正在查找…"
+                  : `已显示${rows.length}条${hasMore ? "，还有更多会话" : "，已显示全部匹配会话"}`}
+              </p>
+              {(hasMore || searchError) && (
+                <button disabled={searching} onClick={() => void loadMore()}>
+                  {searchError ? "重试查找" : "加载更多会话"}
+                </button>
+              )}
             </>
           )}
           {dialog === "rename" && (
@@ -237,7 +295,7 @@ export function ConversationHeader({
                 会话标题
                 <input
                   autoFocus
-                  maxLength={100}
+                  maxLength={80}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />

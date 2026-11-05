@@ -235,3 +235,102 @@ test("deleting a conversation cancels its pending draft so it cannot resurrect o
     ),
   ).toBe(false);
 });
+
+test("drafts typed during generation use the finished revision and survive retryable write failure", async () => {
+  let db = make(),
+    finish!: (c: Conversation) => void,
+    failOnce = true;
+  const generating = new Promise<Conversation>((resolve) => {
+    finish = resolve;
+  });
+  api.invoke.mockImplementation(async (name: string, args: any) => {
+    if (name === "assistant_list") return [];
+    if (name === "assistant_create") return db;
+    if (name === "assistant_ask") {
+      db = { ...db, revision: db.revision + 1 };
+      return generating;
+    }
+    if (name === "assistant_update") {
+      expect(args.expectedRevision).toBe(db.revision);
+      if (failOnce) {
+        failOnce = false;
+        throw Error("磁盘暂不可写");
+      }
+      db = { ...db, draft: args.draft, revision: db.revision + 1 };
+      return db;
+    }
+  });
+  const h = await ready();
+  await act(async () => {
+    await h.result.current.create(null);
+  });
+  let request!: Promise<Conversation>;
+  act(() => {
+    request = h.result.current.start(null, {
+      question: "首问",
+      requestId: "r",
+      semantic: false,
+      retrievalMode: "keyword",
+    });
+  });
+  await waitFor(() =>
+    expect(api.invoke.mock.calls.some(([n]) => n === "assistant_ask")).toBe(
+      true,
+    ),
+  );
+  act(() => h.result.current.saveDraft(null, "生成中写下的下一问"));
+  let draft!: Promise<void>;
+  act(() => {
+    draft = h.result.current.flushDraft();
+    draft.catch(() => {});
+  });
+  expect(api.invoke.mock.calls.some(([n]) => n === "assistant_update")).toBe(
+    false,
+  );
+  await act(async () => {
+    db = { ...db, revision: db.revision + 1 };
+    finish(db);
+    await request;
+    await expect(draft).rejects.toThrow("磁盘暂不可写");
+  });
+  expect(h.result.current.error).toContain("草稿未保存");
+  await act(async () => {
+    await h.result.current.flushDraft();
+  });
+  expect(db.draft).toBe("生成中写下的下一问");
+  expect(h.result.current.error).toBe("");
+});
+
+test("a newer draft remains pending when an older save completes", async () => {
+  const h = await ready();
+  await act(async () => {
+    await h.result.current.create(null);
+  });
+  const saving = deferred<Conversation>();
+  api.invoke.mockImplementation((name: string, args: any) =>
+    name === "assistant_update" && args.draft === "旧草稿"
+      ? saving.promise
+      : Promise.resolve(
+          name === "assistant_list"
+            ? []
+            : { ...make(), draft: args.draft, revision: 2 },
+        ),
+  );
+  act(() => h.result.current.saveDraft(null, "旧草稿"));
+  let old!: Promise<void>;
+  act(() => {
+    old = h.result.current.flushDraft();
+  });
+  await waitFor(() =>
+    expect(api.invoke.mock.calls.some(([n]) => n === "assistant_update")).toBe(
+      true,
+    ),
+  );
+  act(() => h.result.current.saveDraft(null, "最新草稿"));
+  await act(async () => {
+    saving.resolve({ ...make(), draft: "旧草稿", revision: 1 });
+    await old;
+    await h.result.current.flushDraft();
+  });
+  expect(h.result.current.conversation?.draft).toBe("最新草稿");
+});
