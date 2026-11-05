@@ -31,6 +31,7 @@ import {
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Answer from "./Answer";
 import CompanionDock from "./companion/CompanionDock";
+import { useCompactWindow } from "./platform/useCompactWindow";
 import { useAssistant } from "./assistant/useAssistant";
 import { createStreamBuffer } from "./assistant/streamBuffer";
 import {
@@ -258,10 +259,15 @@ export default function App() {
   const [chatStage, setChatStage] = useState("");
   const assistant = useAssistant(workspace?.root);
   const [assistantExpanded, setAssistantExpanded] = useState(false);
+  const compactWindow = useCompactWindow();
+  const focusedKnowledge =
+    panelOpen && (compactWindow || (assistantExpanded && panel === "ask"));
   const [evidencePreview, setEvidencePreview] = useState<SearchResult | null>(
     null,
   );
   const [assistantScopeChanged, setAssistantScopeChanged] = useState(false);
+  const assistantScopeResolver = useRef(currentAssistantScope);
+  assistantScopeResolver.current = currentAssistantScope;
   const [branchParent, setBranchParent] = useState<string | null | undefined>();
   const [assistantRunError, setAssistantRunError] = useState("");
   useEffect(() => {
@@ -986,7 +992,10 @@ export default function App() {
         if (chatInFlight.current && requestRef.current)
           await invoke("cancel_chat", { requestId: requestRef.current });
         if (questionRef.current.trim())
-          assistant.saveDraft(currentAssistantScope(), questionRef.current);
+          assistant.saveDraft(
+            assistantScopeResolver.current(),
+            questionRef.current,
+          );
         // A failed assistant draft must cancel exit, just like a document draft.
         await assistant.flushDraft();
         cancelSearch();
@@ -2475,7 +2484,7 @@ export default function App() {
           </div>
         )}
       <div
-        className={`main-layout ${assistantExpanded && panelOpen && panel === "ask" ? "assistant-expanded" : ""}`}
+        className={`main-layout ${focusedKnowledge ? "assistant-expanded" : ""}`}
       >
         <aside className="sidebar sidebar-compact" aria-label="文档空间导航">
           <div className="space-sidebar-heading">
@@ -2964,7 +2973,7 @@ export default function App() {
         </main>
         {panelOpen && (
           <aside
-            className="knowledge-panel"
+            className={`knowledge-panel ${panel === "ask" ? "ask-panel" : ""}`}
             style={{ "--knowledge-width": `${panelWidth}px` } as CSSProperties}
           >
             <div
@@ -3022,6 +3031,15 @@ export default function App() {
                 <Sparkles size={15} />
                 问答
               </button>
+              {compactWindow && panel === "search" && (
+                <button
+                  className="return-to-editor"
+                  onClick={() => setPanelOpen(false)}
+                >
+                  <PenLine size={15} />
+                  返回编辑
+                </button>
+              )}
               <button
                 className="icon-button"
                 aria-label="收起知识侧栏"
@@ -3148,8 +3166,12 @@ export default function App() {
                 <ConversationHeader
                   controller={assistant}
                   disabled={chatBusy || assistant.loading}
-                  expanded={assistantExpanded}
-                  onExpand={() => setAssistantExpanded(!assistantExpanded)}
+                  expanded={focusedKnowledge}
+                  onExpand={() =>
+                    compactWindow
+                      ? setPanelOpen(false)
+                      : setAssistantExpanded(!assistantExpanded)
+                  }
                   onNew={() => void newConversation()}
                   onActivate={activateConversation}
                   onError={fail}
@@ -3165,6 +3187,12 @@ export default function App() {
                 {assistantRunError && (
                   <div className="panel-warning" role="alert">
                     {assistantRunError}
+                    <button
+                      disabled={chatBusy || !question.trim()}
+                      onClick={() => void ask()}
+                    >
+                      重试发送
+                    </button>
                   </div>
                 )}
                 {branchParent !== undefined && (
@@ -3205,6 +3233,11 @@ export default function App() {
                         assistant.conversation?.scope ? "current" : "workspace",
                       );
                       setQuestion(turn.question);
+                      questionRef.current = turn.question;
+                      assistant.saveDraft(
+                        assistant.conversation?.scope ?? null,
+                        turn.question,
+                      );
                       setBranchParent(turn.parentTurnId);
                     }}
                     onSelect={(turn, candidate) =>
@@ -3293,7 +3326,11 @@ export default function App() {
                     }}
                   />
                   <div>
-                    <span>基于会话固定范围 · Enter发送 / Shift+Enter换行</span>
+                    <span>
+                      {chatBusy && question.trim()
+                        ? "草稿将在本轮结束或退出前保存"
+                        : "基于会话固定范围 · Enter发送 / Shift+Enter换行"}
+                    </span>
                     {chatBusy ? (
                       <button
                         type="button"

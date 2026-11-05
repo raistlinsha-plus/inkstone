@@ -414,3 +414,86 @@ fn history_search_reaches_older_pages_and_respects_workspace_and_archive() {
         1
     );
 }
+
+#[test]
+fn stopped_partial_survives_reopen_backup_and_branch_exports_stay_distinct() {
+    let data = tempfile::tempdir().unwrap();
+    let c = make(data.path(), "space-a");
+    let first = start(data.path(), &c, "原问题", None);
+    let c = finish(
+        data.path(),
+        "space-a",
+        &first,
+        Ok(&response("原候选")),
+        false,
+    )
+    .unwrap();
+    let regenerated = begin(
+        data.path(),
+        "space-a",
+        &c.id,
+        c.revision,
+        "",
+        None,
+        Some(&first.turn_id),
+        "regen",
+    )
+    .unwrap();
+    let mut partial = response("已经流出的部分内容");
+    partial.finish_reason = "cancelled".into();
+    let c = finish(data.path(), "space-a", &regenerated, Ok(&partial), true).unwrap();
+    let reopened = get(data.path(), "space-a", &c.id).unwrap();
+    assert_eq!(reopened.turns[0].candidates[1].status, "stopped");
+    assert_eq!(
+        reopened.turns[0].candidates[1].response.as_ref().unwrap()["text"],
+        "已经流出的部分内容"
+    );
+    validate_snapshot(&data.path().join("assistant.sqlite3")).unwrap();
+    let branch = start(data.path(), &c, "另一分支的问题", None);
+    let c = finish(
+        data.path(),
+        "space-a",
+        &branch,
+        Ok(&response("另一分支的回答")),
+        false,
+    )
+    .unwrap();
+    let exported = export(data.path(), "space-a", &c.id).unwrap();
+    assert!(exported.markdown.contains("另一分支的回答"));
+    assert!(!exported.markdown.contains("已经流出的部分内容"));
+    assert!(!exported.markdown.contains("原候选"));
+    assert!(exported.all_markdown.contains("已经流出的部分内容"));
+    assert!(exported.all_markdown.contains("原候选"));
+    assert!(exported.all_markdown.contains("其他分支"));
+    assert!(exported.all_markdown.contains("上级："));
+    assert!(exported.json.contains("cancelled"));
+}
+
+#[test]
+fn markdown_export_never_revives_rejected_or_unfinished_structures_and_json_stays_raw() {
+    let data = tempfile::tempdir().unwrap();
+    let c = make(data.path(), "space-a");
+    let first = start(data.path(), &c, "待核对图表", None);
+    let raw = "正文\n\n```chart\n{\"series\":[]}\n```\n\n尾段";
+    let mut r = response(raw);
+    r.rejected_charts = vec![0];
+    let c = finish(data.path(), "space-a", &first, Ok(&r), false).unwrap();
+    let exported = export(data.path(), "space-a", &c.id).unwrap();
+    assert!(exported.markdown.contains("````markdown-unverified"));
+    assert!(exported.markdown.contains(raw));
+    assert_eq!(
+        serde_json::from_str::<Value>(&exported.json).unwrap()["turns"][0]["candidates"][0]
+            ["response"]["text"],
+        raw
+    );
+    let next = start(data.path(), &c, "中断代码", Some(&first.turn_id));
+    let mut partial = response("```mermaid\nflowchart LR\nA-->B");
+    partial.finish_reason = "cancelled".into();
+    let c = finish(data.path(), "space-a", &next, Ok(&partial), true).unwrap();
+    let exported = export(data.path(), "space-a", &c.id).unwrap();
+    assert!(exported.markdown.ends_with('\n'));
+    assert!(exported
+        .markdown
+        .contains("````markdown-unverified\n```mermaid"));
+    assert!(exported.markdown.contains("A-->B\n````"));
+}

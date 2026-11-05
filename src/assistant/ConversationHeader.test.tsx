@@ -9,7 +9,8 @@ import {
 import { afterEach, expect, test, vi } from "vitest";
 import { ConversationHeader } from "./ConversationHeader";
 import type { AssistantController } from "./useAssistant";
-vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+const api = vi.hoisted(() => ({ invoke: vi.fn() }));
+vi.mock("@tauri-apps/api/core", () => api);
 afterEach(cleanup);
 test("history queries older titles on the backend, paginates and applies archive scope", async () => {
   const row = (id: string) => ({
@@ -55,4 +56,43 @@ test("history queries older titles on the backend, paginates and applies archive
   expect(search).toHaveBeenCalledWith(false, "旧专题", 0);
   fireEvent.click(screen.getByRole("checkbox", { name: "显示已归档会话" }));
   await waitFor(() => expect(search).toHaveBeenCalledWith(true, "旧专题", 0));
+});
+
+test("export defaults to the current branch and explicitly switches to all records", async () => {
+  api.invoke.mockResolvedValue({
+    markdown: "当前分支内容",
+    allMarkdown: "全部分支与候选内容",
+    json: "{}",
+  });
+  const controller = {
+    conversation: { id: "c", title: "会话", scopeLabel: "当前空间" },
+    error: "",
+  } as unknown as AssistantController;
+  render(
+    <ConversationHeader
+      controller={controller}
+      disabled={false}
+      expanded={false}
+      onExpand={() => {}}
+      onNew={() => {}}
+      onActivate={() => {}}
+      onError={() => {}}
+    />,
+  );
+  fireEvent.click(screen.getByLabelText("管理当前会话"));
+  fireEvent.click(
+    screen.getByRole("button", { name: "导出会话" }),
+  );
+  await screen.findByRole("dialog", { name: "导出问答会话" });
+  expect(
+    (screen.getByRole("textbox", { name: "Markdown" }) as HTMLTextAreaElement)
+      .value,
+  ).toBe("当前分支内容");
+  fireEvent.change(screen.getByLabelText("会话导出范围"), {
+    target: { value: "all" },
+  });
+  expect(
+    (screen.getByRole("textbox", { name: "Markdown" }) as HTMLTextAreaElement)
+      .value,
+  ).toBe("全部分支与候选内容");
 });

@@ -37,6 +37,8 @@ export function ConversationHeader({
     [exportText, setExportText] = useState(""),
     [working, setWorking] = useState(false);
   const [exportJson, setExportJson] = useState("");
+  const [exportData, setExportData] = useState({ current: "", all: "" });
+  const [exportScope, setExportScope] = useState("current");
   const [rows, setRows] = useState<ConversationSummary[]>([]);
   const [searching, setSearching] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -158,9 +160,15 @@ export function ConversationHeader({
                     void run(async () => {
                       const data = await invoke<{
                         markdown: string;
+                        allMarkdown: string;
                         json: string;
                       }>("assistant_export", { conversationId: c.id });
                       setExportText(data.markdown);
+                      setExportData({
+                        current: data.markdown,
+                        all: data.allMarkdown,
+                      });
+                      setExportScope("current");
                       setExportJson(data.json);
                       setDialog("export");
                     })
@@ -179,12 +187,14 @@ export function ConversationHeader({
       {controller.error && (
         <div className="panel-warning" role="alert">
           {controller.error}
-          <button
-            disabled={disabled || working}
-            onClick={() => void run(() => controller.flushDraft())}
-          >
-            重试保存草稿
-          </button>
+          {controller.draftFailed && (
+            <button
+              disabled={disabled || working}
+              onClick={() => void run(() => controller.flushDraft())}
+            >
+              重试保存草稿
+            </button>
+          )}
         </div>
       )}
       {dialog && (
@@ -334,6 +344,27 @@ export function ConversationHeader({
           )}
           {dialog === "export" && (
             <>
+              <label>
+                导出范围
+                <select
+                  aria-label="会话导出范围"
+                  value={exportScope}
+                  onChange={(e) => {
+                    setExportScope(e.target.value);
+                    setExportText(
+                      e.target.value === "all"
+                        ? exportData.all
+                        : exportData.current,
+                    );
+                  }}
+                >
+                  <option value="current">当前分支与选中回答</option>
+                  <option value="all">全部分支与全部候选</option>
+                </select>
+              </label>
+              <p className="muted">
+                Markdown按所选范围导出；JSON包含完整会话、全部分支与来源快照。
+              </p>
               <label>
                 Markdown
                 <textarea

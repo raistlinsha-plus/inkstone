@@ -223,9 +223,14 @@ export function installV07Fixture() {
     if (command === "assistant_list")
       return clone(
         store.conversations
-          .filter((c) => args.includeArchived || !c.archived)
+          .filter(
+            (c) =>
+              (args.includeArchived || !c.archived) &&
+              c.title.toLowerCase().includes((args.query || "").toLowerCase()),
+          )
           .map((c) => ({ ...c, turnCount: c.turns.length }))
-          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+          .slice(args.offset || 0, (args.offset || 0) + 200),
       );
     if (command === "assistant_create") {
       const c = {
@@ -267,6 +272,15 @@ export function installV07Fixture() {
       if (command === "assistant_export")
         return {
           json: JSON.stringify(c, null, 2),
+          allMarkdown: c.turns
+            .map(
+              (t) =>
+                "## 全部分支：" +
+                t.question +
+                "\n" +
+                t.candidates.map((a) => a.response?.text || "").join("\n"),
+            )
+            .join("\n\n"),
           markdown: c.turns
             .map(
               (t) =>
@@ -312,10 +326,11 @@ export function installV07Fixture() {
         if (c.title === "新会话") c.title = c.turns[0].question.slice(0, 30);
         c.revision++;
         persist();
+        send("assistant-accepted", { requestId: args.requestId });
         const insufficient = /满意|更好/.test(t.question),
           text = insufficient
             ? "## 资料不足以判断满意度\n\n当前资料只记录时间和人数，没有满意度指标。人数较多不等于更受欢迎。\n\n建议补充问卷样本与调查口径。"
-            : "## 甲方案参与人数较多\n\n甲方案为 **120人**，乙方案为 **80人**，相差 **40人**。[S1]\n\n| 方案 | 时间 | 人数 |\n| --- | --- | --- |\n| 甲 | 周二 | 120 |\n| 乙 | 周四 | 80 |\n\n资料不足以判断满意度或方案优劣。";
+            : "## 甲方案参与人数较多\n\n甲方案为 **120人**，乙方案为 **80人**，相差 **40人**。[1]\n\n| 方案 | 时间 | 人数 |\n| --- | --- | --- |\n| 甲 | 周二 | 120 |\n| 乙 | 周四 | 80 |\n\n资料不足以判断满意度或方案优劣。";
         send("chat-status", {
           requestId: args.requestId,
           stage: "retrieving",

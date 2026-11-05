@@ -1991,7 +1991,7 @@ a {
   z-index: 2;
 }
 .graph-preview iframe {
-  height: 420px;
+  height: var(--graph-height, 420px);
 }
 /* v0.3 document content blocks */
 .inkstone-node-view {
@@ -2077,8 +2077,8 @@ a {
   outline: 2px solid #6c8b75;
 }
 .inline-block-preview .graph-preview iframe {
-  height: 320px;
-  min-height: 300px;
+  height: var(--graph-height, 320px);
+  min-height: 180px;
 }
 .inline-block-preview .mindmap-preview {
   min-height: 0;
@@ -3201,7 +3201,7 @@ a {
   min-height: 27px;
 }
 .answer-text .graph-preview iframe {
-  min-height: 260px;
+  min-height: 180px;
 }
 .answer-text .citation {
   color: #35502b;

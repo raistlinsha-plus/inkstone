@@ -96,3 +96,32 @@ test("chart validation fails closed and its own frame enables SVG and PNG only f
     requestId: job.requestId,
   });
 });
+
+test("graph sizes are bounded, revision-owned and expandable without changing source", () => {
+  render(<Graph kind="mermaid" source="flowchart LR\n A-->B" />);
+  const iframe = screen.getByTitle("Mermaid 本地预览") as HTMLIFrameElement;
+  const posted = vi.spyOn(iframe.contentWindow!, "postMessage");
+  fireEvent.load(iframe);
+  const job = posted.mock.calls.find(([data]) => data.type === "render")![0];
+  const container = iframe.closest(".graph-preview") as HTMLElement;
+  const size = (height: number, revision = job.revision) =>
+    act(() =>
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          source: iframe.contentWindow!,
+          data: { ...job, type: "size", height, revision },
+        }),
+      ),
+    );
+  size(180);
+  expect(container.style.getPropertyValue("--graph-height")).toBe("180px");
+  size(999999);
+  expect(container.style.getPropertyValue("--graph-height")).toBe("440px");
+  size(200, job.revision - 1);
+  size(NaN);
+  expect(container.style.getPropertyValue("--graph-height")).toBe("440px");
+  fireEvent.click(screen.getByRole("button", { name: "展开画布" }));
+  expect(container.style.getPropertyValue("--graph-height")).toBe("560px");
+  fireEvent.click(screen.getByRole("button", { name: "收起画布" }));
+  expect(container.style.getPropertyValue("--graph-height")).toBe("440px");
+});

@@ -675,7 +675,15 @@ pub async fn chat(
     let mut finished = false;
     let mut finish_reason = String::from("stop");
     loop {
-        let next = tokio::select! {r=stream.next()=>r,_=wait_cancel(cancel)=>return Err("已停止生成".into())};
+        let next = tokio::select! {
+            r=stream.next()=>r,
+            _=wait_cancel(cancel)=> {
+                if text.trim().is_empty() { return Err("已停止生成".into()); }
+                finish_reason = "cancelled".into();
+                finished = true;
+                break;
+            }
+        };
         let Some(bytes) = next else {
             break;
         };
@@ -734,7 +742,11 @@ pub async fn chat(
         }
     }
     if cancel.load(Ordering::SeqCst) {
-        return Err("已停止生成".into());
+        if text.trim().is_empty() {
+            return Err("已停止生成".into());
+        }
+        finish_reason = "cancelled".into();
+        finished = true;
     }
     if text.trim().is_empty() {
         return Err("模型没有返回回答文本，请确认该模型支持对话".into());
@@ -1566,5 +1578,58 @@ mod rerank_http_tests {
         .await
         .unwrap_err()
         .contains("取消"));
+    }
+}
+
+#[cfg(test)]
+mod cancellation_regression {
+    use super::*;
+    #[tokio::test]
+    async fn cancelled_stream_returns_nonempty_unicode_partial_with_explicit_finish_reason() {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            socket
+                .set_read_timeout(Some(std::time::Duration::from_secs(2)))
+                .unwrap();
+            let mut request = [0; 8192];
+            socket.read(&mut request).unwrap();
+            let event = format!(
+                "data: {}\n\n",
+                json!({"choices":[{"delta":{"content":"部分回答：中文内容"}}]})
+            );
+            write!(socket, "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: 999999\r\nConnection: close\r\n\r\n{event}").unwrap();
+            socket.flush().unwrap();
+            std::thread::sleep(std::time::Duration::from_millis(700));
+        });
+        let provider = Provider {
+            enabled: true,
+            base_url: format!("http://{address}/v1"),
+            model: "fixture".into(),
+            ..Provider::default()
+        };
+        let client = reqwest::Client::new();
+        let cancel = AtomicBool::new(false);
+        let generation = chat(
+            &client,
+            &provider,
+            None,
+            "合成问题",
+            &[],
+            &cancel,
+            None,
+            "cancel-test",
+        );
+        let stop = async {
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            cancel.store(true, Ordering::SeqCst);
+        };
+        let (output, _) = tokio::join!(generation, stop);
+        let output = output.unwrap();
+        assert_eq!(output.text, "部分回答：中文内容");
+        assert_eq!(output.finish_reason, "cancelled");
+        server.join().unwrap();
     }
 }

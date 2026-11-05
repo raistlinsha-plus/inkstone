@@ -159,7 +159,13 @@ export function useAssistant(root: string | undefined) {
     if (draftTimer.current) clearTimeout(draftTimer.current);
     draftTimer.current = null;
     const draft = pendingDraft.current;
-    if (!draft || !rootRef.current) return;
+    if (!rootRef.current) return;
+    if (!draft) {
+      // Closing after stop must also wait for a candidate's durable finish,
+      // even when the composer is empty.
+      await queue.current.catch(() => {});
+      return;
+    }
     const epoch = generation.current;
     try {
       // One queue owns begin/finish and draft revisions. Read the revision only
@@ -224,16 +230,34 @@ export function useAssistant(root: string | undefined) {
         const c = current.current!;
         const epoch = generation.current;
         setError("");
-        const next = await invoke<Conversation>("assistant_ask", {
-          ...input,
-          conversationId: c.id,
-          expectedRevision: c.revision,
-          parentTurnId:
-            input.parentTurnId === undefined
-              ? c.activeLeafId
-              : input.parentTurnId,
-          regenerateTurnId: input.regenerateTurnId ?? null,
-        });
+        let next: Conversation;
+        try {
+          next = await invoke<Conversation>("assistant_ask", {
+            ...input,
+            conversationId: c.id,
+            expectedRevision: c.revision,
+            parentTurnId:
+              input.parentTurnId === undefined
+                ? c.activeLeafId
+                : input.parentTurnId,
+            regenerateTurnId: input.regenerateTurnId ?? null,
+          });
+        } catch (e) {
+          // A transport/finish failure may follow durable begin. Reconcile the
+          // accepted revision before a queued draft retries; never invent one.
+          if (epoch === generation.current) {
+            try {
+              const latest = await invoke<Conversation>("assistant_get", {
+                conversationId: c.id,
+              });
+              if (epoch === generation.current && latest?.id === c.id)
+                install(latest);
+            } catch {
+              /* Keep the input/pending draft and the original error. */
+            }
+          }
+          throw e;
+        }
         if (epoch !== generation.current) throw Error("空间已变化");
         install(next);
         await list().catch((e) => setError(String(e)));
@@ -287,6 +311,7 @@ export function useAssistant(root: string | undefined) {
     conversation,
     summaries,
     error: draftError || error,
+    draftFailed: !!draftError,
     loading,
     list,
     search,

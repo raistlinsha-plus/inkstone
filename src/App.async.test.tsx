@@ -19,6 +19,9 @@ const api = vi.hoisted(() => ({
   invoke: vi.fn(),
   confirm: vi.fn(),
   realLibrary: false,
+  events: new Map<string, (event: any) => void>(),
+  close: undefined as
+    undefined | ((event: { preventDefault: () => void }) => Promise<void>),
   drop: undefined as
     | undefined
     | ((event: { payload: { type: string; paths: string[] } }) => void),
@@ -28,11 +31,19 @@ vi.mock("@tauri-apps/api/core", () => ({
   isTauri: () => true,
 }));
 vi.mock("@tauri-apps/api/event", () => ({
-  listen: () => Promise.resolve(() => {}),
+  listen: (name: string, callback: (event: any) => void) => {
+    api.events.set(name, callback);
+    return Promise.resolve(() => {
+      if (api.events.get(name) === callback) api.events.delete(name);
+    });
+  },
 }));
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({
-    onCloseRequested: () => Promise.resolve(() => {}),
+    onCloseRequested: (callback: typeof api.close) => {
+      api.close = callback;
+      return Promise.resolve(() => {});
+    },
   }),
 }));
 vi.mock("@tauri-apps/api/webview", () => ({
@@ -487,6 +498,8 @@ test("a late summary response cannot replace stats from the newly selected space
   expect(count()).toBe("3");
 });
 beforeEach(() => {
+  api.events.clear();
+  api.close = undefined;
   api.realLibrary = false;
   localStorage.clear();
   disk.clear();
@@ -1315,4 +1328,66 @@ test("failed question draft persistence blocks space navigation and retains the 
   expect(
     (screen.getByLabelText("向当前空间提问") as HTMLTextAreaElement).value,
   ).toBe("不能丢的问题");
+});
+
+test("durable acceptance clears only the submitted input, preserving later typing", async () => {
+  const answer = deferred<any>();
+  await askSynthetic(answer.promise);
+  const sent = calls("assistant_ask")[0][1];
+  const input = screen.getByLabelText("向当前空间提问") as HTMLTextAreaElement;
+  expect(input.value).toBe("请分析季度资料");
+  fireEvent.change(input, { target: { value: "后来输入的新问题" } });
+  act(() =>
+    api.events.get("assistant-accepted")?.({
+      payload: { requestId: sent.requestId },
+    }),
+  );
+  expect(input.value).toBe("后来输入的新问题");
+  await act(async () => {
+    answer.resolve(syntheticAnswer);
+  });
+  await screen.findByRole("heading", { name: "季度分析" });
+  expect(input.value).toBe("后来输入的新问题");
+});
+
+test("exit stops generation then durably flushes the next question before quitting", async () => {
+  const answer = deferred<any>();
+  await askSynthetic(answer.promise);
+  const sent = calls("assistant_ask")[0][1];
+  act(() =>
+    api.events.get("assistant-accepted")?.({
+      payload: { requestId: sent.requestId },
+    }),
+  );
+  fireEvent.change(screen.getByLabelText("向当前空间提问"), {
+    target: { value: "退出前必须保留的下一问" },
+  });
+  overrides.set("cancel_chat", () => {
+    answer.resolve(syntheticAnswer);
+  });
+  await act(async () => {
+    await api.close?.({ preventDefault() {} });
+  });
+  expect(calls("cancel_chat")).toHaveLength(1);
+  expect(calls("quit_app")).toHaveLength(1);
+  expect(mockConversation.draft).toBe("退出前必须保留的下一问");
+});
+
+test("exit preserves the latest single-document draft scope without starting generation", async () => {
+  await boot();
+  await openDocument("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "切换知识侧栏" }));
+  fireEvent.click(screen.getByRole("button", { name: "问答" }));
+  fireEvent.change(screen.getByLabelText("资料范围"), {
+    target: { value: "current" },
+  });
+  fireEvent.change(screen.getByLabelText("向当前空间提问"), {
+    target: { value: "单文档的未发送问题" },
+  });
+  await act(async () => {
+    await api.close?.({ preventDefault() {} });
+  });
+  expect(calls("quit_app")).toHaveLength(1);
+  expect(mockConversation.draft).toBe("单文档的未发送问题");
+  expect(mockConversation.scope).toBe("a.md");
 });

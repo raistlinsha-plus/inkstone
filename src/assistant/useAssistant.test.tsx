@@ -240,7 +240,7 @@ test("drafts typed during generation use the finished revision and survive retry
   let db = make(),
     finish!: (c: Conversation) => void,
     failOnce = true;
-  const generating = new Promise<Conversation>((resolve) => {
+  let generating = new Promise<Conversation>((resolve) => {
     finish = resolve;
   });
   api.invoke.mockImplementation(async (name: string, args: any) => {
@@ -299,6 +299,35 @@ test("drafts typed during generation use the finished revision and survive retry
   });
   expect(db.draft).toBe("生成中写下的下一问");
   expect(h.result.current.error).toBe("");
+  const second = deferred<Conversation>();
+  generating = second.promise;
+  let next!: Promise<Conversation>;
+  act(() => {
+    next = h.result.current.start(null, {
+      question: "第二问",
+      requestId: "r2",
+      semantic: false,
+      retrievalMode: "keyword",
+    });
+  });
+  await waitFor(() =>
+    expect(
+      api.invoke.mock.calls.filter(([n]) => n === "assistant_ask"),
+    ).toHaveLength(2),
+  );
+  let drained = false;
+  const emptyFlush = h.result.current.flushDraft().then(() => {
+    drained = true;
+  });
+  await Promise.resolve();
+  expect(drained).toBe(false);
+  await act(async () => {
+    db = { ...db, revision: db.revision + 1 };
+    second.resolve(db);
+    await next;
+    await emptyFlush;
+  });
+  expect(drained).toBe(true);
 });
 
 test("a newer draft remains pending when an older save completes", async () => {
@@ -333,4 +362,36 @@ test("a newer draft remains pending when an older save completes", async () => {
     await h.result.current.flushDraft();
   });
   expect(h.result.current.conversation?.draft).toBe("最新草稿");
+});
+
+test("a lost finish reply reconciles the accepted revision before saving the next draft", async () => {
+  const h = await ready();
+  await act(async () => {
+    await h.result.current.create(null);
+  });
+  const accepted = { ...make("created"), revision: 1 };
+  api.invoke.mockImplementation(async (name: string, args: any) => {
+    if (name === "assistant_list") return [];
+    if (name === "assistant_ask") throw Error("完成回执中断");
+    if (name === "assistant_get") return accepted;
+    if (name === "assistant_update") {
+      expect(args.expectedRevision).toBe(1);
+      return { ...accepted, revision: 2, draft: args.draft };
+    }
+  });
+  await act(async () => {
+    await expect(
+      h.result.current.start(null, {
+        question: "已接收的问题",
+        requestId: "r",
+        semantic: false,
+        retrievalMode: "keyword",
+      }),
+    ).rejects.toThrow("完成回执中断");
+  });
+  await act(async () => {
+    h.result.current.saveDraft(null, "下一问仍可保存");
+    await h.result.current.flushDraft();
+  });
+  expect(h.result.current.conversation?.draft).toBe("下一问仍可保存");
 });

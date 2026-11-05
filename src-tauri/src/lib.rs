@@ -1776,7 +1776,7 @@ async fn ask_pipeline(
             detail: "正在依据已保存且版本校验通过的资料生成回答".into(),
         },
     );
-    let output = providers::chat(
+    let mut output = providers::chat(
         &state.client,
         &config,
         key.as_deref(),
@@ -1787,13 +1787,14 @@ async fn ask_pipeline(
         request_id,
     )
     .await;
-    if state.cancel_chat.load(Ordering::SeqCst) {
-        return Err("已停止生成".into());
-    }
     let current = generation == state.workspace_generation.load(Ordering::SeqCst)
         && sources_current(state, &context_workspace, &sources);
     if state.cancel_chat.load(Ordering::SeqCst) {
-        return Err("已停止生成".into());
+        // Persist a nonempty partial only after the same identity/hash checks
+        // as a complete answer; it remains an explicitly stopped candidate.
+        if let Ok(partial) = &mut output {
+            partial.finish_reason = "cancelled".into();
+        }
     }
     if !current {
         return Ok(ChatResponse { finish_reason: "source_changed".into(), text: "生成期间所用资料发生变化或已被移除，已撤回过期答案和引用。请重新提问以核对最新原文。".into(), sources: vec![], warning: Some("原文已变化，请勿使用生成期间显示的旧内容。".into()), retrieval_mode:actual_mode, rerank_status, model:config.model.clone(), scope,chart_warnings:vec![],rejected_charts:vec![] });
@@ -1805,7 +1806,9 @@ async fn ask_pipeline(
         .into_iter()
         .chain(preference_warning)
         .collect::<Vec<_>>();
-    if output.finish_reason == "length" {
+    if output.finish_reason == "cancelled" {
+        warnings.push("已停止，保留的内容尚未完成，请核对后再使用。".into());
+    } else if output.finish_reason == "length" {
         warnings.push("回答达到输出长度限制，内容已截断。请缩小问题范围后重试。".into());
     } else if output.finish_reason != "stop" {
         warnings.push(format!(

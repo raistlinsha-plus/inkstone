@@ -87,7 +87,10 @@ pub fn validate_snapshot(path: &Path) -> Result<(), String> {
                     return Err("会话候选状态无效".into());
                 }
                 if let Some(response) = &candidate.response {
-                    if !["complete", "source_changed"].contains(&candidate.status.as_str())
+                    if !["complete", "source_changed", "stopped"]
+                        .contains(&candidate.status.as_str())
+                        || (candidate.status == "stopped"
+                            && response["finishReason"] != "cancelled")
                         || response["text"]
                             .as_str()
                             .is_none_or(|text| text.len() > 2 * 1024 * 1024)

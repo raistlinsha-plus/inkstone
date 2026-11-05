@@ -161,7 +161,23 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
         }
         if (local_pointer && started.scope.is_some()) || named(&tree, q, started.scope.as_deref()) {
             return Ok(Prepared {
-                retrieval_question: started.grounded_question.clone(),
+                retrieval_question: [
+                    "这份文档",
+                    "这篇文档",
+                    "这个文档",
+                    "当前文档",
+                    "此文档",
+                    "这份资料",
+                    "这篇资料",
+                    "这份",
+                    "这篇",
+                ]
+                .iter()
+                .find_map(|p| q.strip_prefix(p))
+                .unwrap_or(q)
+                .trim_start_matches('的')
+                .trim()
+                .to_string(),
                 gate: None,
                 clarification: None,
             });

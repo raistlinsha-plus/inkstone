@@ -71,6 +71,7 @@ pub struct Summary {
 #[serde(rename_all = "camelCase")]
 pub struct Export {
     pub markdown: String,
+    pub all_markdown: String,
     pub json: String,
 }
 #[derive(Clone, Debug)]
@@ -579,6 +580,8 @@ pub fn finish(
         Ok(r) => (
             if r.finish_reason == "source_changed" {
                 "source_changed"
+            } else if stopped && r.finish_reason == "cancelled" {
+                "stopped"
             } else {
                 "complete"
             },
@@ -602,39 +605,111 @@ pub fn finish(
     tx.commit().map_err(err)?;
     read(&c, workspace, &started.conversation_id)
 }
+fn export_candidate(markdown: &mut String, candidate: &Candidate, selected: bool) {
+    markdown.push_str(&format!(
+        "### 回答候选 · {}{}\n\n",
+        candidate.status,
+        if selected { " · 当前选择" } else { "" }
+    ));
+    if let Some(r) = &candidate.response {
+        let text = r["text"].as_str().unwrap_or("");
+        let unverified = candidate.status != "complete"
+            || !["stop", "no_evidence"].contains(&r["finishReason"].as_str().unwrap_or(""))
+            || r["rejectedCharts"]
+                .as_array()
+                .is_some_and(|charts| !charts.is_empty());
+        if unverified {
+            // Preserve raw content without reviving rejected charts or letting
+            // an unfinished fence swallow the following exported question.
+            let longest = text.split(|c| c != '`').map(str::len).max().unwrap_or(0);
+            let fence = "`".repeat(3.max(longest + 1));
+            markdown.push_str(&format!("> 此回答未完成或含待核对结构，以下保留原始 Markdown，不自动绘制。\n\n{fence}markdown-unverified\n{text}\n{fence}\n"));
+        } else {
+            markdown.push_str(text);
+        }
+        markdown.push_str("\n\n");
+        if let Some(sources) = r["sources"].as_array() {
+            for (i, s) in sources.iter().enumerate() {
+                markdown.push_str(&format!(
+                    "- S{} · {} · {}–{}行 · hash={}\n",
+                    i + 1,
+                    s["path"].as_str().unwrap_or(""),
+                    s["startLine"],
+                    s["endLine"],
+                    s["hash"].as_str().unwrap_or("")
+                ));
+            }
+        }
+    } else if let Some(error) = &candidate.error {
+        markdown.push_str(error);
+        markdown.push_str("\n\n");
+    }
+    markdown.push('\n');
+}
 pub fn export(data: &Path, workspace: &str, id: &str) -> Result<Export, String> {
     let conversation = get(data, workspace, id)?;
-    let mut markdown = format!(
+    let heading = format!(
         "# {}\n\n资料范围：{}\n\n",
         conversation.title, conversation.scope_label
     );
-    for t in &conversation.turns {
+    let mut path = Vec::new();
+    let mut leaf = conversation.active_leaf_id.as_deref();
+    let mut seen = std::collections::HashSet::new();
+    while let Some(id) = leaf {
+        if !seen.insert(id) {
+            return Err("会话分支包含循环，未导出".into());
+        }
+        let t = conversation
+            .turns
+            .iter()
+            .find(|t| t.id == id)
+            .ok_or("会话分支不完整")?;
+        path.push(t);
+        leaf = t.parent_turn_id.as_deref();
+    }
+    path.reverse();
+    let mut markdown = format!("{heading}导出范围：当前分支，各问题仅保留当前选中的回答候选。\n\n");
+    for t in &path {
         markdown.push_str(&format!("## 用户问题\n\n{}\n\n", t.question));
+        if let Some(candidate) = t
+            .candidates
+            .iter()
+            .find(|c| Some(&c.id) == t.selected_candidate_id.as_ref())
+            .or(t.candidates.last())
+        {
+            export_candidate(&mut markdown, candidate, true);
+        }
+    }
+    let mut all_markdown =
+        format!("{heading}导出范围：全部分支与全部候选。问题标识及上级标识用于还原分支关系。\n\n");
+    for t in &conversation.turns {
+        all_markdown.push_str(&format!(
+            "## 用户问题 · {}\n\n问题标识：{}；上级：{}；{}\n\n{}\n\n",
+            if path.iter().any(|p| p.id == t.id) {
+                "当前分支"
+            } else {
+                "其他分支"
+            },
+            t.id,
+            t.parent_turn_id.as_deref().unwrap_or("起点"),
+            if conversation.active_leaf_id.as_ref() == Some(&t.id) {
+                "当前分支末端"
+            } else {
+                "历史问题"
+            },
+            t.question
+        ));
         for candidate in &t.candidates {
-            markdown.push_str(&format!("### 回答候选 · {}\n\n", candidate.status));
-            if let Some(r) = &candidate.response {
-                markdown.push_str(r["text"].as_str().unwrap_or(""));
-                markdown.push_str("\n\n");
-                if let Some(sources) = r["sources"].as_array() {
-                    for (i, s) in sources.iter().enumerate() {
-                        markdown.push_str(&format!(
-                            "- S{} · {} · {}–{}行 · hash={}\n",
-                            i + 1,
-                            s["path"].as_str().unwrap_or(""),
-                            s["startLine"],
-                            s["endLine"],
-                            s["hash"].as_str().unwrap_or("")
-                        ))
-                    }
-                }
-            } else if let Some(error) = &candidate.error {
-                markdown.push_str(error);
-                markdown.push_str("\n\n")
-            }
+            export_candidate(
+                &mut all_markdown,
+                candidate,
+                Some(&candidate.id) == t.selected_candidate_id.as_ref(),
+            );
         }
     }
     Ok(Export {
         markdown,
+        all_markdown,
         json: serde_json::to_string_pretty(&conversation).map_err(err)?,
     })
 }

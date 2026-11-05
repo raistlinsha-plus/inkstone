@@ -2,6 +2,22 @@
 
 Historical versions below describe local development deliveries, not earlier public GitHub releases. v0.6.6 is the first public source preview. See [release notes](docs/PUBLIC-RELEASE-v0.6.6.md).
 
+## v0.7.0-rc.3 · 2026-11-06 · Local candidate
+
+- Narrow windows use a two-pane knowledge task layout and return to editing without overwriting pane preferences. Display the running version in the title bar.
+- Compact bounded mindmap/Mermaid canvases with expansion, left-aligned JSON forms and consistent error spacing.
+- Retain stopped nonempty responses as explicitly incomplete candidates after current-source checks; include them in validated snapshots.
+- Export the current branch/selected answers or all branches/candidates explicitly; JSON remains a full export.
+- Review and acceptance limits: [rc.3 delivery](docs/DELIVERY-v0.7-rc3.md), [review and stable-version decision](docs/REVIEW-v0.7-rc3.md).
+
+## v0.7.0-rc.2 · 2026-11-05 · Local candidate
+
+- Flush assistant drafts before navigation and exit; retain input until durable acceptance, preserve failed writes for retry, and serialize generation/draft revisions.
+- Retain experience-card edits on save failure; query and paginate conversation history on the backend.
+- Resolve explicitly named/fixed-document first questions before missing-context clarification while retaining evidence checks.
+- Align title length and frozen-scope readiness; repair the official calendar example.
+- [rc.2 implementation milestone](docs/DELIVERY-v0.7-rc2.md). No separate app bundle or GitHub release was created for this intermediate milestone.
+
 ## v0.7.0-rc.1 · 2026-11-05
 
 生产候选新增独立持久会话、多轮追问、问题分支/候选、来源快照、草稿与历史管理，展开阅读与安全回答落地；当前追问属性独立门控，历史词项不稀释新缺项。三角色三阶段、九章、经历/偏好/数据控制与15张静态候选插画接入。备份format2纳入会话和角色库并兼容旧格式；catalog/index仍schema3。完整门槛前端260、Rust164/6忽略，三题真实服务冒烟2次HTTP200，五次隔离冷启动通过；本机界面补验因锁屏待完成，详见[候选交付](docs/DELIVERY-v0.7.md)。自然多日试用、动画/像素整理及正式发行门槛仍待后续。

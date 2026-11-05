@@ -1,6 +1,6 @@
 # Inkstone v0.7 当前技术栈
 
-2026-11-05；**0.7.0-rc.1 candidate**。以下版本读取当前`package-lock.json`、`src-tauri/Cargo.lock`及`toolchain.json`，不是仅列出依赖声明的范围。[4A架构](ARCHITECTURE-v0.7.md) · [候选交付](DELIVERY-v0.7.md)。
+2026-11-06；**0.7.0-rc.3 candidate**。以下版本读取当前`package-lock.json`、`src-tauri/Cargo.lock`及`toolchain.json`，不是仅列出依赖声明的范围。[4A架构](ARCHITECTURE-v0.7.md) · [候选交付](DELIVERY-v0.7-rc3.md)。
 
 ## 1. 工具链与目标
 
@@ -69,7 +69,8 @@ npm run bundle
 
 独立包位于`src-tauri/target/release/bundle/macos/Inkstone.app`，运行时不依赖Node或开发服务器。`desktop-e2e`使用隔离应用身份、禁用系统凭据并限制为回环模型夹具；生产包不启用此feature。
 
-本轮fresh默认检查：47个前端文件260项、Rust164项通过/6项付费远程测试默认忽略，类型/Worker/生产前端构建/文档均通过；另44项是独立原型检查。本轮未将原生WebKit交互、中文候选、Keychain授权、VoiceOver或多日自然成长算作通过；API冒烟证据和原生检查分别记录。
+本轮没有新增第三方依赖或变更锁定依赖版本。完整默认检查、隔离WebView冷启动、浏览器呈现与生产应用安装分别记录，最终结果见[rc.3审查](REVIEW-v0.7-rc3.md)。本轮未将真实WebKit交互、中文候选、Keychain授权、VoiceOver或多日自然成长算作通过；真实API冒烟也单独记录。
+
 
 ## 6. 开源与候选限制
 

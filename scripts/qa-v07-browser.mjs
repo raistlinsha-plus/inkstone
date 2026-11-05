@@ -29,7 +29,9 @@ const context = await browser.newContext({
   viewport: { width: 1440, height: 900 },
   reducedMotion: "reduce",
 });
-await context.addInitScript(installV07Fixture);
+await context.addInitScript(
+  "if(window===window.top){(" + installV07Fixture.toString() + ")()}",
+);
 const page = await context.newPage(),
   errors = [],
   external = [];
@@ -59,7 +61,7 @@ try {
   await page
     .locator(".assistant-turn")
     .first()
-    .getByText("回答候选", { exact: true })
+    .getByText(/^回答候选/)
     .waitFor();
   assert.equal(await page.locator(".assistant-turn").count(), 1);
   checks.push("real App renders a persistent first turn through synthetic IPC");
@@ -97,7 +99,7 @@ try {
   await page.getByLabel("向当前空间提问").fill("请再次比较人数");
   await page.getByRole("button", { name: "发送问题", exact: true }).click();
   await page.getByRole("button", { name: "停止生成", exact: true }).click();
-  await page.getByText("已停止", { exact: true }).waitFor();
+  await page.getByText(/^已停止 · 当前选择/).waitFor();
   checks.push("stop retains a stopped candidate");
   await page
     .locator(".assistant-turn")
@@ -108,7 +110,7 @@ try {
   await page
     .locator(".assistant-turn")
     .last()
-    .getByText("回答候选", { exact: true })
+    .getByText(/^回答候选/)
     .waitFor();
   assert.equal(
     await page.getByLabel("向当前空间提问").inputValue(),
@@ -139,7 +141,9 @@ try {
         storageState: fixtureState,
       });
       try {
-        await freshContext.addInitScript(installV07Fixture);
+        await freshContext.addInitScript(
+          "if(window===window.top){(" + installV07Fixture.toString() + ")()}",
+        );
         const fresh = await freshContext.newPage();
         fresh.on("pageerror", (e) => errors.push(e.message));
         await fresh.route("**/*", (route) => {
@@ -158,7 +162,7 @@ try {
           .getByText("阅读活动比较 · QA合成", { exact: true })
           .waitFor();
         await fresh.locator(".assistant-turn").first().waitFor();
-        if (expanded)
+        if (expanded && width > 1100)
           await fresh
             .getByRole("button", { name: "展开问答", exact: true })
             .click();
@@ -193,7 +197,8 @@ try {
         );
         assert.equal(measure.titlebarCount, 1, "one live app header");
         layouts.push({
-          mode: expanded ? "expanded" : "sidebar",
+          mode:
+            width <= 1100 ? "task-two-pane" : expanded ? "expanded" : "sidebar",
           width,
           height,
           ...measure,

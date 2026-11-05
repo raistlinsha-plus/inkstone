@@ -928,10 +928,19 @@
   row-gap: 8px;
 }
 .json-preview .structure-form label {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  text-align: left;
+}
+.json-preview .structure-form select {
+  justify-self: start;
+  min-width: 180px;
+  max-width: 100%;
+}
+.json-preview .structure-form textarea {
+  width: 100%;
 }
 @media (max-width: 1100px) {
   .editor-toolbar .document-title {
@@ -1003,4 +1012,27 @@
   height: auto;
   padding-top: 6px;
   padding-bottom: 6px;
+}
+
+/* rc.3 shared block spacing and controls. */
+.preview-error,
+.preview-status {
+  padding: 12px 16px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+.inline-block-preview .graph-kind,
+.code-preview-block .graph-kind {
+  display: none;
+}
+.graph-actions button {
+  gap: 5px;
+}
+.app-version {
+  font-size: 10px;
+  color: #586c52;
+  padding: 3px 7px;
+  border: 1px solid #d8e0d1;
+  border-radius: 5px;
+  white-space: nowrap;
 }

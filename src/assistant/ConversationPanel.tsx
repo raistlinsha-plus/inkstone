@@ -39,7 +39,12 @@ export function answerRecord(
       ["stop", "no_evidence"].includes(r?.finishReason ?? ""),
     rejectedCharts: r?.rejectedCharts ?? [],
     chartWarnings: r?.chartWarnings ?? [],
-    warning: candidate.error || r?.warning || "",
+    warning:
+      candidate.status === "stopped"
+        ? ["已停止，以下为未完成内容。", candidate.error || r?.warning]
+            .filter(Boolean)
+            .join("\n")
+        : candidate.error || r?.warning || "",
     snapshot: {
       id: candidate.id,
       workspaceRoot: root,
@@ -129,7 +134,7 @@ export function ConversationTimeline({
         <div className="thinking">正在准备资料并组织回答…</div>
       )}{" "}
       {record.warning && (
-        <div className="panel-warning" role="alert">
+        <div className="panel-warning" role={active ? "status" : "alert"}>
           {record.warning}
         </div>
       )}
@@ -182,16 +187,23 @@ export function ConversationTimeline({
             el.scrollHeight - el.scrollTop - el.clientHeight < 64;
       }}
     >
-      {path.map((turn) => {
+      {path.length > 0 && (
+        <p className="assistant-path" aria-label="当前会话分支">
+          当前分支 · {path.length}轮 · 每轮展示选中的回答
+        </p>
+      )}
+      {path.map((turn, index) => {
         const candidate = selectedCandidate(turn);
         return (
           <section className="assistant-turn" key={turn.id}>
             <div className="assistant-question">
-              <span>你</span>
+              <div className="assistant-question-heading">
+                <span>你 · 第{index + 1}轮</span>
+                <button disabled={busy} onClick={() => onEdit(turn)}>
+                  修改问题并分支
+                </button>
+              </div>
               <p>{turn.question}</p>
-              <button disabled={busy} onClick={() => onEdit(turn)}>
-                修改问题并分支
-              </button>
             </div>
             {candidate &&
               renderAnswer(
@@ -208,6 +220,7 @@ export function ConversationTimeline({
                       : candidate.status === "source_changed"
                         ? "来源已变化"
                         : "回答候选"}
+                  {` · 当前选择 ${turn.candidates.indexOf(candidate) + 1}/${turn.candidates.length}`}
                 </span>
                 {turn.candidates.length > 1 && (
                   <select
@@ -223,7 +236,16 @@ export function ConversationTimeline({
                   >
                     {turn.candidates.map((c, i) => (
                       <option value={c.id} key={c.id}>
-                        {i + 1}/{turn.candidates.length} · {c.status}
+                        {i + 1}/{turn.candidates.length} ·{" "}
+                        {
+                          {
+                            complete: "已完成",
+                            stopped: "已停止",
+                            failed: "生成失败",
+                            generating: "生成中",
+                            source_changed: "来源变化",
+                          }[c.status]
+                        }
                       </option>
                     ))}
                   </select>
