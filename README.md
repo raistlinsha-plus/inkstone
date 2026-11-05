@@ -1,6 +1,6 @@
 # Inkstone · 砚台
 
-**Local development candidate: v0.7.0-rc.1.** Persistent multi-turn conversations, candidate branches and source snapshots, expanded Q&A, opt-in pixel-ink companions, three-stage stories and local data controls are implemented. The current public source release remains v0.6.6. See [candidate delivery and limits](docs/DELIVERY-v0.7.md). Artwork is static release-candidate art; multi-day natural use and native accessibility checks remain pending.
+**Local development candidate: v0.7.0-rc.1.** Persistent multi-turn conversations, candidate branches and source snapshots, expanded Q&A, opt-in pixel-ink companions, three-stage stories and local data controls are implemented. The current public source release remains v0.6.6. See [candidate delivery and limits](docs/DELIVERY-v0.7.md), [current product guide](docs/PRODUCT-v0.7.md), [4A architecture](docs/ARCHITECTURE-v0.7.md), [technology stack](docs/TECH-STACK-v0.7.md) and [current UX regression review](docs/REVIEW-v0.7.md). Artwork is static release-candidate art; multi-day natural use and native accessibility checks remain pending.
 
 A local Markdown workspace and evidence-based knowledge assistant for **macOS 13+ on Apple Silicon**. Bring your own compatible model API. Version **0.6.6** is the first public **source preview**.
 
