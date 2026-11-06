@@ -24,7 +24,7 @@
 }
 .assistant-conversation-title small {
   font-size: 11px;
-  color: #747d6d;
+  color: #64715d;
   line-height: 1.65;
   margin-top: 3px;
 }
@@ -33,6 +33,42 @@
   gap: 3px;
   align-items: center;
   flex-wrap: wrap;
+}
+.knowledge-panel .assistant-toolbar {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.knowledge-panel .assistant-conversation-title {
+  min-width: 0;
+}
+.knowledge-panel .assistant-conversation-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.knowledge-panel .assistant-toolbar-actions {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+.knowledge-panel .assistant-toolbar-actions > button {
+  width: 32px;
+  padding: 6px;
+}
+.knowledge-panel .assistant-toolbar-actions > button > span {
+  display: none;
+}
+.knowledge-panel
+  .assistant-toolbar-actions
+  > button[aria-pressed="true"]
+  > span {
+  display: inline;
+}
+.main-layout.assistant-expanded .assistant-toolbar-actions > button {
+  width: auto;
+  padding: 6px 9px;
+}
+.main-layout.assistant-expanded .assistant-toolbar-actions > button > span {
+  display: inline;
 }
 .assistant-toolbar-actions button,
 .assistant-turn-actions button,

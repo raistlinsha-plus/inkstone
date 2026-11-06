@@ -149,9 +149,61 @@ export function installV07Fixture() {
     if (command === "library_list")
       return {
         projects: store.spaces,
-        documents: store.documents,
+        documents: [...store.documents].sort((a, b) => b.opened - a.opened),
         pendingImports: [],
       };
+    if (command === "library_get_view")
+      return (
+        store.views?.[args.projectId] ?? {
+          version: 1,
+          sort: "nameAsc",
+          pinnedCollapsed: false,
+        }
+      );
+    if (command === "library_set_view") {
+      store.views ??= {};
+      store.views[args.projectId] = args.preferences;
+      persist();
+      return;
+    }
+    if (command === "library_trash") {
+      const doc = store.documents.find((d) => d.id === args.id);
+      doc.status = args.restore ? "ready" : "trashed";
+      persist();
+      return;
+    }
+    if (command === "library_trash_detail") {
+      const doc = store.documents.find((d) => d.id === args.documentId);
+      return {
+        documentId: doc.id,
+        projectId: doc.projectId,
+        title: doc.title,
+        status: doc.status,
+        trashedAt: Date.now() / 1000,
+        attachments: 1,
+        history: 2,
+        bytes: 2048,
+        operationId: null,
+      };
+    }
+    if (command === "library_purge_preview")
+      return {
+        detail: await invoke("library_trash_detail", args),
+        token: "synthetic-preview",
+        expiresAt: Date.now() / 1000 + 300,
+      };
+    if (command === "library_purge_execute") {
+      if (args.confirmation !== "删除") throw Error("确认缺失");
+      const doc = store.documents.find((d) => d.id === args.documentId);
+      store.documents = store.documents.filter((d) => d.id !== args.documentId);
+      if (doc) delete store.files[doc.path];
+      persist();
+      return {
+        operationId: args.operationId,
+        status: "completed",
+        message: "已删除合成资料",
+      };
+    }
     if (command === "library_recovery_report")
       return { checkedAt: Date.now(), items: [] };
     if (command === "workspace_index_status")
@@ -175,6 +227,11 @@ export function installV07Fixture() {
     if (command === "read_file") {
       const f = store.files[args.path];
       if (!f) throw Error("QA fixture source unavailable");
+      const doc = store.documents.find((d) => d.path === args.path);
+      if (doc) {
+        doc.opened = Date.now() / 1000;
+        persist();
+      }
       return {
         path: args.path,
         content: f.content,

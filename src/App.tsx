@@ -3329,7 +3329,9 @@ export default function App() {
                     <span>
                       {chatBusy && question.trim()
                         ? "草稿将在本轮结束或退出前保存"
-                        : "基于会话固定范围 · Enter发送 / Shift+Enter换行"}
+                        : assistant.conversation
+                          ? "基于会话固定范围 · Enter发送 / Shift+Enter换行"
+                          : "首次发送后固定资料范围 · Enter发送 / Shift+Enter换行"}
                     </span>
                     {chatBusy ? (
                       <button
@@ -3395,6 +3397,16 @@ export default function App() {
         <EvidencePreview
           source={evidencePreview}
           busy={chatBusy}
+          unavailable={Boolean(
+            evidencePreview.documentId &&
+            workspace?.managedProjectId &&
+            !libraryView.documents.some(
+              (d) =>
+                d.id === evidencePreview.documentId &&
+                d.projectId === workspace.managedProjectId &&
+                d.status === "ready",
+            ),
+          )}
           onClose={() => setEvidencePreview(null)}
           onOpen={() => {
             const source = evidencePreview;

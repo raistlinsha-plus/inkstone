@@ -1,6 +1,6 @@
 # Inkstone v0.7 当前4A架构
 
-2026-11-06；版本 **0.7.0-rc.3 candidate**。本文以当前候选代码为准，替代阅读旧版本逐次增量时产生的现状歧义；历史交付记录继续保留。[技术栈](TECH-STACK-v0.7.md) · [候选交付及验收边界](DELIVERY-v0.7-rc3.md)。
+2026-11-07；版本 **0.7.0-rc.4 candidate**。本文以当前候选代码为准，替代阅读旧版本逐次增量时产生的现状歧义；历史交付记录继续保留。[技术栈](TECH-STACK-v0.7.md) · [候选交付及验收边界](DELIVERY-v0.7-rc4.md)。
 
 4A在本文指业务架构、应用架构、数据架构和技术架构。Inkstone是面向个人Mac的本地桌面单体，没有必需的云端文档服务、账号系统或内置模型权重。
 
@@ -38,7 +38,7 @@ flowchart TB
   UI[React文档与问答工作台] --> IPC[Tauri IPC]
   IPC --> DOC[文档域]
   DOC --> FILE[UTF-8正文/附件/历史]
-  DOC --> CAT[catalog schema3]
+  DOC --> CAT[catalog schema4]
   IPC --> RAG[检索/证据/上下文/模型]
   RAG --> IDX[index schema3]
   RAG --> API[用户配置的兼容API]
@@ -57,7 +57,7 @@ flowchart TB
 | 数据 | 当前版本与事实来源 |
 | --- | --- |
 | 文档正文、图片、历史、恢复草稿 | 本机文件；正文是内容事实来源，导入后编辑受管理副本 |
-| `library/catalog.sqlite3` | schema3；空间、文档ID、显示标题/路径、来源、历史、导入及恢复操作元数据 |
+| `library/catalog.sqlite3` | schema4；删除阶段日志、预览令牌、空间、文档ID、显示标题/路径、来源、历史、导入及恢复操作元数据 |
 | 应用数据目录`workspaces/<工作区根路径hash>.sqlite3` | schema3；FTS5与向量等派生索引，可按保存内容重建 |
 | `assistant.sqlite3` | 独立schema1；conversations、turns、candidates；冻结范围、草稿、父分支、请求ID、选中候选及回答/来源快照 |
 | `companion.sqlite3` | 独立schema1；state、receipts、tokens、pending；角色设置/章节、去重账本、经历卡、偏好、待确认意图 |
@@ -76,3 +76,7 @@ Tauri 2/Rust承载本机文件、数据库和网络；React 19/TypeScript运行�
 文档/模型输出不授权文件或外部动作；渲染器、结构块与图表受格式约束。故事/经历不参与事实检索，表达偏好不能改变权限、资料或证据资格。合法引用或图表不等于语义已全面核验。
 
 目标为macOS13+ Apple Silicon（arm64）；候选包采用ad hoc临时签名，未Developer ID、公证或跨机验收。本轮自动回归不覆盖真实WebKit交互、拼音候选、Keychain系统授权及VoiceOver；自然多日成长和最终sprite动作/像素美术签收仍待完成。当前是候选版本，最近公开源码预览仍为v0.6.6。
+
+## rc.4 文档生命周期边界
+
+共享排序选择器与每空间偏好独立于 opened。`library/lifecycle.rs` 管理专属副本清单、短期预览、prepared/committed 阶段日志、回退与续清；维护独占阻止备份或在途写入产生半态。副本删除时清理未确认经历凭据，历史问答/确认卡片文本保留但不成为新证据。完整协议见[正式版设计](design/v0.7-stable/ARCHITECTURE.md)。

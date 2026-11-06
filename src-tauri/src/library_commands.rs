@@ -10,6 +10,88 @@ use std::{
 };
 use tauri::{Emitter, State};
 #[tauri::command]
+pub async fn library_trash_detail(
+    state: State<'_, AppState>,
+    project_id: String,
+    document_id: String,
+) -> Result<library::lifecycle::TrashDetail, String> {
+    let data = state.data_dir.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        library::lifecycle::detail(&data, &project_id, &document_id)
+    })
+    .await
+    .map_err(|_| "回收站详情读取失败".to_string())?
+}
+#[tauri::command]
+pub async fn library_purge_preview(
+    state: State<'_, AppState>,
+    project_id: String,
+    document_id: String,
+) -> Result<library::lifecycle::PurgePreview, String> {
+    check_idle(&state)?;
+    let data = state.data_dir.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        library::lifecycle::preview(&data, &project_id, &document_id)
+    })
+    .await
+    .map_err(|_| "删除预览未完成".to_string())?
+}
+#[tauri::command]
+pub async fn library_purge_execute(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    project_id: String,
+    document_id: String,
+    token: String,
+    operation_id: String,
+    confirmation: String,
+) -> Result<library::lifecycle::PurgeResult, String> {
+    check_idle(&state)?;
+    let data = state.data_dir.clone();
+    let project = project_id.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        library::lifecycle::execute(
+            &data,
+            &project_id,
+            &document_id,
+            &token,
+            &operation_id,
+            &confirmation,
+        )
+    })
+    .await
+    .map_err(|_| "删除结果暂不可读，请查询操作状态".to_string())??;
+    let _ = app.emit(
+        "library-lifecycle-changed",
+        serde_json::json!({"projectId":project,"status":result.status}),
+    );
+    Ok(result)
+}
+#[tauri::command]
+pub async fn library_purge_status(
+    state: State<'_, AppState>,
+    project_id: String,
+    operation_id: String,
+) -> Result<library::lifecycle::PurgeResult, String> {
+    library::lifecycle::status(&state.data_dir, &project_id, &operation_id)
+}
+#[tauri::command]
+pub async fn library_get_view(
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<library::ViewPreferences, String> {
+    library::get_view(&state.data_dir, &project_id)
+}
+#[tauri::command]
+pub async fn library_set_view(
+    state: State<'_, AppState>,
+    project_id: String,
+    preferences: library::ViewPreferences,
+) -> Result<(), String> {
+    let _permit = crate::maintenance::mutation(&state.data_dir)?;
+    library::set_view(&state.data_dir, &project_id, &preferences)
+}
+#[tauri::command]
 pub async fn library_list(state: State<'_, AppState>) -> Result<library::LibraryView, String> {
     library::list(&state.data_dir)
 }
@@ -26,6 +108,7 @@ pub async fn open_library(
     let data = state.data_dir.clone();
     let project = id.clone();
     let refreshed = tauri::async_runtime::spawn_blocking(move || {
+        let _permit = crate::maintenance::mutation(&data)?;
         let result = documents::refresh_project(&data, &project);
         let _ = calendar::refresh(&data, &project);
         result
@@ -311,11 +394,11 @@ pub async fn library_recovery_report(
 pub async fn library_retry_recovery(
     state: State<'_, AppState>,
 ) -> Result<library::RecoveryReport, String> {
-    let _permit = crate::maintenance::mutation_scope(&state.data_dir, false)?;
     check_idle(&state)?;
     let data = state.data_dir.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let result = library::recover(&data);
+        let _exclusive = crate::maintenance::exclusive_recovery(&data)?;
+        let result = library::lifecycle::recover(&data).and_then(|_| library::recover(&data));
         crate::maintenance::set_managed_error(&data, result.as_ref().err().cloned());
         result
     })

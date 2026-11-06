@@ -304,11 +304,13 @@ export function ConversationTimeline({
 export function EvidencePreview({
   source,
   busy,
+  unavailable = false,
   onClose,
   onOpen,
 }: {
   source: SearchResult;
   busy: boolean;
+  unavailable?: boolean;
   onClose: () => void;
   onOpen: () => void;
 }) {
@@ -328,6 +330,11 @@ export function EvidencePreview({
         第{source.startLine}–{source.endLine}行 ·
         本轮来源快照。打开原文时会核对当前版本。
       </p>
+      {unavailable && (
+        <p role="status" className="panel-warning">
+          来源已删除、移入回收站或不在当前空间。此处保留历史快照，无法作为当前资料核对。
+        </p>
+      )}
       {source.heading && <h3>{source.heading}</h3>}
       <pre className="assistant-evidence-text">{source.text}</pre>
       <details>
@@ -336,7 +343,11 @@ export function EvidencePreview({
       </details>
       <div className="modal-actions">
         <button onClick={onClose}>回到会话</button>
-        <button className="primary" disabled={busy} onClick={onOpen}>
+        <button
+          className="primary"
+          disabled={busy || unavailable}
+          onClick={onOpen}
+        >
           打开原文并核对版本
         </button>
       </div>

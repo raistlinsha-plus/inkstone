@@ -106,8 +106,8 @@ export function ConversationHeader({
           <strong>{c?.title || "新会话"}</strong>
           <small>
             {c
-              ? `${c.scopeLabel}${c.archived ? " · 已归档" : ""}`
-              : "发送问题后建立独立会话"}
+              ? `固定范围 · ${c.scopeLabel}${c.archived ? " · 已归档" : ""}`
+              : "首次发送后固定资料范围"}
           </small>
         </div>
         <div className="assistant-toolbar-actions">
@@ -117,15 +117,26 @@ export function ConversationHeader({
               setDialog("history");
             }}
             title="会话历史"
+            aria-label="会话"
           >
             <History size={15} />
-            会话
+            <span>会话</span>
           </button>
-          <button disabled={disabled} onClick={onNew}>
+          <button
+            disabled={disabled}
+            onClick={onNew}
+            aria-label="新建"
+            title="新建会话"
+          >
             <MessageSquarePlus size={15} />
-            新建
+            <span>新建</span>
           </button>
-          <button onClick={onExpand} aria-pressed={expanded}>
+          <button
+            onClick={onExpand}
+            aria-pressed={expanded}
+            aria-label={expanded ? "返回编辑" : "展开问答"}
+            title={expanded ? "返回编辑" : "展开问答"}
+          >
             {expanded ? <Minimize2 size={15} /> : <Expand size={15} />}
             <span>{expanded ? "返回编辑" : "展开问答"}</span>
           </button>

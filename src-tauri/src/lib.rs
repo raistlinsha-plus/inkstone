@@ -26,6 +26,8 @@ mod evidence;
 mod files;
 mod library;
 mod library_commands;
+#[cfg(all(test, feature = "desktop-e2e"))]
+mod local_acceptance;
 mod maintenance;
 mod models;
 mod providers;
@@ -2373,7 +2375,7 @@ pub fn run() {
                 .connect_timeout(std::time::Duration::from_secs(15))
                 .timeout(std::time::Duration::from_secs(120))
                 .build()?;
-            maintenance::set_managed_error(&data_dir, library::recover(&data_dir).err());
+            maintenance::set_managed_error(&data_dir, library::lifecycle::recover(&data_dir).and_then(|_|library::recover(&data_dir)).err());
             app.manage(AppState {
                 credentials: credentials::CredentialReader::default(),
                 workspace: Mutex::new(None),
@@ -2405,6 +2407,12 @@ pub fn run() {
             calendar_commands::export_calendar_ics,
             library_commands::library_archive_import,
             library_commands::library_list,
+            library_commands::library_get_view,
+            library_commands::library_set_view,
+            library_commands::library_trash_detail,
+            library_commands::library_purge_preview,
+            library_commands::library_purge_execute,
+            library_commands::library_purge_status,
             library_commands::open_library,
             library_commands::library_create_project,
             library_commands::library_rename_project,

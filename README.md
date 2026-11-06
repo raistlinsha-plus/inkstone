@@ -1,6 +1,6 @@
 # Inkstone · 砚台
 
-**Local development candidate: v0.7.0-rc.3.** Persistent multi-turn conversations, candidate branches and source snapshots, expanded Q&A, opt-in pixel-ink companions, three-stage stories and local data controls are implemented. The current public source release remains v0.6.6. See [candidate delivery and limits](docs/DELIVERY-v0.7-rc3.md), [current product guide](docs/PRODUCT-v0.7.md), [4A architecture](docs/ARCHITECTURE-v0.7.md), [technology stack](docs/TECH-STACK-v0.7.md) and [current UX regression review](docs/REVIEW-v0.7-rc3.md). Artwork is static release-candidate art; multi-day natural use and native accessibility checks remain pending.
+**Local development candidate: v0.7.0-rc.4.** Persistent multi-turn conversations, candidate branches and source snapshots, expanded Q&A, opt-in pixel-ink companions, three-stage stories and local data controls are implemented. The current public source release remains v0.6.6. See [candidate delivery and limits](docs/DELIVERY-v0.7-rc4.md), [current product guide](docs/PRODUCT-v0.7.md), [4A architecture](docs/ARCHITECTURE-v0.7.md), [technology stack](docs/TECH-STACK-v0.7.md) and [current UX regression review](docs/REVIEW-v0.7-rc4.md). Artwork is static release-candidate art; multi-day natural use and native accessibility checks remain pending.
 
 A local Markdown workspace and evidence-based knowledge assistant for **macOS 13+ on Apple Silicon**. Bring your own compatible model API. Version **0.6.6** is the first public **source preview**.
 
@@ -57,7 +57,7 @@ Graph/chart formats follow the application's data contracts. Chart presence, val
 
 ## Roadmap and contributing
 
-The local v0.7.0-rc.3 candidate implements persistent conversations and opt-in companions, growth, CG albums and stories. The [stable-version design](docs/design/v0.7-stable/README.md) adds stable document navigation and single-document permanent deletion to the remaining acceptance work. Its separate prototype uses synthetic data. Natural multi-day use, final artwork review and native accessibility acceptance remain gates before a stable v0.7 release; see the [candidate delivery](docs/DELIVERY-v0.7-rc3.md).
+The local v0.7.0-rc.4 candidate implements persistent conversations and opt-in companions, growth, CG albums and stories. The [stable-version design](docs/design/v0.7-stable/README.md) describes the implemented stable document navigation and single-document permanent deletion, plus remaining release gates. Its separate prototype uses synthetic data. Natural multi-day use, final artwork review and native accessibility acceptance remain gates before a stable v0.7 release; see the [candidate delivery](docs/DELIVERY-v0.7-rc4.md).
 
 [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Limitations](docs/KNOWN-LIMITATIONS.md) · [Evaluation results](evals/v0.6.6/RESULTS.md)
 

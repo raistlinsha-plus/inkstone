@@ -1,5 +1,12 @@
 import { isImeEvent } from "./platform/ime";
-import { useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  selectDocuments,
+  type LibraryTab,
+  type DocumentSort,
+} from "./library/selectors";
+import { useViewPreferences } from "./library/useViewPreferences";
+import TrashDialog from "./library/TrashDialog";
 import { appVersion } from "./version";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
@@ -68,7 +75,7 @@ export default function LibraryBrowser({
   onBackup,
 }: Props) {
   const [query, setQuery] = useState(""),
-    [tab, setTab] = useState(compact ? "all" : "recent"),
+    [tab, setTab] = useState<LibraryTab>("all"),
     [projectName, setProjectName] = useState(""),
     [adding, setAdding] = useState(false),
     [menu, setMenu] = useState(""),
@@ -81,37 +88,67 @@ export default function LibraryBrowser({
   const [renamingSpace, setRenamingSpace] = useState(false);
   const [spaceSaving, setSpaceSaving] = useState(false);
   const spaceFlight = useRef(false);
-  const [sortBy, setSortBy] = useState("updated");
+  const {
+    preferences,
+    update: updateView,
+    warning: viewWarning,
+  } = useViewPreferences(projectId);
+  const sortBy = preferences.sort;
+  const listRef = useRef<HTMLDivElement>(null);
+  const anchor = useRef<{ id: string; offset: number } | null>(null);
+  function rememberAnchor() {
+    const list = listRef.current;
+    if (!list) return;
+    const top = list.getBoundingClientRect().top;
+    const row = Array.from(
+      list.querySelectorAll<HTMLElement>("[data-document-id]"),
+    ).find((el) => el.getBoundingClientRect().bottom > top);
+    anchor.current = row
+      ? {
+          id: row.dataset.documentId!,
+          offset: row.getBoundingClientRect().top - top,
+        }
+      : null;
+  }
+  useEffect(() => {
+    setTab("all");
+    setQuery("");
+    anchor.current = null;
+  }, [projectId]);
   const [typeFilter, setTypeFilter] = useState("all");
   const [relink, setRelink] = useState<LibraryDocument | null>(null);
+  const [trashDetail, setTrashDetail] = useState<LibraryDocument | null>(null);
   const [pinSaving, setPinSaving] = useState("");
   const menuTrigger = useRef<HTMLButtonElement | null>(null);
   const pendingImports = view.pendingImports.filter(
     (t) => t.projectId === projectId,
   );
   const project = view.projects.find((p) => p.id === projectId);
-  const docs = view.documents
-    .filter((d) =>
-      tab === "trash" ? d.status === "trashed" : d.status === "ready",
-    )
-    .filter((d) => d.projectId === projectId)
-    .filter((d) => tab !== "pinned" || pins.includes(d.id))
-    .filter(
-      (d) =>
-        compact ||
-        typeFilter === "all" ||
-        (typeFilter === "md"
-          ? /\.(md|markdown)$/i.test(d.path)
-          : (d.path.split(".").at(-1)?.toLowerCase() ?? "") === typeFilter),
-    )
-    .filter((d) => d.title.toLowerCase().includes(query.toLowerCase()))
-    .sort((a, b) =>
-      tab === "recent" || sortBy === "opened"
-        ? b.opened - a.opened || b.updated - a.updated
-        : sortBy === "title"
-          ? a.title.localeCompare(b.title, "zh-CN")
-          : b.updated - a.updated,
-    );
+  const docs = selectDocuments(
+    view.documents,
+    projectId,
+    tab,
+    sortBy,
+    query,
+    pins,
+    compact ? "all" : typeFilter,
+  );
+  const order = docs.map((d) => d.id).join("|") + preferences.pinnedCollapsed;
+  useLayoutEffect(() => {
+    const list = listRef.current,
+      old = anchor.current;
+    if (list && old) {
+      const row = Array.from(
+        list.querySelectorAll<HTMLElement>("[data-document-id]"),
+      ).find((el) => el.dataset.documentId === old.id);
+      if (row)
+        list.scrollTop +=
+          row.getBoundingClientRect().top -
+          list.getBoundingClientRect().top -
+          old.offset;
+    }
+    rememberAnchor();
+  }, [order]);
   const exportDoc = async (d?: LibraryDocument, bundle = true) => {
     try {
       if (!(await onBeforeAction())) return;
@@ -349,11 +386,12 @@ export default function LibraryBrowser({
         {compact && (
           <div className="library-shortcuts">
             <button disabled={busy} onClick={onNew}>
-              <Plus size={15} />
-              新建
+              <Plus size={16} strokeWidth={2} aria-hidden="true" />
+              <span>新建</span>
             </button>
             <button disabled={busy} onClick={() => onImport()}>
-              导入文档
+              <Upload size={16} strokeWidth={2} aria-hidden="true" />
+              <span>导入文档</span>
             </button>
           </div>
         )}
@@ -370,18 +408,23 @@ export default function LibraryBrowser({
           {(compact
             ? [
                 ["all", "空间文档"],
+                ["recent", "最近"],
                 ["trash", "回收站"],
               ]
             : [
                 ["recent", "最近"],
                 ["pinned", "置顶"],
                 ["all", "全部资料"],
+                ["trash", "回收站"],
               ]
           ).map(([id, label]) => (
             <button
               key={id}
               className={tab === id ? "active" : ""}
-              onClick={() => setTab(id)}
+              onClick={() => {
+                anchor.current = null;
+                setTab(id as LibraryTab);
+              }}
             >
               {label}
             </button>
@@ -415,22 +458,32 @@ export default function LibraryBrowser({
             {docs.length} 篇{tab === "trash" ? "已移除文档" : "文档"}
             {query ? "匹配" : ""}
           </span>
-          {!compact && tab !== "recent" && (
+          {tab !== "recent" && tab !== "trash" && (
             <label>
               排序
               <select
                 aria-label="文档排序"
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) =>
+                  updateView({
+                    ...preferences,
+                    sort: e.target.value as DocumentSort,
+                  })
+                }
               >
-                <option value="updated">最近修改</option>
-                <option value="opened">最近打开</option>
-                <option value="title">标题</option>
+                <option value="nameAsc">名称 A–Z</option>
+                <option value="nameDesc">名称 Z–A</option>
+                <option value="updatedDesc">修改时间</option>
               </select>
             </label>
           )}
         </div>
       </div>
+      {viewWarning && (
+        <p role="status" className="library-view-warning">
+          {viewWarning}
+        </p>
+      )}
       {!compact && pendingImports.length > 0 && (
         <div className="import-recovery">
           <strong>有可重试的导入记录</strong>
@@ -464,161 +517,213 @@ export default function LibraryBrowser({
           ))}
         </div>
       )}
-      <div className="library-documents">
+      <div
+        className="library-documents"
+        ref={listRef}
+        onScroll={rememberAnchor}
+      >
         {docs.length ? (
-          docs.slice(0, tab === "recent" ? 50 : 2000).map((d) => (
-            <div
-              key={d.id}
-              className={`library-document ${selected === d.path && d.projectId === projectId ? "selected" : ""}`}
-            >
-              <button
-                className="library-open"
-                title={d.title}
-                disabled={busy}
-                onClick={() => {
-                  setMenu("");
-                  if (d.status === "trashed")
-                    void onTrash(d, true).catch(onError);
-                  else onOpen(d);
-                }}
-              >
-                {pins.includes(d.id) ? (
-                  <Pin size={compact ? 14 : 20} aria-label="已置顶" />
-                ) : (
-                  <FileText size={compact ? 14 : 20} />
-                )}
-                <span>
-                  <strong>{d.title}</strong>
-                  {(!compact || tab === "recent") && (
-                    <small>
-                      {view.projects.find((p) => p.id === d.projectId)?.title} ·{" "}
-                      {d.opened
-                        ? "最近打开 " +
-                          new Date(d.opened * 1000).toLocaleDateString("zh-CN")
-                        : "本地文档"}
-                      {d.source ? " · 已导入副本" : ""}
-                    </small>
-                  )}
-                </span>
-              </button>
-              {d.status === "trashed" ? (
+          docs.slice(0, tab === "recent" ? 50 : 2000).map((d, i) => (
+            <Fragment key={d.id}>
+              {tab === "all" && pins.includes(d.id) && i === 0 && (
                 <button
-                  aria-label={"恢复 " + d.title}
-                  onClick={() => void onTrash(d, true).catch(onError)}
+                  className="library-pin-heading"
+                  aria-expanded={!preferences.pinnedCollapsed}
+                  onClick={() =>
+                    updateView({
+                      ...preferences,
+                      pinnedCollapsed: !preferences.pinnedCollapsed,
+                    })
+                  }
                 >
-                  恢复
-                </button>
-              ) : (
-                <button
-                  aria-label={"文档操作 " + d.title}
-                  aria-expanded={menu === d.id}
-                  aria-haspopup="true"
-                  onClick={(e) => {
-                    menuTrigger.current = e.currentTarget;
-                    setMenu(menu === d.id ? "" : d.id);
-                  }}
-                >
-                  <MoreHorizontal size={15} />
+                  置顶 · {preferences.pinnedCollapsed ? "展开" : "收起"}
                 </button>
               )}
-              {menu === d.id && (
+              {tab === "all" &&
+                !pins.includes(d.id) &&
+                i > 0 &&
+                pins.includes(docs[i - 1].id) && (
+                  <div className="library-pin-heading">空间文档</div>
+                )}
+              {!(
+                tab === "all" &&
+                pins.includes(d.id) &&
+                preferences.pinnedCollapsed
+              ) && (
                 <div
-                  className="library-doc-menu"
-                  role="group"
-                  aria-label={d.title + "的操作"}
+                  key={d.id}
+                  data-document-id={d.id}
+                  className={`library-document ${selected === d.path && d.projectId === projectId ? "selected" : ""}`}
                 >
-                  {onPin && (
-                    <button
-                      disabled={busy || !!pinSaving}
-                      onClick={() =>
-                        void (async () => {
-                          setPinSaving(d.id);
-                          try {
-                            await onPin(d.id, !pins.includes(d.id));
-                            setMenu("");
-                          } catch (e) {
-                            onError(e);
-                          } finally {
-                            setPinSaving("");
-                          }
-                        })()
-                      }
-                    >
-                      <Pin size={14} />
-                      {pins.includes(d.id) ? "取消置顶" : "置顶文档"}
-                    </button>
-                  )}
-                  {d.source && (
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        void (async () => {
-                          if (!(await onBeforeAction())) return;
-                          setMenu("");
-                          setRelink(d);
-                        })().catch(onError)
-                      }
-                    >
-                      <Link2 size={14} />
-                      重新关联链接
-                    </button>
-                  )}
                   <button
+                    className="library-open"
+                    title={d.title}
+                    disabled={busy}
                     onClick={() => {
-                      setRename(d);
-                      setTitle(d.title);
                       setMenu("");
+                      if (d.status !== "ready") setTrashDetail(d);
+                      else onOpen(d);
                     }}
                   >
-                    重命名标题
+                    {pins.includes(d.id) ? (
+                      <Pin size={compact ? 14 : 20} aria-label="已置顶" />
+                    ) : (
+                      <FileText size={compact ? 14 : 20} />
+                    )}
+                    <span>
+                      <strong>{d.title}</strong>
+                      {(!compact || tab === "recent") && (
+                        <small>
+                          {
+                            view.projects.find((p) => p.id === d.projectId)
+                              ?.title
+                          }{" "}
+                          ·{" "}
+                          {d.opened
+                            ? "最近打开 " +
+                              new Date(d.opened * 1000).toLocaleDateString(
+                                "zh-CN",
+                              )
+                            : "本地文档"}
+                          {d.source ? " · 已导入副本" : ""}
+                        </small>
+                      )}
+                    </span>
                   </button>
-                  {d.source && (
+                  {d.status !== "ready" ? (
+                    <>
+                      <button
+                        disabled={busy || d.status === "purging"}
+                        aria-label={"恢复 " + d.title}
+                        onClick={() => void onTrash(d, true).catch(onError)}
+                      >
+                        恢复
+                      </button>
+                      <button
+                        aria-label={"回收站操作 " + d.title}
+                        disabled={busy}
+                        onClick={() => setTrashDetail(d)}
+                      >
+                        {d.status === "purging" ? (
+                          "删除未完成"
+                        ) : (
+                          <MoreHorizontal size={15} />
+                        )}
+                      </button>
+                    </>
+                  ) : (
                     <button
-                      disabled={busy}
-                      onClick={() =>
-                        void (async () => {
-                          if (!(await onBeforeAction())) return;
-                          setMenu("");
-                          setReview({ document: d, tab: "source" });
-                        })().catch(onError)
-                      }
+                      aria-label={"文档操作 " + d.title}
+                      aria-expanded={menu === d.id}
+                      aria-haspopup="true"
+                      onClick={(e) => {
+                        menuTrigger.current = e.currentTarget;
+                        setMenu(menu === d.id ? "" : d.id);
+                      }}
                     >
-                      <RefreshCw size={14} />
-                      检查来源更新
+                      <MoreHorizontal size={15} />
                     </button>
                   )}
-                  <button
-                    disabled={busy}
-                    onClick={() =>
-                      void (async () => {
-                        if (!(await onBeforeAction())) return;
-                        setMenu("");
-                        setReview({ document: d, tab: "history" });
-                      })().catch(onError)
-                    }
-                  >
-                    <History size={14} />
-                    历史版本
-                  </button>
-                  <button onClick={() => void exportDoc(d, false)}>
-                    导出文件
-                  </button>
-                  <button onClick={() => void exportDoc(d, true)}>
-                    导出含附件包
-                  </button>
-                  <button
-                    onClick={() =>
-                      void onTrash(d, false)
-                        .then(() => setMenu(""))
-                        .catch(onError)
-                    }
-                  >
-                    <Trash2 size={12} />
-                    移到回收站
-                  </button>
+                  {menu === d.id && (
+                    <div
+                      className="library-doc-menu"
+                      role="group"
+                      aria-label={d.title + "的操作"}
+                    >
+                      {onPin && (
+                        <button
+                          disabled={busy || !!pinSaving}
+                          onClick={() =>
+                            void (async () => {
+                              setPinSaving(d.id);
+                              try {
+                                await onPin(d.id, !pins.includes(d.id));
+                                setMenu("");
+                              } catch (e) {
+                                onError(e);
+                              } finally {
+                                setPinSaving("");
+                              }
+                            })()
+                          }
+                        >
+                          <Pin size={14} />
+                          {pins.includes(d.id) ? "取消置顶" : "置顶文档"}
+                        </button>
+                      )}
+                      {d.source && (
+                        <button
+                          disabled={busy}
+                          onClick={() =>
+                            void (async () => {
+                              if (!(await onBeforeAction())) return;
+                              setMenu("");
+                              setRelink(d);
+                            })().catch(onError)
+                          }
+                        >
+                          <Link2 size={14} />
+                          重新关联链接
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          setRename(d);
+                          setTitle(d.title);
+                          setMenu("");
+                        }}
+                      >
+                        重命名标题
+                      </button>
+                      {d.source && (
+                        <button
+                          disabled={busy}
+                          onClick={() =>
+                            void (async () => {
+                              if (!(await onBeforeAction())) return;
+                              setMenu("");
+                              setReview({ document: d, tab: "source" });
+                            })().catch(onError)
+                          }
+                        >
+                          <RefreshCw size={14} />
+                          检查来源更新
+                        </button>
+                      )}
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          void (async () => {
+                            if (!(await onBeforeAction())) return;
+                            setMenu("");
+                            setReview({ document: d, tab: "history" });
+                          })().catch(onError)
+                        }
+                      >
+                        <History size={14} />
+                        历史版本
+                      </button>
+                      <button onClick={() => void exportDoc(d, false)}>
+                        导出文件
+                      </button>
+                      <button onClick={() => void exportDoc(d, true)}>
+                        导出含附件包
+                      </button>
+                      <button
+                        onClick={() =>
+                          void onTrash(d, false)
+                            .then(() => setMenu(""))
+                            .catch(onError)
+                        }
+                      >
+                        <Trash2 size={12} />
+                        移到回收站
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </Fragment>
           ))
         ) : (
           <div className="library-empty">
@@ -632,6 +737,17 @@ export default function LibraryBrowser({
           </div>
         )}
       </div>
+      {trashDetail && (
+        <TrashDialog
+          key={trashDetail.id}
+          document={trashDetail}
+          onClose={() => setTrashDetail(null)}
+          onRestore={() => onTrash(trashDetail, true)}
+          onRefresh={onRefresh}
+          onBeforeAction={onBeforeAction}
+          onBusy={onMutationBusy ?? (() => {})}
+        />
+      )}
       {relink && (
         <RelinkDialog
           key={relink.id}

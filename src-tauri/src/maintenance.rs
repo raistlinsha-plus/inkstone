@@ -117,6 +117,36 @@ pub fn set_managed_error(data: &Path, error: Option<String>) {
     }
 }
 struct SnapshotGuard(Arc<Gate>);
+/// A bounded maintenance operation never waits behind a network request or nested writer.
+pub struct ExclusiveGuard(Arc<Gate>);
+pub fn exclusive(data: &Path) -> Result<ExclusiveGuard, String> {
+    exclusive_inner(data, false)
+}
+pub fn exclusive_recovery(data: &Path) -> Result<ExclusiveGuard, String> {
+    exclusive_inner(data, true)
+}
+fn exclusive_inner(data: &Path, recovery: bool) -> Result<ExclusiveGuard, String> {
+    let g = gate(data);
+    {
+        let mut s = g.state.lock().map_err(|_| "BUSY:资料维护状态不可用")?;
+        if s.preparing || s.active > 0 {
+            return Err("BUSY:资料正在处理中，请稍后重试".into());
+        }
+        if let Some(error) = s.blocked.as_ref().filter(|_| !recovery) {
+            return Err(format!("资料库需要修复：{error}"));
+        }
+        s.preparing = true;
+    }
+    Ok(ExclusiveGuard(g))
+}
+impl Drop for ExclusiveGuard {
+    fn drop(&mut self) {
+        if let Ok(mut s) = self.0.state.lock() {
+            s.preparing = false;
+            self.0.drained.notify_all();
+        }
+    }
+}
 impl SnapshotGuard {
     fn acquire(data: &Path) -> Result<Self, String> {
         let g = gate(data);
@@ -224,9 +254,14 @@ fn warnings() -> Vec<String> {
 }
 fn manifest_warnings(manifest: &Manifest) -> Vec<String> {
     let mut result = warnings();
-    for (name, label) in [("assistant.sqlite3", "知识会话历史和草稿"), ("companion.sqlite3", "角色进度、偏好和待处理经历")] {
+    for (name, label) in [
+        ("assistant.sqlite3", "知识会话历史和草稿"),
+        ("companion.sqlite3", "角色进度、偏好和待处理经历"),
+    ] {
         if manifest.stores.iter().any(|s| s.path == name) {
-            result.push(format!("此备份包含{label}，恢复可能带回以前删除的记录；不会自动合并当前数据。"));
+            result.push(format!(
+                "此备份包含{label}，恢复可能带回以前删除的记录；不会自动合并当前数据。"
+            ));
         } else {
             result.push(format!("此备份不包含{label}；恢复预演不会补建这些数据。"));
         }
@@ -318,7 +353,7 @@ fn catalog_check(path: &Path, schema: i64) -> Result<(), String> {
     let actual: i64 = c
         .pragma_query_value(None, "user_version", |r| r.get(0))
         .map_err(err)?;
-    if actual != schema || !(1..=3).contains(&actual) {
+    if actual != schema || !(1..=4).contains(&actual) {
         return Err("备份目录版本不兼容".into());
     }
     let quick: String = c
@@ -335,11 +370,26 @@ fn catalog_check(path: &Path, schema: i64) -> Result<(), String> {
 }
 fn auxiliary_check(path: &Path, schema: i64) -> Result<(), String> {
     let c = sql_read(path)?;
-    let version: i64 = c.pragma_query_value(None, "user_version", |r| r.get(0)).map_err(err)?;
-    if version != schema || version != 1 { return Err("角色或会话数据库版本不兼容".into()); }
-    let quick: String = c.query_row("PRAGMA quick_check", [], |r| r.get(0)).map_err(err)?;
-    if quick != "ok" { return Err("角色或会话数据库完整性检查未通过".into()); }
-    if c.prepare("PRAGMA foreign_key_check").map_err(err)?.query([]).map_err(err)?.next().map_err(err)?.is_some() {
+    let version: i64 = c
+        .pragma_query_value(None, "user_version", |r| r.get(0))
+        .map_err(err)?;
+    if version != schema || version != 1 {
+        return Err("角色或会话数据库版本不兼容".into());
+    }
+    let quick: String = c
+        .query_row("PRAGMA quick_check", [], |r| r.get(0))
+        .map_err(err)?;
+    if quick != "ok" {
+        return Err("角色或会话数据库完整性检查未通过".into());
+    }
+    if c.prepare("PRAGMA foreign_key_check")
+        .map_err(err)?
+        .query([])
+        .map_err(err)?
+        .next()
+        .map_err(err)?
+        .is_some()
+    {
         return Err("角色或会话数据关联无效".into());
     }
     Ok(())
@@ -349,9 +399,11 @@ fn auxiliary_members(data: &Path) -> Result<BTreeSet<String>, String> {
     for name in ["assistant.sqlite3", "companion.sqlite3"] {
         let path = data.join(name);
         match fs::symlink_metadata(&path) {
-            Ok(m) if m.is_file() && !m.file_type().is_symlink() => { found.insert(name.into()); },
+            Ok(m) if m.is_file() && !m.file_type().is_symlink() => {
+                found.insert(name.into());
+            }
             Ok(_) => return Err("角色或会话数据库必须是普通文件".into()),
-            Err(e) if e.kind()==std::io::ErrorKind::NotFound => {},
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
             Err(e) => return Err(err(e)),
         }
     }
@@ -461,6 +513,16 @@ fn create_backup_with_hook(
     }
     let _freeze = SnapshotGuard::acquire(data)?;
     let c = library::conn(data)?;
+    let pending: bool = c
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM document_purges WHERE phase IN ('prepared','committed'))",
+            [],
+            |r| r.get(0),
+        )
+        .map_err(err)?;
+    if pending {
+        return Err("有未完成的文档删除，请先重试清理再备份".into());
+    }
     let stage = target.with_file_name(format!(".inkstone-snapshot-{}", uuid::Uuid::new_v4()));
     private_directory(&stage, false)?;
     let result = (|| {
@@ -485,11 +547,19 @@ fn create_backup_with_hook(
             let digest = catalog_digest(&source)?;
             let snapshot = stage.join(name);
             drop(private_file(&snapshot)?);
-            sql_read(&source)?.execute("VACUUM INTO ?1", [snapshot.to_string_lossy().as_ref()]).map_err(err)?;
+            sql_read(&source)?
+                .execute("VACUUM INTO ?1", [snapshot.to_string_lossy().as_ref()])
+                .map_err(err)?;
             auxiliary_check(&snapshot, 1)?;
-            if catalog_digest(&snapshot)? != digest { return Err("会话或角色快照发生变化，请重试".into()); }
+            if catalog_digest(&snapshot)? != digest {
+                return Err("会话或角色快照发生变化，请重试".into());
+            }
             sources.push((name.clone(), snapshot));
-            stores.push(StoreSnapshot { path: name.clone(), schema_version: 1, resource_version: env!("CARGO_PKG_VERSION").into() });
+            stores.push(StoreSnapshot {
+                path: name.clone(),
+                schema_version: 1,
+                resource_version: env!("CARGO_PKG_VERSION").into(),
+            });
             auxiliary_digests.push((name.clone(), digest));
         }
         add_source(&mut sources, data, &data.join("library/projects"))?;
@@ -581,10 +651,14 @@ fn create_backup_with_hook(
         // An external editor does not enter the application gate. Recheck all earlier
         // files and directory membership after the entire archive has been validated.
         recheck_sources(data, &sources, &manifest, &members, &catalog_hash)?;
-        if auxiliary_members(data)? != auxiliary_names { return Err("备份期间会话或角色数据库清单变化".into()); }
+        if auxiliary_members(data)? != auxiliary_names {
+            return Err("备份期间会话或角色数据库清单变化".into());
+        }
         for (name, digest) in &auxiliary_digests {
             auxiliary_check(&data.join(name), 1)?;
-            if catalog_digest(&data.join(name))? != *digest { return Err("备份期间会话或角色资料发生变化，请重试".into()); }
+            if catalog_digest(&data.join(name))? != *digest {
+                return Err("备份期间会话或角色资料发生变化，请重试".into());
+            }
         }
         secure_tree(&stage)?;
         // A hard link publishes without replacing a concurrently created target.
@@ -613,7 +687,7 @@ fn read_manifest(zip: &mut ZipArchive<File>) -> Result<(Manifest, Vec<u8>), Stri
     }
     file.read_to_end(&mut raw).map_err(err)?;
     let m: Manifest = serde_json::from_slice(&raw).map_err(|_| "备份清单格式无效")?;
-    if !(1..=FORMAT).contains(&m.format) || !(1..=3).contains(&m.schema_version) {
+    if !(1..=FORMAT).contains(&m.format) || !(1..=4).contains(&m.schema_version) {
         return Err("备份格式或目录版本不兼容".into());
     }
     Ok((m, raw))
@@ -636,13 +710,22 @@ fn inspect(zip: &mut ZipArchive<File>, manifest: &Manifest) -> Result<(), String
     }
     let mut store_paths = HashSet::new();
     for store in &manifest.stores {
-        if manifest.format < 2 || !matches!(store.path.as_str(), "assistant.sqlite3" | "companion.sqlite3")
-            || store.schema_version != 1 || !store_paths.insert(store.path.clone()) || !known.contains_key(&store.path) {
+        if manifest.format < 2
+            || !matches!(
+                store.path.as_str(),
+                "assistant.sqlite3" | "companion.sqlite3"
+            )
+            || store.schema_version != 1
+            || !store_paths.insert(store.path.clone())
+            || !known.contains_key(&store.path)
+        {
             return Err("角色或会话备份声明无效".into());
         }
     }
     for name in ["assistant.sqlite3", "companion.sqlite3"] {
-        if known.contains_key(name) != store_paths.contains(name) { return Err("角色或会话备份清单不一致".into()); }
+        if known.contains_key(name) != store_paths.contains(name) {
+            return Err("角色或会话备份清单不一致".into());
+        }
     }
     let mut seen = HashSet::new();
     for i in 0..zip.len() {
@@ -709,8 +792,12 @@ fn restored_catalog_check(stage: &Path, m: &Manifest) -> Result<(), String> {
     for store in &m.stores {
         let path = stage.join(&store.path);
         auxiliary_check(&path, store.schema_version)?;
-        if store.path == "assistant.sqlite3" { crate::assistant::validate_snapshot(&path)?; }
-        if store.path == "companion.sqlite3" { crate::companion::validate_snapshot(&path)?; }
+        if store.path == "assistant.sqlite3" {
+            crate::assistant::validate_snapshot(&path)?;
+        }
+        if store.path == "companion.sqlite3" {
+            crate::companion::validate_snapshot(&path)?;
+        }
     }
     let c = sql_read(&stage.join("library/catalog.sqlite3"))?;
     let mut q = c
@@ -1068,7 +1155,11 @@ mod tests {
         assert!(restore_backup(&file, &out.path().join("bad"), data.path()).is_err());
         assert!(!out.path().join("bad").exists());
     }
-    pub(super) fn rewrite_archive(source: &Path, target: &Path, mutate: impl Fn(&str, &mut Vec<u8>)) {
+    pub(super) fn rewrite_archive(
+        source: &Path,
+        target: &Path,
+        mutate: impl Fn(&str, &mut Vec<u8>),
+    ) {
         let mut archive = ZipArchive::new(File::open(source).unwrap()).unwrap();
         let mut entries = vec![];
         for i in 0..archive.len() {

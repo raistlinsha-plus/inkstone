@@ -1,6 +1,6 @@
 # Inkstone v0.7 当前技术栈
 
-2026-11-06；**0.7.0-rc.3 candidate**。以下版本读取当前`package-lock.json`、`src-tauri/Cargo.lock`及`toolchain.json`，不是仅列出依赖声明的范围。[4A架构](ARCHITECTURE-v0.7.md) · [候选交付](DELIVERY-v0.7-rc3.md)。
+2026-11-07；**0.7.0-rc.4 candidate**。以下版本读取当前`package-lock.json`、`src-tauri/Cargo.lock`及`toolchain.json`，不是仅列出依赖声明的范围。[4A架构](ARCHITECTURE-v0.7.md) · [候选交付](DELIVERY-v0.7-rc4.md)。
 
 ## 1. 工具链与目标
 
@@ -48,7 +48,7 @@
 | `src/companion` / Rust `companion` | 三角色章节、成长确认、去重、偏好和清空/导出；独立SQLite schema1 |
 | Rust `maintenance` | 写入准入/排空、一致快照、领域校验和新目录恢复预演 |
 
-catalog与index仍为 **schema3**。会话库保存conversations/turns/candidates；角色库保存state/receipts/tokens/pending，文档和派生索引继续分别拥有内容与检索职责。**备份format2**纳入两个辅助库，兼容format1并提示旧包缺项，不伪造旧数据。
+catalog 为 **schema4**，index 仍为 **schema3**。会话库保存conversations/turns/candidates；角色库保存state/receipts/tokens/pending，文档和派生索引继续分别拥有内容与检索职责。**备份format2**纳入两个辅助库，兼容format1并提示旧包缺项，不伪造旧数据。
 
 追问的资料身份与当前属性独立核对；此前最近至多6个用户问题、合计最多4000字符可进入生成语境，旧AI回答不能成为事实证据。角色经历/剧情不入RAG；启用的表达偏好只约束输出风格。角色成长不增加专属模型调用。
 
@@ -69,7 +69,7 @@ npm run bundle
 
 独立包位于`src-tauri/target/release/bundle/macos/Inkstone.app`，运行时不依赖Node或开发服务器。`desktop-e2e`使用隔离应用身份、禁用系统凭据并限制为回环模型夹具；生产包不启用此feature。
 
-本轮没有新增第三方依赖或变更锁定依赖版本。完整默认检查、隔离WebView冷启动、浏览器呈现与生产应用安装分别记录，最终结果见[rc.3审查](REVIEW-v0.7-rc3.md)。本轮未将真实WebKit交互、中文候选、Keychain授权、VoiceOver或多日自然成长算作通过；真实API冒烟也单独记录。
+本轮没有新增第三方依赖或变更锁定依赖版本。完整默认检查、隔离WebView冷启动、浏览器呈现与生产应用安装分别记录，最终结果见[rc.4审查](REVIEW-v0.7-rc4.md)。本轮未将真实WebKit交互、中文候选、Keychain授权、VoiceOver或多日自然成长算作通过；真实API冒烟也单独记录。
 
 
 ## 6. 开源与候选限制

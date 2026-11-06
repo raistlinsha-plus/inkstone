@@ -2,6 +2,14 @@
 
 Historical versions below describe local development deliveries, not earlier public GitHub releases. v0.6.6 is the first public source preview. See [release notes](docs/PUBLIC-RELEASE-v0.6.6.md).
 
+## v0.7.0-rc.4 · 2026-11-07 · Stable-scope candidate
+
+- Default to stable natural-name document ordering, with an explicit Recent view, pinned groups, per-space durable preferences and list scroll anchors. Reading no longer influences equal-timestamp ordering.
+- Add read-only trash details, explicit restore, and single-document permanent deletion with preview/confirmation, durable staging, rollback before commitment, resumable cleanup and source invalidation. External originals, prior conversations, confirmed experience text and user backups remain separate.
+- Migrate the catalog to schema4 with a consistent pre-migration catalog snapshot; retain index schema3 and backup format2. Refuse backups of unfinished deletion state and reject late saves/drafts against unavailable managed documents.
+- Align New/Import button icons and labels, refine Q&A scope/header density, keep compact companion actions accessible, and withdraw the ineffective nickname setting while preserving saved values.
+- [Implementation, verification and release gates](docs/DELIVERY-v0.7-rc4.md). Not a stable GitHub release.
+
 ## v0.7.0-rc.3 · 2026-11-06 · Local candidate
 
 - Narrow windows use a two-pane knowledge task layout and return to editing without overwriting pane preferences. Display the running version in the title bar.

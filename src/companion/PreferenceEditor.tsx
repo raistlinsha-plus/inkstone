@@ -78,7 +78,7 @@ export default function PreferenceEditor({
             · {p.enabled ? "启用" : "停用"}
           </small>
           <button
-            disabled={busy}
+            disabled={busy || p.key === "nickname"}
             onClick={() => {
               setEditing(p);
               setKey(p.key);
@@ -88,7 +88,10 @@ export default function PreferenceEditor({
           >
             编辑
           </button>
-          <button disabled={busy} onClick={() => void save(p)}>
+          <button
+            disabled={busy || p.key === "nickname"}
+            onClick={() => void save(p)}
+          >
             {p.enabled ? "停用" : "启用"}
           </button>
           <button disabled={busy} onClick={() => void save(p, true)}>
@@ -106,11 +109,13 @@ export default function PreferenceEditor({
               setScope("global");
             }}
           >
-            {Object.entries(preferenceLabels).map(([k, label]) => (
-              <option key={k} value={k}>
-                {label}
-              </option>
-            ))}
+            {Object.entries(preferenceLabels)
+              .filter(([k]) => k !== "nickname")
+              .map(([k, label]) => (
+                <option key={k} value={k}>
+                  {label}
+                </option>
+              ))}
           </select>
         </label>
         <label>
@@ -141,7 +146,7 @@ export default function PreferenceEditor({
         {editing && <button onClick={reset}>取消修改</button>}
       </div>
       <p className="companion-note">
-        偏好限于表达和称呼，不改变资料、权限和证据充分性。所有字段可删除，故事与经历不会成为检索资料。
+        偏好限于回答表达，不改变资料、权限和证据充分性。旧称呼值保留并可删除；本版暂不应用称呼。故事与经历不会成为检索资料。
       </p>
     </>
   );

@@ -36,6 +36,38 @@ fn valid_character(v: &str) -> bool {
 pub fn database_path(data: &Path) -> PathBuf {
     data.join("companion.sqlite3")
 }
+/// Called under library maintenance. Confirmed cards and growth remain user data.
+pub fn purge_source(data: &Path, document: &str) -> Result<(), String> {
+    if !database_path(data).exists() {
+        return Ok(());
+    }
+    let mut c = open(data)?;
+    let tx = c
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(err)?;
+    tx.execute("DELETE FROM companion_receipts WHERE doc_id=?", [document])
+        .map_err(err)?;
+    for table in ["companion_tokens", "companion_pending"] {
+        let rows = tx
+            .prepare(&format!("SELECT id,payload FROM {table}"))
+            .map_err(err)?
+            .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
+            .map_err(err)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(err)?;
+        for (id, raw) in rows {
+            let value: serde_json::Value = serde_json::from_str(&raw).map_err(err)?;
+            if value["receipt"]["docId"].as_str() == Some(document) {
+                tx.execute(&format!("DELETE FROM {table} WHERE id=?"), [id])
+                    .map_err(err)?;
+            }
+        }
+    }
+    let mut d = load(&tx)?;
+    d.revision += 1;
+    save(&tx, &d)?;
+    tx.commit().map_err(err)
+}
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]

@@ -10,6 +10,7 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
+pub mod lifecycle;
 mod links;
 mod recovery;
 mod updates;
@@ -39,10 +40,10 @@ pub(crate) fn conn(data: &Path) -> Result<Connection, String> {
     let version: i64 = c
         .pragma_query_value(None, "user_version", |r| r.get(0))
         .map_err(err)?;
-    if version > 3 {
+    if version > 4 {
         return Err("文档库来自更新版本，请使用对应应用打开".into());
     }
-    if version > 0 && version < 3 {
+    if version > 0 && version < 4 {
         // SQLite itself copies the live database and WAL consistently before migration.
         let backup = base(data).join("backups");
         if fs::symlink_metadata(&backup).is_ok_and(|m| m.file_type().is_symlink()) {
@@ -81,11 +82,26 @@ pub(crate) fn conn(data: &Path) -> Result<Connection, String> {
             )
             .map_err(err)?;
     }
+    if !columns.iter().any(|name| name == "trashed_at") {
+        migration
+            .execute("ALTER TABLE documents ADD COLUMN trashed_at INTEGER", [])
+            .map_err(err)?;
+    }
+    if !columns.iter().any(|name| name == "lifecycle_revision") {
+        migration
+            .execute(
+                "ALTER TABLE documents ADD COLUMN lifecycle_revision INTEGER NOT NULL DEFAULT 0",
+                [],
+            )
+            .map_err(err)?;
+    }
     migration.execute_batch("CREATE TABLE IF NOT EXISTS source_baselines(document TEXT PRIMARY KEY REFERENCES documents(id),source_fingerprint TEXT NOT NULL,managed_fingerprint TEXT NOT NULL,allowed_root TEXT NOT NULL,attachments INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS document_history(id TEXT PRIMARY KEY,document TEXT NOT NULL REFERENCES documents(id),created INTEGER NOT NULL,reason TEXT NOT NULL,content_hash TEXT NOT NULL,attachment_count INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS library_operations(id TEXT PRIMARY KEY,document TEXT NOT NULL REFERENCES documents(id),before_version TEXT NOT NULL,target_hash TEXT NOT NULL,metadata TEXT NOT NULL,status TEXT NOT NULL);").map_err(err)?;
+    migration.execute_batch("CREATE TABLE IF NOT EXISTS document_purges(id TEXT PRIMARY KEY,document TEXT NOT NULL,project TEXT NOT NULL,phase TEXT NOT NULL,payload TEXT NOT NULL,error TEXT NOT NULL DEFAULT '');
+CREATE TABLE IF NOT EXISTS purge_previews(token TEXT PRIMARY KEY,document TEXT NOT NULL,project TEXT NOT NULL,expires INTEGER NOT NULL,digest TEXT NOT NULL);").map_err(err)?;
     migration
-        .pragma_update(None, "user_version", 3)
+        .pragma_update(None, "user_version", 4)
         .map_err(err)?;
     migration.commit().map_err(err)?;
     c.execute(
@@ -166,6 +182,60 @@ fn doc_row(r: &rusqlite::Row) -> rusqlite::Result<Document> {
     })
 }
 const DOC_COLS: &str = "id,project,path,title,source,updated,opened,status";
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ViewPreferences {
+    pub version: u32,
+    pub sort: String,
+    pub pinned_collapsed: bool,
+}
+impl Default for ViewPreferences {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            sort: "nameAsc".into(),
+            pinned_collapsed: false,
+        }
+    }
+}
+pub fn get_view(data: &Path, project: &str) -> Result<ViewPreferences, String> {
+    use rusqlite::OptionalExtension;
+    project_root(data, project)?;
+    let raw: Option<String> = conn(data)?
+        .query_row(
+            "SELECT value FROM preferences WHERE key=?",
+            [format!("library.view.v1:{project}")],
+            |r| r.get(0),
+        )
+        .optional()
+        .map_err(err)?;
+    let p: ViewPreferences = match raw {
+        Some(raw) => serde_json::from_str(&raw).map_err(|_| "排序偏好损坏")?,
+        None => ViewPreferences::default(),
+    };
+    validate_view(&p)?;
+    Ok(p)
+}
+fn validate_view(p: &ViewPreferences) -> Result<(), String> {
+    if p.version != 1 || !["nameAsc", "nameDesc", "updatedDesc"].contains(&p.sort.as_str()) {
+        return Err("排序偏好不兼容".into());
+    }
+    Ok(())
+}
+pub fn set_view(data: &Path, project: &str, p: &ViewPreferences) -> Result<(), String> {
+    validate_view(p)?;
+    project_root(data, project)?;
+    conn(data)?
+        .execute(
+            "INSERT OR REPLACE INTO preferences VALUES(?,?)",
+            params![
+                format!("library.view.v1:{project}"),
+                serde_json::to_string(p).map_err(err)?
+            ],
+        )
+        .map_err(err)?;
+    Ok(())
+}
 pub fn list(data: &Path) -> Result<LibraryView, String> {
     let c = conn(data)?;
     let projects = c
@@ -369,7 +439,7 @@ pub fn saved(data: &Path, root: &Path, path: &str) {
     if let Some(project) = project_at_root(data, root) {
         if let Ok(c) = conn(data) {
             let _ = c.execute(
-                "UPDATE documents SET updated=? WHERE project=? AND path=?",
+                "UPDATE documents SET updated=?,lifecycle_revision=lifecycle_revision+1 WHERE project=? AND path=? AND status='ready'",
                 params![now(), project, path],
             );
         }
@@ -405,18 +475,21 @@ pub fn rename(data: &Path, id: &str, name: &str) -> Result<(), String> {
     }
     conn(data)?
         .execute(
-            "UPDATE documents SET title=?,updated=? WHERE id=?",
+            "UPDATE documents SET title=?,updated=?,lifecycle_revision=lifecycle_revision+1 WHERE id=? AND status='ready'",
             params![name, now(), id],
         )
         .map_err(err)?;
     Ok(())
 }
 pub fn trash(data: &Path, id: &str, restore: bool) -> Result<(), String> {
-    get(data, id)?;
+    let d = get(data, id)?;
+    if d.status == "purging" {
+        return Err("删除未完成，请先重试清理".into());
+    }
     conn(data)?
         .execute(
-            "UPDATE documents SET status=?,updated=? WHERE id=?",
-            params![if restore { "ready" } else { "trashed" }, now(), id],
+            "UPDATE documents SET status=?,trashed_at=?,lifecycle_revision=lifecycle_revision+1 WHERE id=?",
+            params![if restore { "ready" } else { "trashed" }, if restore { None } else { Some(now()) }, id],
         )
         .map_err(err)?;
     Ok(())

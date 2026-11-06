@@ -160,7 +160,7 @@ impl Default for Settings {
             character_id: "motuan".into(),
             mode: "focus".into(),
             reduced_motion: true,
-            compact: false,
+            compact: true,
         }
     }
 }

@@ -45,10 +45,17 @@ function renderLibrary(refresh: () => Promise<void>) {
 }
 test("space creation is single flight and stays guarded until its list refresh completes", async () => {
   let commit!: (v: unknown) => void, refresh!: () => void;
-  api.invoke.mockReturnValue(
-    new Promise((r) => {
-      commit = r;
-    }),
+  const creation = new Promise((r) => {
+    commit = r;
+  });
+  api.invoke.mockImplementation((name: string) =>
+    name === "library_create_project"
+      ? creation
+      : Promise.resolve({
+          version: 1,
+          sort: "nameAsc",
+          pinnedCollapsed: false,
+        }),
   );
   const props = renderLibrary(
     () =>
@@ -63,7 +70,13 @@ test("space creation is single flight and stays guarded until its list refresh c
   const form = screen.getByLabelText("空间名称").closest("form")!;
   fireEvent.submit(form);
   fireEvent.submit(form);
-  await waitFor(() => expect(api.invoke).toHaveBeenCalledTimes(1));
+  await waitFor(() =>
+    expect(
+      api.invoke.mock.calls.filter(
+        ([name]) => name === "library_create_project",
+      ),
+    ).toHaveLength(1),
+  );
   await act(async () => commit({ id: "s2" }));
   expect(props.onMutationBusy.mock.calls).toEqual([[true]]);
   expect(screen.queryByLabelText("空间名称")).toBeNull();
@@ -74,7 +87,11 @@ test("space creation is single flight and stays guarded until its list refresh c
   });
 });
 test("a failed refresh after a committed space never leaves a repeatable create form", async () => {
-  api.invoke.mockResolvedValue({ id: "s2" });
+  api.invoke.mockImplementation(async (name: string) =>
+    name === "library_create_project"
+      ? { id: "s2" }
+      : { version: 1, sort: "nameAsc", pinnedCollapsed: false },
+  );
   const props = renderLibrary(async () => {
     throw Error("刷新中断");
   });
@@ -86,7 +103,9 @@ test("a failed refresh after a committed space never leaves a repeatable create 
   await waitFor(() => expect(props.onError).toHaveBeenCalled());
   expect(String(props.onError.mock.calls[0][0])).toContain("空间已保存");
   expect(screen.queryByLabelText("空间名称")).toBeNull();
-  expect(api.invoke).toHaveBeenCalledTimes(1);
+  expect(
+    api.invoke.mock.calls.filter(([name]) => name === "library_create_project"),
+  ).toHaveLength(1);
 });
 
 test("the workbench scopes recent documents, pinning and type views without repeating sidebar controls", async () => {

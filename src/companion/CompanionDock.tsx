@@ -304,7 +304,7 @@ export default function CompanionDock({
       {!settings?.enabled ? (
         <div className="companion-invitation">
           <Leaf size={16} />
-          <span>为书房添一位同伴</span>
+          <span>书房同伴</span>
           <button
             type="button"
             onClick={() => {
@@ -363,6 +363,26 @@ export default function CompanionDock({
               <Settings2 size={16} />
             </button>
           </div>
+          {settings.compact && (
+            <div className="companion-compact-actions">
+              <button type="button" onClick={() => setView("journal")}>
+                <BookOpen size={13} />
+                手札
+              </button>
+              <button
+                type="button"
+                disabled={
+                  busy ||
+                  !saved ||
+                  !documentPath ||
+                  !workspace?.managedProjectId
+                }
+                onClick={startPreview}
+              >
+                本次完成
+              </button>
+            </div>
+          )}
           {!settings.compact && (
             <div className="companion-links">
               <button type="button" onClick={() => setView("growth")}>
