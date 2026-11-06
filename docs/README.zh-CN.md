@@ -2,7 +2,7 @@
 
 [English](../README.md) · [架构与技术栈](PUBLIC-ARCHITECTURE.md) · [首发说明](PUBLIC-RELEASE-v0.6.6.md)
 
-Inkstone 把本地写作、文档空间与带引用的知识问答放在一起，使用你自己的模型 API。当前本地开发候选为 **v0.7.0-rc.1**，最近公开源码预览仍为v0.6.6；验证目标为 macOS 13+ Apple Silicon，界面目前以中文为主。[候选交付与验收边界](DELIVERY-v0.7.md)。
+Inkstone 把本地写作、文档空间与带引用的知识问答放在一起，使用你自己的模型 API。当前本地开发候选为 **v0.7.0-rc.3**，最近公开源码预览仍为v0.6.6；验证目标为 macOS 13+ Apple Silicon，界面目前以中文为主。[候选交付与验收边界](DELIVERY-v0.7-rc3.md)。后续范围见 [v0.7.0 正式版详细设计](design/v0.7-stable/README.md)，包含稳定排序、独立最近和单篇彻底删除；这些新增功能尚未进入生产应用。
 
 ![合成文档工作台](assets/v0.6.6/01-workspace.png)
 

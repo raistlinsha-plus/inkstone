@@ -57,7 +57,7 @@ Graph/chart formats follow the application's data contracts. Chart presence, val
 
 ## Roadmap and contributing
 
-The local v0.7.0-rc.1 candidate implements persistent conversations and opt-in companions, growth, CG albums and stories. The separate `prototypes/v0.7` demo remains a fictional design reference. Natural multi-day use, final sprite animation/artwork review and native accessibility acceptance remain gates before a stable v0.7 release; see the [candidate delivery](docs/DELIVERY-v0.7.md).
+The local v0.7.0-rc.3 candidate implements persistent conversations and opt-in companions, growth, CG albums and stories. The [stable-version design](docs/design/v0.7-stable/README.md) adds stable document navigation and single-document permanent deletion to the remaining acceptance work. Its separate prototype uses synthetic data. Natural multi-day use, final artwork review and native accessibility acceptance remain gates before a stable v0.7 release; see the [candidate delivery](docs/DELIVERY-v0.7-rc3.md).
 
 [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Limitations](docs/KNOWN-LIMITATIONS.md) · [Evaluation results](evals/v0.6.6/RESULTS.md)
 
