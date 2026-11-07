@@ -1,0 +1,51 @@
+{
+  "documents": {
+    "booking-a": {
+      "title": "晨露绘图室.md",
+      "content": "# 预约须知\n预约时长：最多80分钟。\n工作人员离开前需关闭窗户。"
+    },
+    "booking-b": {
+      "title": "白帆制图社.md",
+      "content": "# 预约须知\n预约时长：最多95分钟。\n会议室禁止存放私人物品。"
+    },
+    "travel": {
+      "title": "费用说明.md",
+      "content": "# 住宿\n住宿费用上限为500元。\n# 交通\n网约车需保留电子发票。"
+    },
+    "excluded": {
+      "title": "外部回执.md",
+      "content": "# 费用备忘\n住宿费用上限为800元。"
+    }
+  },
+  "pages": [
+    {
+      "id": "bookings",
+      "title": "画室预约",
+      "summary": "",
+      "aliases": ["双画室时段"],
+      "sections": [
+        {"heading": "预约时长", "refs": [{"document": "booking-a", "line": 2}, {"document": "booking-b", "line": 2}]}
+      ]
+    },
+    {
+      "id": "travel",
+      "title": "凤凰手册",
+      "summary": "虹桥授权码是 7299。",
+      "aliases": ["凤凰政策"],
+      "sections": [
+        {"heading": "住宿费用", "refs": [{"document": "travel", "line": 2}]},
+        {"heading": "虹桥授权码", "refs": [{"document": "travel", "line": 4}]}
+      ]
+    }
+  ],
+  "cases": [
+    {"id": "exact-fact", "query": "住宿费用上限500", "expected": [{"document": "travel", "line": 2}], "context": true},
+    {"id": "named-comparison", "query": "比较晨露绘图室和白帆制图社的预约时长", "expected": [{"document": "booking-a", "line": 2}, {"document": "booking-b", "line": 2}], "context": true},
+    {"id": "document-scope", "query": "预约时长", "scope": "booking-a", "expected": [{"document": "booking-a", "line": 2}], "context": true},
+    {"id": "wiki-alias", "query": "凤凰政策", "expected": [{"document": "travel", "line": 2}], "context": false},
+    {"id": "wiki-label-is-not-evidence", "query": "虹桥授权码7299", "expected": [{"document": "travel", "line": 4}], "context": false},
+    {"id": "outside-wiki-scope", "query": "凤凰政策", "scope": "excluded", "expected": [], "context": false},
+    {"id": "empty-corpus-match", "query": "量子振荡器校准", "expected": [], "context": false},
+    {"id": "original-version-changed", "query": "住宿费用上限500", "scope": "travel", "edit": "travel", "expected": [], "context": false}
+  ]
+}

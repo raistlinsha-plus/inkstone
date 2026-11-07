@@ -334,6 +334,7 @@ pub async fn library_import(
                 .push("副本已保存；本地索引有未完成项，请更新知识库。".into());
         }
         let _ = calendar::refresh(&data, &project_id);
+        crate::wiki::schedule(app);
         if !result.cancelled {
             if let Some(id) = resume_job_id {
                 let _ = library::retried(&data, &id);

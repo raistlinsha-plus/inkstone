@@ -112,7 +112,7 @@ export default function Markdown({
   onOpenDoc?: (path: string) => void;
   viewKey?: string;
   readOnly?: boolean;
-  citations?: SearchResult[];
+  citations?: (SearchResult | undefined)[];
   onCitation?: (source: SearchResult) => void;
   label?: string;
   pending?: boolean;
@@ -445,7 +445,9 @@ export default function Markdown({
                 startLine={block.line}
                 onLocate={readOnly ? undefined : onLocate}
                 onError={onError}
-                sourceRefs={citations?.map((_, i) => `S${i + 1}`)}
+                sourceRefs={citations?.flatMap((source, i) =>
+                  source ? [`S${i + 1}`] : [],
+                )}
                 onApply={
                   !readOnly && onApply
                     ? (base, next) =>

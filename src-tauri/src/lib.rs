@@ -1,6 +1,8 @@
 mod answer_validation;
 mod assistant;
 mod assistant_commands;
+mod assistant_runtime;
+mod assistant_sources;
 mod calendar;
 mod calendar_commands;
 mod companion;
@@ -32,6 +34,8 @@ mod maintenance;
 mod models;
 mod providers;
 mod retrieval;
+mod web_retrieval;
+mod wiki;
 mod workbench;
 
 use models::*;
@@ -911,7 +915,21 @@ async fn resolve_image(
 }
 #[tauri::command]
 async fn save_file(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
+    path: String,
+    content: String,
+    expected_hash: String,
+    workspace_root: String,
+) -> Result<documents::SaveResult, String> {
+    let result = save_file_for(&state, path, content, expected_hash.clone(), workspace_root)?;
+    if result.hash != expected_hash {
+        wiki::schedule(app);
+    }
+    Ok(result)
+}
+fn save_file_for(
+    state: &AppState,
     path: String,
     content: String,
     expected_hash: String,
@@ -1359,13 +1377,39 @@ async fn search_inner(
     cancel: &AtomicBool,
     progress: Option<(&tauri::AppHandle, &str)>,
 ) -> Result<SearchResponse, String> {
+    search_workspace(
+        state,
+        query,
+        scope,
+        semantic,
+        requested_mode,
+        cancel,
+        progress,
+        None,
+    )
+    .await
+}
+async fn search_workspace(
+    state: &AppState,
+    query: &str,
+    scope: Option<&str>,
+    semantic: bool,
+    requested_mode: Option<&str>,
+    cancel: &AtomicBool,
+    progress: Option<(&tauri::AppHandle, &str)>,
+    fixed_workspace: Option<Workspace>,
+) -> Result<SearchResponse, String> {
     if query.trim().is_empty() || query.chars().count() > 1500 {
         return Err("请输入 1～1500 字符的查询内容".into());
     }
     let knowledge_query = retrieval::knowledge_query(query);
     let query_adjusted = knowledge_query.trim() != query.trim();
     let query = knowledge_query.as_str();
-    let ws = workspace(state)?;
+    let fixed = fixed_workspace.is_some();
+    let ws = match fixed_workspace {
+        Some(ws) => ws,
+        None => workspace(state)?,
+    };
     let generation = state.workspace_generation.load(Ordering::SeqCst);
     if let Some(scope) = scope {
         files::resolve(&ws.root, scope, false)?;
@@ -1442,12 +1486,19 @@ async fn search_inner(
     if cancel.load(Ordering::SeqCst) {
         return Err("操作已取消".into());
     }
-    if workspace(state)?.root != ws.root
-        || state.workspace_generation.load(Ordering::SeqCst) != generation
+    if !fixed
+        && (workspace(state)?.root != ws.root
+            || state.workspace_generation.load(Ordering::SeqCst) != generation)
     {
         return Err("项目已切换，已忽略旧检索".into());
     }
     let mut results = db::merge_candidates(&db::open(&ws.db)?, &ws, &lexical, &vectors)?;
+    if catalogue.is_some() {
+        match wiki::recall(&state.data_dir, &ws, query, scope) {
+            Ok(wiki_hits) => retrieval::merge_wiki(&mut results, wiki_hits),
+            Err(_) => warnings.push("Wiki 暂不可用，已继续检索原文".into()),
+        }
+    }
     if let Some(documents) = &catalogue {
         results.retain_mut(|r| {
             if let Some((id, title)) = documents.get(&r.path) {
@@ -1471,7 +1522,8 @@ async fn search_inner(
     .to_string();
     if plan.rerank && !results.is_empty() {
         report("reranking", "正在重排候选并核对证据");
-        let count = reranker.candidate_count.min(results.len());
+        retrieval::balance_candidates(&mut results);
+        let count = reranker.candidate_count.min(results.len()).min(24);
         let documents = results[..count]
             .iter()
             .map(|r| {
@@ -1504,7 +1556,12 @@ async fn search_inner(
         .await
         {
             Ok(Ok(ranking)) => {
-                retrieval::apply_rerank(&mut results, &ranking, reranker.min_score);
+                retrieval::apply_rerank_policy(
+                    &mut results,
+                    &ranking,
+                    reranker.min_score,
+                    reranker.strict,
+                );
                 rerank_status = "applied".into();
             }
             failure => {
@@ -1530,8 +1587,9 @@ async fn search_inner(
     if cancel.load(Ordering::SeqCst) {
         return Err("操作已取消".into());
     }
-    if workspace(state)?.root != ws.root
-        || state.workspace_generation.load(Ordering::SeqCst) != generation
+    if !fixed
+        && (workspace(state)?.root != ws.root
+            || state.workspace_generation.load(Ordering::SeqCst) != generation)
     {
         return Err("项目已切换，已忽略旧检索".into());
     }
@@ -1669,6 +1727,8 @@ async fn ask_question(
         semantic,
         retrieval_mode,
         None,
+        None,
+        None,
     )
     .await
 }
@@ -1694,22 +1754,37 @@ async fn ask_pipeline(
     semantic: Option<bool>,
     retrieval_mode: Option<String>,
     followup_gate: Option<&assistant::grounding::FollowupGate>,
+    memory: Option<assistant::memory::Run>,
+    web_question: Option<&str>,
 ) -> Result<ChatResponse, String> {
     let generation = state.workspace_generation.load(Ordering::SeqCst);
     let config = settings(&state)?.chat;
     if !config.enabled {
         return Err("请在模型设置中启用问答服务".into());
     }
-    let mut found = search_inner(
-        &state,
-        retrieval_question,
-        scope.as_deref(),
-        semantic.unwrap_or(true),
-        retrieval_mode.as_deref(),
-        &state.cancel_chat,
-        Some((app, request_id)),
-    )
-    .await?;
+    let (local, mut web) = tokio::join!(
+        search_inner(
+            state,
+            retrieval_question,
+            scope.as_deref(),
+            semantic.unwrap_or(true),
+            retrieval_mode.as_deref(),
+            &state.cancel_chat,
+            Some((app, request_id))
+        ),
+        async {
+            match web_question {
+                Some(question) => {
+                    assistant_runtime::web(app, state, &config, question, request_id).await
+                }
+                None => assistant_runtime::WebTurn::default(),
+            }
+        }
+    );
+    let mut found = local?;
+    if state.cancel_chat.load(Ordering::SeqCst) {
+        return Err("已停止生成".into());
+    }
     if generation != state.workspace_generation.load(Ordering::SeqCst) {
         return Err("资料空间已变化，已撤回旧回答".into());
     }
@@ -1717,28 +1792,56 @@ async fn ask_pipeline(
         assistant::grounding::tighten(gate, &mut found.results);
         found.evidence_count = found.results.iter().filter(|r| r.evidence).count();
     }
-    let actual_mode = found.retrieval_mode.clone();
+    let mut actual_mode = found.retrieval_mode.clone();
     let rerank_status = found.rerank_status.clone();
-    let context_workspace = workspace(&state)?;
-    let (prompt_question, preference_warning) =
-        match companion::format_preferences(&state.data_dir, &context_workspace) {
-            Ok(value) if !value.is_empty() => (format!("{prompt_question}\n\n{value}"), None),
-            Ok(_) => (prompt_question.to_string(), None),
-            Err(_) => (
-                prompt_question.to_string(),
-                Some("角色表达偏好暂不可用，本轮按默认格式回答。".to_string()),
-            ),
-        };
+    let context_workspace = workspace(state)?;
+    let budget = config.context_chars.saturating_sub(
+        prompt_question.chars().count() + providers::ANSWER_SYSTEM.chars().count() + 500,
+    );
     let sources = retrieval::generation_context(
         &context_workspace,
         &found.results,
-        config.context_chars.saturating_sub(
-            prompt_question.chars().count() + providers::ANSWER_SYSTEM.chars().count() + 500,
-        ),
+        if web.evidence.is_empty() {
+            budget
+        } else {
+            budget * 2 / 3
+        },
         scope.is_some(),
     );
-    if sources.is_empty() {
-        return Ok(ChatResponse{finish_reason:"no_evidence".into(),text:"当前资料中没有找到足够直接、可引用的证据。请检查资料范围、更新索引，或换一个更具体的问题；可能相关的候选未被当作答案依据。".into(),sources,warning:found.warning,retrieval_mode:actual_mode,rerank_status,model:String::new(),scope,chart_warnings:vec![],rejected_charts:vec![]});
+    let mut trace = assistant_sources::Trace::default();
+    trace
+        .steps
+        .push(format!("文档原文 · {} 条证据", sources.len()));
+    if sources.iter().any(|s| s.match_kind.contains("wiki")) {
+        trace.steps.push("Wiki · 按主题和章节定位原文".into());
+    }
+    assistant_runtime::web_trace(&mut trace, &web, !sources.is_empty());
+    let external = assistant_runtime::select_external(
+        std::mem::take(&mut web.evidence),
+        sources.len(),
+        budget.saturating_sub(providers::chat_source_text(&sources).chars().count()),
+        &mut trace.unread,
+    );
+    if !external.is_empty() {
+        actual_mode = if sources.is_empty() { "web" } else { "mixed" }.into();
+    } else {
+        trace.route = if sources.is_empty() {
+            "no-evidence"
+        } else {
+            "local"
+        }
+        .into();
+    }
+    let warnings = found
+        .warning
+        .into_iter()
+        .chain(web.warning)
+        .collect::<Vec<_>>();
+    if sources.is_empty() && external.is_empty() {
+        return Ok(ChatResponse{external_sources:vec![],trace:Some(trace),memory: None,
+            finish_reason:"no_evidence".into(),text:"本轮没有找到足够直接、可引用的证据。请检查资料范围、索引和联网设置，或换一个更具体的问题。".into(),
+            sources,warning:(!warnings.is_empty()).then(||warnings.join("\n")),retrieval_mode:actual_mode,
+            rerank_status,model:String::new(),scope,chart_warnings:vec![],rejected_charts:vec![]});
     }
     let key = read_key(&state, "chat", &config.base_url, &state.cancel_chat).await?;
     if state.cancel_chat.load(Ordering::SeqCst) {
@@ -1751,6 +1854,9 @@ async fn ask_pipeline(
     }
     if !current {
         return Ok(ChatResponse {
+            external_sources: vec![],
+            trace: None,
+            memory: None,
             finish_reason: "source_changed".into(),
             text: "所用资料已更新或移除，尚未发送过期内容。请重新提问以使用最新原文。".into(),
             sources: vec![],
@@ -1778,12 +1884,43 @@ async fn ask_pipeline(
             detail: "正在依据已保存且版本校验通过的资料生成回答".into(),
         },
     );
-    let mut output = providers::chat(
+    let mut question_for_model = prompt_question.to_string();
+    if web.expected && external.is_empty() {
+        question_for_model.push_str("\n公开资料未核验，只回答当前原文支持的部分。");
+    }
+    if sources.is_empty() && !external.is_empty() {
+        question_for_model
+            .push_str("\n本轮只有网页证据。不要用外部事实代替用户要求核对的内部文档内容。");
+    }
+    let context = providers::chat_source_text(&sources)
+        + &external
+            .iter()
+            .map(assistant_sources::Evidence::as_prompt)
+            .collect::<String>();
+    let usage = memory.map(|run| {
+        let available = config.context_chars.saturating_sub(
+            question_for_model.chars().count()
+                + providers::ANSWER_SYSTEM.chars().count()
+                + context.chars().count()
+                + 100,
+        );
+        let (block, usage) = assistant::memory::compose(
+            &state.data_dir,
+            &run.workspace,
+            scope.as_deref(),
+            &run.options,
+            available,
+        );
+        question_for_model.push_str(&block);
+        usage
+    });
+    let prompt = format!("资料开始\n{context}\n资料结束\n\n问题：{question_for_model}");
+    let mut output = providers::stream_chat(
         &state.client,
         &config,
         key.as_deref(),
-        &prompt_question,
-        &sources,
+        providers::ANSWER_SYSTEM,
+        &prompt,
         &state.cancel_chat,
         Some(app),
         request_id,
@@ -1799,15 +1936,20 @@ async fn ask_pipeline(
         }
     }
     if !current {
-        return Ok(ChatResponse { finish_reason: "source_changed".into(), text: "生成期间所用资料发生变化或已被移除，已撤回过期答案和引用。请重新提问以核对最新原文。".into(), sources: vec![], warning: Some("原文已变化，请勿使用生成期间显示的旧内容。".into()), retrieval_mode:actual_mode, rerank_status, model:config.model.clone(), scope,chart_warnings:vec![],rejected_charts:vec![] });
+        return Ok(ChatResponse { external_sources: vec![], trace: None, memory: None, finish_reason: "source_changed".into(), text: "生成期间所用资料发生变化或已被移除，已撤回过期答案和引用。请重新提问以核对最新原文。".into(), sources: vec![], warning: Some("原文已变化，请勿使用生成期间显示的旧内容。".into()), retrieval_mode:actual_mode, rerank_status, model:config.model.clone(), scope,chart_warnings:vec![],rejected_charts:vec![] });
     }
     let output = output?;
-    let chart_audit = answer_validation::audit_charts(&output.text, &sources);
-    let mut warnings = found
-        .warning
-        .into_iter()
-        .chain(preference_warning)
+    let chart_sources = sources
+        .iter()
+        .cloned()
+        .chain(
+            external
+                .iter()
+                .map(assistant_sources::Evidence::chart_source),
+        )
         .collect::<Vec<_>>();
+    let chart_audit = answer_validation::audit_charts(&output.text, &chart_sources);
+    let mut warnings = warnings;
     if output.finish_reason == "cancelled" {
         warnings.push("已停止，保留的内容尚未完成，请核对后再使用。".into());
     } else if output.finish_reason == "length" {
@@ -1819,6 +1961,9 @@ async fn ask_pipeline(
         ));
     }
     Ok(ChatResponse {
+        external_sources: external.into_iter().map(|e| e.metadata).collect(),
+        trace: Some(trace),
+        memory: usage,
         finish_reason: output.finish_reason.clone(),
         retrieval_mode: actual_mode,
         rerank_status,
@@ -2062,14 +2207,13 @@ mod v05_io_tests {
         maintenance::set_managed_error(&alias, Some("synthetic blocked catalogue".into()));
         let expected = files::hash("原稿");
         let workspace_root = ws.root.to_string_lossy().into_owned();
-        assert!(save_file(
-            state.clone(),
+        assert!(save_file_for(
+            &state,
             doc.path.clone(),
             "不能写入".into(),
             expected.clone(),
             workspace_root.clone()
         )
-        .await
         .is_err());
         assert!(save_draft(
             state.clone(),
@@ -2105,14 +2249,13 @@ mod v05_io_tests {
         };
         fs::write(external_ws.root.join("outside.md"), "外部原稿").unwrap();
         *state.workspace.lock().unwrap() = Some(external_ws.clone());
-        save_file(
-            state.clone(),
+        save_file_for(
+            &state,
             "outside.md".into(),
             "外部仍可保存".into(),
             files::hash("外部原稿"),
             external_ws.root.to_string_lossy().into_owned(),
         )
-        .await
         .unwrap();
         assert_eq!(
             fs::read_to_string(external_ws.root.join("outside.md")).unwrap(),
@@ -2465,12 +2608,32 @@ pub fn run() {
             assistant_commands::assistant_create,
             assistant_commands::assistant_get,
             assistant_commands::assistant_update,
+            assistant_commands::assistant_save_running_draft,
             assistant_commands::assistant_delete,
             assistant_commands::assistant_export,
             assistant_commands::assistant_select_candidate,
             assistant_commands::assistant_ask,
+            assistant::attachments::assistant_attachment_add,
+            assistant::attachments::assistant_attachment_list,
+            assistant::attachments::assistant_attachment_read,
+            assistant::attachments::assistant_attachment_delete,
+            web_retrieval::web_search_settings,
+            web_retrieval::save_web_search_settings,
+            wiki::wiki_status,
+            wiki::wiki_set_policy,
+            wiki::wiki_compile,
+            wiki::wiki_cancel,
+            wiki::wiki_review,
+            wiki::wiki_read,
+            wiki::wiki_source,
+            assistant_commands::assistant_memory_settings,
+            assistant_commands::assistant_memory_update,
+            assistant_commands::assistant_history_preview,
             companion_commands::companion_state,
             companion_commands::companion_settings,
+            companion_commands::companion_recall,
+            companion_commands::companion_recall_source,
+            companion_commands::companion_recall_setting,
             companion_commands::companion_preview,
             companion_commands::companion_confirm,
             companion_commands::companion_story,

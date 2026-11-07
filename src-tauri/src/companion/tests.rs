@@ -450,3 +450,55 @@ fn formatting_preferences_are_scoped_and_never_include_story_or_cards() {
     assert!(!prompt.contains("私密昵称"));
     assert!(!prompt.contains("书房"));
 }
+
+#[test]
+fn recent_companion_recall_requires_opt_in_current_role_space_and_source() {
+    let (temp, ws, doc) = fixture();
+    let path = temp.path();
+    let snapshot = enable(path);
+    let p = capture(path, &ws, &doc);
+    let recorded = confirm(path, &ws, input(&snapshot, &p)).unwrap().snapshot;
+    assert!(recall(path, &ws, true).unwrap().recent.is_none());
+    let enabled = recall_setting(path, ctx(&recorded), true).unwrap();
+    let found = recall(path, &ws, true).unwrap();
+    assert_eq!(found.recent.unwrap().id, p.event_id);
+    assert_eq!(found.statuses[&p.event_id], "current");
+    let other = library::create_project(path, "另一空间").unwrap();
+    let root = library::project_root(path, &other.id).unwrap();
+    let other_ws = Workspace {
+        db: root.join("index.sqlite3"),
+        root,
+    };
+    assert!(recall(path, &other_ws, true).unwrap().recent.is_none());
+
+    let changed = settings(
+        path,
+        SettingsInput {
+            context: ctx(&enabled),
+            character_id: "zhiwei".into(),
+            enabled: true,
+            reduced_motion: true,
+            compact: false,
+            mode: "focus".into(),
+            outfit: None,
+            timezone: None,
+        },
+    )
+    .unwrap();
+    assert!(recall(path, &ws, false).unwrap().recent.is_none());
+    fs::write(ws.root.join(&doc.path), "更新之后的内容").unwrap();
+    let found = recall(path, &ws, true).unwrap();
+    assert!(found.recent.is_none());
+    assert_eq!(found.statuses[&p.event_id], "changed");
+    let removed = mutate_card(
+        path,
+        CardInput {
+            context: ctx(&changed),
+            id: p.event_id,
+            text: None,
+        },
+    )
+    .unwrap();
+    assert_eq!(removed.events, 1);
+    assert!(recall(path, &ws, true).unwrap().statuses.is_empty());
+}

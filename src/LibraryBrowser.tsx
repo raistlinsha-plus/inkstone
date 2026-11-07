@@ -1,5 +1,12 @@
 import { isImeEvent } from "./platform/ime";
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  Fragment,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   selectDocuments,
   type LibraryTab,
@@ -50,6 +57,7 @@ interface Props {
   onPin?: (id: string, pinned: boolean) => Promise<void>;
   onIndex?: () => void;
   onBackup?: () => void;
+  firstUseGuide?: ReactNode;
 }
 export default function LibraryBrowser({
   view,
@@ -73,6 +81,7 @@ export default function LibraryBrowser({
   onPin,
   onIndex,
   onBackup,
+  firstUseGuide,
 }: Props) {
   const [query, setQuery] = useState(""),
     [tab, setTab] = useState<LibraryTab>("all"),
@@ -257,6 +266,7 @@ export default function LibraryBrowser({
           </button>
         </div>
       )}
+      {!compact && firstUseGuide}
       <div className="library-controls">
         {compact && (
           <div className="library-project">

@@ -10,6 +10,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import ModalDialog from "../ModalDialog";
+import type { LibraryView } from "../library";
 import type { Workspace } from "../types";
 import stories from "./stories.json";
 import { characterArt, cgArt } from "./art";
@@ -23,9 +24,10 @@ import {
   type Preview,
   type StoryCharacter,
   type Pending,
+  type CompanionRecall,
 } from "./types";
 import "./companion.css";
-import PreferenceEditor, { type PreferenceMutation } from "./PreferenceEditor";
+
 import ExperienceJournal from "./ExperienceJournal";
 import {
   CharacterPicker,
@@ -54,6 +56,8 @@ export default function CompanionDock({
   saveSerial,
   activity = "idle",
   activityText,
+  libraryRevision,
+  onOpenSource,
 }: {
   workspace: Workspace | null;
   documentPath: string | null;
@@ -62,6 +66,8 @@ export default function CompanionDock({
   saveSerial?: number;
   activity?: "working" | "needs_input" | "ready" | "blocked" | "idle";
   activityText?: string;
+  libraryRevision?: LibraryView;
+  onOpenSource?: (path: string) => Promise<boolean>;
 }) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null),
     [view, setView] = useState<View | null>(null),
@@ -128,6 +134,65 @@ export default function CompanionDock({
     }
   };
   const settings = snapshot?.settings;
+  const [recallResult, setRecallResult] = useState<{
+    key: string;
+    data: CompanionRecall;
+    library?: LibraryView;
+  }>();
+  const recallKey = JSON.stringify([
+    root,
+    snapshot?.generation,
+    snapshot?.revision,
+    documentHash,
+    saveSerial,
+    view === "journal",
+  ]);
+  const readRecall =
+    !!workspace?.managedProjectId &&
+    (view === "journal" || (settings?.enabled && snapshot?.recallEnabled));
+  const recall =
+    readRecall &&
+    recallResult?.key === recallKey &&
+    recallResult.library === libraryRevision
+      ? recallResult.data
+      : undefined;
+  useEffect(() => {
+    if (!readRecall) return;
+    let alive = true;
+    let pending = false;
+    function read() {
+      if (pending || document.hidden) return;
+      pending = true;
+      void invoke<CompanionRecall>("companion_recall", {
+        workspaceRoot: root,
+        journal: view === "journal",
+      })
+        .then(
+          (data) => {
+            if (alive)
+              setRecallResult({
+                key: recallKey,
+                data,
+                library: libraryRevision,
+              });
+          },
+          () => {
+            if (alive) setRecallResult(undefined);
+          },
+        )
+        .finally(() => {
+          pending = false;
+        });
+    }
+    read();
+    const interval = setInterval(read, 10000);
+    document.addEventListener("visibilitychange", read);
+    return () => {
+      alive = false;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", read);
+    };
+  }, [readRecall, recallKey, root, view, libraryRevision]);
   const role = settings?.characterId ?? "motuan",
     r = characters[role],
     progress = snapshot?.roles[role],
@@ -259,17 +324,6 @@ export default function CompanionDock({
         setNotice("同伴数据已导出；不包含API密钥或工作正文。");
       },
     );
-  const writePreference = async (input: PreferenceMutation) => {
-    let ok = false;
-    await run(
-      () => invoke<Snapshot>("companion_preference", { input }),
-      (s) => {
-        setSnapshot(s);
-        ok = true;
-      },
-    );
-    return ok;
-  };
   const episode = storyData.find((s) => s.id === role)?.episodes[stage];
   const title =
     view === "choose"
@@ -363,6 +417,20 @@ export default function CompanionDock({
               <Settings2 size={16} />
             </button>
           </div>
+          {recall?.recent && settings.enabled && snapshot?.recallEnabled && (
+            <button
+              type="button"
+              className="companion-recent"
+              title="在手札中查看"
+              onClick={() => setView("journal")}
+            >
+              <BookOpen size={14} />
+              <span>
+                <small>最近一起完成 · {recall.recent.day}</small>
+                <strong>{recall.recent.text}</strong>
+              </span>
+            </button>
+          )}
           {settings.compact && (
             <div className="companion-compact-actions">
               <button type="button" onClick={() => setView("journal")}>
@@ -552,6 +620,25 @@ export default function CompanionDock({
                 busy={busy}
                 onRetry={retry}
                 onCard={cardMutation}
+                sourceStatuses={recall?.statuses}
+                onOpenSource={
+                  onOpenSource &&
+                  ((cardId) =>
+                    void run(
+                      () =>
+                        invoke<string>("companion_recall_source", {
+                          workspaceRoot: root,
+                          cardId,
+                        }),
+                      (path) => {
+                        void onOpenSource(path)
+                          .then((opened) => {
+                            if (opened) setView(null);
+                          })
+                          .catch((error) => setError(String(error)));
+                      },
+                    ))
+                }
               />
             )}
             {view === "stories" && (
@@ -710,12 +797,55 @@ export default function CompanionDock({
                 >
                   更换角色
                 </button>
-                <PreferenceEditor
-                  snapshot={snapshot}
-                  workspace={workspace}
-                  busy={busy}
-                  onWrite={writePreference}
-                />
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={!!snapshot.recallEnabled}
+                    disabled={busy}
+                    onChange={(event) => {
+                      const enabled = event.target.checked;
+                      void run(
+                        () =>
+                          invoke<Snapshot>("companion_recall_setting", {
+                            context: contextOf(snapshot),
+                            enabled,
+                          }),
+                        setSnapshot,
+                      );
+                    }}
+                  />
+                  回顾最近一起完成的事
+                </label>
+                <p className="companion-note">
+                  开启后，在当前空间显示这个角色近 30
+                  天的一条已确认经历。来源版本校验通过才展示，经历保存在本机。
+                </p>
+                <p className="companion-note">回答偏好可在问答工具栏中管理。</p>
+                {snapshot.preferences
+                  .filter((preference) => preference.key === "nickname")
+                  .map((preference) => (
+                    <div className="companion-preference" key={preference.id}>
+                      <span>保留的旧称呼 · {preference.value}</span>
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          void run(
+                            () =>
+                              invoke<Snapshot>("companion_preference", {
+                                input: {
+                                  ...preference,
+                                  context: contextOf(snapshot),
+                                  delete: true,
+                                },
+                              }),
+                            setSnapshot,
+                          )
+                        }
+                      >
+                        删除旧称呼
+                      </button>
+                    </div>
+                  ))}
                 <div className="companion-data-actions">
                   <button disabled={busy} onClick={exportData}>
                     导出同伴数据

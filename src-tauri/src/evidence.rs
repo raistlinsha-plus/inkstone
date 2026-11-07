@@ -134,8 +134,16 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
                     .filter(|t| t.chars().any(|c| c.is_ascii_digit()))
                     .all(|t| tokens.contains(t))
         };
-        r.evidence = r.bm25_rank.is_some() && has_body && supported;
-        r.match_kind = if r.evidence { "keyword" } else { "candidate" }.into();
+        let wiki = r.match_kind == "wiki";
+        r.evidence = (r.bm25_rank.is_some() || wiki) && has_body && supported;
+        r.match_kind = if wiki {
+            "wiki"
+        } else if r.evidence {
+            "keyword"
+        } else {
+            "candidate"
+        }
+        .into();
     }
 }
 

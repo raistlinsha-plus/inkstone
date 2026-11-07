@@ -2,14 +2,108 @@ import {
   ArrowUp,
   Database,
   FilePlus2,
-  FileText,
   FolderOpen,
   HardDrive,
   PenLine,
   Sparkles,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import type { Stats, Workspace } from "../types";
 import { appVersion } from "../version";
+
+export function FirstUseGuide({
+  hasWorkspace,
+  managed,
+  hasDocuments,
+  indexed,
+  modelReady,
+  embeddingReady,
+  rerankEnabled,
+  disabled,
+  onPrepare,
+  onIndex,
+  onSettings,
+  onAsk,
+}: {
+  hasWorkspace: boolean;
+  managed: boolean;
+  hasDocuments: boolean;
+  indexed: boolean;
+  modelReady: boolean;
+  embeddingReady: boolean;
+  rerankEnabled: boolean;
+  disabled: boolean;
+  onPrepare: () => void;
+  onIndex: () => void;
+  onSettings: () => void;
+  onAsk: () => void;
+}) {
+  const steps = [
+    {
+      label: "准备一份资料",
+      detail: managed
+        ? "复制导入到当前空间，原文件留在本机原位置。"
+        : "打开已有文档的本地目录。",
+      ready: hasDocuments,
+      action: managed ? "复制导入文档" : "打开本地目录",
+      onClick: onPrepare,
+    },
+    {
+      label: "建立本地索引",
+      detail: "索引完成后即可使用离线关键词检索。",
+      ready: indexed,
+      action: "管理索引",
+      onClick: onIndex,
+      unavailable: !hasWorkspace,
+    },
+    {
+      label: "连接聊天模型",
+      detail: `聊天用于生成回答。向量索引${embeddingReady ? "已就绪" : "未就绪"}，重排${rerankEnabled ? "已启用" : "未启用"}，这两项可稍后配置。`,
+      ready: modelReady,
+      action: "打开模型设置",
+      onClick: onSettings,
+    },
+    {
+      label: "提问、核对与保存",
+      detail: "打开回答的来源，核对后将回答保存到文档。",
+      action: "打开问答",
+      onClick: onAsk,
+      unavailable: !hasWorkspace,
+    },
+  ];
+  return (
+    <section className="welcome-first-use" aria-label="开始使用">
+      <details open={!managed || !hasDocuments || !indexed || !modelReady}>
+        <summary>
+          <Sparkles size={17} /> 从资料到第一条回答
+        </summary>
+        <ol>
+          {steps.map((step) => (
+            <li key={step.label}>
+              <div>
+                <strong>{step.label}</strong>
+                {step.ready && (
+                  <span className="status-pill">
+                    {step.action === "打开模型设置" ? "已启用" : "已就绪"}
+                  </span>
+                )}
+                <p>{step.detail}</p>
+              </div>
+              <button
+                className="button small"
+                disabled={disabled || step.unavailable}
+                onClick={step.onClick}
+              >
+                {step.action}
+              </button>
+            </li>
+          ))}
+        </ol>
+      </details>
+    </section>
+  );
+}
+
 export default function WelcomePage({
   workspace,
   stats,
@@ -17,6 +111,7 @@ export default function WelcomePage({
   onOpen,
   onNew,
   onIndex,
+  guide,
 }: {
   workspace: Workspace | null;
   stats: Stats;
@@ -24,11 +119,12 @@ export default function WelcomePage({
   onOpen: () => void;
   onNew: () => void;
   onIndex: () => void;
+  guide: ReactNode;
 }) {
   return (
     <div className="welcome-page">
       <div className="welcome-top">
-        <span className="eyebrow">A QUIET PLACE FOR YOUR IDEAS</span>
+        <span className="eyebrow">INKSTONE · 本地工作台</span>
         <span className="version-pill">v{appVersion} · macOS</span>
       </div>
       <div className="welcome-heading">
@@ -40,78 +136,37 @@ export default function WelcomePage({
           <br />
           <span>让知识相连。</span>
         </h1>
-        <p>
-          专注写作，整理本地资料。
-          <br />
-          在自己的文字里，找到下一次灵感。
-        </p>
+        <p>编辑本地文档，从自己的资料里找到有出处的回答。</p>
       </div>
       <div className="welcome-actions">
         <button className="button primary" disabled={disabled} onClick={onOpen}>
           <FolderOpen size={16} />
-          {workspace ? "打开其他目录" : "打开本地目录"}
+          {workspace ? "打开本地目录" : "选择本地目录"}
           <span className="shortcut">⌘O</span>
         </button>
         {workspace && (
-          <button className="button" onClick={onNew}>
+          <button className="button" disabled={disabled} onClick={onNew}>
             <FilePlus2 size={16} />
             新建笔记
           </button>
         )}
       </div>
-      <div className="feature-grid">
-        <div>
-          <span className="feature-icon">
-            <FileText size={19} />
-          </span>
-          <h3>纯粹的编辑体验</h3>
-          <p>
-            纯文本与 Markdown，
-            <br />
-            源码与可视化，自在切换。
-          </p>
-        </div>
-        <div>
-          <span className="feature-icon">
-            <Database size={19} />
-          </span>
-          <h3>资料就在手边</h3>
-          <p>
-            本地建立知识索引，
-            <br />
-            从片段回到完整上下文。
-          </p>
-        </div>
-        <div>
-          <span className="feature-icon">
-            <Sparkles size={19} />
-          </span>
-          <h3>模型由你选择</h3>
-          <p>
-            连接自己的 API，
-            <br />
-            让回答带着可靠的出处。
-          </p>
-        </div>
-      </div>
+      {guide}
       {workspace && (
         <div className="workspace-summary">
           <HardDrive size={17} />
           <div>
-            <strong>{workspace.root}</strong>
+            <strong>{workspace.name}</strong>
             <span>
               {stats.documents} 篇已索引文档 · {stats.chunks} 个片段
             </span>
           </div>
           <button className="text-button" onClick={onIndex}>
-            管理资料索引 <ArrowUp size={13} className="diagonal" />
+            <Database size={14} /> 管理资料索引{" "}
+            <ArrowUp size={13} className="diagonal" />
           </button>
         </div>
       )}
-      <div className="welcome-footer">
-        <span className="small-dot" />
-        文件自由保存，知识属于你。<span>TXT / MARKDOWN</span>
-      </div>
     </div>
   );
 }

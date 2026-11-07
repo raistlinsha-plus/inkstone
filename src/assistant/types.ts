@@ -15,6 +15,7 @@ export interface Turn {
   createdAt: string;
   selectedCandidateId: string | null;
   candidates: Candidate[];
+  sources?: AssistantSourcePlan;
 }
 export interface Conversation {
   id: string;
@@ -41,7 +42,57 @@ export interface ConversationSummary {
   activeLeafId: string | null;
   turnCount: number;
 }
+export interface HistoryRef {
+  conversationId: string;
+  turnId: string;
+  digest: string;
+}
+export interface HistoryPreview {
+  reference: HistoryRef;
+  title: string;
+  excerpt: string;
+  createdAt: string;
+}
+export interface MemoryUsage {
+  preferences: {
+    id: string;
+    revision: number;
+    key: string;
+    scope: "global" | "space";
+  }[];
+  history: { conversationId: string; turnId: string } | null;
+  notes: string[];
+}
+export interface AssistantSourcePlan {
+  projectId?: string | null;
+  documentIds?: string[];
+  attachments?: string[];
+}
+export interface AssistantAttachment {
+  id: string;
+  title: string;
+  size: number;
+}
+export interface ExternalSource {
+  id: string;
+  kind: "web" | "attachment" | "document";
+  label: string;
+  url?: string | null;
+  excerpt?: string | null;
+  capturedAt?: string | null;
+  attachmentId?: string | null;
+  projectId?: string | null;
+  documentId?: string | null;
+  citation: number;
+}
+export interface RetrievalTrace {
+  route: string;
+  steps: string[];
+  unread: string[];
+}
 export interface StartQuestion {
+  sources?: AssistantSourcePlan;
+  memoryOptions?: { skipPreferences: boolean; history: HistoryRef | null };
   question: string;
   parentTurnId?: string | null;
   regenerateTurnId?: string | null;

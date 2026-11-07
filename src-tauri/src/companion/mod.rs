@@ -81,6 +81,8 @@ struct Data {
     cards: Vec<Card>,
     roles: BTreeMap<String, RoleProgress>,
     preferences: Vec<Preference>,
+    #[serde(default)]
+    recall_enabled: bool,
 }
 impl Default for Data {
     fn default() -> Self {
@@ -94,6 +96,7 @@ impl Default for Data {
             cards: vec![],
             roles: BTreeMap::new(),
             preferences: vec![],
+            recall_enabled: false,
         }
     }
 }
@@ -230,6 +233,7 @@ fn snapshot(c: &Connection, d: Data) -> Result<Snapshot, String> {
         roles: d.roles,
         cards: d.cards,
         preferences: d.preferences,
+        recall_enabled: d.recall_enabled,
         pending: pending(c)?,
         eligible: e,
     })
@@ -294,6 +298,105 @@ pub fn settings(data: &Path, i: SettingsInput) -> Result<Snapshot, String> {
         Ok(())
     })
 }
+pub fn recall_setting(data: &Path, context: Context, enabled: bool) -> Result<Snapshot, String> {
+    mutate(data, &context, |_, d| {
+        d.recall_enabled = enabled;
+        Ok(())
+    })
+}
+
+#[derive(Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Recall {
+    recent: Option<Card>,
+    statuses: BTreeMap<String, &'static str>,
+}
+
+fn card_source(data: &Path, ws: &Workspace, entry: &Ledger) -> Result<String, &'static str> {
+    let doc = library::get(data, &entry.doc_id).map_err(|_| "unavailable")?;
+    if doc.project_id != entry.space_id || doc.status != "ready" {
+        return Err("unavailable");
+    }
+    let content = files::resolve(&ws.root, &doc.path, false)
+        .and_then(|path| files::read_text(&path))
+        .map_err(|_| "unavailable")?;
+    if files::hash(content.as_bytes()) != entry.hash {
+        return Err("changed");
+    }
+    Ok(doc.path)
+}
+
+pub fn recall_source(data: &Path, ws: &Workspace, id: &str) -> Result<String, String> {
+    let _permit = maintenance::mutation(data)?;
+    let space = library::project_at_root(data, &ws.root).ok_or("请切回经历所属空间")?;
+    let d = load(&open(data)?)?;
+    if !d
+        .cards
+        .iter()
+        .any(|card| card.id == id && card.space_id == space)
+    {
+        return Err("经历已移除或不在当前空间".into());
+    }
+    let entry = d
+        .ledger
+        .iter()
+        .find(|entry| entry.id == id && entry.space_id == space)
+        .ok_or("来源不可用")?;
+    card_source(data, ws, entry).map_err(|status| {
+        if status == "changed" {
+            "来源已更新，当前文档版本与经历记录不同".into()
+        } else {
+            "来源不可用".into()
+        }
+    })
+}
+
+pub fn recall(data: &Path, ws: &Workspace, journal: bool) -> Result<Recall, String> {
+    let _permit = maintenance::mutation(data)?;
+    let Some(space) = library::project_at_root(data, &ws.root) else {
+        return Ok(Recall::default());
+    };
+    let d = load(&open(data)?)?;
+    let mut result = Recall::default();
+    if !(journal || (d.settings.enabled && d.recall_enabled)) {
+        return Ok(result);
+    }
+    let today = day_at(now(), &d.timezone)?;
+    let today = chrono::NaiveDate::parse_from_str(&today, "%Y-%m-%d").map_err(err)?;
+    let ledger: BTreeMap<_, _> = d.ledger.iter().map(|entry| (&entry.id, entry)).collect();
+    for (position, card) in d
+        .cards
+        .iter()
+        .rev()
+        .filter(|card| card.space_id == space)
+        .enumerate()
+    {
+        let eligible = result.recent.is_none()
+            && d.settings.enabled
+            && d.recall_enabled
+            && card.character_id == d.settings.character_id
+            && chrono::NaiveDate::parse_from_str(&card.day, "%Y-%m-%d")
+                .is_ok_and(|day| (0..30).contains(&today.signed_duration_since(day).num_days()));
+        // Daily caps bound recent checks. Journal verifies only its latest entries.
+        if !eligible && (!journal || position >= 30) {
+            continue;
+        }
+        let status = ledger.get(&card.id).map_or("unavailable", |entry| {
+            match card_source(data, ws, entry) {
+                Ok(_) => "current",
+                Err(status) => status,
+            }
+        });
+        if journal && position < 30 {
+            result.statuses.insert(card.id.clone(), status);
+        }
+        if eligible && status == "current" {
+            result.recent = Some(card.clone());
+        }
+    }
+    Ok(result)
+}
+
 fn day_at(timestamp: i64, timezone: &str) -> Result<String, String> {
     let tz: Tz = timezone.parse().map_err(|_| "时区无效")?;
     let dt = DateTime::<Utc>::from_timestamp(timestamp, 0).ok_or("日期无效")?;
@@ -760,6 +863,7 @@ pub fn export(data: &Path) -> Result<String, String> {
 }
 
 /// User-confirmed presentation preferences only. Never a retrieval/evidence input.
+#[cfg(test)]
 pub fn format_preferences(data: &Path, ws: &Workspace) -> Result<String, String> {
     let _permit = maintenance::mutation(data)?;
     if !database_path(data).exists() {
@@ -794,6 +898,23 @@ pub fn format_preferences(data: &Path, ws: &Workspace) -> Result<String, String>
             serde_json::to_string(&values).map_err(err)?
         ))
     }
+}
+
+pub fn legacy_answer_preferences(data: &Path, ws: &Workspace) -> Result<Vec<Preference>, String> {
+    let _permit = maintenance::mutation(data)?;
+    if !database_path(data).exists() {
+        return Ok(vec![]);
+    }
+    let space = library::project_at_root(data, &ws.root);
+    Ok(load(&open(data)?)?
+        .preferences
+        .into_iter()
+        .filter(|p| {
+            crate::assistant::memory::Key::legacy(&p.key).is_some()
+                && (p.scope == "global"
+                    || (p.scope == "space" && space.as_deref() == Some(&p.scope_id)))
+        })
+        .collect())
 }
 
 #[cfg(test)]

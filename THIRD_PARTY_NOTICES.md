@@ -656,6 +656,7 @@ Some unmodified transitive dependencies use MPL-2.0. They retain that license; s
 | [cargo: proc-macro-error-attr3](https://crates.io/crates/proc-macro-error-attr3/3.1.1) | 3.1.1 | MIT OR Apache-2.0 |
 | [cargo: proc-macro-error3](https://crates.io/crates/proc-macro-error3/3.1.1) | 3.1.1 | MIT OR Apache-2.0 |
 | [cargo: proc-macro2](https://crates.io/crates/proc-macro2/1.0.107) | 1.0.107 | MIT OR Apache-2.0 |
+| [cargo: pulldown-cmark](https://crates.io/crates/pulldown-cmark/0.13.6) | 0.13.6 | MIT |
 | [cargo: quick-xml](https://crates.io/crates/quick-xml/0.42.0) | 0.42.0 | MIT |
 | [cargo: quinn](https://crates.io/crates/quinn/0.11.12) | 0.11.12 | MIT OR Apache-2.0 |
 | [cargo: quinn-proto](https://crates.io/crates/quinn-proto/0.11.19) | 0.11.19 | MIT OR Apache-2.0 |
@@ -798,7 +799,7 @@ Some unmodified transitive dependencies use MPL-2.0. They retain that license; s
 | [cargo: zip](https://crates.io/crates/zip/9.0.5) | 9.0.5 | MIT |
 | [cargo: zlib-rs](https://crates.io/crates/zlib-rs/0.6.8) | 0.6.8 | Zlib |
 | [cargo: zmij](https://crates.io/crates/zmij/1.0.23) | 1.0.23 | MIT |
-| [cargo: zstd](https://crates.io/crates/zstd/0.13.3) | 0.13.3 | MIT |
-| [cargo: zstd-safe](https://crates.io/crates/zstd-safe/7.3.0) | 7.3.0 | BSD-3-Clause |
+| [cargo: zstd](https://crates.io/crates/zstd/0.13.4) | 0.13.4 | BSD-3-Clause |
+| [cargo: zstd-safe](https://crates.io/crates/zstd-safe/7.4.0) | 7.4.0 | BSD-3-Clause |
 | [cargo: zstd-sys](https://crates.io/crates/zstd-sys/2.1.2+zstd.1.5.7) | 2.1.2+zstd.1.5.7 | BSD-3-Clause |
-| [cargo: pulldown-cmark](https://crates.io/crates/pulldown-cmark/0.13.6) | 0.13.6 | MIT |
+| [cargo: cpufeatures](https://crates.io/crates/cpufeatures/0.3.1) | 0.3.1 | MIT OR Apache-2.0 |

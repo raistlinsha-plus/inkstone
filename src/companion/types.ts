@@ -40,7 +40,13 @@ export interface Pending {
   receipt: { spaceId: string; docId: string };
   characterId: CharacterId;
 }
+export type SourceStatus = "current" | "changed" | "unavailable";
+export interface CompanionRecall {
+  recent: ExperienceCard | null;
+  statuses: Record<string, SourceStatus>;
+}
 export interface Snapshot extends Context {
+  recallEnabled?: boolean;
   timezone: string;
   settings: CompanionSettings;
   events: number;

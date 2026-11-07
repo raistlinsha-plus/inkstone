@@ -355,8 +355,25 @@ export function installV07Fixture() {
         persist();
         return clone(c);
       }
+      if (command === "assistant_save_running_draft") {
+        const active = c.turns.find((t) => t.id === c.activeLeafId);
+        const candidate = active?.candidates.find(
+          (a) => a.id === active.selectedCandidateId,
+        );
+        if (
+          c.archived ||
+          candidate?.requestId !== args.requestId ||
+          candidate.status !== "generating"
+        )
+          return false;
+        c.draft = args.draft;
+        c.revision++;
+        c.updatedAt = now();
+        persist();
+        return true;
+      }
       if (command === "assistant_ask") {
-        c.draft = "";
+        if (!args.regenerateTurnId) c.draft = "";
         const t = args.regenerateTurnId
           ? c.turns.find((t) => t.id === args.regenerateTurnId)
           : {

@@ -201,6 +201,12 @@ pub struct ChatEvent {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatResponse {
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub external_sources: Vec<crate::assistant_sources::ExternalSource>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trace: Option<crate::assistant_sources::Trace>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub memory: Option<crate::assistant::memory::Usage>,
     pub finish_reason: String,
     pub text: String,
     pub sources: Vec<SearchResult>,

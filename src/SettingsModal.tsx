@@ -32,10 +32,12 @@ export default function SettingsModal({
   value,
   onClose,
   onSave,
+  onWebSearch,
 }: {
   value: Settings;
   onClose: () => void;
   onSave: (settings: Settings) => void;
+  onWebSearch?: () => void;
 }) {
   const [form, setForm] = useState<Settings>(() => ({
     ...structuredClone(value),
@@ -186,6 +188,16 @@ export default function SettingsModal({
       <p className="muted">
         文件与索引保存在本机。按需要连接自己的 API，也可以使用本地服务。
       </p>
+      {onWebSearch && (
+        <button
+          type="button"
+          className="button small"
+          disabled={!!busy}
+          onClick={onWebSearch}
+        >
+          自动联网设置
+        </button>
+      )}
       <div
         className="settings-tabs"
         role="tablist"

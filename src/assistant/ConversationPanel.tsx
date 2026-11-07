@@ -4,18 +4,29 @@ import Answer from "../Answer";
 import ModalDialog from "../ModalDialog";
 import type { AnswerSnapshot } from "../answerContent";
 import type { SearchResult } from "../types";
+import { sourceKind } from "./sourceDisplay";
 import {
   branchTurns,
   selectedCandidate,
   type Candidate,
   type Conversation,
+  type ExternalSource,
+  type RetrievalTrace,
   type Turn,
 } from "./types";
+
+const preferenceLabels: Record<string, string> = {
+  structure: "回答结构",
+  length: "回答篇幅",
+  original_units: "资料单位",
+};
 
 export interface AnswerRecord {
   question: string;
   text: string;
   sources: SearchResult[];
+  externalSources?: ExternalSource[];
+  trace?: RetrievalTrace;
   snapshot: AnswerSnapshot | null;
   complete: boolean;
   rejectedCharts: number[];
@@ -34,6 +45,8 @@ export function answerRecord(
     question: turn.question,
     text: r?.text ?? "",
     sources: r?.sources ?? [],
+    externalSources: r?.externalSources,
+    trace: r?.trace,
     complete:
       candidate.status === "complete" &&
       ["stop", "no_evidence"].includes(r?.finishReason ?? ""),
@@ -76,6 +89,8 @@ export function ConversationTimeline({
   busy,
   live,
   onOpen,
+  onOpenExternal,
+  allowInsert = true,
   onCopy,
   onTransfer,
   onRetry,
@@ -90,6 +105,8 @@ export function ConversationTimeline({
   busy: boolean;
   live: AnswerRecord | null;
   onOpen: (source: SearchResult) => void;
+  onOpenExternal?: (source: ExternalSource) => void;
+  allowInsert?: boolean;
   onCopy: (answer: AnswerRecord) => void;
   onTransfer: (kind: "save" | "insert", answer: AnswerRecord) => void;
   onRetry: (turn: Turn) => void;
@@ -112,18 +129,25 @@ export function ConversationTimeline({
     <>
       <div className="assistant-turn-context">
         {record.snapshot?.scopeLabel}
-        <span>
-          {record.snapshot?.model || "未调用问答模型"}
-          {record.snapshot?.rerankStatus
-            ? ` · ${record.snapshot.rerankStatus}`
-            : ""}
-        </span>
+        <details className="assistant-model-details">
+          <summary>检索与模型</summary>
+          <p>{record.snapshot?.model || "未调用问答模型"}</p>
+          {record.snapshot?.retrievalMode && (
+            <p>实际检索 · {record.snapshot.retrievalMode}</p>
+          )}
+          {record.snapshot?.rerankStatus && (
+            <p>重排 · {record.snapshot.rerankStatus}</p>
+          )}
+        </details>
       </div>
       {record.text && (
         <Answer
           text={record.text}
           sources={record.sources}
-          onOpen={onOpen}
+          externalSources={record.externalSources}
+          onOpen={(source) =>
+            source.external ? onOpenExternal?.(source.external) : onOpen(source)
+          }
           pending={active || !record.complete}
           rejectedCharts={record.rejectedCharts}
           viewKey={key}
@@ -151,17 +175,34 @@ export function ConversationTimeline({
           <button disabled={active} onClick={() => onTransfer("save", record)}>
             保存为文档
           </button>
-          <button
-            disabled={active}
-            onClick={() => onTransfer("insert", record)}
-          >
-            插入正文
-          </button>
+          {allowInsert && (
+            <button
+              disabled={active}
+              onClick={() => onTransfer("insert", record)}
+            >
+              插入正文
+            </button>
+          )}
         </div>
       )}
-      {record.sources.length > 0 && (
+      {record.trace && (
         <details className="assistant-evidence">
-          <summary>本轮资料依据 · {record.sources.length}</summary>
+          <summary>本轮查阅</summary>
+          <small>{record.trace.route}</small>
+          {record.trace.steps.map((step, index) => (
+            <small key={index}>{step}</small>
+          ))}
+          {record.trace.unread.map((step, index) => (
+            <small key={`unread-${index}`}>未核验 · {step}</small>
+          ))}
+        </details>
+      )}
+      {record.sources.length + (record.externalSources?.length ?? 0) > 0 && (
+        <details className="assistant-evidence">
+          <summary>
+            本轮资料依据 ·{" "}
+            {record.sources.length + (record.externalSources?.length ?? 0)}
+          </summary>
           {record.sources.map((source, i) => (
             <button key={`${source.id}-${i}`} onClick={() => onOpen(source)}>
               <strong>
@@ -170,6 +211,18 @@ export function ConversationTimeline({
               <small>
                 第{source.startLine}–{source.endLine}行 · 本轮版本快照
               </small>
+            </button>
+          ))}
+          {record.externalSources?.map((source) => (
+            <button
+              type="button"
+              key={source.id}
+              onClick={() => onOpenExternal?.(source)}
+            >
+              <strong>
+                S{source.citation} · {sourceKind(source)} · {source.label}
+              </strong>
+              {source.capturedAt && <small>采集于 {source.capturedAt}</small>}
             </button>
           ))}
         </details>
@@ -210,6 +263,44 @@ export function ConversationTimeline({
                 answerRecord(conversation!, turn, candidate, root, mode),
                 candidate.id,
               )}
+            {candidate?.response?.memory && (
+              <details className="assistant-memory-details">
+                <summary>本轮上下文</summary>
+                <p>
+                  已应用 {candidate.response.memory.preferences.length}{" "}
+                  项表达偏好
+                  {candidate.response.memory.preferences.length > 0 && (
+                    <>
+                      {" "}
+                      ·{" "}
+                      {Array.from(
+                        new Set(
+                          candidate.response.memory.preferences.map((pref) =>
+                            pref.scope === "space" ? "当前空间" : "全部空间",
+                          ),
+                        ),
+                      ).join(" / ")}
+                    </>
+                  )}
+                </p>
+                {candidate.response.memory.preferences.length > 0 && (
+                  <ul>
+                    {candidate.response.memory.preferences.map((preference) => (
+                      <li key={preference.id}>
+                        {preferenceLabels[preference.key] ?? preference.key} ·{" "}
+                        {preference.scope === "space" ? "当前空间" : "全部空间"}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {candidate.response.memory.history && (
+                  <p>已发送 1 条历史问题背景。</p>
+                )}
+                {candidate.response.memory.notes.map((note) => (
+                  <p key={note}>{note}</p>
+                ))}
+              </details>
+            )}
             {candidate && (
               <div className="assistant-branches">
                 <span>

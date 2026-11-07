@@ -178,7 +178,8 @@ impl Drop for SnapshotGuard {
         }
     }
 }
-const FORMAT: u32 = 2;
+const FORMAT: u32 = 3;
+const STORES: [&str; 3] = ["assistant.sqlite3", "companion.sqlite3", "wiki.sqlite3"];
 const MAX_TOTAL: u64 = 2 * 1024 * 1024 * 1024;
 const MAX_FILE: u64 = 128 * 1024 * 1024;
 const MAX_FILES: usize = 50000;
@@ -257,6 +258,7 @@ fn manifest_warnings(manifest: &Manifest) -> Vec<String> {
     for (name, label) in [
         ("assistant.sqlite3", "知识会话历史和草稿"),
         ("companion.sqlite3", "角色进度、偏好和待处理经历"),
+        ("wiki.sqlite3", "知识 Wiki 页面、来源和审阅记录"),
     ] {
         if manifest.stores.iter().any(|s| s.path == name) {
             result.push(format!(
@@ -282,7 +284,7 @@ fn validate_name(name: &str) -> Result<(), String> {
         && !name.starts_with("library/projects/")
         && !name.starts_with("library/history/")
         && !name.starts_with("drafts/")
-        && !matches!(name, "assistant.sqlite3" | "companion.sqlite3")
+        && !STORES.contains(&name)
     {
         return Err("备份包含范围外的条目".into());
     }
@@ -368,12 +370,19 @@ fn catalog_check(path: &Path, schema: i64) -> Result<(), String> {
     }
     Ok(())
 }
+fn valid_store_schema(name: &str, schema: i64) -> bool {
+    match name {
+        "assistant.sqlite3" => (1..=crate::assistant::SCHEMA).contains(&schema),
+        "companion.sqlite3" | "wiki.sqlite3" => schema == 1,
+        _ => false,
+    }
+}
 fn auxiliary_check(path: &Path, schema: i64) -> Result<(), String> {
     let c = sql_read(path)?;
     let version: i64 = c
         .pragma_query_value(None, "user_version", |r| r.get(0))
         .map_err(err)?;
-    if version != schema || version != 1 {
+    if version != schema {
         return Err("角色或会话数据库版本不兼容".into());
     }
     let quick: String = c
@@ -396,7 +405,7 @@ fn auxiliary_check(path: &Path, schema: i64) -> Result<(), String> {
 }
 fn auxiliary_members(data: &Path) -> Result<BTreeSet<String>, String> {
     let mut found = BTreeSet::new();
-    for name in ["assistant.sqlite3", "companion.sqlite3"] {
+    for name in STORES {
         let path = data.join(name);
         match fs::symlink_metadata(&path) {
             Ok(m) if m.is_file() && !m.file_type().is_symlink() => {
@@ -543,24 +552,30 @@ fn create_backup_with_hook(
         let mut stores = vec![];
         for name in &auxiliary_names {
             let source = data.join(name);
-            auxiliary_check(&source, 1)?;
+            let store_schema: i64 = sql_read(&source)?
+                .pragma_query_value(None, "user_version", |row| row.get(0))
+                .map_err(err)?;
+            if !valid_store_schema(name, store_schema) {
+                return Err("角色或会话数据库版本不兼容".into());
+            }
+            auxiliary_check(&source, store_schema)?;
             let digest = catalog_digest(&source)?;
             let snapshot = stage.join(name);
             drop(private_file(&snapshot)?);
             sql_read(&source)?
                 .execute("VACUUM INTO ?1", [snapshot.to_string_lossy().as_ref()])
                 .map_err(err)?;
-            auxiliary_check(&snapshot, 1)?;
+            auxiliary_check(&snapshot, store_schema)?;
             if catalog_digest(&snapshot)? != digest {
                 return Err("会话或角色快照发生变化，请重试".into());
             }
             sources.push((name.clone(), snapshot));
             stores.push(StoreSnapshot {
                 path: name.clone(),
-                schema_version: 1,
+                schema_version: store_schema,
                 resource_version: env!("CARGO_PKG_VERSION").into(),
             });
-            auxiliary_digests.push((name.clone(), digest));
+            auxiliary_digests.push((name.clone(), store_schema, digest));
         }
         add_source(&mut sources, data, &data.join("library/projects"))?;
         add_source(&mut sources, data, &data.join("library/history"))?;
@@ -612,7 +627,11 @@ fn create_backup_with_hook(
             });
         }
         let manifest = Manifest {
-            format: FORMAT,
+            format: if auxiliary_names.contains("wiki.sqlite3") {
+                FORMAT
+            } else {
+                2
+            },
             app_version: env!("CARGO_PKG_VERSION").into(),
             created_at: now(),
             schema_version: schema,
@@ -654,8 +673,8 @@ fn create_backup_with_hook(
         if auxiliary_members(data)? != auxiliary_names {
             return Err("备份期间会话或角色数据库清单变化".into());
         }
-        for (name, digest) in &auxiliary_digests {
-            auxiliary_check(&data.join(name), 1)?;
+        for (name, store_schema, digest) in &auxiliary_digests {
+            auxiliary_check(&data.join(name), *store_schema)?;
             if catalog_digest(&data.join(name))? != *digest {
                 return Err("备份期间会话或角色资料发生变化，请重试".into());
             }
@@ -711,18 +730,16 @@ fn inspect(zip: &mut ZipArchive<File>, manifest: &Manifest) -> Result<(), String
     let mut store_paths = HashSet::new();
     for store in &manifest.stores {
         if manifest.format < 2
-            || !matches!(
-                store.path.as_str(),
-                "assistant.sqlite3" | "companion.sqlite3"
-            )
-            || store.schema_version != 1
+            || !STORES.contains(&store.path.as_str())
+            || (store.path == "wiki.sqlite3" && manifest.format < 3)
+            || !valid_store_schema(&store.path, store.schema_version)
             || !store_paths.insert(store.path.clone())
             || !known.contains_key(&store.path)
         {
             return Err("角色或会话备份声明无效".into());
         }
     }
-    for name in ["assistant.sqlite3", "companion.sqlite3"] {
+    for name in STORES {
         if known.contains_key(name) != store_paths.contains(name) {
             return Err("角色或会话备份清单不一致".into());
         }
@@ -797,6 +814,9 @@ fn restored_catalog_check(stage: &Path, m: &Manifest) -> Result<(), String> {
         }
         if store.path == "companion.sqlite3" {
             crate::companion::validate_snapshot(&path)?;
+        }
+        if store.path == "wiki.sqlite3" {
+            crate::wiki::validate_snapshot(&path)?;
         }
     }
     let c = sql_read(&stage.join("library/catalog.sqlite3"))?;

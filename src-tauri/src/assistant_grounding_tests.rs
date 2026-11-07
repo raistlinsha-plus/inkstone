@@ -1,6 +1,9 @@
 use super::*;
 fn response(sources: Vec<SearchResult>) -> ChatResponse {
     ChatResponse {
+        external_sources: vec![],
+        trace: None,
+        memory: None,
         finish_reason: "stop".into(),
         text: "OLD_MODEL_UNSUPPORTED_满意度100%".into(),
         sources,
