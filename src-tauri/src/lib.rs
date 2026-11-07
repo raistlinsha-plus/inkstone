@@ -2465,6 +2465,7 @@ pub fn run() {
             assistant_commands::assistant_create,
             assistant_commands::assistant_get,
             assistant_commands::assistant_update,
+            assistant_commands::assistant_save_running_draft,
             assistant_commands::assistant_delete,
             assistant_commands::assistant_export,
             assistant_commands::assistant_select_candidate,

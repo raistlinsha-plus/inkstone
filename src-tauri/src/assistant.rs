@@ -344,9 +344,7 @@ pub fn update(
         .map_err(err)?;
     }
     if let Some(draft) = draft {
-        if draft.chars().count() > 16000 {
-            return Err("问题草稿超过16000字限制".into());
-        }
+        validate_draft(&draft)?;
         tx.execute(
             "UPDATE conversations SET draft=? WHERE id=?",
             params![draft, id],
@@ -365,6 +363,39 @@ pub fn update(
     tx.commit().map_err(err)?;
     read(&c, workspace, id)
 }
+fn validate_draft(draft: &str) -> Result<(), String> {
+    if draft.chars().count() > 16000 {
+        return Err("问题草稿超过16000字限制".into());
+    }
+    Ok(())
+}
+
+pub fn save_running_draft(
+    data: &Path,
+    workspace: &str,
+    id: &str,
+    request: &str,
+    draft: &str,
+) -> Result<bool, String> {
+    validate_draft(draft)?;
+    let _permit = maintenance::mutation(data)?;
+    let c = open(data)?;
+    // A single statement orders this write with begin and finish. A late write
+    // cannot alter a finished candidate or a conversation in a different space.
+    let updated = c
+        .execute(
+            "UPDATE conversations SET draft=?1,revision=revision+1,updated_at=?2
+         WHERE id=?3 AND workspace_id=?4 AND archived=0 AND EXISTS (
+           SELECT 1 FROM turns t JOIN candidates a ON a.id=t.selected_candidate_id
+           WHERE t.conversation_id=conversations.id AND t.id=conversations.active_leaf_id
+             AND a.turn_id=t.id AND a.request_id=?5 AND a.status='generating' AND a.process_id=?6
+         )",
+            params![draft, now(), id, workspace, request, process_id()],
+        )
+        .map_err(err)?;
+    Ok(updated == 1)
+}
+
 fn bump(tx: &Transaction<'_>, id: &str) -> Result<(), String> {
     tx.execute(
         "UPDATE conversations SET revision=revision+1,updated_at=? WHERE id=?",
@@ -550,7 +581,17 @@ pub fn begin_with_mode(
         params![candidate_id, turn_id],
     )
     .map_err(err)?;
-    tx.execute("UPDATE conversations SET active_leaf_id=?,draft='',title=CASE WHEN title='新会话' THEN ? ELSE title END WHERE id=?",params![turn_id,question.chars().take(32).collect::<String>(),id]).map_err(err)?;
+    tx.execute(
+        "UPDATE conversations SET active_leaf_id=?,draft=CASE WHEN ? THEN draft ELSE '' END,
+         title=CASE WHEN title='新会话' THEN ? ELSE title END WHERE id=?",
+        params![
+            turn_id,
+            regenerate.is_some(),
+            question.chars().take(32).collect::<String>(),
+            id
+        ],
+    )
+    .map_err(err)?;
     bump(&tx, id)?;
     tx.commit().map_err(err)?;
     Ok(Started {

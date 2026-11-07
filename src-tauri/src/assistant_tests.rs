@@ -98,6 +98,43 @@ fn spaces_are_authorized_and_scope_draft_identity_survive_reopen() {
     .is_err());
 }
 #[test]
+fn running_draft_is_durable_and_cannot_follow_a_finished_or_foreign_request() {
+    let data = tempfile::tempdir().unwrap();
+    let path = data.path();
+    let conversation = make(path, "space-a");
+    let id = &conversation.id;
+    let request = "draft-running";
+    assert!(!save_running_draft(path, "space-a", id, request, "尚未接收").unwrap());
+    let started = begin(path, "space-a", id, 0, "首问", None, None, request).unwrap();
+    assert!(!save_running_draft(path, "space-b", id, request, "越界").unwrap());
+    assert!(!save_running_draft(path, "space-a", id, "different", "错误请求").unwrap());
+    assert!(save_running_draft(path, "space-a", id, request, "下一问草稿").unwrap());
+    let running = get(path, "space-a", id).unwrap();
+    assert_eq!(running.draft, "下一问草稿");
+    assert_eq!(running.revision, 2);
+
+    let stopped = finish(path, "space-a", &started, Err("已停止"), true).unwrap();
+    assert_eq!(stopped.draft, running.draft);
+    assert_eq!(stopped.turns[0].candidates[0].status, "stopped");
+    assert!(!save_running_draft(path, "space-a", id, request, "晚到草稿").unwrap());
+    let retry = begin(
+        path,
+        "space-a",
+        id,
+        stopped.revision,
+        "首问",
+        None,
+        Some(&started.turn_id),
+        "retry-draft",
+    )
+    .unwrap();
+    assert_eq!(get(path, "space-a", id).unwrap().draft, running.draft);
+    assert!(save_running_draft(path, "space-a", id, "retry-draft", "").unwrap());
+    let completed = finish(path, "space-a", &retry, Ok(&response("完成")), false).unwrap();
+    assert_eq!(completed.draft, "");
+}
+
+#[test]
 fn bounded_user_context_preserves_branches_but_never_replays_assistant_facts() {
     let data = tempfile::tempdir().unwrap();
     let c = make(data.path(), "space-a");
@@ -201,7 +238,7 @@ fn candidates_retry_and_draft_edit_are_independent() {
     assert_eq!(c.turns[0].candidates.len(), 2);
     assert_eq!(c.turns[0].candidates[0].requested_mode, "keyword");
     assert_eq!(c.turns[0].candidates[1].requested_mode, "rerank");
-    assert_eq!(c.draft, "");
+    assert_eq!(c.draft, "生成时编辑下一问");
     let selected = select(
         data.path(),
         "space-a",

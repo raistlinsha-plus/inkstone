@@ -291,23 +291,20 @@ export default function App() {
   const submittedQuestion = useRef<{
     id: string;
     text: string;
+    scope: string | null;
     cleared: boolean;
     retry: boolean;
   } | null>(null);
   function acceptQuestion(id: string) {
     const submitted = submittedQuestion.current;
-    if (
-      !submitted ||
-      submitted.id !== id ||
-      submitted.cleared ||
-      submitted.retry
-    )
-      return;
+    if (!submitted || submitted.id !== id || submitted.cleared) return;
     submitted.cleared = true;
     // Clear only the exact submitted value, after the backend has persisted it.
-    if (questionRef.current === submitted.text) {
+    if (!submitted.retry && questionRef.current === submitted.text) {
       questionRef.current = "";
       setQuestion("");
+    } else if (questionRef.current) {
+      assistant.saveDraft(submitted.scope, questionRef.current);
     }
   }
   const chatEventsReady = useRef<Promise<unknown>>(Promise.resolve());
@@ -688,8 +685,11 @@ export default function App() {
     const acceptedListener = listen<{ requestId: string }>(
       "assistant-accepted",
       (event) => {
-        if (event.payload.requestId === requestRef.current)
-          acceptQuestion(event.payload.requestId);
+        const { requestId } = event.payload;
+        if (requestId !== requestRef.current) return;
+        acceptQuestion(requestId);
+        if (stoppedRequest.current === requestId)
+          void invoke("cancel_chat", { requestId }).catch(fail);
       },
     );
     const sourceListener = listen<{
@@ -863,8 +863,10 @@ export default function App() {
         }
         if (importBusyRef.current)
           await invoke("cancel_import").catch(() => {});
-        if (chatInFlight.current && requestRef.current)
-          await invoke("cancel_chat", { requestId: requestRef.current });
+        if (chatInFlight.current && requestRef.current) {
+          stoppedRequest.current = requestRef.current;
+          await invoke("cancel_chat", { requestId: stoppedRequest.current });
+        }
         if (questionRef.current.trim())
           assistant.saveDraft(
             assistantScopeResolver.current(),
@@ -1953,6 +1955,7 @@ export default function App() {
     submittedQuestion.current = {
       id,
       text: prompt,
+      scope: frozenScope,
       cleared: false,
       retry: !!options?.retry,
     };
@@ -1981,16 +1984,18 @@ export default function App() {
       await chatEventsReady.current;
       if (stoppedRequest.current === id)
         throw Error("已停止生成，问题未发送。");
-      const next = await assistant.start(frozenScope, {
-        question: prompt,
-        parentTurnId: options?.retry
-          ? options.retry.parentTurnId
-          : branchParent,
-        regenerateTurnId: options?.retry?.id,
-        requestId: id,
-        semantic,
-        retrievalMode,
-      });
+      const next = await assistant.start(
+        frozenScope,
+        {
+          question: prompt,
+          parentTurnId: options?.retry ? options.retry.parentTurnId : branchParent,
+          regenerateTurnId: options?.retry?.id,
+          requestId: id,
+          semantic,
+          retrievalMode,
+        },
+        () => stoppedRequest.current === id,
+      );
       if (requestRef.current !== id || epoch !== workspaceEpoch.current) return;
       acceptQuestion(id);
       streamBuffer.current?.clear();
@@ -3202,7 +3207,7 @@ export default function App() {
                   <div>
                     <span>
                       {chatBusy && question.trim()
-                        ? "草稿将在本轮结束或退出前保存"
+                        ? "下一问草稿自动保存"
                         : assistant.conversation
                           ? "基于会话固定范围 · Enter发送 / Shift+Enter换行"
                           : "首次发送后固定资料范围 · Enter发送 / Shift+Enter换行"}

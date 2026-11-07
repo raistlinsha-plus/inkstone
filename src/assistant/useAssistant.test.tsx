@@ -236,7 +236,116 @@ test("deleting a conversation cancels its pending draft so it cannot resurrect o
   ).toBe(false);
 });
 
-test("drafts typed during generation use the finished revision and survive retryable write failure", async () => {
+test("stop during the initial draft save prevents a later model request", async () => {
+  const write = deferred<Conversation>();
+  let stopped = false;
+  api.invoke.mockImplementation(async (name: string) => {
+    if (name === "assistant_list") return [];
+    if (name === "assistant_create") return make();
+    if (name === "assistant_update") return write.promise;
+    throw Error(`unexpected ${name}`);
+  });
+  const h = await ready();
+  let run!: Promise<Conversation>;
+  act(() => {
+    h.result.current.saveDraft(null, "尚未发送");
+    run = h.result.current.start(
+      null,
+      {
+        question: "尚未发送",
+        requestId: "stop-before-send",
+        semantic: false,
+        retrievalMode: "keyword",
+      },
+      () => stopped,
+    );
+    void run.catch(() => {});
+  });
+  await waitFor(() =>
+    expect(api.invoke).toHaveBeenCalledWith("assistant_update", {
+      conversationId: "c1",
+      expectedRevision: 0,
+      draft: "尚未发送",
+    }),
+  );
+  stopped = true;
+  await act(async () => {
+    write.resolve({ ...make(), draft: "尚未发送", revision: 1 });
+    await expect(run).rejects.toThrow("问题未发送");
+  });
+  expect(h.result.current.conversation?.draft).toBe("尚未发送");
+  expect(api.invoke.mock.calls.some(([name]) => name === "assistant_ask")).toBe(
+    false,
+  );
+});
+
+test("the newest draft reaches storage before a held answer finishes", async () => {
+  const answer = deferred<Conversation>(),
+    firstWrite = deferred<boolean>();
+  let db = make();
+  api.invoke.mockImplementation(async (name: string, args: any) => {
+    if (name === "assistant_list") return [];
+    if (name === "assistant_create") return db;
+    if (name === "assistant_ask") {
+      db = { ...db, revision: db.revision + 1 };
+      return answer.promise;
+    }
+    if (name === "assistant_save_running_draft") {
+      expect(args.conversationId).toBe(db.id);
+      expect(args.requestId).toBe("held-answer");
+      if (args.draft === "初稿") await firstWrite.promise;
+      db = { ...db, draft: args.draft, revision: db.revision + 1 };
+      return true;
+    }
+    throw Error(`unexpected ${name}`);
+  });
+  const h = await ready();
+  await act(async () => {
+    await h.result.current.create(null);
+  });
+  let generation!: Promise<Conversation>;
+  act(() => {
+    generation = h.result.current.start(null, {
+      question: "首问",
+      requestId: "held-answer",
+      semantic: false,
+      retrievalMode: "keyword",
+    });
+  });
+  await waitFor(() => expect(db.revision).toBe(1));
+  vi.useFakeTimers();
+  act(() => h.result.current.saveDraft(null, "初稿"));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(600);
+  });
+  act(() => h.result.current.saveDraft(null, "改好的下一问"));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(600);
+  });
+  expect(
+    api.invoke.mock.calls.filter(
+      ([name]) => name === "assistant_save_running_draft",
+    ),
+  ).toHaveLength(1);
+  await act(async () => {
+    firstWrite.resolve(true);
+  });
+  expect(db.draft).toBe("改好的下一问");
+  expect(db.revision).toBe(3);
+  expect(h.result.current.conversation?.revision).toBe(0);
+
+  await act(async () => {
+    answer.resolve({ ...db, revision: 4 });
+    await generation;
+    await h.result.current.flushDraft();
+  });
+  expect(h.result.current.conversation?.draft).toBe("改好的下一问");
+  expect(
+    api.invoke.mock.calls.some(([name]) => name === "assistant_update"),
+  ).toBe(false);
+});
+
+test("draft flush waits for the finished revision and survives retryable write failure", async () => {
   let db = make(),
     finish!: (c: Conversation) => void,
     failOnce = true;

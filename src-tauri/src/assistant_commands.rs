@@ -90,6 +90,16 @@ pub fn assistant_update(
     )
 }
 #[tauri::command]
+pub fn assistant_save_running_draft(
+    state: State<'_, AppState>,
+    conversation_id: String,
+    request_id: String,
+    draft: String,
+) -> Result<bool, String> {
+    let (_, id) = context(&state)?;
+    assistant::save_running_draft(&state.data_dir, &id, &conversation_id, &request_id, &draft)
+}
+#[tauri::command]
 pub fn assistant_delete(
     state: State<'_, AppState>,
     conversation_id: String,

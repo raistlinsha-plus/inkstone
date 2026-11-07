@@ -2,6 +2,15 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Conversation, ConversationSummary, StartQuestion } from "./types";
 
+type Draft = { scope: string | null; text: string };
+type RunningQuestion = {
+  id: string;
+  conversationId: string;
+  scope: string | null;
+  epoch: number;
+  writes: Promise<boolean>;
+};
+
 /** Persistent assistant data; request ownership is scoped to the current workspace. */
 export function useAssistant(root: string | undefined) {
   const [conversation, setConversation] = useState<Conversation | null>(null),
@@ -15,7 +24,8 @@ export function useAssistant(root: string | undefined) {
     queue = useRef<Promise<unknown>>(Promise.resolve());
   rootRef.current = root;
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null),
-    pendingDraft = useRef<{ scope: string | null; text: string } | null>(null);
+    pendingDraft = useRef<Draft | null>(null);
+  const runningQuestion = useRef<RunningQuestion | null>(null);
   const install = useCallback((next: Conversation | null) => {
     current.current = next;
     setConversation(next);
@@ -158,19 +168,20 @@ export function useAssistant(root: string | undefined) {
   const flushDraft = useCallback(async () => {
     if (draftTimer.current) clearTimeout(draftTimer.current);
     draftTimer.current = null;
-    const draft = pendingDraft.current;
     if (!rootRef.current) return;
-    if (!draft) {
+    const epoch = generation.current;
+    if (!pendingDraft.current) {
       // Closing after stop must also wait for a candidate's durable finish,
       // even when the composer is empty.
       await queue.current.catch(() => {});
-      return;
+      if (epoch !== generation.current || !pendingDraft.current) return;
     }
-    const epoch = generation.current;
     try {
-      // One queue owns begin/finish and draft revisions. Read the revision only
-      // when this job runs, after any generating candidate has been installed.
+      // Read the latest pending value when this job runs. A draft may already
+      // have been written during generation while this job waited in the queue.
       await serial(async () => {
+        const draft = pendingDraft.current;
+        if (!draft) return;
         if (
           !current.current ||
           current.current.archived ||
@@ -193,9 +204,9 @@ export function useAssistant(root: string | undefined) {
           if (epoch !== generation.current) throw Error("空间已变化");
           install(next);
         }
+        if (pendingDraft.current === draft) pendingDraft.current = null;
       });
       if (epoch === generation.current) {
-        if (pendingDraft.current === draft) pendingDraft.current = null;
         setDraftError("");
         await list().catch((e) => setError(String(e)));
       }
@@ -205,20 +216,69 @@ export function useAssistant(root: string | undefined) {
       throw e;
     }
   }, [serial, install, list]);
+  const persistDebouncedDraft = useCallback(async () => {
+    const draft = pendingDraft.current;
+    const run = runningQuestion.current;
+    if (
+      !draft ||
+      !run ||
+      run.scope !== draft.scope ||
+      run.epoch !== generation.current
+    ) {
+      await flushDraft();
+      return;
+    }
+
+    const write = run.writes
+      .catch(() => {})
+      .then(async () => {
+        if (pendingDraft.current !== draft || run.epoch !== generation.current)
+          return false;
+        return invoke<boolean>("assistant_save_running_draft", {
+          conversationId: run.conversationId,
+          requestId: run.id,
+          draft: draft.text,
+        });
+      });
+    run.writes = write;
+    let saved: boolean;
+    try {
+      saved = await write;
+    } catch (e) {
+      if (run.epoch === generation.current && pendingDraft.current === draft)
+        setDraftError("问答草稿未保存：" + String(e));
+      return;
+    }
+    if (run.epoch !== generation.current || pendingDraft.current !== draft)
+      return;
+    if (saved) {
+      pendingDraft.current = null;
+      setDraftError("");
+    } else {
+      // Begin may not have accepted the request yet, or finish may have won
+      // the race. The normal queue will use the conversation's final revision.
+      await flushDraft();
+    }
+  }, [flushDraft]);
   const saveDraft = useCallback(
     (scope: string | null, text: string) => {
       pendingDraft.current = { scope, text };
       if (draftTimer.current) clearTimeout(draftTimer.current);
       draftTimer.current = setTimeout(() => {
-        void flushDraft().catch(() => {
+        draftTimer.current = null;
+        void persistDebouncedDraft().catch(() => {
           /* retained for explicit retry */
         });
       }, 600);
     },
-    [flushDraft],
+    [persistDebouncedDraft],
   );
   const start = useCallback(
-    async (scope: string | null, input: StartQuestion) => {
+    async (
+      scope: string | null,
+      input: StartQuestion,
+      isStopped?: () => boolean,
+    ) => {
       await flushDraft();
       if (
         !current.current ||
@@ -227,8 +287,17 @@ export function useAssistant(root: string | undefined) {
       )
         await create(scope);
       return serial(async () => {
+        if (isStopped?.()) throw Error("已停止生成，问题未发送。");
         const c = current.current!;
         const epoch = generation.current;
+        const run: RunningQuestion = {
+          id: input.requestId,
+          conversationId: c.id,
+          scope,
+          epoch,
+          writes: Promise.resolve(false),
+        };
+        runningQuestion.current = run;
         setError("");
         let next: Conversation;
         try {
@@ -257,6 +326,8 @@ export function useAssistant(root: string | undefined) {
             }
           }
           throw e;
+        } finally {
+          if (runningQuestion.current === run) runningQuestion.current = null;
         }
         if (epoch !== generation.current) throw Error("空间已变化");
         install(next);
