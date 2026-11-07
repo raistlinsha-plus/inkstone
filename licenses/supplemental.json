@@ -112,6 +112,55 @@
           "packageVersionEvidence": "published crate .cargo_vcs_info.json and Cargo.toml"
         }
       ]
+    },
+    {
+      "kind": "npm",
+      "name": "@rolldown/binding-darwin-arm64",
+      "version": "1.2.15",
+      "files": [
+        {
+          "file": "supplemental/npm/@rolldown__binding-darwin-arm64@1.2.15/LICENSE",
+          "url": "https://raw.githubusercontent.com/rolldown/rolldown/89d821ca07cf9ccd84dd92bd3f48af0f579ab21a/LICENSE",
+          "sha256": "23ecfff35a5a2e80d92142f75228912c3b1abc4b5a8337a821ff4397e2f9f734",
+          "upstreamRevision": "89d821ca07cf9ccd84dd92bd3f48af0f579ab21a",
+          "packageVersionEvidence": "https://github.com/rolldown/rolldown/tree/v1.2.15; https://registry.npmjs.org/@rolldown/binding-darwin-arm64/1.2.15"
+        }
+      ]
+    },
+    {
+      "kind": "cargo",
+      "name": "sqlite-vec",
+      "version": "0.1.9",
+      "files": [
+        {
+          "file": "supplemental/cargo/sqlite-vec@0.1.9/LICENSE-MIT",
+          "url": "https://raw.githubusercontent.com/asg017/sqlite-vec/e9f598abfa0c06b328d8fe5da9c3760cce74be10/LICENSE-MIT",
+          "sha256": "6ce72bbe12d975bd5286e5ab0a064c069693300c47bccbc57bec18485f1621ea",
+          "upstreamRevision": "e9f598abfa0c06b328d8fe5da9c3760cce74be10",
+          "packageVersionEvidence": "https://github.com/asg017/sqlite-vec/tree/v0.1.9; packaged Rust wrapper and build.rs compared byte-for-byte"
+        },
+        {
+          "file": "supplemental/cargo/sqlite-vec@0.1.9/LICENSE-APACHE",
+          "url": "https://raw.githubusercontent.com/asg017/sqlite-vec/e9f598abfa0c06b328d8fe5da9c3760cce74be10/LICENSE-APACHE",
+          "sha256": "a38070a94d4afd9cd710e3ce67bd1de78097cfe1784c1f0109ac95d3c196bfdc",
+          "upstreamRevision": "e9f598abfa0c06b328d8fe5da9c3760cce74be10",
+          "packageVersionEvidence": "https://github.com/asg017/sqlite-vec/tree/v0.1.9; packaged Rust wrapper and build.rs compared byte-for-byte"
+        }
+      ]
+    },
+    {
+      "kind": "cargo",
+      "name": "jieba-macros",
+      "version": "0.7.1",
+      "files": [
+        {
+          "file": "supplemental/cargo/jieba-macros@0.7.1/LICENSE",
+          "url": "https://raw.githubusercontent.com/messense/jieba-rs/c1a776ca7ece07cebe74ef7c4760ad948b65b612/LICENSE",
+          "sha256": "92257c8d1c7a059fa02720b34fce017574a990bed14cee8f565597f4fbfb1f13",
+          "upstreamRevision": "c1a776ca7ece07cebe74ef7c4760ad948b65b612",
+          "packageVersionEvidence": "https://github.com/messense/jieba-rs/tree/v0.7.4/jieba-macros; macro version and both src files compared"
+        }
+      ]
     }
   ]
 }
