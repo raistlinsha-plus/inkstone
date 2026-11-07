@@ -2,6 +2,8 @@
 
 2026-11-07；审查对象为 `v0.7.0-rc.4` 候选代码及本轮准备的传播材料。结论：**具备提交增量 PR、在目标提交托管检查通过后发布源码预览的基础；不具备宣称稳定 v0.7.0 或公开正式安装包的条件。** 本轮没有 push、创建远程 PR/标签/Release、修改仓库设置或发送推广帖子。
 
+以下远端状态是发布准备时点的审查快照，发布后的制品与检查状态以 [Releases](https://github.com/raistlinsha-plus/inkstone/releases) 和 [Actions](https://github.com/raistlinsha-plus/inkstone/actions) 为准。
+
 ## 远程与本地的实际差距
 
 只读查询 [现有仓库](https://github.com/raistlinsha-plus/inkstone)确认：公开 main 为 `8728003`，最新发布是 [v0.6.6 Source Preview](https://github.com/raistlinsha-plus/inkstone/releases/tag/v0.6.6)，属于 pre-release；本轮开始时本地 `c1c4626` 在其后有九个提交。已有受保护的 main、Issues 和六个相关 Topics；Homepage 为空、Discussions 关闭。查询时 Stars/forks 均为 0，源码包和校验和资产各有两次下载；下载次数不能当作独立用户数。没有读取私有 Traffic 或把不存在的数据填成零。

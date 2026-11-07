@@ -28,5 +28,5 @@
       "inkstone-v0.7.0-rc.4-source.tar.gz.sha256"
     ]
   },
-  "status": "prepared locally; no remote metadata or release changed"
+  "status": "release configuration template; actual publication state is in GitHub Releases"
 }
