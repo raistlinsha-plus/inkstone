@@ -1,68 +1,57 @@
 # Inkstone · 砚台
 
-**Local development candidate: v0.7.0-rc.4.** Persistent multi-turn conversations, candidate branches and source snapshots, expanded Q&A, opt-in pixel-ink companions, three-stage stories and local data controls are implemented. The current public source release remains v0.6.6. See [candidate delivery and limits](docs/DELIVERY-v0.7-rc4.md), [current product guide](docs/PRODUCT-v0.7.md), [4A architecture](docs/ARCHITECTURE-v0.7.md), [technology stack](docs/TECH-STACK-v0.7.md) and [current UX regression review](docs/REVIEW-v0.7-rc4.md). Artwork is static release-candidate art; multi-day natural use and native accessibility checks remain pending.
+**Write locally. Ask your notes. Check the sources.**
 
-A local Markdown workspace and evidence-based knowledge assistant for **macOS 13+ on Apple Silicon**. Bring your own compatible model API. Version **0.6.6** is the first public **source preview**.
+A Markdown workspace and evidence-based knowledge assistant for **macOS 13+ on Apple Silicon**. Bring your own compatible model API. Keep an optional ink companion beside your work.
 
-[中文说明](docs/README.zh-CN.md) · [Architecture](docs/PUBLIC-ARCHITECTURE.md) · [Release notes](docs/PUBLIC-RELEASE-v0.6.6.md) · [Known limits](docs/KNOWN-LIMITATIONS.md)
+[中文](docs/README.zh-CN.md) · [Start from source](docs/QUICKSTART.md) · [Roadmap](docs/ROADMAP.md) · [Releases](https://github.com/raistlinsha-plus/inkstone/releases) · [Feedback](https://github.com/raistlinsha-plus/inkstone/issues)
 
-![Inkstone Markdown workspace with a synthetic journal](docs/assets/v0.6.6/01-workspace.png)
+**v0.7.0-rc.4 · source-preview candidate.** See Releases for published artifacts. The interface uses Chinese labels. There is no signed/notarized installer yet.
 
-Screenshots use the isolated acceptance build and fictional content. They do not show private documents or a live model session. The interface currently uses Chinese labels.
+![Inkstone cited conversation using fictional reading-activity data](docs/assets/launch-v0.7/02-conversation.png)
 
-## Write, organize and ask
+*Current production UI with isolated synthetic data and simulated model responses. This screenshot demonstrates the interface, not a live-model quality result. No private documents or credentials are shown.*
 
-- **Document spaces:** collect copies from different local folders, compare source updates, preserve document identity, history and backups.
-- **Markdown editing:** switch between source and visual editing; JSON trees, Mermaid, mindmaps, calendars and constrained ECharts charts appear inside documents.
-- **Local retrieval:** BM25, hybrid vector retrieval and optional reranking, with explicit fallback status, current-source checks and citations.
-- **Rich answers:** Markdown and validated chart blocks, source navigation, and answer-to-document workflows.
+## What makes Inkstone useful?
 
-v0.6.6 keeps startup loading until workspace/session restoration finishes, adds retry and pane visibility preferences, and improves explicitly named document comparisons without letting relevance scores grant evidence. Heading-only snippets cannot serve as answer evidence.
+- **Documents you can keep.** Copy-import local Markdown/text, organize document spaces, preserve originals, and compare source updates explicitly. History, backups and recovery stay local.
+- **Answers you can inspect.** Continue scoped conversations, follow references back to source snapshots, branch questions and save a useful answer as a document. BM25, optional vectors and reranking work behind explicit evidence checks; missing facts can be refused.
+- **Rich content inside Markdown.** Edit JSON trees, Mermaid, mindmaps, calendars and constrained ECharts blocks in the document body, then switch back to source.
+- **A quieter companion.** Optionally enable Motuan, Yanzhou or Zhiwei. Confirm real work milestones to unlock fixed stories and stage artwork. Companions add no separate model call; current art is static release-candidate art.
 
-## Run from source
+![Markdown document and an inline chart](docs/assets/launch-v0.7/01-editor.png)
 
-Install Apple's command-line developer tools, Node **24.14.0**, npm **11.9.0** and Rust **1.99.1**. Verified toolchain versions are in `toolchain.json`.
+## Watch the workflow
+
+![Synthetic UI walkthrough: document, answer, source and missing-information follow-up](docs/assets/launch-v0.7/workflow.gif)
+
+The walkthrough uses fictional data and fixture responses, with no live model request. It shows the UI workflow, not measured response speed or guaranteed answer accuracy. [Larger MP4 and publishing materials](docs/launch/v0.7/README.md).
+
+## Try it from source
+
+You need Apple's command-line developer tools, Node **24.14.0**, npm **11.9.0**, and Rust **1.99.1**. See `toolchain.json`.
 
 ```sh
 npm ci --registry=https://registry.npmjs.org
-npm run verify
 npm run desktop
 ```
 
-Build a standalone local app:
+Start with the [fictional reading plan](examples/v0.7/阅读活动方案.md): compare 120 vs 80 participants, inspect the source, then ask about missing satisfaction data. [Quickstart](docs/QUICKSTART.md) explains importing, indexing, model setup and expected limits. Source installation downloads dependencies and compiles locally; first setup takes additional time.
 
-```sh
-npm run bundle
-```
+Editing and keyword search do not require model credentials. To generate answers or use vectors, configure your own compatible API and model in settings. Reranking uses a separately configured Cohere-compatible endpoint.
 
-Output: `src-tauri/target/release/bundle/macos/Inkstone.app`. This uses a local ad-hoc signature. Developer ID signing, notarization, cross-machine installation and Intel/Windows/Linux acceptance are incomplete; this release provides source rather than an unverified installer. The bundled app does not need Node or a development server to run. For daily local use, install only at `/Applications/Inkstone.app`; build outputs and acceptance apps are temporary. See [single-installation and data management](docs/LOCAL-INSTALLATION.md).
+Build an independent local app with `npm run bundle`. Use `/Applications/Inkstone.app` as the single daily installation and keep temporary build/test bundles separate. This is a locally ad-hoc signed build, not a notarized public installer. It runs without Node or a development server after building. [Installation/data boundaries](docs/LOCAL-INSTALLATION.md).
 
-To try the editor, create a document space and copy-import [the synthetic sample](examples/v0.6.6/首发体验.md). Existing files remain unchanged. Advanced external-directory mode edits originals directly and is separate from managed spaces.
+## Local data, explicit model requests
 
-## Connect your API
+Documents, history, indexes, conversations and companion state stay on your Mac. Model operations transmit selected text, questions, candidate snippets or evidence to **the provider you configure**, which may charge usage fees. Multi-turn generation can include limited earlier user questions and enabled presentation preferences. Keys use macOS Keychain. Keyword-only search makes no model request. No weights, hosted account or document server are bundled. [Security policy](SECURITY.md).
 
-Configure OpenAI-compatible embedding/chat endpoints and models in settings; reranking uses a separately configured Cohere-compatible endpoint. Remote endpoints require HTTPS, while loopback services can use HTTP. Keys use macOS Keychain. No model weights, hosted account or document server are bundled.
+## Candidate status
 
-Documents, catalog, history and indexes stay local. Model operations transmit selected chunks, questions/candidate snippets or evidence to the service you configure. Keyword-only retrieval makes no model request. [Security and data boundaries](SECURITY.md).
+Local integration tests and synthetic-browser checks are recorded in the [current readiness assessment](docs/GITHUB-READINESS-v0.7.md). They do not establish native accessibility, cross-machine installation or general RAG accuracy. Five natural usage days, final artwork, native IME/VoiceOver, third-party binary notices and macOS distribution acceptance remain gates before a stable release. PDF/OCR, cloud collaboration, arbitrary document-set Q&A and a floating desktop pet are not shipped. [Known limits](docs/KNOWN-LIMITATIONS.md).
 
-Default tests use synthetic data and do not access production keys or paid models. The explicit [quality evaluation](evals/v0.6.6/README.md) reports actual models, calls, failures, review and timing. Its small same-author corpus is not a general accuracy guarantee; abstract paraphrases can still be conservatively refused.
-
-## Structured content
-
-![Mermaid diagram inside the document](docs/assets/v0.6.6/02-mermaid.png)
-
-![Editable chart preserving a missing value](docs/assets/v0.6.6/03-chart.png)
-
-Graph/chart formats follow the application's data contracts. Chart presence, valid source IDs and numeric checks do not prove every generated fact. Confirm answers against the original sources.
-
-## Roadmap and contributing
-
-The local v0.7.0-rc.4 candidate implements persistent conversations and opt-in companions, growth, CG albums and stories. The [stable-version design](docs/design/v0.7-stable/README.md) describes the implemented stable document navigation and single-document permanent deletion, plus remaining release gates. Its separate prototype uses synthetic data. Natural multi-day use, final artwork review and native accessibility acceptance remain gates before a stable v0.7 release; see the [candidate delivery](docs/DELIVERY-v0.7-rc4.md).
-
-[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Limitations](docs/KNOWN-LIMITATIONS.md) · [Evaluation results](evals/v0.6.6/RESULTS.md)
-
-Use synthetic reproductions in issues. Never upload keys, passwords, your application data directory or an unredacted backup.
+Want to help? Try a workflow, report a small fictional reproduction, or independently review a retrieval case. [Contributing](CONTRIBUTING.md) · [Architecture](docs/ARCHITECTURE-v0.7.md) · [Technology](docs/TECH-STACK-v0.7.md). If this direction is useful to you, a star helps others find it.
 
 ## License
 
-Inkstone source is **Apache-2.0**. Third-party packages retain their licenses; see `LICENSE`, `NOTICE`, `THIRD_PARTY_NOTICES.md` and `licenses/`. Some unmodified transitive dependencies use MPL-2.0. Exact upstream versions and supplemental license provenance are recorded; standalone local text remains missing for 20 acquired packages, so binary redistribution review is incomplete. Source dependencies are fetched from their registries, not bundled as dependency executables in this preview.
+Inkstone source is **Apache-2.0**. Dependencies retain their licenses, including some unmodified MPL-2.0 packages; see `LICENSE`, `NOTICE`, `THIRD_PARTY_NOTICES.md` and `licenses/`. Twenty acquired packages still lack standalone local notice text, so binary redistribution review is incomplete. Artwork provenance and candidate status are recorded under `src/companion/assets/`.

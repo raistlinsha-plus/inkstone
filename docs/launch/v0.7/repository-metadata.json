@@ -1,0 +1,32 @@
+{
+  "repository": "raistlinsha-plus/inkstone",
+  "description": "Local Markdown workspace with cited multi-turn Q&A, rich blocks and optional ink companions for macOS. Bring your own model API.",
+  "topics": [
+    "markdown",
+    "knowledge-management",
+    "rag",
+    "retrieval-augmented-generation",
+    "local-first",
+    "macos",
+    "tauri",
+    "byok",
+    "mermaid",
+    "echarts",
+    "ai-assistant",
+    "ai-companion"
+  ],
+  "homepage": null,
+  "socialPreview": "docs/assets/launch-v0.7/social-preview.png",
+  "release": {
+    "tag": "v0.7.0-rc.4",
+    "title": "v0.7.0-rc.4 \u2014 Notes, cited conversations and optional ink companions",
+    "prerelease": true,
+    "makeLatest": false,
+    "body": "docs/launch/v0.7/RELEASE-NOTES.md",
+    "assets": [
+      "inkstone-v0.7.0-rc.4-source.tar.gz",
+      "inkstone-v0.7.0-rc.4-source.tar.gz.sha256"
+    ]
+  },
+  "status": "prepared locally; no remote metadata or release changed"
+}

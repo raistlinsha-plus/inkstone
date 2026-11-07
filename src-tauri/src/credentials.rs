@@ -225,12 +225,16 @@ mod tests {
         let reader = CredentialReader::new(Duration::from_secs(1), Duration::from_millis(40));
         let calls = Arc::new(AtomicUsize::new(0));
         let c = calls.clone();
+        let (release, resumed) = std::sync::mpsc::channel();
         let id = Identity::new("chat", "https://a.invalid/v1", false);
         let cancel = AtomicBool::new(false);
         let error = reader
             .read(id.clone(), &cancel, move || {
                 c.fetch_add(1, Ordering::SeqCst);
-                std::thread::sleep(Duration::from_millis(100));
+                // The native call stays blocked until the timeout/slot assertions finish.
+                resumed
+                    .recv()
+                    .expect("test releases the simulated native read");
                 Ok(Some("test-secret".into()))
             })
             .await
@@ -257,7 +261,24 @@ mod tests {
                 .unwrap_err(),
             PENDING
         );
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        let mut completion = reader
+            .state
+            .lock()
+            .unwrap()
+            .flight
+            .as_ref()
+            .unwrap()
+            .result
+            .subscribe();
+        release.send(()).unwrap();
+        // Await publication rather than assuming a blocking worker ran during a sleep.
+        tokio::time::timeout(
+            Duration::from_secs(10),
+            completion.wait_for(|value| value.is_some()),
+        )
+        .await
+        .expect("native result publication")
+        .expect("result sender remains alive");
         assert_eq!(
             reader
                 .read(id, &cancel, || panic!("must use late successful result"))

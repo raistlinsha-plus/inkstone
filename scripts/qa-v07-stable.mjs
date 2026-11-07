@@ -10,7 +10,7 @@ const { chromium } = require(
 );
 const url = process.env.INKSTONE_QA_URL || "http://127.0.0.1:1420/";
 assert(["127.0.0.1", "localhost"].includes(new URL(url).hostname));
-const out = resolve("artifacts/v0.7.0-rc.4-development/browser-stable");
+const out = resolve(process.env.INKSTONE_QA_OUT || "artifacts/v0.7.0-rc.4-development/browser-stable");
 await mkdir(out, { recursive: true });
 const browser = await chromium.launch({
   headless: true,
