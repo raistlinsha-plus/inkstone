@@ -1,4 +1,5 @@
 use crate::{assistant, files, library, models::*, workspace, AppState};
+use assistant::memory;
 use std::{path::Path, sync::atomic::Ordering};
 use tauri::{Emitter, State};
 
@@ -6,6 +7,63 @@ fn context(state: &AppState) -> Result<(Workspace, String), String> {
     let ws = workspace(state)?;
     let id = assistant::workspace_id(&state.data_dir, &ws);
     Ok((ws, id))
+}
+
+fn memory_context(state: &AppState, root: &str) -> Result<(Workspace, String), String> {
+    let (ws, id) = context(state)?;
+    if ws.root != Path::new(root) {
+        return Err("资料空间已切换，请重新打开记忆设置".into());
+    }
+    Ok((ws, id))
+}
+
+#[tauri::command]
+pub fn assistant_memory_settings(
+    state: State<'_, AppState>,
+    workspace_root: String,
+) -> Result<serde_json::Value, String> {
+    let (ws, id) = memory_context(&state, &workspace_root)?;
+    let (preferences, handled) = memory::preferences(&state.data_dir, &id)?;
+    let legacy = crate::companion::legacy_answer_preferences(&state.data_dir, &ws)?
+        .into_iter()
+        .filter(|p| !handled.contains(&p.id))
+        .collect::<Vec<_>>();
+    Ok(serde_json::json!({"preferences":preferences,"legacy":legacy}))
+}
+
+#[tauri::command]
+pub fn assistant_memory_update(
+    state: State<'_, AppState>,
+    workspace_root: String,
+    change: memory::Change,
+) -> Result<serde_json::Value, String> {
+    let (ws, id) = memory_context(&state, &workspace_root)?;
+    if let Some(legacy_id) = &change.legacy_id {
+        if !crate::companion::legacy_answer_preferences(&state.data_dir, &ws)?
+            .iter()
+            .any(|p| {
+                p.id == *legacy_id
+                    && p.scope == change.scope
+                    && memory::Key::legacy(&p.key) == Some(change.key)
+            })
+        {
+            return Err("旧偏好不在当前范围或已失效".into());
+        }
+    }
+    memory::update(&state.data_dir, &id, change)?;
+    assistant_memory_settings(state, workspace_root)
+}
+
+#[tauri::command]
+pub fn assistant_history_preview(
+    state: State<'_, AppState>,
+    workspace_root: String,
+    scope: Option<String>,
+    reference: memory::HistoryRef,
+) -> Result<memory::HistoryPreview, String> {
+    let (ws, id) = memory_context(&state, &workspace_root)?;
+    scope_label(&state, &ws, scope.as_deref())?;
+    memory::history(&state.data_dir, &id, scope.as_deref(), &reference)
 }
 fn scope_label(state: &AppState, ws: &Workspace, scope: Option<&str>) -> Result<String, String> {
     if let Some(scope) = scope {
@@ -146,9 +204,18 @@ pub async fn assistant_ask(
     expected_revision: i64,
     semantic: Option<bool>,
     retrieval_mode: Option<String>,
+    memory_options: Option<memory::Options>,
 ) -> Result<assistant::Conversation, String> {
     let _busy = crate::begin_chat(&state, &request_id)?;
     let (ws, id) = context(&state)?;
+    let options = memory_options.unwrap_or_default();
+    if let Some(reference) = &options.history {
+        if reference.digest.is_empty() {
+            return Err("请先预览历史问题".into());
+        }
+        let c = assistant::get(&state.data_dir, &id, &conversation_id)?;
+        memory::history(&state.data_dir, &id, c.scope.as_deref(), reference)?;
+    }
     let generation = state.workspace_generation.load(Ordering::SeqCst);
     let started = assistant::begin_with_mode(
         &state.data_dir,
@@ -176,6 +243,7 @@ pub async fn assistant_ask(
     let prepared = assistant::grounding::prepare(&state.data_dir, &ws, &started);
     let result = match prepared {
         Ok(prepared) if prepared.clarification.is_some() => Ok(ChatResponse {
+            memory: None,
             finish_reason: "no_evidence".into(),
             text: prepared.clarification.unwrap_or_default(),
             sources: vec![],
@@ -199,6 +267,10 @@ pub async fn assistant_ask(
                     semantic,
                     retrieval_mode,
                     prepared.gate.as_ref(),
+                    Some(memory::Run {
+                        workspace: id.clone(),
+                        options,
+                    }),
                 )
                 .await
             }

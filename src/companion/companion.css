@@ -91,8 +91,17 @@
 .companion-mini .companion-stage {
   font-size: 9px;
 }
-.companion-compact-actions { display: flex; gap: 8px; padding: 0 12px 8px; }
-.companion-compact-actions button { min-height: 28px; font-size: 11px; border: 1px solid #dce3d5; background: #fffefa; }
+.companion-compact-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 12px 8px;
+}
+.companion-compact-actions button {
+  min-height: 28px;
+  font-size: 11px;
+  border: 1px solid #dce3d5;
+  background: #fffefa;
+}
 .companion-links {
   display: flex;
   gap: 3px;
@@ -574,4 +583,30 @@
     width: 80px;
     height: 100px;
   }
+}
+
+.companion-recent {
+  display: flex;
+  align-items: flex-start;
+  text-align: left;
+  gap: 8px;
+  padding: 6px 8px;
+  min-width: 0;
+}
+.companion-recent svg {
+  flex: none;
+}
+.companion-recent span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.companion-recent strong {
+  overflow-wrap: anywhere;
+}
+.companion-journal-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 10px 0;
 }

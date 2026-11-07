@@ -1669,6 +1669,7 @@ async fn ask_question(
         semantic,
         retrieval_mode,
         None,
+        None,
     )
     .await
 }
@@ -1694,6 +1695,7 @@ async fn ask_pipeline(
     semantic: Option<bool>,
     retrieval_mode: Option<String>,
     followup_gate: Option<&assistant::grounding::FollowupGate>,
+    memory: Option<assistant::memory::Run>,
 ) -> Result<ChatResponse, String> {
     let generation = state.workspace_generation.load(Ordering::SeqCst);
     let config = settings(&state)?.chat;
@@ -1720,15 +1722,6 @@ async fn ask_pipeline(
     let actual_mode = found.retrieval_mode.clone();
     let rerank_status = found.rerank_status.clone();
     let context_workspace = workspace(&state)?;
-    let (prompt_question, preference_warning) =
-        match companion::format_preferences(&state.data_dir, &context_workspace) {
-            Ok(value) if !value.is_empty() => (format!("{prompt_question}\n\n{value}"), None),
-            Ok(_) => (prompt_question.to_string(), None),
-            Err(_) => (
-                prompt_question.to_string(),
-                Some("角色表达偏好暂不可用，本轮按默认格式回答。".to_string()),
-            ),
-        };
     let sources = retrieval::generation_context(
         &context_workspace,
         &found.results,
@@ -1738,7 +1731,7 @@ async fn ask_pipeline(
         scope.is_some(),
     );
     if sources.is_empty() {
-        return Ok(ChatResponse{finish_reason:"no_evidence".into(),text:"当前资料中没有找到足够直接、可引用的证据。请检查资料范围、更新索引，或换一个更具体的问题；可能相关的候选未被当作答案依据。".into(),sources,warning:found.warning,retrieval_mode:actual_mode,rerank_status,model:String::new(),scope,chart_warnings:vec![],rejected_charts:vec![]});
+        return Ok(ChatResponse{ memory: None,finish_reason:"no_evidence".into(),text:"当前资料中没有找到足够直接、可引用的证据。请检查资料范围、更新索引，或换一个更具体的问题；可能相关的候选未被当作答案依据。".into(),sources,warning:found.warning,retrieval_mode:actual_mode,rerank_status,model:String::new(),scope,chart_warnings:vec![],rejected_charts:vec![]});
     }
     let key = read_key(&state, "chat", &config.base_url, &state.cancel_chat).await?;
     if state.cancel_chat.load(Ordering::SeqCst) {
@@ -1751,6 +1744,7 @@ async fn ask_pipeline(
     }
     if !current {
         return Ok(ChatResponse {
+            memory: None,
             finish_reason: "source_changed".into(),
             text: "所用资料已更新或移除，尚未发送过期内容。请重新提问以使用最新原文。".into(),
             sources: vec![],
@@ -1778,11 +1772,29 @@ async fn ask_pipeline(
             detail: "正在依据已保存且版本校验通过的资料生成回答".into(),
         },
     );
+    let mut question_for_model = prompt_question.to_string();
+    let usage = memory.map(|run| {
+        let available = config.context_chars.saturating_sub(
+            prompt_question.chars().count()
+                + providers::ANSWER_SYSTEM.chars().count()
+                + providers::chat_source_text(&sources).chars().count()
+                + 100,
+        );
+        let (block, usage) = assistant::memory::compose(
+            &state.data_dir,
+            &run.workspace,
+            scope.as_deref(),
+            &run.options,
+            available,
+        );
+        question_for_model.push_str(&block);
+        usage
+    });
     let mut output = providers::chat(
         &state.client,
         &config,
         key.as_deref(),
-        &prompt_question,
+        &question_for_model,
         &sources,
         &state.cancel_chat,
         Some(app),
@@ -1799,15 +1811,11 @@ async fn ask_pipeline(
         }
     }
     if !current {
-        return Ok(ChatResponse { finish_reason: "source_changed".into(), text: "生成期间所用资料发生变化或已被移除，已撤回过期答案和引用。请重新提问以核对最新原文。".into(), sources: vec![], warning: Some("原文已变化，请勿使用生成期间显示的旧内容。".into()), retrieval_mode:actual_mode, rerank_status, model:config.model.clone(), scope,chart_warnings:vec![],rejected_charts:vec![] });
+        return Ok(ChatResponse { memory: None, finish_reason: "source_changed".into(), text: "生成期间所用资料发生变化或已被移除，已撤回过期答案和引用。请重新提问以核对最新原文。".into(), sources: vec![], warning: Some("原文已变化，请勿使用生成期间显示的旧内容。".into()), retrieval_mode:actual_mode, rerank_status, model:config.model.clone(), scope,chart_warnings:vec![],rejected_charts:vec![] });
     }
     let output = output?;
     let chart_audit = answer_validation::audit_charts(&output.text, &sources);
-    let mut warnings = found
-        .warning
-        .into_iter()
-        .chain(preference_warning)
-        .collect::<Vec<_>>();
+    let mut warnings = found.warning.into_iter().collect::<Vec<_>>();
     if output.finish_reason == "cancelled" {
         warnings.push("已停止，保留的内容尚未完成，请核对后再使用。".into());
     } else if output.finish_reason == "length" {
@@ -1819,6 +1827,7 @@ async fn ask_pipeline(
         ));
     }
     Ok(ChatResponse {
+        memory: usage,
         finish_reason: output.finish_reason.clone(),
         retrieval_mode: actual_mode,
         rerank_status,
@@ -2470,8 +2479,14 @@ pub fn run() {
             assistant_commands::assistant_export,
             assistant_commands::assistant_select_candidate,
             assistant_commands::assistant_ask,
+            assistant_commands::assistant_memory_settings,
+            assistant_commands::assistant_memory_update,
+            assistant_commands::assistant_history_preview,
             companion_commands::companion_state,
             companion_commands::companion_settings,
+            companion_commands::companion_recall,
+            companion_commands::companion_recall_source,
+            companion_commands::companion_recall_setting,
             companion_commands::companion_preview,
             companion_commands::companion_confirm,
             companion_commands::companion_story,

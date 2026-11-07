@@ -502,3 +502,118 @@
     min-height: 44px;
   }
 }
+
+.assistant-history-row {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+.assistant-history-row > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.assistant-history-row > .text-button {
+  flex: none;
+  width: auto;
+}
+.answer-preference-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.answer-preference-row > p,
+.answer-preference-actions {
+  grid-column: 1 / -1;
+  overflow-wrap: anywhere;
+}
+.answer-preference-actions,
+.assistant-first-use {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.answer-preference-enabled,
+.assistant-skip-preference {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.assistant-background-chip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.assistant-background-chip p,
+.assistant-background-chip small {
+  grid-column: 1 / -1;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.assistant-background-chip p {
+  max-height: 6rem;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+.assistant-memory-details {
+  margin: 6px 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.assistant-memory-details p {
+  margin: 4px 0;
+}
+.assistant-first-use {
+  justify-content: center;
+  margin: 10px 0;
+}
+.assistant-first-use small {
+  flex-basis: 100%;
+}
+.welcome-first-use {
+  margin: 22px 0;
+}
+.welcome-first-use summary {
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+}
+.welcome-first-use summary svg {
+  vertical-align: -3px;
+  margin: 0 4px 0 6px;
+}
+.library-browser > .welcome-first-use {
+  margin: 0 0 22px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.welcome-first-use ol {
+  padding-left: 25px;
+  margin: 0;
+}
+.welcome-first-use li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.welcome-first-use li > div {
+  display: inline-block;
+  vertical-align: middle;
+  width: min(65%, 420px);
+  padding-right: 12px;
+}
+.welcome-first-use li p {
+  margin: 3px 0;
+  font-size: 13px;
+}
+.welcome-first-use li span {
+  margin-left: 8px;
+  font-size: 11px;
+}

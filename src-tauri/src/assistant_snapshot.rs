@@ -7,7 +7,7 @@ pub fn validate_snapshot(path: &Path) -> Result<(), String> {
     let version: i64 = c
         .pragma_query_value(None, "user_version", |r| r.get(0))
         .map_err(err)?;
-    if version != SCHEMA {
+    if !(1..=SCHEMA).contains(&version) {
         return Err("会话备份schema不兼容".into());
     }
     let quick: String = c
@@ -98,6 +98,9 @@ pub fn validate_snapshot(path: &Path) -> Result<(), String> {
                     {
                         return Err("会话回答快照无效".into());
                     }
+                    if let Some(usage) = response.get("memory") {
+                        memory::validate_usage(usage)?;
+                    }
                     let sources = response["sources"].as_array().ok_or("会话来源快照无效")?;
                     if sources.len() > 200 {
                         return Err("会话来源快照过大".into());
@@ -121,6 +124,9 @@ pub fn validate_snapshot(path: &Path) -> Result<(), String> {
                 }
             }
         }
+    }
+    if version >= 2 {
+        memory::validate_snapshot(&c)?;
     }
     Ok(())
 }

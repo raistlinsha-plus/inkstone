@@ -4,7 +4,7 @@ use tauri::State;
 fn current(state: &AppState, root: &str) -> Result<Workspace, String> {
     let ws = workspace(state)?;
     if ws.root != PathBuf::from(root) {
-        return Err("工作空间已变化，请重新预览本次完成".into());
+        return Err("工作空间已变化，请重新打开同伴功能".into());
     }
     Ok(ws)
 }
@@ -69,4 +69,39 @@ pub fn companion_reset(
 #[tauri::command]
 pub fn companion_export(state: State<'_, AppState>) -> Result<String, String> {
     companion::export(&state.data_dir)
+}
+
+#[tauri::command]
+pub async fn companion_recall(
+    state: State<'_, AppState>,
+    workspace_root: String,
+    journal: bool,
+) -> Result<companion::Recall, String> {
+    let ws = current(&state, &workspace_root)?;
+    let data = state.data_dir.clone();
+    tauri::async_runtime::spawn_blocking(move || companion::recall(&data, &ws, journal))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub fn companion_recall_setting(
+    state: State<'_, AppState>,
+    context: companion::Context,
+    enabled: bool,
+) -> Result<companion::Snapshot, String> {
+    companion::recall_setting(&state.data_dir, context, enabled)
+}
+
+#[tauri::command]
+pub async fn companion_recall_source(
+    state: State<'_, AppState>,
+    workspace_root: String,
+    card_id: String,
+) -> Result<String, String> {
+    let ws = current(&state, &workspace_root)?;
+    let data = state.data_dir.clone();
+    tauri::async_runtime::spawn_blocking(move || companion::recall_source(&data, &ws, &card_id))
+        .await
+        .map_err(|error| error.to_string())?
 }

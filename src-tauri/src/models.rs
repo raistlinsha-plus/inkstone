@@ -201,6 +201,8 @@ pub struct ChatEvent {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub memory: Option<crate::assistant::memory::Usage>,
     pub finish_reason: String,
     pub text: String,
     pub sources: Vec<SearchResult>,

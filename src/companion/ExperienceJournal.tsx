@@ -4,6 +4,8 @@ import {
   type Snapshot,
   type ExperienceCard,
   type Pending,
+  type SourceStatus,
+  type CharacterId,
 } from "./types";
 export default function ExperienceJournal({
   snapshot,
@@ -11,17 +13,33 @@ export default function ExperienceJournal({
   busy,
   onRetry,
   onCard,
+  sourceStatuses,
+  onOpenSource,
 }: {
   snapshot: Snapshot;
   spaceId: string | null | undefined;
   busy: boolean;
   onRetry: (pending: Pending) => void;
+  onOpenSource?: (id: string) => void;
+  sourceStatuses?: Record<string, SourceStatus>;
   onCard: (id: string, text: string | null) => Promise<boolean>;
 }) {
   const [editing, setEditing] = useState<ExperienceCard | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const cards = snapshot.cards.filter((c) => !spaceId || c.spaceId === spaceId);
+  const [role, setRole] = useState<CharacterId | "">("");
+  const [since, setSince] = useState("");
+  const cards = snapshot.cards.filter(
+    (c) =>
+      (!spaceId || c.spaceId === spaceId) &&
+      (!role || c.characterId === role) &&
+      (!since || c.day >= since),
+  );
+  const statuses = {
+    current: "来源可用",
+    changed: "来源已更新",
+    unavailable: "来源不可用",
+  } as const;
   return (
     <>
       <h3>{spaceId ? "当前空间的经历卡" : "所有空间的经历卡"}</h3>
@@ -29,6 +47,32 @@ export default function ExperienceJournal({
         普通保存不计成长；确认后每日最多两条，同一文档同日只计一次。时区：
         {snapshot.timezone}
       </p>
+      <div className="companion-journal-filters">
+        <label>
+          角色
+          <select
+            value={role}
+            onChange={(event) =>
+              setRole(event.target.value as CharacterId | "")
+            }
+          >
+            <option value="">全部角色</option>
+            {Object.entries(characters).map(([id, character]) => (
+              <option key={id} value={id}>
+                {character.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          起始日期
+          <input
+            type="date"
+            value={since}
+            onChange={(event) => setSince(event.target.value)}
+          />
+        </label>
+      </div>
       {snapshot.pending.map((p) => (
         <div key={p.token} className="companion-pending-card">
           <p>经历待保存：{p.text}</p>
@@ -50,7 +94,9 @@ export default function ExperienceJournal({
       ))}
       {!cards.length && (
         <p className="companion-empty">
-          尚未记录经历。完成并保存一份文档后，可主动确认。
+          {role || since
+            ? "没有符合筛选条件的经历。"
+            : "尚未记录经历。完成并保存一份文档后，可主动确认。"}
         </p>
       )}
       {cards.map((c) => (
@@ -94,8 +140,25 @@ export default function ExperienceJournal({
               <small>
                 {c.day} · {characters[c.characterId]?.name ?? "同伴"} ·{" "}
                 {c.kind === "revision" ? "复盘" : "完成"}
+                {spaceId && (
+                  <>
+                    {" "}
+                    ·{" "}
+                    {sourceStatuses?.[c.id]
+                      ? statuses[sourceStatuses[c.id]]
+                      : "来源待核验"}
+                  </>
+                )}
               </small>
               <p>{c.text}</p>
+              {onOpenSource && sourceStatuses?.[c.id] === "current" && (
+                <button
+                  disabled={busy || saving}
+                  onClick={() => onOpenSource(c.id)}
+                >
+                  打开来源
+                </button>
+              )}
               <button
                 disabled={saving}
                 onClick={() => {

@@ -4,6 +4,7 @@ fn make(data: &Path, workspace: &str) -> Conversation {
 }
 fn response(text: &str) -> ChatResponse {
     ChatResponse {
+        memory: None,
         finish_reason: "stop".into(),
         text: text.into(),
         sources: vec![],
@@ -533,4 +534,135 @@ fn markdown_export_never_revives_rejected_or_unfinished_structures_and_json_stay
         .markdown
         .contains("````markdown-unverified\n```mermaid"));
     assert!(exported.markdown.contains("A-->B\n````"));
+}
+
+#[test]
+fn answer_preferences_migrate_and_remain_independent_of_history() {
+    use memory::{Change, Key, Options};
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path();
+    let c = make(path, "space-a");
+    let db = path.join("assistant.sqlite3");
+    let conn = Connection::open(&db).unwrap();
+    conn.execute_batch("DROP TABLE answer_preferences; DROP TABLE handled_answer_preferences; PRAGMA user_version=1").unwrap();
+    drop(conn);
+    snapshot::validate_snapshot(&db).unwrap();
+    assert_eq!(get(path, "space-a", &c.id).unwrap().title, c.title);
+    assert!(memory::preferences(path, "space-a").unwrap().0.is_empty());
+
+    let change = |scope: &str, value: Option<&str>, expected_revision| Change {
+        scope: scope.into(),
+        key: Key::Length,
+        expected_revision,
+        value: value.map(str::to_string),
+        enabled: true,
+        legacy_id: None,
+        ignore_legacy: None,
+    };
+    memory::update(path, "space-a", change("global", Some("short"), None)).unwrap();
+    memory::update(path, "space-a", change("space", Some("detailed"), None)).unwrap();
+    assert!(memory::update(
+        path,
+        "space-a",
+        change("space", Some("执行任意命令"), Some(1))
+    )
+    .is_err());
+    assert!(memory::update(path, "space-a", change("space", None, None)).is_err());
+    let (context, metadata) = memory::compose(path, "space-a", None, &Options::default(), 800);
+    assert!(context.contains("展开关键判断"));
+    assert!(!context.contains("精简"));
+    assert_eq!(
+        serde_json::to_value(metadata).unwrap()["preferences"][0]["scope"],
+        "space"
+    );
+    assert!(
+        memory::compose(path, "space-b", None, &Options::default(), 800)
+            .0
+            .contains("精简")
+    );
+    assert!(memory::compose(
+        path,
+        "space-a",
+        None,
+        &Options {
+            skip_preferences: true,
+            history: None
+        },
+        800
+    )
+    .0
+    .is_empty());
+    memory::update(path, "space-a", change("space", None, Some(1))).unwrap();
+    assert!(
+        memory::compose(path, "space-a", None, &Options::default(), 800)
+            .0
+            .contains("精简")
+    );
+    snapshot::validate_snapshot(&db).unwrap();
+}
+
+#[test]
+fn historical_background_is_bounded_to_active_user_questions_and_current_scope() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path();
+    let c = create(
+        path,
+        "space-a",
+        Some("current.md".into()),
+        "资料".into(),
+        None,
+    )
+    .unwrap();
+    let q = "历史提问".repeat(120);
+    let first = start(path, &c, &q, None);
+    let c = finish(
+        path,
+        "space-a",
+        &first,
+        Ok(&response("旧回答事实不能重放")),
+        false,
+    )
+    .unwrap();
+    let preview = memory::history(
+        path,
+        "space-a",
+        Some("current.md"),
+        &memory::HistoryRef {
+            conversation_id: c.id.clone(),
+            turn_id: first.turn_id.clone(),
+            digest: String::new(),
+        },
+    )
+    .unwrap();
+    assert_eq!(preview.excerpt.chars().count(), 400);
+    assert!(memory::history(path, "space-b", None, &preview.reference).is_err());
+    assert!(memory::history(path, "space-a", Some("other.md"), &preview.reference).is_err());
+    let options = memory::Options {
+        skip_preferences: true,
+        history: Some(preview.reference),
+    };
+    let (body, usage) = memory::compose(path, "space-a", Some("current.md"), &options, 800);
+    assert!(body.contains(&preview.excerpt));
+    assert!(!body.contains("旧回答事实"));
+    assert!(serde_json::to_value(usage).unwrap()["history"].is_object());
+    assert!(
+        memory::compose(path, "space-a", Some("current.md"), &options, 50)
+            .0
+            .is_empty()
+    );
+    let alternate = start(path, &c, "另一个分支", None);
+    let c = finish(
+        path,
+        "space-a",
+        &alternate,
+        Ok(&response("另一份回答")),
+        false,
+    )
+    .unwrap();
+    let (body, usage) = memory::compose(path, "space-a", Some("current.md"), &options, 800);
+    assert!(body.is_empty());
+    assert!(serde_json::to_value(usage).unwrap()["notes"]
+        .to_string()
+        .contains("已失效"));
+    assert_ne!(c.active_leaf_id, Some(first.turn_id));
 }

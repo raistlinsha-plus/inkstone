@@ -41,7 +41,29 @@ export interface ConversationSummary {
   activeLeafId: string | null;
   turnCount: number;
 }
+export interface HistoryRef {
+  conversationId: string;
+  turnId: string;
+  digest: string;
+}
+export interface HistoryPreview {
+  reference: HistoryRef;
+  title: string;
+  excerpt: string;
+  createdAt: string;
+}
+export interface MemoryUsage {
+  preferences: {
+    id: string;
+    revision: number;
+    key: string;
+    scope: "global" | "space";
+  }[];
+  history: { conversationId: string; turnId: string } | null;
+  notes: string[];
+}
 export interface StartQuestion {
+  memoryOptions?: { skipPreferences: boolean; history: HistoryRef | null };
   question: string;
   parentTurnId?: string | null;
   regenerateTurnId?: string | null;

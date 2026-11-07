@@ -12,6 +12,12 @@ import {
   type Turn,
 } from "./types";
 
+const preferenceLabels: Record<string, string> = {
+  structure: "回答结构",
+  length: "回答篇幅",
+  original_units: "资料单位",
+};
+
 export interface AnswerRecord {
   question: string;
   text: string;
@@ -112,12 +118,16 @@ export function ConversationTimeline({
     <>
       <div className="assistant-turn-context">
         {record.snapshot?.scopeLabel}
-        <span>
-          {record.snapshot?.model || "未调用问答模型"}
-          {record.snapshot?.rerankStatus
-            ? ` · ${record.snapshot.rerankStatus}`
-            : ""}
-        </span>
+        <details className="assistant-model-details">
+          <summary>检索与模型</summary>
+          <p>{record.snapshot?.model || "未调用问答模型"}</p>
+          {record.snapshot?.retrievalMode && (
+            <p>实际检索 · {record.snapshot.retrievalMode}</p>
+          )}
+          {record.snapshot?.rerankStatus && (
+            <p>重排 · {record.snapshot.rerankStatus}</p>
+          )}
+        </details>
       </div>
       {record.text && (
         <Answer
@@ -210,6 +220,44 @@ export function ConversationTimeline({
                 answerRecord(conversation!, turn, candidate, root, mode),
                 candidate.id,
               )}
+            {candidate?.response?.memory && (
+              <details className="assistant-memory-details">
+                <summary>本轮上下文</summary>
+                <p>
+                  已应用 {candidate.response.memory.preferences.length}{" "}
+                  项表达偏好
+                  {candidate.response.memory.preferences.length > 0 && (
+                    <>
+                      {" "}
+                      ·{" "}
+                      {Array.from(
+                        new Set(
+                          candidate.response.memory.preferences.map((pref) =>
+                            pref.scope === "space" ? "当前空间" : "全部空间",
+                          ),
+                        ),
+                      ).join(" / ")}
+                    </>
+                  )}
+                </p>
+                {candidate.response.memory.preferences.length > 0 && (
+                  <ul>
+                    {candidate.response.memory.preferences.map((preference) => (
+                      <li key={preference.id}>
+                        {preferenceLabels[preference.key] ?? preference.key} ·{" "}
+                        {preference.scope === "space" ? "当前空间" : "全部空间"}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {candidate.response.memory.history && (
+                  <p>已发送 1 条历史问题背景。</p>
+                )}
+                {candidate.response.memory.notes.map((note) => (
+                  <p key={note}>{note}</p>
+                ))}
+              </details>
+            )}
             {candidate && (
               <div className="assistant-branches">
                 <span>

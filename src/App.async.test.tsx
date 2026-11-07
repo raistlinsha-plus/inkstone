@@ -307,6 +307,18 @@ async function openDocument(path: string) {
   );
 }
 
+test("the managed workbench offers the first-question guide on startup", async () => {
+  api.realLibrary = true;
+  render(<App />);
+  const guide = await screen.findByRole("region", { name: "开始使用" });
+  expect(within(guide).getByText("从资料到第一条回答")).toBeTruthy();
+  expect(
+    within(guide).getByRole("button", { name: "复制导入文档" }),
+  ).toBeTruthy();
+  fireEvent.click(within(guide).getByRole("button", { name: "打开问答" }));
+  expect(await screen.findByLabelText("向当前空间提问")).toBeTruthy();
+});
+
 test("startup remains loading until the space and its document list have both loaded", async () => {
   const opening = deferred<Workspace>();
   const listing = deferred<LibraryView>();

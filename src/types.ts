@@ -109,6 +109,7 @@ export interface SearchResponse {
   rerankStatus: string;
 }
 export interface ChatResponse {
+  memory?: import("./assistant/types").MemoryUsage;
   finishReason: string;
   text: string;
   sources: SearchResult[];

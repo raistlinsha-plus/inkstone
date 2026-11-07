@@ -2,6 +2,14 @@
 
 Historical versions below describe local development deliveries, not earlier public GitHub releases. v0.6.6 is the first public source preview. See [release notes](docs/PUBLIC-RELEASE-v0.6.6.md).
 
+## v0.7.1 · 2026-11-07 · 本机交付
+
+- 新增可操作的首次使用引导，连接复制导入、本地索引、聊天模型、首问、来源核对和回答保存。
+- 问答独立管理空间与全局的受控表达偏好，支持启停、删除、本轮停用及显式迁移旧偏好。
+- 可预览并选取一条历史用户问题作为本轮背景。在模型调用前验证空间、文档范围、活动分支和摘要。回答保留轻量的本轮上下文记录。
+- 同伴可选显示当前空间和角色近 30 天的已确认经历，手札支持角色、日期筛选和来源状态。会话库升级到 schema 2，兼容旧备份。
+- [本机交付与回归记录](docs/DELIVERY-v0.7.1.md)。
+
 ## v0.7.0-rc.5 · 2026-11-07 · Local stability candidate
 
 - Save the next question to its conversation while the current answer generates. Restore saved drafts after interruption and keep unsent text when regenerating an existing answer.

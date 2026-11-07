@@ -75,6 +75,8 @@ pub struct Snapshot {
     pub roles: BTreeMap<String, RoleProgress>,
     pub cards: Vec<Card>,
     pub preferences: Vec<Preference>,
+    #[serde(default)]
+    pub recall_enabled: bool,
     pub pending: Vec<Pending>,
     pub eligible: Option<u8>,
 }

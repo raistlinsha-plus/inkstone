@@ -368,12 +368,19 @@ fn catalog_check(path: &Path, schema: i64) -> Result<(), String> {
     }
     Ok(())
 }
+fn valid_store_schema(name: &str, schema: i64) -> bool {
+    match name {
+        "assistant.sqlite3" => (1..=crate::assistant::SCHEMA).contains(&schema),
+        "companion.sqlite3" => schema == 1,
+        _ => false,
+    }
+}
 fn auxiliary_check(path: &Path, schema: i64) -> Result<(), String> {
     let c = sql_read(path)?;
     let version: i64 = c
         .pragma_query_value(None, "user_version", |r| r.get(0))
         .map_err(err)?;
-    if version != schema || version != 1 {
+    if version != schema {
         return Err("角色或会话数据库版本不兼容".into());
     }
     let quick: String = c
@@ -543,24 +550,30 @@ fn create_backup_with_hook(
         let mut stores = vec![];
         for name in &auxiliary_names {
             let source = data.join(name);
-            auxiliary_check(&source, 1)?;
+            let store_schema: i64 = sql_read(&source)?
+                .pragma_query_value(None, "user_version", |row| row.get(0))
+                .map_err(err)?;
+            if !valid_store_schema(name, store_schema) {
+                return Err("角色或会话数据库版本不兼容".into());
+            }
+            auxiliary_check(&source, store_schema)?;
             let digest = catalog_digest(&source)?;
             let snapshot = stage.join(name);
             drop(private_file(&snapshot)?);
             sql_read(&source)?
                 .execute("VACUUM INTO ?1", [snapshot.to_string_lossy().as_ref()])
                 .map_err(err)?;
-            auxiliary_check(&snapshot, 1)?;
+            auxiliary_check(&snapshot, store_schema)?;
             if catalog_digest(&snapshot)? != digest {
                 return Err("会话或角色快照发生变化，请重试".into());
             }
             sources.push((name.clone(), snapshot));
             stores.push(StoreSnapshot {
                 path: name.clone(),
-                schema_version: 1,
+                schema_version: store_schema,
                 resource_version: env!("CARGO_PKG_VERSION").into(),
             });
-            auxiliary_digests.push((name.clone(), digest));
+            auxiliary_digests.push((name.clone(), store_schema, digest));
         }
         add_source(&mut sources, data, &data.join("library/projects"))?;
         add_source(&mut sources, data, &data.join("library/history"))?;
@@ -654,8 +667,8 @@ fn create_backup_with_hook(
         if auxiliary_members(data)? != auxiliary_names {
             return Err("备份期间会话或角色数据库清单变化".into());
         }
-        for (name, digest) in &auxiliary_digests {
-            auxiliary_check(&data.join(name), 1)?;
+        for (name, store_schema, digest) in &auxiliary_digests {
+            auxiliary_check(&data.join(name), *store_schema)?;
             if catalog_digest(&data.join(name))? != *digest {
                 return Err("备份期间会话或角色资料发生变化，请重试".into());
             }
@@ -715,7 +728,7 @@ fn inspect(zip: &mut ZipArchive<File>, manifest: &Manifest) -> Result<(), String
                 store.path.as_str(),
                 "assistant.sqlite3" | "companion.sqlite3"
             )
-            || store.schema_version != 1
+            || !valid_store_schema(&store.path, store.schema_version)
             || !store_paths.insert(store.path.clone())
             || !known.contains_key(&store.path)
         {

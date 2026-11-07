@@ -6,7 +6,7 @@ A Markdown workspace and evidence-based knowledge assistant for **macOS 13+ on A
 
 [中文](docs/README.zh-CN.md) · [Start from source](docs/QUICKSTART.md) · [Roadmap](docs/ROADMAP.md) · [Releases](https://github.com/raistlinsha-plus/inkstone/releases) · [Feedback](https://github.com/raistlinsha-plus/inkstone/issues)
 
-**v0.7.0-rc.5 · local stability candidate.** The public source preview is v0.7.0-rc.4. The interface uses Chinese labels. See the [candidate delivery record](docs/DELIVERY-v0.7-rc5.md) for macOS acceptance and distribution status.
+**v0.7.1 · local development delivery.** The public source preview is v0.7.0-rc.4. The interface uses Chinese labels. The update adds a first-use guide, answer preferences, explicitly selected history context and optional companion recall. [Local delivery record](docs/DELIVERY-v0.7.1.md).
 
 ![Inkstone cited conversation using fictional reading-activity data](docs/assets/launch-v0.7/02-conversation.png)
 

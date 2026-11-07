@@ -1,5 +1,7 @@
 # Inkstone v0.7 当前技术栈
 
+v0.7.1 沿用 React、Tauri、Rust、SQLite 与现有构建链。新增能力由现有 Rust IPC、SQLite 事务与 React 界面实现。详见 [v0.7.1 交付](DELIVERY-v0.7.1.md)。下文版本表记录 rc.4 基线。
+
 2026-11-07；**0.7.0-rc.4 candidate**。以下版本读取当前`package-lock.json`、`src-tauri/Cargo.lock`及`toolchain.json`，不是仅列出依赖声明的范围。[4A架构](ARCHITECTURE-v0.7.md) · [候选交付](DELIVERY-v0.7-rc4.md)。
 
 ## 1. 工具链与目标

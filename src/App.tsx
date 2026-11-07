@@ -32,6 +32,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Answer from "./Answer";
 import CompanionDock from "./companion/CompanionDock";
 import { useCompactWindow } from "./platform/useCompactWindow";
+import AnswerPreferences from "./assistant/AnswerPreferences";
 import { useAssistant } from "./assistant/useAssistant";
 import { createStreamBuffer } from "./assistant/streamBuffer";
 import {
@@ -44,6 +45,7 @@ import {
 import {
   selectedCandidate,
   type Conversation,
+  type HistoryPreview,
   type Turn,
 } from "./assistant/types";
 import {
@@ -61,10 +63,7 @@ import {
   type CalendarDocument,
   type DateRange,
 } from "./content/calendar";
-import Editor, {
-  type EditorMode,
-  type InsertionTarget,
-} from "./Editor";
+import Editor, { type EditorMode, type InsertionTarget } from "./Editor";
 import ImportDialog from "./ImportDialog";
 import { useDocumentPersistence } from "./document/useDocumentPersistence";
 import IndexStatusPanel from "./IndexStatusPanel";
@@ -84,7 +83,7 @@ import Sources from "./shell/Sources";
 import SpaceNavigation from "./shell/SpaceNavigation";
 import Titlebar from "./shell/Titlebar";
 import Tree from "./shell/Tree";
-import WelcomePage from "./shell/WelcomePage";
+import WelcomePage, { FirstUseGuide } from "./shell/WelcomePage";
 import StartupState from "./shell/StartupState";
 import type {
   IndexStatusSnapshot,
@@ -255,6 +254,13 @@ export default function App() {
   assistantScopeResolver.current = currentAssistantScope;
   const [branchParent, setBranchParent] = useState<string | null | undefined>();
   const [assistantRunError, setAssistantRunError] = useState("");
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [skipPreferences, setSkipPreferences] = useState(false);
+  const [historyBackground, setHistoryBackground] = useState<HistoryPreview>();
+  function clearMemorySelection() {
+    setHistoryBackground(undefined);
+    setSkipPreferences(false);
+  }
   useEffect(() => {
     setQuestion("");
     setBranchParent(undefined);
@@ -1883,6 +1889,7 @@ export default function App() {
     }
   }
   function activateConversation(next: Conversation) {
+    clearMemorySelection();
     setScope(next.scope ? "current" : "workspace");
     setAssistantScopeChanged(false);
     setQuestion(next.draft);
@@ -1894,6 +1901,7 @@ export default function App() {
     try {
       await assistant.flushDraft();
       assistant.clear();
+      clearMemorySelection();
       setQuestion("");
       setAsked("");
       setAnswer("");
@@ -1910,6 +1918,16 @@ export default function App() {
       : scope === "current"
         ? (document?.path ?? null)
         : null;
+  }
+  const assistantScope = currentAssistantScope();
+  useEffect(() => {
+    setHistoryBackground(undefined);
+    setSkipPreferences(false);
+  }, [workspace?.root, assistantScope]);
+  useEffect(() => setPreferencesOpen(false), [workspace?.root]);
+  function openAsk() {
+    setPanel("ask");
+    setPanelOpen(true);
   }
   async function ask(options?: { retry: Turn }) {
     const prompt = options?.retry.question ?? question;
@@ -1988,16 +2006,26 @@ export default function App() {
         frozenScope,
         {
           question: prompt,
-          parentTurnId: options?.retry ? options.retry.parentTurnId : branchParent,
+          parentTurnId: options?.retry
+            ? options.retry.parentTurnId
+            : branchParent,
           regenerateTurnId: options?.retry?.id,
           requestId: id,
           semantic,
           retrievalMode,
+          memoryOptions: {
+            skipPreferences,
+            history:
+              frozenScope === assistantScope
+                ? (historyBackground?.reference ?? null)
+                : null,
+          },
         },
         () => stoppedRequest.current === id,
       );
       if (requestRef.current !== id || epoch !== workspaceEpoch.current) return;
       acceptQuestion(id);
+      clearMemorySelection();
       streamBuffer.current?.clear();
       const turn =
           next.turns.find((t) => t.id === next.activeLeafId) ??
@@ -2024,8 +2052,10 @@ export default function App() {
       setChatStage("");
     } catch (e) {
       if (requestRef.current === id && epoch === workspaceEpoch.current) {
-        setAssistantRunError(displayError(e));
-        setAnswerWarning(displayError(e));
+        const message = displayError(e);
+        if (message.includes("历史问题已")) setHistoryBackground(undefined);
+        setAssistantRunError(message);
+        setAnswerWarning(message);
         setAnswerSnapshot({ ...snapshot, finishReason: "error" });
         setChatStage("");
       }
@@ -2331,6 +2361,34 @@ export default function App() {
     </>
   );
 
+  const firstUseGuide = (
+    <FirstUseGuide
+      hasWorkspace={!!workspace}
+      managed={!!workspace?.managedProjectId}
+      hasDocuments={
+        workspace?.managedProjectId
+          ? libraryView.documents.some(
+              (entry) =>
+                entry.projectId === workspace.managedProjectId &&
+                entry.status === "ready",
+            )
+          : !!workspace?.files.length
+      }
+      indexed={stats.documents > 0}
+      modelReady={!!settings?.chat.enabled}
+      embeddingReady={stats.embeddingReady}
+      rerankEnabled={!!settings?.rerank.enabled}
+      disabled={busy || booting}
+      onPrepare={
+        workspace?.managedProjectId
+          ? () => showImport()
+          : () => void chooseWorkspace()
+      }
+      onIndex={() => setIndexOpen(true)}
+      onSettings={() => setSettingsOpen(true)}
+      onAsk={openAsk}
+    />
+  );
   return (
     <div
       {...imeBoundary}
@@ -2645,7 +2703,7 @@ export default function App() {
             </div>
           ) : welcome || !document ? (
             workspace?.managedProjectId ? (
-              <LibraryBrowser {...libraryProps} />
+              <LibraryBrowser {...libraryProps} firstUseGuide={firstUseGuide} />
             ) : (
               <WelcomePage
                 workspace={workspace}
@@ -2654,6 +2712,7 @@ export default function App() {
                 onOpen={() => void chooseWorkspace()}
                 onNew={() => nameAction("new")}
                 onIndex={() => setIndexOpen(true)}
+                guide={firstUseGuide}
               />
             )
           ) : (
@@ -3054,11 +3113,24 @@ export default function App() {
                   onNew={() => void newConversation()}
                   onActivate={activateConversation}
                   onError={fail}
+                  onUseHistory={workspace ? setHistoryBackground : undefined}
+                  scope={assistantScope}
+                  onPreferences={
+                    workspace ? () => setPreferencesOpen(true) : undefined
+                  }
                 />
+                {preferencesOpen && workspace && (
+                  <AnswerPreferences
+                    workspaceRoot={workspace.root}
+                    onClose={() => setPreferencesOpen(false)}
+                  />
+                )}
                 <CompanionDock
                   workspace={workspace}
                   documentPath={document?.path ?? null}
                   documentHash={document?.hash ?? null}
+                  libraryRevision={libraryView}
+                  onOpenSource={openPath}
                   saved={!dirty}
                   activity={assistantActivity}
                   activityText={assistantActivityText}
@@ -3138,7 +3210,30 @@ export default function App() {
                         <i />
                       </div>
                       <h3>向自己的知识提问</h3>
-                      <p>从一个问题开始，逐轮核对资料与判断。</p>
+                      <p>
+                        从一个问题开始，打开回答的来源核对，再将回答保存到文档。
+                      </p>
+                      {!stats.documents && workspace && (
+                        <div className="assistant-first-use">
+                          {workspace.managedProjectId && (
+                            <button
+                              className="button small"
+                              onClick={() => showImport()}
+                            >
+                              复制导入资料
+                            </button>
+                          )}
+                          <button
+                            className="button small"
+                            onClick={() => setIndexOpen(true)}
+                          >
+                            建立本地索引
+                          </button>
+                          <small>
+                            关键词检索可以离线使用。生成回答需要聊天模型。
+                          </small>
+                        </div>
+                      )}
                       <div className="example-searches">
                         {[
                           "比较资料中的两种方案，列出相同点与差异",
@@ -3179,6 +3274,34 @@ export default function App() {
                     void ask();
                   }}
                 >
+                  {historyBackground && (
+                    <section
+                      className="assistant-background-chip"
+                      aria-label="本轮历史背景"
+                    >
+                      <strong>历史背景 · {historyBackground.title}</strong>
+                      <button
+                        type="button"
+                        disabled={chatBusy}
+                        onClick={() => setHistoryBackground(undefined)}
+                      >
+                        移除
+                      </button>
+                      <p>{historyBackground.excerpt}</p>
+                      <small>发送时会将以上背景一并发给聊天模型。</small>
+                    </section>
+                  )}
+                  <label className="assistant-skip-preference">
+                    <input
+                      type="checkbox"
+                      checked={skipPreferences}
+                      disabled={chatBusy}
+                      onChange={(event) =>
+                        setSkipPreferences(event.target.checked)
+                      }
+                    />
+                    本轮停用回答偏好
+                  </label>
                   <textarea
                     aria-label="向当前空间提问"
                     value={question}

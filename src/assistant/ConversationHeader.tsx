@@ -6,10 +6,16 @@ import {
   MessageSquarePlus,
   History,
   MoreHorizontal,
+  SlidersHorizontal,
   X,
 } from "lucide-react";
 import ModalDialog from "../ModalDialog";
-import type { Conversation, ConversationSummary } from "./types";
+import {
+  branchTurns,
+  type Conversation,
+  type ConversationSummary,
+  type HistoryPreview,
+} from "./types";
 import type { AssistantController } from "./useAssistant";
 export function ConversationHeader({
   controller,
@@ -19,6 +25,9 @@ export function ConversationHeader({
   onNew,
   onActivate,
   onError,
+  onUseHistory,
+  onPreferences,
+  scope = null,
 }: {
   controller: AssistantController;
   disabled: boolean;
@@ -27,15 +36,21 @@ export function ConversationHeader({
   onNew: () => void;
   onActivate: (c: Conversation) => void;
   onError: (e: unknown) => void;
+  onPreferences?: () => void;
+  onUseHistory?: (preview: HistoryPreview) => void;
+  scope?: string | null;
 }) {
   const [dialog, setDialog] = useState<
-      "history" | "rename" | "delete" | "export" | null
+      "history" | "background" | "rename" | "delete" | "export" | null
     >(null),
     [filter, setFilter] = useState(""),
     [archived, setArchived] = useState(false),
     [title, setTitle] = useState(""),
     [exportText, setExportText] = useState(""),
     [working, setWorking] = useState(false);
+  const [background, setBackground] = useState<Conversation>();
+  const [preview, setPreview] = useState<HistoryPreview>();
+  const [previewError, setPreviewError] = useState("");
   const [exportJson, setExportJson] = useState("");
   const [exportData, setExportData] = useState({ current: "", all: "" });
   const [exportScope, setExportScope] = useState("current");
@@ -89,6 +104,30 @@ export function ConversationHeader({
     }
   }
   const c = controller.conversation;
+  useEffect(() => {
+    setBackground(undefined);
+    setPreview(undefined);
+    setDialog(null);
+  }, [controller.workspaceKey]);
+  async function previewQuestion(turnId: string) {
+    if (!background) return;
+    setPreview(undefined);
+    setPreviewError("");
+    setWorking(true);
+    try {
+      setPreview(
+        await invoke<HistoryPreview>("assistant_history_preview", {
+          workspaceRoot: controller.workspaceKey,
+          scope,
+          reference: { conversationId: background.id, turnId, digest: "" },
+        }),
+      );
+    } catch (error) {
+      setPreviewError(String(error));
+    } finally {
+      setWorking(false);
+    }
+  }
   async function run(fn: () => Promise<void>) {
     setWorking(true);
     try {
@@ -140,6 +179,17 @@ export function ConversationHeader({
             {expanded ? <Minimize2 size={15} /> : <Expand size={15} />}
             <span>{expanded ? "返回编辑" : "展开问答"}</span>
           </button>
+          {onPreferences && (
+            <button
+              disabled={disabled}
+              onClick={onPreferences}
+              title="回答偏好"
+              aria-label="回答偏好"
+            >
+              <SlidersHorizontal size={15} />
+              <span>回答偏好</span>
+            </button>
+          )}
           {c && (
             <details className="assistant-manage">
               <summary aria-label="管理当前会话">
@@ -211,13 +261,15 @@ export function ConversationHeader({
       {dialog && (
         <ModalDialog
           label={
-            dialog === "history"
-              ? "问答会话"
-              : dialog === "rename"
-                ? "重命名会话"
-                : dialog === "delete"
-                  ? "删除问答会话"
-                  : "导出问答会话"
+            dialog === "background"
+              ? "选择历史背景"
+              : dialog === "history"
+                ? "问答会话"
+                : dialog === "rename"
+                  ? "重命名会话"
+                  : dialog === "delete"
+                    ? "删除问答会话"
+                    : "导出问答会话"
           }
           className="assistant-history-dialog"
           busy={working}
@@ -225,13 +277,15 @@ export function ConversationHeader({
         >
           <div className="modal-heading">
             <h2>
-              {dialog === "history"
-                ? "问答会话"
-                : dialog === "rename"
-                  ? "重命名会话"
-                  : dialog === "delete"
-                    ? "删除这段会话？"
-                    : "导出会话 Markdown"}
+              {dialog === "background"
+                ? "选择历史背景"
+                : dialog === "history"
+                  ? "问答会话"
+                  : dialog === "rename"
+                    ? "重命名会话"
+                    : dialog === "delete"
+                      ? "删除这段会话？"
+                      : "导出会话 Markdown"}
             </h2>
             <button
               aria-label="关闭会话管理"
@@ -263,27 +317,51 @@ export function ConversationHeader({
               </label>
               <div className="assistant-history-list">
                 {rows.map((row) => (
-                  <button
-                    key={row.id}
-                    disabled={working}
-                    aria-current={c?.id === row.id ? "true" : undefined}
-                    onClick={() =>
-                      void run(async () => {
-                        await controller.flushDraft();
-                        const next = await controller.load(row.id);
-                        if (next) {
-                          onActivate(next);
-                          setDialog(null);
-                        }
-                      })
-                    }
-                  >
-                    <strong>{row.title}</strong>
-                    <small>
-                      {row.scopeLabel} · {row.turnCount}轮
-                      {row.archived ? " · 已归档" : ""}
-                    </small>
-                  </button>
+                  <div className="assistant-history-row" key={row.id}>
+                    <button
+                      disabled={working}
+                      aria-current={c?.id === row.id ? "true" : undefined}
+                      onClick={() =>
+                        void run(async () => {
+                          await controller.flushDraft();
+                          const next = await controller.load(row.id);
+                          if (next) {
+                            onActivate(next);
+                            setDialog(null);
+                          }
+                        })
+                      }
+                    >
+                      <strong>{row.title}</strong>
+                      <small>
+                        {row.scopeLabel} · {row.turnCount}轮
+                        {row.archived ? " · 已归档" : ""}
+                      </small>
+                    </button>
+                    {onUseHistory &&
+                      !row.archived &&
+                      row.turnCount > 0 &&
+                      (!scope || row.scope === scope) && (
+                        <button
+                          className="text-button"
+                          disabled={working}
+                          onClick={() =>
+                            void run(async () => {
+                              setBackground(
+                                await invoke<Conversation>("assistant_get", {
+                                  conversationId: row.id,
+                                }),
+                              );
+                              setPreview(undefined);
+                              setPreviewError("");
+                              setDialog("background");
+                            })
+                          }
+                        >
+                          选作背景
+                        </button>
+                      )}
+                  </div>
                 ))}
                 {!searching && !searchError && !rows.length && (
                   <p className="muted">本空间暂无匹配会话。</p>
@@ -300,6 +378,58 @@ export function ConversationHeader({
                   {searchError ? "重试查找" : "加载更多会话"}
                 </button>
               )}
+            </>
+          )}
+          {dialog === "background" && background && (
+            <>
+              <p>{background.title} · 当前分支</p>
+              <label>
+                选择一个历史问题
+                <select
+                  disabled={working}
+                  value={preview?.reference.turnId ?? ""}
+                  onChange={(event) => void previewQuestion(event.target.value)}
+                >
+                  <option value="" disabled>
+                    请选择
+                  </option>
+                  {branchTurns(background)
+                    .slice(-200)
+                    .map((turn) => (
+                      <option key={turn.id} value={turn.id}>
+                        {turn.question.slice(0, 100)}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              {previewError && <p role="alert">{previewError}</p>}
+              {preview && (
+                <>
+                  <p className="muted">
+                    {new Date(preview.createdAt).toLocaleString()} · 最多 400 字
+                  </p>
+                  <blockquote>{preview.excerpt}</blockquote>
+                </>
+              )}
+              <p className="muted">
+                确认后，预览片段会随下一次问答发给聊天模型，作为理解问题的背景。检索仍使用你当前输入的问题。
+              </p>
+              <div className="modal-actions">
+                <button disabled={working} onClick={() => setDialog("history")}>
+                  返回会话
+                </button>
+                <button
+                  className="primary"
+                  disabled={working || !preview}
+                  onClick={() => {
+                    if (!preview) return;
+                    onUseHistory?.(preview);
+                    setDialog(null);
+                  }}
+                >
+                  加入本轮
+                </button>
+              </div>
             </>
           )}
           {dialog === "rename" && (

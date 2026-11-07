@@ -14,7 +14,9 @@ use std::{
 };
 use uuid::Uuid;
 
-const SCHEMA: i64 = 1;
+pub(crate) const SCHEMA: i64 = 2;
+#[path = "assistant_memory.rs"]
+pub mod memory;
 const MAX_TURNS: i64 = 200;
 const MAX_CANDIDATES: i64 = 12;
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -125,7 +127,7 @@ fn open(data: &Path) -> Result<Connection, String> {
             Err(e) => return Err(err(e)),
         }
     }
-    let c = Connection::open(path).map_err(err)?;
+    let mut c = Connection::open(path).map_err(err)?;
     c.busy_timeout(Duration::from_millis(1500)).map_err(err)?;
     let version: i64 = c
         .pragma_query_value(None, "user_version", |r| r.get(0))
@@ -147,7 +149,9 @@ fn open(data: &Path) -> Result<Connection, String> {
         )
         .map_err(err)?;
     }
-    c.pragma_update(None, "user_version", SCHEMA).map_err(err)?;
+    if version < SCHEMA {
+        memory::migrate(&mut c)?;
+    }
     c.execute("UPDATE candidates SET status='failed',error='上次生成未完成，请重新生成。' WHERE status='generating' AND process_id<>?",[process_id()]).map_err(err)?;
     Ok(c)
 }
