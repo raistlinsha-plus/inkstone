@@ -62,11 +62,11 @@ import {
   type DateRange,
 } from "./content/calendar";
 import Editor, {
-  type EditorHandle,
   type EditorMode,
   type InsertionTarget,
 } from "./Editor";
 import ImportDialog from "./ImportDialog";
+import { useDocumentPersistence } from "./document/useDocumentPersistence";
 import IndexStatusPanel from "./IndexStatusPanel";
 import { requestChunks } from "./knowledge/parserClient";
 import type { ImportTask, LibraryDocument, LibraryView } from "./library";
@@ -94,17 +94,6 @@ import type {
   Workspace,
 } from "./types";
 
-interface DocumentState {
-  path: string;
-  content: string;
-  saved: string;
-  hash: string;
-  revision: number;
-  conflict: boolean;
-  recovered: boolean;
-  missing?: boolean;
-  draftSaved?: string;
-}
 interface PendingMutation {
   epoch: number;
   projectId?: string;
@@ -158,11 +147,7 @@ export default function App() {
     [importPaths, setImportPaths] = useState<string[]>([]),
     [importTask, setImportTask] = useState<ImportTask | undefined>(),
     [importBusy, setImportBusy] = useState(false);
-  const editorHandle = useRef<EditorHandle>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
-  const [document, setDocument] = useState<DocumentState | null>(null);
-  const docRef = useRef(document);
-  docRef.current = document;
   const [mode, setMode] = useState<EditorMode>("visual");
   const [line, setLine] = useState<number>();
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -366,9 +351,6 @@ export default function App() {
   const [indexDirty, setIndexDirty] = useState(false);
   const [toast, setToast] = useState("");
   const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [draftError, setDraftError] = useState("");
-  const [saveWarning, setSaveWarning] = useState("");
   const [position, setPosition] = useState<{
     selection: number;
     scroll: number;
@@ -382,6 +364,32 @@ export default function App() {
   const importBusyRef = useRef(false);
   const workspaceRef = useRef<Workspace | null>(null);
   workspaceRef.current = workspace;
+  const {
+    document,
+    setDocument,
+    docRef,
+    editorHandle,
+    dirty,
+    saving,
+    draftError,
+    setDraftError,
+    saveWarning,
+    setSaveWarning,
+    saveInFlight,
+    syncEditor,
+    persistDraft,
+    saveCurrent,
+  } = useDocumentPersistence({
+    workspaceRef,
+    libraryMutationBusy,
+    formatError: displayError,
+    onError: fail,
+    onSaved(warning) {
+      setError("");
+      setIndexDirty(true);
+      if (!warning) void refreshStats();
+    },
+  });
   function rememberPosition(selection?: number, scroll?: number) {
     const ws = workspaceRef.current,
       current = docRef.current;
@@ -402,8 +410,6 @@ export default function App() {
       /* Session metadata is optional. */
     }
   }
-  const saveInFlight = useRef<Promise<void> | null>(null);
-  const draftInFlight = useRef<Promise<void>>(Promise.resolve());
   const [nameDialog, setNameDialog] = useState<
     "new" | "rename" | "copy" | null
   >(null);
@@ -419,7 +425,6 @@ export default function App() {
   const parser = useRef<Worker | null>(null);
   const parserError = useRef("");
   const parseSeq = useRef(0);
-  const dirty = document !== null && document.content !== document.saved;
   const busy =
     booting ||
     !!startupError ||
@@ -771,140 +776,9 @@ export default function App() {
     };
   }, [startupAttempt]);
 
-  function syncEditor() {
-    const doc = docRef.current;
-    const live = editorHandle.current?.getContent();
-    if (doc && live !== undefined && live !== doc.content) {
-      const next = { ...doc, content: live };
-      setSaveWarning("");
-      docRef.current = next;
-      setDocument(next);
-      return next;
-    }
-    return doc;
-  }
   useEffect(() => {
     rememberPosition();
   }, [mode]);
-  async function persistDraft() {
-    const doc = syncEditor(),
-      root = workspaceRef.current?.root;
-    if (!doc || (doc.content === doc.saved && !doc.conflict)) {
-      await draftInFlight.current.catch(() => {});
-      return;
-    }
-    const previous = draftInFlight.current.catch(() => {});
-    const pending = (async () => {
-      await previous;
-      try {
-        await invoke("save_draft", {
-          path: doc.path,
-          content: doc.content,
-          baseHash: doc.hash,
-          workspaceRoot: root,
-        });
-        if (workspaceRef.current?.root === root) {
-          setDocument((old) =>
-            old?.path === doc.path ? { ...old, draftSaved: doc.content } : old,
-          );
-          setDraftError("");
-        }
-      } catch (e) {
-        if (workspaceRef.current?.root === root) setDraftError(displayError(e));
-        throw e;
-      }
-    })();
-    draftInFlight.current = pending;
-    return pending;
-  }
-  async function saveCurrent(): Promise<void> {
-    if (saveInFlight.current) {
-      await saveInFlight.current;
-      return saveCurrent();
-    }
-    const doc = syncEditor();
-    if (!doc) return;
-    if (doc.conflict) {
-      await persistDraft();
-      throw new Error(
-        doc.missing
-          ? "原文件不可访问，可恢复原位置或另存为。"
-          : "文件有外部修改，请载入磁盘版本或另存为",
-      );
-    }
-    if (doc.content === doc.saved) return;
-    setSaving(true);
-    const promise = (async () => {
-      try {
-        try {
-          await persistDraft();
-        } catch {
-          /* A successful file save remains sufficient. */
-        }
-        const result = await invoke("save_file", {
-          path: doc.path,
-          content: doc.content,
-          expectedHash: doc.hash,
-          workspaceRoot: workspaceRef.current?.root,
-        });
-        const hash = result.hash;
-        setSaveWarning(result.warning ?? "");
-        setError("");
-        setDraftError("");
-        setDocument((old) =>
-          old?.path === doc.path
-            ? {
-                ...old,
-                saved: doc.content,
-                hash,
-                recovered: false,
-                conflict: false,
-                missing: false,
-                draftSaved: undefined,
-              }
-            : old,
-        );
-        if (docRef.current?.path === doc.path)
-          docRef.current = {
-            ...docRef.current,
-            saved: doc.content,
-            hash,
-            recovered: false,
-          };
-        setIndexDirty(true);
-        if (!result.warning) void refreshStats();
-      } catch (e) {
-        if (String(e).includes("CONFLICT:"))
-          setDocument((old) =>
-            old?.path === doc.path ? { ...old, conflict: true } : old,
-          );
-        throw e;
-      } finally {
-        setSaving(false);
-        saveInFlight.current = null;
-      }
-    })();
-    saveInFlight.current = promise;
-    return promise;
-  }
-  useEffect(() => {
-    if (libraryMutationBusy || !document || (!dirty && !document.conflict))
-      return;
-    const draft = setTimeout(() => void persistDraft().catch(fail), 400);
-    const auto = document.conflict
-      ? null
-      : setTimeout(() => void saveCurrent().catch(fail), 1400);
-    return () => {
-      clearTimeout(draft);
-      if (auto) clearTimeout(auto);
-    };
-  }, [
-    document?.content,
-    document?.path,
-    document?.conflict,
-    document?.saved,
-    libraryMutationBusy,
-  ]);
   useEffect(() => {
     if (!document || !native) return;
     const timer = setInterval(() => {
