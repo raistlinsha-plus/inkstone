@@ -1991,7 +1991,7 @@ a {
   z-index: 2;
 }
 .graph-preview iframe {
-  height: 420px;
+  height: var(--graph-height, 420px);
 }
 /* v0.3 document content blocks */
 .inkstone-node-view {
@@ -2077,8 +2077,8 @@ a {
   outline: 2px solid #6c8b75;
 }
 .inline-block-preview .graph-preview iframe {
-  height: 320px;
-  min-height: 300px;
+  height: var(--graph-height, 320px);
+  min-height: 180px;
 }
 .inline-block-preview .mindmap-preview {
   min-height: 0;
@@ -2135,8 +2135,20 @@ a {
 }
 .library-browser.compact {
   padding: 8px;
-  height: auto;
-  overflow: visible;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.library-browser.compact > .library-controls {
+  flex-shrink: 0;
+}
+.library-browser.compact > .library-documents {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
 }
 .library-heading {
   display: flex;
@@ -2189,7 +2201,154 @@ a {
 .library-shortcuts {
   display: flex;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+}
+.library-shortcuts button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 12px !important;
+  line-height: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.library-shortcuts button svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+.library-shortcuts button span {
+  display: block;
+}
+.library-pin-heading {
+  display: flex;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: #64725b;
+  font-size: 12px;
+  text-align: left;
+}
+.library-view-warning {
+  font-size: 12px;
+  padding: 8px;
+  color: #885d30;
+}
+.library-browser.compact .library-list-meta {
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.library-browser.compact .library-list-meta label {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 11px;
+}
+.library-browser.compact .library-list-meta select {
+  max-width: 112px;
+  min-width: 0;
+  padding: 3px 4px;
+  font-size: 12px;
+}
+.library-browser.compact .library-tabs button {
+  flex: 1;
+  min-width: 0;
+  padding-inline: 5px;
+}
+.trash-dialog {
+  width: 540px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100dvh - 48px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+.trash-dialog > .modal-heading {
+  padding: 20px 24px;
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.trash-dialog-body {
+  padding: 24px;
+  overflow: auto;
+  min-height: 0;
+  font-size: 13px;
+  line-height: 1.75;
+}
+.trash-dialog-body h3 {
+  font-size: 13px;
+  margin: 16px 0 8px;
+}
+.trash-dialog-body p {
+  margin: 8px 0 16px;
+}
+.trash-target {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid #dbe2d2;
+  border-radius: 8px;
+  background: #f5f7ef;
+}
+.trash-target svg {
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.trash-target strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.trash-target small {
+  display: block;
+  color: #627159;
+  margin-top: 4px;
+}
+.trash-facts {
+  color: #627159;
+  font-size: 12px;
+}
+.trash-danger-note {
+  color: #963f34;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #fff3ef;
+}
+.trash-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+.trash-confirm input {
+  min-height: 36px;
+  border: 1px solid #c4d0bb;
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: var(--paper);
+}
+.trash-error {
+  color: #963f34;
+}
+.trash-dialog > .modal-actions {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  margin: 0;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.trash-dialog > .modal-actions button { min-height: 36px; padding: 7px 12px; border: 1px solid #cbd5c2; border-radius: 6px; background: #fffefa; font-size: 13px; }
+.trash-dialog > .modal-actions button.danger { background: #9c3f36; border-color: #9c3f36; color: #fffefa; }
+.trash-dialog .danger-text {
+  color: #963f34;
 }
 .library-shortcuts button,
 .library-inline-form button {
@@ -3201,7 +3360,7 @@ a {
   min-height: 27px;
 }
 .answer-text .graph-preview iframe {
-  min-height: 260px;
+  min-height: 180px;
 }
 .answer-text .citation {
   color: #35502b;

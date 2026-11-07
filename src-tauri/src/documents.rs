@@ -48,6 +48,7 @@ pub struct SaveResult {
     pub warning: Option<String>,
 }
 pub fn read(ws: &Workspace, data_dir: &Path, path: &str) -> Result<FileData, String> {
+    library::lifecycle::require_ready(data_dir, ws, path)?;
     files::validate_relative(path)?;
     if !files::supported(Path::new(path)) {
         return Err("文件格式不支持".into());
@@ -91,6 +92,7 @@ pub fn draft(
         data_dir,
         crate::maintenance::is_managed_root(data_dir, &ws.root),
     )?;
+    library::lifecycle::require_ready(data_dir, ws, path)?;
     files::validate_relative(path)?;
     if !files::supported(Path::new(path)) {
         return Err("文件格式不支持".into());
@@ -118,6 +120,7 @@ pub fn save(
         data_dir,
         crate::maintenance::is_managed_root(data_dir, &ws.root),
     )?;
+    library::lifecycle::require_ready(data_dir, ws, path)?;
     if content.len() as u64 > files::MAX_FILE {
         return Err("内容超过 2 MB，无法保存".into());
     }
@@ -163,6 +166,7 @@ pub fn refresh_local(
     path: &str,
     content: &str,
 ) -> Result<(), String> {
+    library::lifecycle::require_ready(data_dir, ws, path)?;
     let mut conn = db::open_with_timeout(&ws.db, Duration::from_millis(80))?;
     if path.to_lowercase().ends_with(".json") {
         let selected: bool = conn

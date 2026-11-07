@@ -1,0 +1,74 @@
+{
+  "capturedDate": "2026-11-07",
+  "uiVersion": "0.7.0-rc.4",
+  "scope": "production React UI in fresh isolated browser; synthetic IPC and fictional sources; no live model",
+  "privacy": "no production data, keys, login state or raw user screenshots",
+  "art": "existing static candidate artwork; provenance in src/companion/assets/",
+  "walkthrough": "screenshot sequence, not live video or speed measurement",
+  "files": [
+    {
+      "path": "docs/assets/launch-v0.7/01-editor.png",
+      "bytes": 150616,
+      "sha256": "7b49700b5b718b0bd85e1aef08d39c9e705aaabe849ae299df14f5793bc22d11",
+      "dimensions": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "path": "docs/assets/launch-v0.7/02-conversation.png",
+      "bytes": 130667,
+      "sha256": "118bbaeda4cf48f27308cd63fff56f5ab237c29c087060aa32339b7bcbf0d37a",
+      "dimensions": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "path": "docs/assets/launch-v0.7/03-source.png",
+      "bytes": 178545,
+      "sha256": "25a1b50542cebe20829fc5b9c59e2deae67c8064e124a9f4b371f60de4cc5d91",
+      "dimensions": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "path": "docs/assets/launch-v0.7/04-missing-information.png",
+      "bytes": 131965,
+      "sha256": "cf2026ee02fd182df48568dc84c9f4cf1701c2e75ff6b97da7672c540f3ca0ea",
+      "dimensions": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "path": "docs/assets/launch-v0.7/05-companions.png",
+      "bytes": 284060,
+      "sha256": "2321b9c7e9af6042a272c2234bf7a55e1cd21bf944c0d65b77c2c9cf2c809c44",
+      "dimensions": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "path": "docs/assets/launch-v0.7/social-preview.png",
+      "bytes": 132685,
+      "sha256": "49dc6be05dff19618f548fd1ee2bb68542233b0391a1bf72ccffc2cabe020662",
+      "dimensions": [
+        1280,
+        640
+      ]
+    },
+    {
+      "path": "docs/assets/launch-v0.7/workflow.gif",
+      "bytes": 363396,
+      "sha256": "ea6829ae6dcf1c8939d50eb1277b8138b7312b4d4cf52ede869b6eac76a65375"
+    },
+    {
+      "path": "docs/assets/launch-v0.7/workflow.mp4",
+      "bytes": 136433,
+      "sha256": "db1369fc2417c9fd5a059f3cc088b418349e933d91674f09929b5e31ccfc4578"
+    }
+  ]
+}

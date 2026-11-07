@@ -1306,7 +1306,7 @@ mod tests {
                 .unwrap()
                 .pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0))
                 .unwrap(),
-            3
+            4
         );
         assert_eq!(
             fs::read_dir(base(data.path()).join("backups"))

@@ -30,7 +30,7 @@ const report = {
   sourceCommit: run("git", ["rev-parse", "HEAD"]).stdout.trim() || null,
   sourceDirty: !!run("git", ["status", "--porcelain"]).stdout.trim(),
   target: "aarch64-apple-darwin",
-  catalogSchema: 3,
+  catalogSchema: 4,
   indexSchema: 3,
   toolchain: JSON.parse(await readFile(join(root, "toolchain.json"), "utf8")),
   hashes,

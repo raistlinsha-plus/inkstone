@@ -6,7 +6,8 @@ import { createHash } from "node:crypto";
 import { JSDOM, VirtualConsole } from "jsdom";
 const dir = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(resolve(dir, "index.html"), "utf8");
-const code = readFileSync(resolve(dir, "prototype.js"), "utf8");
+const code = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+assert(code, "compiled prototype script missing");
 const assets = JSON.parse(
   readFileSync(resolve(dir, "asset-plan.json"), "utf8"),
 );
@@ -24,7 +25,7 @@ function environment(saved) {
   const errors = [];
   const console = new VirtualConsole();
   console.on("jsdomError", (e) => errors.push(e.message));
-  const dom = new JSDOM(html, {
+  const dom = new JSDOM(html.replace(/<script>[\s\S]*?<\/script>/, ""), {
     url: "http://prototype.test",
     runScripts: "outside-only",
     virtualConsole: console,
@@ -39,7 +40,7 @@ function environment(saved) {
   };
   if (saved) w.localStorage.setItem("inkstone-prototype-v07-v1", saved);
   w.eval(
-    code + "\nwindow.inspectPrototype=()=>JSON.parse(JSON.stringify(state));",
+    code.replace(/data:image\/png;base64,[A-Za-z0-9+/=]+/g, "data:image/png;base64,") + "\nwindow.inspectPrototype=()=>JSON.parse(JSON.stringify(state));",
   );
   const q = (s) => w.document.querySelector(s);
   return {
@@ -71,7 +72,8 @@ check(
   () => {
     const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
     const inlineStyle = html.match(/<style>([\s\S]*?)<\/style>/)?.[1];
-    assert.equal(inlineScript, "\n" + code + "\n");
+    assert.equal(inlineScript, code);
+    assert(!inlineScript.includes("EMBED_CONCEPT_ASSETS"));
     assert.equal(
       inlineStyle,
       "\n" + readFileSync(resolve(dir, "prototype.css"), "utf8") + "\n",
@@ -325,8 +327,58 @@ check("clearing companion resets role while work document remains", () => {
 check("no script exceptions during primary flows", () =>
   assert.deepEqual(e.errors, []),
 );
+const visual = environment();
+visual.click("art-direction");
+check("visual guide contains three real character concepts and a study CG", () => {
+  assert.equal(visual.q(".art-review").querySelectorAll("img.concept-art").length,3);
+  assert(visual.q(".art-scene img").src.startsWith("data:image/png;base64,"));
+  assert(visual.q(".art-rules").textContent.includes("6张主CG"));
+  assert.equal(visual.q(".art-review svg"),null);
+});
+visual.click("close");
+visual.click("choose");
+visual.click("apply-role");
+check("new initial pet selection defaults to Motuan", () => assert.equal(visual.inspect().character,"motuan"));
+visual.click("finish-story");
+visual.click("close");
+const beforeNudge=visual.inspect().ledger.length;
+visual.click("nudge");
+check("light companionship never adds growth",()=>assert.equal(visual.inspect().ledger.length,beforeNudge));
+check("all displayed art describes concept status",()=>{
+  assert([...visual.w.document.querySelectorAll("img.concept-art")].every(img=>img.alt.includes("非最终")));
+});
+visual.click("expand-chat");
+visual.input("#question","比较两种阅读活动的参与人数");
+visual.q("#ask-form").dispatchEvent(new visual.w.Event("submit",{bubbles:true,cancelable:true}));
+visual.click("followup");
+check("multi-turn follow-up keeps the earlier answer and refuses unsupported satisfaction",()=>{
+  assert.equal(visual.q("#knowledge-body").querySelectorAll(".chat-turn").length,2);
+  assert(visual.q("#knowledge-body").textContent.includes("没有满意度"));
+});
+const oldThread=visual.inspect().threads[0].id;
+visual.change("#chat-scope","current");
+check("scope change creates a separate thread without erasing history",()=>{
+  assert.equal(visual.inspect().threads.length,2);
+  assert.notEqual(visual.inspect().threadId,oldThread);
+  assert.equal(visual.inspect().threads.find(t=>t.id===oldThread).messages.length,2);
+});
+visual.click("demo-stream");visual.click("stop-chat");
+check("stopping a generated sample keeps an incomplete state",()=>assert.equal(visual.inspect().threads[0].messages[0].status,"stopped"));
+visual.input("#question","比较阅读活动人数");visual.q("#ask-form").dispatchEvent(new visual.w.Event("submit",{bubbles:true,cancelable:true}));
+visual.click("save-answer");visual.click("confirm-answer-save");
+check("answer save creates a synthetic work document without growth",()=>{
+  assert.equal(visual.inspect().savedAnswers.length,1);
+  assert.equal(visual.inspect().ledger.length,0);
+});
+visual.click("companion-entry");visual.click("clear-companion");visual.click("clear-confirm");
+check("clearing a companion preserves knowledge conversations and saved answers",()=>{
+  assert.equal(visual.inspect().savedAnswers.length,1);
+  assert.equal(visual.inspect().threads.length,2);
+  assert.equal(visual.inspect().character,null);
+});
+visual.dom.window.close();
 const result = {
-  date: "2026-10-30",
+  date: "2026-11-04",
   scope: "prototype-only; not production acceptance",
   checks,
   passed: true,

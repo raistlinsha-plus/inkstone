@@ -46,6 +46,10 @@ function tree(node: any): any {
     children: (node.children ?? []).map(tree),
   };
 }
+if (typeof ResizeObserver !== "undefined")
+  new ResizeObserver(() => {
+    if (map) map.svg.attr("height", Math.max(160, window.innerHeight - 4));
+  }).observe(host);
 let drag: { x: number; y: number; left: number; top: number } | null = null;
 host.addEventListener("pointerdown", (event) => {
   if (!map) {
@@ -160,11 +164,24 @@ window.addEventListener("message", async (event) => {
       const svg = host.querySelector("svg")!;
       svg.style.maxWidth = "none";
       svg.style.width = "100%";
-      svg.style.minHeight = "300px";
+      svg.style.minHeight = "140px";
+      const box = svg.viewBox?.baseVal;
+      if (box?.width > 0 && box.height > 0)
+        notify(
+          "size",
+          {
+            height: Math.ceil(
+              box.height *
+                Math.min(1, Math.max(120, window.innerWidth - 32) / box.width) +
+                40,
+            ),
+          },
+          job,
+        );
     } else if (data.kind === "mindmap") {
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.style.width = "100%";
-      svg.style.height = `${Math.max(300, window.innerHeight - 4)}px`;
+      svg.style.height = "calc(100vh - 4px)";
       svg.style.fontSize = "14px";
       host.append(svg);
       const localMap = Markmap.create(

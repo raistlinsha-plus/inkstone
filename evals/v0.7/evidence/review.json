@@ -1,0 +1,42 @@
+{
+  "date": "2026-11-05",
+  "report": "remote-multiturn-1793817415.json",
+  "sha256": "af89a1b309188f6ff1709e031a79cddf52d2aafdd68f634ba6da7ffc136f461c",
+  "reviewer": "implementation agent; not independent",
+  "result": "facts-and-citation-supported-in-two-generated-answers; third-turn-local-refusal",
+  "checks": [
+    {
+      "turn": 1,
+      "supported": [
+        "2026-11-10",
+        "东侧阅览室",
+        "120人",
+        "18岁以上",
+        "阅读室登记台",
+        "90分钟"
+      ],
+      "citation": "[1] maps to same current synthetic document"
+    },
+    {
+      "turn": 2,
+      "supported": [
+        "referent resolves to 青禾方案",
+        "120人"
+      ],
+      "citation": "[1] current source retained"
+    },
+    {
+      "turn": 3,
+      "supported": [
+        "budget absent; no answer invented"
+      ],
+      "modelCalled": false
+    }
+  ],
+  "limitations": [
+    "3 synthetic turns only, same-author and previously observed",
+    "no embedding/reranking quality validation",
+    "does not exercise native AppState, UI or Keychain in evaluator",
+    "billed cost and token totals unknown"
+  ]
+}

@@ -1,5 +1,6 @@
 "use strict";
 /* Offline interaction model, not a production companion implementation. */
+const conceptAssets = /* EMBED_CONCEPT_ASSETS */ {};
 const STORAGE = "inkstone-prototype-v07-v1";
 const $ = (s) => document.querySelector(s);
 const esc = (v) =>
@@ -14,7 +15,7 @@ const stages = ["初遇", "相识", "同行", "默契", "共著"];
 const roles = {
   yanzhou: {
     name: "砚舟",
-    type: "成年男性人型",
+    type: "成年男性 · 27岁",
     color: "#5c7460",
     accent: "#bd9b62",
     theme: "容纳未完成",
@@ -31,7 +32,7 @@ const roles = {
   },
   zhiwei: {
     name: "知微",
-    type: "成年女性人型",
+    type: "成年女性 · 25岁",
     color: "#73868a",
     accent: "#98ad80",
     theme: "表达自己的判断",
@@ -54,7 +55,7 @@ const roles = {
     theme: "珍惜留下的痕迹",
     object: "叶纹纸签",
     intro: "爱收集小纸签，也愿意陪你安静地读完一页。",
-    quote: "一枚纸签，被轻轻放在你的手边。",
+    quote: "这枚纸签……刚好留给你。",
     titles: ["纸页旁的小影子", "捡到一枚书签", "午后共读"],
     cg: ["捡到一枚书签", "午后共读"],
     choices: ["夹在这本手稿里", "收进共同的书签盒"],
@@ -210,7 +211,7 @@ try {
   const old = JSON.parse(localStorage.getItem(STORAGE));
   if (old?.version === 1) state = { ...state, ...old };
 } catch {}
-let selectedRole = state.character || "zhiwei",
+let selectedRole = state.character || "motuan",
   selectedMode = state.mode,
   panelTab = "growth",
   activeChapter = 0,
@@ -263,54 +264,24 @@ function eligible(id = state.character) {
   return null;
 }
 function art(id, stage = 0, scene = false) {
-  const r = roles[id],
-    t = stage === 0 ? "初遇" : stage === 1 ? "相识" : "同行";
-  let shape;
-  if (id === "motuan")
-    shape =
-      '<path d="M121 136 Q106 108 128 80 L126 47 L150 63 Q171 55 185 65 L205 45 L207 87 Q230 111 207 142 Z" fill="' +
-      r.color +
-      '"/><ellipse cx="166" cy="152" rx="54" ry="48" fill="' +
-      r.color +
-      '"/><path d="M204 171 Q253 185 248 133" fill="none" stroke="' +
-      r.color +
-      '" stroke-width="18" stroke-linecap="round"/><ellipse cx="144" cy="185" rx="14" ry="8" fill="#f4f3df"/><ellipse cx="185" cy="185" rx="14" ry="8" fill="#f4f3df"/><path d="M146 99h8m28 0h8" stroke="#dce2c2" stroke-width="3" stroke-linecap="round"/>' +
-      (stage > 0
-        ? '<path d="M163 125q11-15 16-2q-6 10-16 2" fill="#a5bb8e"/>'
-        : "") +
-      (stage > 1
-        ? '<path d="M161 140h20l-4 23-8 6-8-6z" fill="#e5d7b5"/>'
-        : "");
-  else
-    shape =
-      '<path d="M116 201 Q111 143 144 131 L185 131 Q218 144 216 201 Z" fill="' +
-      r.color +
-      '"/><path d="M146 132l17 44 20-44" fill="#eeeadc"/><path d="M139 67 Q163 43 190 70 L191 115 Q171 139 146 117 Z" fill="#d8c6aa"/><path d="M137 83 Q127 48 161 43 Q207 38 199 101 L188 75 Q165 80 146 67 L142 110Z" fill="' +
-      (id === "zhiwei" ? "#4d5149" : "#454d42") +
-      '"/><path d="M150 96h7m20 0h7" stroke="#6c695a" stroke-width="2" stroke-linecap="round"/><path d="M163 113q5 3 11-1" fill="none" stroke="#9d8871" stroke-width="1.5"/>' +
-      (id === "zhiwei"
-        ? '<path d="M192 73q13-14 18-1q-4 13-18 1" fill="' + r.accent + '"/>'
-        : '<path d="M193 153h7v22l-4-4-3 4z" fill="' + r.accent + '"/>') +
-      (stage > 0
-        ? '<path d="M116 167q31-11 65 21l-7 13h-51" fill="#8d9b7e"/><rect x="161" y="165" width="35" height="29" rx="2" fill="#c8bc99"/>'
-        : "") +
-      (stage > 1
-        ? '<path d="M119 139q11-13 23-7l-11 62-21-1" fill="#a6b28f"/>'
-        : "");
-  return (
-    '<svg viewBox="0 0 330 220" preserveAspectRatio="' +
-    (scene ? "xMidYMid meet" : "xMidYMid slice") +
-    '" role="img" aria-label="' +
-    r.name +
-    " " +
-    t +
-    '，仅构图示意"><rect width="330" height="220" fill="#e4e9da"/><path d="M20 25h85v122H20z" fill="#f3f4e4" stroke="#c5d0b7"/><path d="M62 25v122M20 87h85" stroke="#c5d0b7"/><path d="M225 50h83m-83 28h83m-83 28h83" stroke="#c5cfb7" stroke-width="3"/><path d="M232 48V29m12 19V20m13 28V30m13 18V26m17 22V22" stroke="#a6b394" stroke-width="9"/><path d="M1 201h329v19H1z" fill="#c8cbb3"/>' +
-    shape +
-    (scene
-      ? '<path d="M29 196l38-22 43 22-41 13z" fill="#f7f3dd" stroke="#b7b99e"/><path d="M66 178l2 29" stroke="#c9c8ae"/><path d="M267 194v-53m-24-2h48l-11-30h-28z" fill="#d5c697" stroke="#9eab8c"/><ellipse cx="269" cy="197" rx="16" ry="3" fill="#a6af96"/>'
-      : "") +
-    "</svg>"
-  );
+  const isScene = scene && id === "motuan";
+  const asset = conceptAssets[isScene ? "motuanScene" : id];
+  const label = roles[id].name + " · " + stages[stage] + " · " +
+    (isScene ? "书房CG概念，非最终阶段CG" : "像素水墨人物概念，非最终阶段立绘");
+  return asset ? '<img class="concept-art ' + (isScene ? 'scene-art' : 'character-art') +
+    '" src="' + asset + '" alt="' + esc(label) + '">' :
+    '<p class="asset-unavailable">概念资源暂不可用；解锁记录仍保留。</p>';
+}
+function artDirection() {
+  setDialog("像素入墨 · 角色设定", "美术概念评审 · 3张人物概念与1张书房场景；阶段成品仍待制作。",
+    '<div class="visual-brief"><div class="eyebrow">PIXEL SILHOUETTE / INK WASH</div><h3>像素勾轮廓，水墨留温度</h3><p>纸色与墨绿工作台保持清爽，角色保留颗粒和墨染。亲近感放在眼神、纸签和一句恰好的回应里。</p></div>' +
+    '<div class="role-grid art-review">' + Object.entries(roles).map(([id,r]) =>
+      '<section class="role-card"><div class="role-art">' + art(id) + '</div><div class="role-copy"><h3>' + r.name +
+      '</h3><p>' + r.type + '</p><p>' + r.intro + '</p></div></section>').join('') + '</div>' +
+    '<figure class="story-scene art-scene"><div>' + art('motuan',1,true) +
+    '</div><figcaption>墨团书房CG概念 · 同行场景方向；不代表两张最终CG均已制作。</figcaption></figure>' +
+    '<div class="art-rules"><h3>三阶段的可见变化</h3><p>初遇：墨色小影与空白纸签。相识：浅叶纹与递纸签。同行：书签盒、稳定座位与更放松的姿态。</p><p>本原型复用概念资源演示阶段交互；9张阶段立绘、6张主CG须独立签收。</p><h3>轻陪伴的尺度</h3><p>成年人物的微笑、害羞与温柔小反差；书猫的撒娇和小傲气。专注模式不额外说话，关闭不丢工作能力，轻互动不计成长。</p></div>',
+    '<button class="primary" data-action="close">回到工作</button>');
 }
 function toast(message) {
   $("#toast").textContent = message;
@@ -340,6 +311,7 @@ function closeDialog() {
   returnFocus?.focus();
 }
 function renderDoc() {
+  for(const d of state.savedAnswers||[])if(!docs.some(x=>x.id===d.id))docs.push({...d,heading:d.title,caption:"由问答保存 · 合成示例",html:'<h1>'+esc(d.title)+'</h1><pre class="markdown-preview">'+esc(d.markdown)+'</pre>'});
   const doc = docs.find((d) => d.id === state.activeDoc) || docs[0];
   $("#breadcrumb").innerHTML = "砚间书房 <span>›</span> " + esc(doc.title);
   $("#editor").innerHTML =
@@ -369,6 +341,7 @@ function renderDoc() {
     (state.saved ? "已保存" : "有未保存的演示修改") + " · 演示文档";
 }
 function renderList() {
+  $(".list-caption span").textContent=docs.length+" 篇";
   const q = $("#document-search").value.trim();
   $("#doc-list").innerHTML =
     docs
@@ -387,6 +360,10 @@ function renderList() {
 }
 function renderCompanion() {
   document.body.classList.toggle("reduced", state.reduced);
+  if(state.petMini && state.character && state.enabled) {
+    $("#companion").innerHTML='<div class="mini-pet">'+art(state.character)+'<span>'+roles[state.character].name+' · '+(state.answer==="error"?"问答未完成":"安静陪读")+'</span><button data-action="show-pet">展开同伴</button><button data-action="companion-entry">设置</button></div>';
+    return;
+  }
   if (!state.enabled) {
     $("#companion").innerHTML =
       '<div class="disabled-card"><span>陪伴已关闭 · 工作功能照常使用</span><button data-action="enable">开启</button></div>';
@@ -394,7 +371,7 @@ function renderCompanion() {
   }
   if (!state.character) {
     $("#companion").innerHTML =
-      '<div class="choose-intro"><div class="eyebrow">THE INKSTONE STUDY</div><h2>让书房，多一位同伴</h2><p>有人陪你慢慢想，也有人安静地守着这一页。选择你喜欢的相处方式。</p><button class="primary" data-action="choose">认识书房同伴</button><button data-action="disable">暂不开启</button></div>';
+      '<div class="choose-intro"><div class="intro-cat">' + art("motuan") + '</div><div class="eyebrow">THE INKSTONE STUDY</div><h2>让书房，多一位同伴</h2><p>有人陪你慢慢想，也有人安静地守着这一页。选择你喜欢的相处方式。</p><button class="primary" data-action="choose">认识书房同伴</button><button data-action="disable">暂不开启</button></div>';
     return;
   }
   const r = roles[state.character],
@@ -416,7 +393,7 @@ function renderCompanion() {
     stages[lv] +
     "</span></div><p>" +
     line +
-    '</p><button data-action="panel" data-tab="settings">形象与陪伴设置</button></div></div><div class="companion-links"><button data-action="panel" data-tab="experiences">共同经历</button><button data-action="panel" data-tab="stories">角色故事</button><button data-action="panel" data-tab="album">CG 相册</button></div>' +
+    '</p><button data-action="panel" data-tab="settings">形象与陪伴设置</button><button data-action="hide-pet">收起</button></div></div><div class="companion-links"><button data-action="panel" data-tab="experiences">共同经历</button><button data-action="panel" data-tab="stories">角色故事</button><button data-action="panel" data-tab="album">CG 相册</button><button data-action="nudge">递一枚纸签</button></div>' +
     (next !== null
       ? '<div class="quiet-flag"><span class="local-dot"></span>' +
         (next === 0 ? "相遇短章待阅读" : "新章节可阅读 · " + stages[next]) +
@@ -429,7 +406,9 @@ function renderCompanion() {
       : "") +
     "</div>";
 }
+/* EMBED_CHAT_MODULE */
 function renderKnowledge() {
+  renderChatHeader();
   const body = $("#knowledge-body");
   $("#ask-tab").classList.toggle("selected", state.tab === "ask");
   $("#search-tab").classList.toggle("selected", state.tab === "search");
@@ -443,13 +422,17 @@ function renderKnowledge() {
       '<div class="answer-notice" role="alert"><strong>问答暂未完成</strong><br>演示服务超时。文档已经保存，未生成答案，也没有新增经历。<br><button data-action="retry-answer">重试演示问答</button></div>';
     return;
   }
+  if (currentThread().messages.length) {
+    body.innerHTML = renderThread();
+    return;
+  }
   if (state.answer === "answer") {
     body.innerHTML =
       '<div class="answer"><span class="answer-label">知识回答 · 固定演示内容</span><h3>甲方案参与人数较多</h3><p>甲方案为 <strong>120 人</strong>，乙方案为 <strong>80 人</strong>，相差 40 人。<span class="source-tag">S1</span></p><table class="answer-table"><thead><tr><th>方案</th><th>时间</th><th>人数</th></tr></thead><tbody><tr><td>甲</td><td>周二</td><td>120 人</td></tr><tr><td>乙</td><td>周四</td><td>80 人</td></tr></tbody></table><p>资料不足以判断满意度或方案优劣，建议补充反馈数据。</p><div class="fact-source"><button class="source-tag" data-action="sources">S1 · 阅读活动方案.md</button><p>来源、数字与表格不随角色切换。新增角色化模型请求：0。</p></div></div>';
     return;
   }
   body.innerHTML =
-    '<div class="empty-answer"><span>一页资料，<br>一点新发现。</span>从已有材料开始，把问题说清楚。<button class="prompt-sample" data-action="sample-question">比较两种阅读活动的参与人数，并列出资料不足的部分 ↗</button><p class="microcopy">演示仅覆盖这一问答，不模拟通用模型能力。</p></div>';
+    '<div class="empty-answer"><span>一页资料，<br>一点新发现。</span>从已有材料开始，把问题说清楚。<button class="prompt-sample" data-action="sample-question">比较两种阅读活动的参与人数，并列出资料不足的部分 ↗</button><p class="microcopy">演示仅覆盖比较人数与满意度不足情景，不模拟通用模型能力。</p><button data-action="demo-stream">体验生成与中止</button></div>';
 }
 function render() {
   renderDoc();
@@ -458,7 +441,7 @@ function render() {
   persist();
 }
 function choose() {
-  selectedRole = state.character || "zhiwei";
+  selectedRole = state.character || "motuan";
   selectedMode = state.mode;
   renderChoice();
 }
@@ -478,7 +461,7 @@ function renderChoice() {
             (selectedRole === id) +
             '"><div class="role-art">' +
             art(id, 0) +
-            '<span class="art-label">角色构图示意 · 非最终立绘</span></div><div class="role-copy"><h3>' +
+            '<span class="art-label">像素水墨概念 · 非最终立绘</span></div><div class="role-copy"><h3>' +
             r.name +
             "</h3><small>" +
             r.type +
@@ -500,7 +483,7 @@ function renderChoice() {
       '><span>专注<small>安静陪同，保留状态与故事入口。</small></span></label><label class="radio-card"><input name="choose-mode" type="radio" value="gentle" ' +
       (selectedMode === "gentle" ? "checked" : "") +
       '><span>温和陪伴<small>在真实操作之外，多一句简短回应。</small></span></label></div></div><p class="microcopy">可随时更换或关闭。离开不会失去进度；不会自动读取文档建立私人记忆。</p>',
-    '<span class="foot-note">示意图只用于验证构图和占位尺寸，最终美术另行制作。</span><button data-action="close">稍后再选</button><button class="primary" data-action="apply-role">与' +
+    '<span class="foot-note">概念图用于风格评审；9张阶段立绘与6张主CG另行签收。</span><button data-action="close">稍后再选</button><button class="primary" data-action="apply-role">与' +
       roles[selectedRole].name +
       "相遇 →</button>",
   );
@@ -792,7 +775,7 @@ function story(stage) {
     r.name + " · " + stages[stage] + " · 固定剧情草案，可随时关闭后重看",
     '<figure class="story-scene"><div>' +
       art(state.character, stage, true) +
-      '</div><figcaption>仅示意角色/书房构图与阅读区域；最终立绘、CG尚待制作。</figcaption></figure><div class="story-text">' +
+      '</div><figcaption>概念资源演示；人型为人物概念，墨团为书房场景。最终阶段立绘/CG另行制作。</figcaption></figure><div class="story-text">' +
       chapters[state.character][stage].map((p) => "<p>" + p + "</p>").join("") +
       "</div>" +
       (stage === 2
@@ -946,9 +929,10 @@ function commitPending() {
   );
 }
 function setScenario(name) {
+  stopDemoStream();
   const previousCharacter = state.character;
   state = initial();
-  state.character = previousCharacter || "zhiwei";
+  state.character = previousCharacter || "motuan";
   state.mode = "gentle";
   progress().read = [0];
   if (name === "first") {
@@ -1097,7 +1081,20 @@ document.addEventListener("click", (event) => {
   const button = event.target.closest("[data-action]");
   if (!button || button.disabled) return;
   const action = button.dataset.action;
+  if(chatAction(action,button))return;
   switch (action) {
+    case "hide-pet":
+      state.petMini=true;renderCompanion();persist();break;
+    case "show-pet":
+      state.petMini=false;renderCompanion();persist();break;
+    case "art-direction":
+      artDirection();
+      break;
+    case "nudge":
+      if (!state.enabled || !state.character) break;
+      toast(state.mode === "focus" ? "同伴安静陪读。轻互动不计成长。" :
+        roles[state.character].quote + "（轻互动不计成长）");
+      break;
     case "close":
       closeDialog();
       break;
@@ -1181,6 +1178,8 @@ document.addEventListener("click", (event) => {
       clearCompanion(false);
       break;
     case "reset-confirm":
+      stopDemoStream();
+      docs.splice(4);
       state = initial();
       closeDialog();
       render();
@@ -1192,6 +1191,11 @@ document.addEventListener("click", (event) => {
         activeDoc: state.activeDoc,
         note: state.note,
         saved: state.saved,
+        threads: state.threads,
+        threadId: state.threadId,
+        chatExpanded: state.chatExpanded,
+        savedAnswers: state.savedAnswers,
+        answer: state.answer,
       };
       closeDialog();
       render();
@@ -1209,7 +1213,7 @@ document.addEventListener("click", (event) => {
       const r = roles[state.character];
       setDialog(
         r.cg[stage - 1],
-        r.name + " · " + stages[stage] + " · CG构图示意，最终插画尚未制作",
+        r.name + " · " + stages[stage] + " · CG概念展示，最终阶段插画尚未制作",
         '<figure class="story-scene"><div class="cg-large">' +
           art(state.character, stage, true) +
           '</div><figcaption>第一人称阅读视角；不绘制可识别用户面孔。纸页、书签和文字均为虚构。</figcaption></figure><p class="album-caption">' +
@@ -1394,6 +1398,7 @@ document.addEventListener("click", (event) => {
 });
 document.addEventListener("change", (event) => {
   const el = event.target;
+  if(el.id === "chat-scope") { newThread(el.value); toast("资料范围改变，已新建独立会话。"); }
   if (el.id === "setting-mode") {
     state.mode = el.value;
     renderCompanion();
@@ -1435,10 +1440,7 @@ document.addEventListener("submit", (event) => {
       toast("请先输入问题，或使用示例问题。");
       return;
     }
-    state.answer = "answer";
-    state.tab = "ask";
-    renderKnowledge();
-    persist();
+    sendDemoQuestion($("#question").value);
   }
   if (event.target.id === "memory-form") {
     event.preventDefault();
@@ -1458,4 +1460,5 @@ document.addEventListener("submit", (event) => {
   }
 });
 $("#modal").addEventListener("close", () => returnFocus?.focus());
+stopDemoStream();
 render();

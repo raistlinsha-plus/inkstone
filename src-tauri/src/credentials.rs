@@ -199,15 +199,20 @@ mod tests {
     use std::sync::atomic::AtomicUsize;
     #[tokio::test]
     async fn simultaneous_same_identity_reads_share_one_result_and_failures_cool_down() {
-        let reader = CredentialReader::new(Duration::from_secs(1), Duration::from_millis(200));
+        // This case checks identity/coalescing, not the deadline. Barriers control
+        // ordering; the generous deadline allows a slow CI worker to be scheduled.
+        let reader = CredentialReader::new(Duration::from_secs(60), Duration::from_secs(60));
         let id = Identity::new("chat", "https://a.invalid/v1", false);
         let cancel = AtomicBool::new(false);
-        let first = reader.read(id.clone(), &cancel, || {
-            std::thread::sleep(Duration::from_millis(30));
+        let (release, resumed) = std::sync::mpsc::channel();
+        let first = reader.read(id.clone(), &cancel, move || {
+            resumed.recv().expect("release joined read");
             Ok(Some("same".into()))
         });
         let second = reader.read(id.clone(), &cancel, || panic!("must join"));
-        let (a, b) = tokio::join!(first, second);
+        let (a, b, _) = tokio::join!(biased; first, second, async {
+            release.send(()).unwrap();
+        });
         assert_eq!(a.unwrap(), b.unwrap());
         reader.invalidate();
         assert!(reader
@@ -222,15 +227,19 @@ mod tests {
     }
     #[tokio::test]
     async fn single_flight_timeout_cancellation_and_late_success_do_not_stack_os_reads() {
-        let reader = CredentialReader::new(Duration::from_secs(1), Duration::from_millis(40));
+        let reader = CredentialReader::new(Duration::from_secs(60), Duration::from_millis(40));
         let calls = Arc::new(AtomicUsize::new(0));
         let c = calls.clone();
+        let (release, resumed) = std::sync::mpsc::channel();
         let id = Identity::new("chat", "https://a.invalid/v1", false);
         let cancel = AtomicBool::new(false);
         let error = reader
             .read(id.clone(), &cancel, move || {
                 c.fetch_add(1, Ordering::SeqCst);
-                std::thread::sleep(Duration::from_millis(100));
+                // The native call stays blocked until the timeout/slot assertions finish.
+                resumed
+                    .recv()
+                    .expect("test releases the simulated native read");
                 Ok(Some("test-secret".into()))
             })
             .await
@@ -257,7 +266,24 @@ mod tests {
                 .unwrap_err(),
             PENDING
         );
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        let mut completion = reader
+            .state
+            .lock()
+            .unwrap()
+            .flight
+            .as_ref()
+            .unwrap()
+            .result
+            .subscribe();
+        release.send(()).unwrap();
+        // Await publication rather than assuming a blocking worker ran during a sleep.
+        tokio::time::timeout(
+            Duration::from_secs(10),
+            completion.wait_for(|value| value.is_some()),
+        )
+        .await
+        .expect("native result publication")
+        .expect("result sender remains alive");
         assert_eq!(
             reader
                 .read(id, &cancel, || panic!("must use late successful result"))
@@ -270,21 +296,23 @@ mod tests {
     }
     #[tokio::test]
     async fn same_identity_joins_and_configuration_invalidation_rejects_late_secrets() {
-        let reader = CredentialReader::new(Duration::from_secs(1), Duration::from_millis(200));
+        let reader = CredentialReader::new(Duration::from_secs(60), Duration::from_secs(60));
         let id = Identity::new("chat", "https://a.invalid/v1", false);
         let cancel = AtomicBool::new(false);
-        let first = reader.read(id.clone(), &cancel, || {
-            std::thread::sleep(Duration::from_millis(60));
+        let (release, resumed) = std::sync::mpsc::channel();
+        let first = reader.read(id.clone(), &cancel, move || {
+            resumed.recv().expect("release invalidated read");
             Ok(Some("old".into()))
         });
         let second = async {
-            tokio::time::sleep(Duration::from_millis(10)).await;
             reader.invalidate();
-            reader
+            let result = reader
                 .read(id.clone(), &cancel, || panic!("old read owns slot"))
-                .await
+                .await;
+            release.send(()).unwrap();
+            result
         };
-        let (a, b) = tokio::join!(first, second);
+        let (a, b) = tokio::join!(biased; first, second);
         assert!(a.unwrap_err().contains("配置已变化"));
         assert_eq!(b.unwrap_err(), PENDING);
         assert_eq!(
@@ -298,7 +326,7 @@ mod tests {
     }
     #[tokio::test]
     async fn cache_is_role_address_scoped_expiring_and_cancel_is_prompt() {
-        let reader = CredentialReader::new(Duration::from_millis(30), Duration::from_millis(200));
+        let reader = CredentialReader::new(Duration::from_millis(30), Duration::from_secs(60));
         let cancel = AtomicBool::new(false);
         let a = Identity::new("chat", "https://a.invalid/v1", false);
         assert_eq!(
@@ -324,16 +352,33 @@ mod tests {
             None
         );
         reader.invalidate();
-        let work = reader.read(a, &cancel, || {
-            std::thread::sleep(Duration::from_millis(100));
+        let (release, resumed) = std::sync::mpsc::channel();
+        let work = reader.read(a, &cancel, move || {
+            resumed.recv().expect("release cancelled read");
             Ok(None)
         });
         let stop = async {
-            tokio::time::sleep(Duration::from_millis(5)).await;
             cancel.store(true, Ordering::SeqCst);
         };
-        let (result, _) = tokio::join!(work, stop);
+        let (result, _) = tokio::join!(biased; work, stop);
         assert_eq!(result.unwrap_err(), "操作已取消");
         assert!(reader.pending());
+        let mut completion = reader
+            .state
+            .lock()
+            .unwrap()
+            .flight
+            .as_ref()
+            .unwrap()
+            .result
+            .subscribe();
+        release.send(()).unwrap();
+        tokio::time::timeout(
+            Duration::from_secs(10),
+            completion.wait_for(|value| value.is_some()),
+        )
+        .await
+        .expect("cancelled reader completes after release")
+        .expect("result sender remains alive");
     }
 }

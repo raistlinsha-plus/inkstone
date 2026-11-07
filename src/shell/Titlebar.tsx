@@ -1,4 +1,5 @@
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import { version } from "../../package.json";
 export default function Titlebar({
   workspaceName,
   panelOpen,
@@ -13,6 +14,13 @@ export default function Titlebar({
       <div className="traffic-space" data-tauri-drag-region />
       <span className="titlebar-name" data-tauri-drag-region>
         砚台 <span>/</span> Inkstone
+      </span>
+      <span
+        className="app-version"
+        title="当前运行的应用版本"
+        data-tauri-drag-region
+      >
+        v{version}
       </span>
       <span className="titlebar-center" data-tauri-drag-region>
         {workspaceName ?? "本地写作与知识空间"}

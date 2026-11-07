@@ -4,7 +4,13 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 const dir = dirname(fileURLToPath(import.meta.url));
 const css = "\n" + readFileSync(resolve(dir, "prototype.css"), "utf8") + "\n";
-const script = "\n" + readFileSync(resolve(dir, "prototype.js"), "utf8") + "\n";
+const concepts = Object.fromEntries(Object.entries({
+  motuan: "motuan-concept.png", yanzhou: "yanzhou-concept.png",
+  zhiwei: "zhiwei-concept.png", motuanScene: "motuan-study-concept.png",
+}).map(([key,file]) => [key,"data:image/png;base64," + readFileSync(resolve(dir,"assets",file)).toString("base64")]));
+const script = "\n" + readFileSync(resolve(dir,"prototype.js"),"utf8")
+  .replace("/* EMBED_CONCEPT_ASSETS */ {}", JSON.stringify(concepts))
+  .replace("/* EMBED_CHAT_MODULE */", readFileSync(resolve(dir,"chat.js"),"utf8")) + "\n";
 if (/<\/(?:script|style)/i.test(css + script))
   throw Error("Inline source contains closing HTML tag");
 const hash = (s) => createHash("sha256").update(s).digest("base64");

@@ -1,0 +1,30 @@
+name: Feature or usability feedback
+description: Explain the writing or knowledge task you want Inkstone to make easier
+title: '[Feedback] '
+body:
+  - type: markdown
+    attributes:
+      value: Use fictional examples. Never include credentials, personal documents, application data or private backups.
+  - type: input
+    id: version
+    attributes:
+      label: Inkstone version and macOS / CPU
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: What were you trying to accomplish?
+      description: Describe the writing, organization or Q&A task before suggesting a feature.
+    validations:
+      required: true
+  - type: textarea
+    id: friction
+    attributes:
+      label: Where did the current workflow get in your way?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested change and any alternatives

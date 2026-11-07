@@ -1,0 +1,54 @@
+{
+  "date": "2026-11-04",
+  "scope": "headless Chrome; synthetic offline prototype only",
+  "passed": true,
+  "layouts": [
+    {
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440,
+      "viewport": 1440,
+      "sendBottom": 850,
+      "bodyHeight": 900,
+      "headers": 1
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "documentWidth": 1280,
+      "viewport": 1280,
+      "sendBottom": 750,
+      "bodyHeight": 800,
+      "headers": 1
+    },
+    {
+      "width": 960,
+      "height": 640,
+      "documentWidth": 960,
+      "viewport": 960,
+      "sendBottom": 594,
+      "bodyHeight": 640,
+      "headers": 1
+    }
+  ],
+  "pageErrors": [],
+  "checked": [
+    "three generated character concepts load",
+    "pet introduction",
+    "source preview",
+    "two-turn insufficient answer",
+    "stop generated sample",
+    "save answer creates synthetic document",
+    "scope change starts separate thread",
+    "history preserved",
+    "art review panel",
+    "1440/1280/960 layouts"
+  ],
+  "notRun": [
+    "native WebKit",
+    "real IME candidate confirmation",
+    "actual VoiceOver",
+    "real provider streaming",
+    "production persistence"
+  ]
+}

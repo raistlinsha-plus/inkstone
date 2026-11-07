@@ -1,7 +1,7 @@
 {
-  "date": "2026-10-30",
+  "date": "2026-11-04",
   "scope": "prototype-only; not production acceptance",
-  "checks": 35,
+  "checks": 44,
   "passed": true,
   "outcomes": [
     "portable HTML embeds current sources under hash-only CSP with no asset requests",
@@ -38,6 +38,15 @@
     "answer retry leaves growth unchanged",
     "answer keeps facts separate from persona",
     "clearing companion resets role while work document remains",
-    "no script exceptions during primary flows"
+    "no script exceptions during primary flows",
+    "visual guide contains three real character concepts and a study CG",
+    "new initial pet selection defaults to Motuan",
+    "light companionship never adds growth",
+    "all displayed art describes concept status",
+    "multi-turn follow-up keeps the earlier answer and refuses unsupported satisfaction",
+    "scope change creates a separate thread without erasing history",
+    "stopping a generated sample keeps an incomplete state",
+    "answer save creates a synthetic work document without growth",
+    "clearing a companion preserves knowledge conversations and saved answers"
   ]
 }

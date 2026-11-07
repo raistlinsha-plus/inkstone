@@ -10,7 +10,7 @@ export interface LibraryDocument {
   source: string;
   updated: number;
   opened: number;
-  status: "ready" | "trashed";
+  status: "ready" | "trashed" | "purging";
 }
 export interface ImportTask {
   id: string;

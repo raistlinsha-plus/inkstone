@@ -3,6 +3,12 @@ import { invoke as transport } from "@tauri-apps/api/core";
 import type { LibraryView, LibraryDocument } from "../library";
 import type { CalendarDocument } from "../content/calendar";
 import type { RecoveryReport } from "../RecoveryDialog";
+import type { ViewPreferences } from "../library/selectors";
+import type {
+  TrashDetail,
+  PurgePreview,
+  PurgeResult,
+} from "../library/TrashDialog";
 import type {
   Stats,
   IndexStatusSnapshot,
@@ -34,6 +40,33 @@ export interface Commands {
   library_recovery_report: Command<undefined, RecoveryReport>;
   workspace_set_pin: Command<{ id: string; pinned: boolean }, void>;
   library_list: Command<undefined, LibraryView>;
+  library_get_view: Command<{ projectId: string }, ViewPreferences>;
+  library_set_view: Command<
+    { projectId: string; preferences: ViewPreferences },
+    void
+  >;
+  library_trash_detail: Command<
+    { projectId: string; documentId: string },
+    TrashDetail
+  >;
+  library_purge_preview: Command<
+    { projectId: string; documentId: string },
+    PurgePreview
+  >;
+  library_purge_execute: Command<
+    {
+      projectId: string;
+      documentId: string;
+      token: string;
+      operationId: string;
+      confirmation: string;
+    },
+    PurgeResult
+  >;
+  library_purge_status: Command<
+    { projectId: string; operationId: string },
+    PurgeResult
+  >;
   list_files: Command<undefined, FileEntry[]>;
   open_workspace: Command<{ root: string }, Workspace>;
   open_library: Command<{ projectId: string | null }, Workspace>;

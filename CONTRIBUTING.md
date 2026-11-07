@@ -1,6 +1,6 @@
 # Contributing
 
-Inkstone is an Apache-2.0 source preview for macOS 13+ on Apple Silicon. Windows, Linux and Intel Mac have not been accepted as supported targets. The companion prototype is separate from the production application.
+Inkstone is an Apache-2.0 source preview for macOS 13+ on Apple Silicon. Windows, Linux and Intel Mac have not been accepted as supported targets. The v0.7 candidate includes optional companions with static candidate artwork; the separate design prototype is not production acceptance evidence.
 
 Use Node 24.14.0, npm 11.9.0, Rust 1.99.1 and Apple's command-line developer tools. Install with `npm ci`, then run `npm run desktop`. `npm run verify` runs the complete local gates; `npm run verify:changed` is scoped feedback and cannot substitute for final integration. `npm run bundle` produces a locally ad-hoc signed app, not a notarized distribution.
 

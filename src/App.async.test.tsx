@@ -19,6 +19,9 @@ const api = vi.hoisted(() => ({
   invoke: vi.fn(),
   confirm: vi.fn(),
   realLibrary: false,
+  events: new Map<string, (event: any) => void>(),
+  close: undefined as
+    undefined | ((event: { preventDefault: () => void }) => Promise<void>),
   drop: undefined as
     | undefined
     | ((event: { payload: { type: string; paths: string[] } }) => void),
@@ -28,11 +31,19 @@ vi.mock("@tauri-apps/api/core", () => ({
   isTauri: () => true,
 }));
 vi.mock("@tauri-apps/api/event", () => ({
-  listen: () => Promise.resolve(() => {}),
+  listen: (name: string, callback: (event: any) => void) => {
+    api.events.set(name, callback);
+    return Promise.resolve(() => {
+      if (api.events.get(name) === callback) api.events.delete(name);
+    });
+  },
 }));
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({
-    onCloseRequested: () => Promise.resolve(() => {}),
+    onCloseRequested: (callback: typeof api.close) => {
+      api.close = callback;
+      return Promise.resolve(() => {});
+    },
   }),
 }));
 vi.mock("@tauri-apps/api/webview", () => ({
@@ -216,6 +227,7 @@ vi.mock("./calendar/ProjectCalendar", () => ({
     </div>
   ),
 }));
+vi.mock("./companion/CompanionDock", () => ({ default: () => null }));
 import App from "./App";
 import { defaultRerankProvider } from "./types";
 
@@ -264,6 +276,7 @@ const view: LibraryView = {
 };
 const disk = new Map<string, FileData>();
 const overrides = new Map<string, (args: Record<string, any>) => unknown>();
+let mockConversation: any = null;
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => {
@@ -485,10 +498,13 @@ test("a late summary response cannot replace stats from the newly selected space
   expect(count()).toBe("3");
 });
 beforeEach(() => {
+  api.events.clear();
+  api.close = undefined;
   api.realLibrary = false;
   localStorage.clear();
   disk.clear();
   overrides.clear();
+  mockConversation = null;
   api.confirm.mockResolvedValue(true);
   for (const d of view.documents) disk.set(d.path, file(d.path));
   api.invoke.mockImplementation(
@@ -496,6 +512,82 @@ beforeEach(() => {
       if (overrides.has(command))
         return Promise.resolve(overrides.get(command)!(args));
       switch (command) {
+        case "assistant_list":
+          return Promise.resolve(
+            mockConversation
+              ? [
+                  {
+                    ...mockConversation,
+                    turnCount: mockConversation.turns.length,
+                  },
+                ]
+              : [],
+          );
+        case "assistant_create":
+          mockConversation = {
+            id: "conversation-test",
+            title: "新会话",
+            scope: args.scope,
+            scopeLabel: args.scope
+              ? `当前文档 · ${args.scope}`
+              : "当前空间 · p1",
+            archived: false,
+            draft: "",
+            revision: 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            activeLeafId: null,
+            turns: [],
+          };
+          return Promise.resolve({ ...mockConversation });
+        case "assistant_get":
+          return Promise.resolve(mockConversation);
+        case "assistant_update":
+          mockConversation = {
+            ...mockConversation,
+            ...args,
+            revision: mockConversation.revision + 1,
+          };
+          return Promise.resolve(mockConversation);
+        case "assistant_ask": {
+          const c = mockConversation;
+          // Reuse the original provider fixture while asserting the new durable command boundary.
+          return api
+            .invoke("ask_question", {
+              question: args.question,
+              scope: c.scope,
+              requestId: args.requestId,
+              semantic: args.semantic,
+              retrievalMode: args.retrievalMode,
+            })
+            .then((response: any) => {
+              const candidate = {
+                id: "candidate-" + args.requestId,
+                requestId: args.requestId,
+                status: "complete",
+                createdAt: new Date().toISOString(),
+                error: null,
+                response,
+              };
+              const turn = {
+                id: "turn-" + args.requestId,
+                parentTurnId: args.parentTurnId,
+                question: args.question,
+                createdAt: new Date().toISOString(),
+                selectedCandidateId: candidate.id,
+                candidates: [candidate],
+              };
+              mockConversation = {
+                ...c,
+                title: args.question,
+                draft: "",
+                revision: c.revision + 2,
+                activeLeafId: turn.id,
+                turns: [...c.turns, turn],
+              };
+              return mockConversation;
+            });
+        }
         case "bootstrap":
           return Promise.resolve({ settings, lastWorkspace: null });
         case "open_library":
@@ -980,7 +1072,11 @@ test("an answer keeps its request scope and explicit retrieval mode when control
   fireEvent.change(screen.getByLabelText("资料范围"), {
     target: { value: "workspace" },
   });
-  expect(screen.getByText(/当前文档 · a.md/)).toBeTruthy();
+  expect(
+    within(document.querySelector(".assistant-turn")!).getByText(
+      /当前文档 · a.md/,
+    ),
+  ).toBeTruthy();
 });
 
 test("save answer creates a separate managed Markdown document without replacing current edits", async () => {
@@ -1107,3 +1203,191 @@ test("source replacement and an in-flight file hash never save the old document 
   expect(calls("save_file")).toHaveLength(0);
   expect(screen.queryByText("磁盘文件已变化。")).toBeNull();
 }, 10000);
+
+test("assistant keeps multiple turns and transfers the explicitly selected older answer", async () => {
+  await askSynthetic(syntheticAnswer);
+  await screen.findByRole("heading", { name: "季度分析" });
+  overrides.set("ask_question", () => ({
+    ...syntheticAnswer,
+    text: "## 后续结论\n\n另一轮的回答。",
+  }));
+  fireEvent.change(screen.getByLabelText("向当前空间提问"), {
+    target: { value: "请继续分析第二季度" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+  await screen.findByRole("heading", { name: "后续结论" });
+  const turns = document.querySelectorAll(".assistant-turn");
+  expect(turns).toHaveLength(2);
+  expect(calls("assistant_ask")[1][1]).toMatchObject({
+    parentTurnId: mockConversation.turns[0].id,
+  });
+  fireEvent.click(
+    within(turns[0] as HTMLElement).getByRole("button", { name: "保存为文档" }),
+  );
+  const preview = screen.getByRole("dialog", { name: "保存回答为文档" });
+  expect(preview.textContent).toContain("季度分析");
+  expect(preview.textContent).not.toContain("后续结论");
+});
+
+test("question composer protects IME Enter and Shift+Enter while Enter sends", async () => {
+  await askSynthetic(syntheticAnswer);
+  await screen.findByRole("heading", { name: "季度分析" });
+  const input = screen.getByLabelText("向当前空间提问");
+  fireEvent.change(input, { target: { value: "追问资料" } });
+  fireEvent.keyDown(input, { key: "Enter", isComposing: true, keyCode: 229 });
+  fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
+  expect(calls("assistant_ask")).toHaveLength(1);
+  await waitFor(() =>
+    expect(input.hasAttribute("data-ime-composing")).toBe(false),
+  );
+  fireEvent.keyDown(input, { key: "Enter" });
+  await waitFor(() => expect(calls("assistant_ask")).toHaveLength(2));
+});
+
+test("pre-begin send failure preserves the question and its durable draft for retry", async () => {
+  overrides.set("assistant_ask", () => Promise.reject(Error("发送前存储失败")));
+  overrides.set("bootstrap", () => ({
+    settings: {
+      ...settings,
+      chat: { ...settings.chat, enabled: true, model: "fixture" },
+    },
+    lastWorkspace: null,
+  }));
+  await boot();
+  await openDocument("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "切换知识侧栏" }));
+  fireEvent.click(screen.getByRole("button", { name: "问答" }));
+  const input = screen.getByLabelText("向当前空间提问") as HTMLTextAreaElement;
+  fireEvent.change(input, { target: { value: "还未发送的重要问题" } });
+  fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+  await screen.findAllByText("发送前存储失败");
+  expect(input.value).toBe("还未发送的重要问题");
+  expect(mockConversation.draft).toBe("还未发送的重要问题");
+  expect(mockConversation.turns).toHaveLength(0);
+  expect(
+    (screen.getByRole("button", { name: "发送问题" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(false);
+});
+
+test("rapid space navigation flushes question drafts even when the document is clean", async () => {
+  let project = "p1";
+  overrides.set("open_library", (args) => {
+    project = args.projectId ?? "p1";
+    return workspace(project);
+  });
+  overrides.set("assistant_list", () =>
+    project === "p1" && mockConversation
+      ? [{ ...mockConversation, turnCount: 0 }]
+      : [],
+  );
+
+  await boot();
+  await openDocument("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "切换知识侧栏" }));
+  fireEvent.click(screen.getByRole("button", { name: "问答" }));
+  fireEvent.change(screen.getByLabelText("向当前空间提问"), {
+    target: { value: "切换前的问题" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "项目 p2" }));
+  await screen.findByRole("button", { name: "打开 c.md" });
+  expect(mockConversation.draft).toBe("切换前的问题");
+  const save = api.invoke.mock.calls.findIndex(
+    ([n, a]) => n === "assistant_update" && a.draft === "切换前的问题",
+  );
+  const open = api.invoke.mock.calls.findIndex(
+    ([n, a]) => n === "open_library" && a.projectId === "p2",
+  );
+  expect(save).toBeGreaterThan(-1);
+  expect(save).toBeLessThan(open);
+  fireEvent.click(screen.getByRole("button", { name: "项目 p1" }));
+  await screen.findByRole("button", { name: "打开 a.md" });
+  await waitFor(() =>
+    expect(
+      (screen.getByLabelText("向当前空间提问") as HTMLTextAreaElement).value,
+    ).toBe("切换前的问题"),
+  );
+});
+
+test("failed question draft persistence blocks space navigation and retains the input", async () => {
+  await boot();
+  await openDocument("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "切换知识侧栏" }));
+  fireEvent.click(screen.getByRole("button", { name: "问答" }));
+  overrides.set("assistant_update", () =>
+    Promise.reject(Error("磁盘暂不可写")),
+  );
+  fireEvent.change(screen.getByLabelText("向当前空间提问"), {
+    target: { value: "不能丢的问题" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "项目 p2" }));
+  await screen.findByText(/已保留当前空间/);
+  expect(calls("open_library").some(([, a]) => a.projectId === "p2")).toBe(
+    false,
+  );
+  expect(
+    (screen.getByLabelText("向当前空间提问") as HTMLTextAreaElement).value,
+  ).toBe("不能丢的问题");
+});
+
+test("durable acceptance clears only the submitted input, preserving later typing", async () => {
+  const answer = deferred<any>();
+  await askSynthetic(answer.promise);
+  const sent = calls("assistant_ask")[0][1];
+  const input = screen.getByLabelText("向当前空间提问") as HTMLTextAreaElement;
+  expect(input.value).toBe("请分析季度资料");
+  fireEvent.change(input, { target: { value: "后来输入的新问题" } });
+  act(() =>
+    api.events.get("assistant-accepted")?.({
+      payload: { requestId: sent.requestId },
+    }),
+  );
+  expect(input.value).toBe("后来输入的新问题");
+  await act(async () => {
+    answer.resolve(syntheticAnswer);
+  });
+  await screen.findByRole("heading", { name: "季度分析" });
+  expect(input.value).toBe("后来输入的新问题");
+});
+
+test("exit stops generation then durably flushes the next question before quitting", async () => {
+  const answer = deferred<any>();
+  await askSynthetic(answer.promise);
+  const sent = calls("assistant_ask")[0][1];
+  act(() =>
+    api.events.get("assistant-accepted")?.({
+      payload: { requestId: sent.requestId },
+    }),
+  );
+  fireEvent.change(screen.getByLabelText("向当前空间提问"), {
+    target: { value: "退出前必须保留的下一问" },
+  });
+  overrides.set("cancel_chat", () => {
+    answer.resolve(syntheticAnswer);
+  });
+  await act(async () => {
+    await api.close?.({ preventDefault() {} });
+  });
+  expect(calls("cancel_chat")).toHaveLength(1);
+  expect(calls("quit_app")).toHaveLength(1);
+  expect(mockConversation.draft).toBe("退出前必须保留的下一问");
+});
+
+test("exit preserves the latest single-document draft scope without starting generation", async () => {
+  await boot();
+  await openDocument("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "切换知识侧栏" }));
+  fireEvent.click(screen.getByRole("button", { name: "问答" }));
+  fireEvent.change(screen.getByLabelText("资料范围"), {
+    target: { value: "current" },
+  });
+  fireEvent.change(screen.getByLabelText("向当前空间提问"), {
+    target: { value: "单文档的未发送问题" },
+  });
+  await act(async () => {
+    await api.close?.({ preventDefault() {} });
+  });
+  expect(calls("quit_app")).toHaveLength(1);
+  expect(mockConversation.draft).toBe("单文档的未发送问题");
+  expect(mockConversation.scope).toBe("a.md");
+});

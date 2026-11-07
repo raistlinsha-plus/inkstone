@@ -9,3 +9,5 @@ src-tauri/target/
 .env*
 !\.env.example
 artifacts/
+
+src-tauri/gen/

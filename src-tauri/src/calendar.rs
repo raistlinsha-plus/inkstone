@@ -311,7 +311,22 @@ fn projection_lock<T>(action: impl FnOnce() -> Result<T, String>) -> Result<T, S
     action()
 }
 pub fn refresh(data: &Path, project: &str) -> Result<CalendarView, String> {
+    let _permit = crate::maintenance::mutation(data)?;
     projection_lock(|| refresh_project(data, project))
+}
+pub fn purge_document(data: &Path, project: &str, document: &str) -> Result<(), String> {
+    if !data.join("calendar.sqlite3").exists() {
+        return Ok(());
+    }
+    projection_lock(|| {
+        connection(data)?
+            .execute(
+                "DELETE FROM events WHERE project=? AND document=?",
+                params![project, document],
+            )
+            .map_err(error)?;
+        Ok(())
+    })
 }
 fn refresh_project(data: &Path, project: &str) -> Result<CalendarView, String> {
     let root = library::project_root(data, project)?;

@@ -1,0 +1,46 @@
+{
+  "checkedAt": "2026-11-06T14:52:30.125Z",
+  "surface": "Codex in-app browser",
+  "url": "http://127.0.0.1:28710/",
+  "checks": [
+    "打开文档不改变名称排序",
+    "最近独立更新访问顺序",
+    "名称降序与修改排序可切换，打开不影响修改排序",
+    "搜索筛选；回收站标题仅打开摘要",
+    "删除按钮确认门槛、模拟准备失败保留数据、重试成功",
+    "显式恢复与空回收站",
+    "候选来源可核对，追问资料不足明确呈现",
+    "手札经历/新章/相册可切换，Escape 返回工作",
+    "1440/1280 三栏及 960 两栏；窄窗删除按钮可见、取消初始焦点、键盘环绕",
+    "最终代码连续 10 次打开，默认列表顺序完全不变",
+    "排序菜单方向键与 Escape 返回",
+    "超出固定问答情景保留输入并解释"
+  ],
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900,
+      "layout": "three columns; expanded answer 560px"
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "layout": "three columns; expanded answer two columns"
+    },
+    {
+      "width": 960,
+      "height": 640,
+      "layout": "two columns by task"
+    }
+  ],
+  "consoleErrors": [],
+  "realModelRequests": 0,
+  "productionDataMutations": 0,
+  "limits": [
+    "No backend purge or crash-recovery validation",
+    "No native IME or VoiceOver acceptance",
+    "No free-form model answering or production editor implementation",
+    "No final sprite or CG artwork approval"
+  ],
+  "result": "passed"
+}

@@ -1,6 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
-import { ZoomIn, ZoomOut, Download } from "lucide-react";
+import { ZoomIn, ZoomOut, Download, Expand, Minimize2 } from "lucide-react";
 import { save } from "@tauri-apps/plugin-dialog";
 import DOMPurify from "dompurify";
 import type { MindNode } from "../content/mindmap";
@@ -145,6 +152,16 @@ export default function Graph({
   }, []);
   const viewport = useRef(loadViewport(viewKey));
   const [zoom, setZoom] = useState(100);
+  const [canvasExpanded, setCanvasExpanded] = useState(false);
+  const [measuredHeight, setMeasuredHeight] = useState(240);
+  const compactHeight = useMemo(() => {
+    if (kind !== "mindmap" || !tree) return measuredHeight;
+    const leaves = (node: MindNode): number =>
+      node.children.length
+        ? node.children.reduce((sum, child) => sum + leaves(child), 0)
+        : 1;
+    return Math.min(440, Math.max(200, leaves(tree) * 32 + 72));
+  }, [kind, tree, measuredHeight]);
   const token = useMemo(() => crypto.randomUUID(), []);
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState("正在准备本地预览…");
@@ -223,7 +240,13 @@ export default function Graph({
         data.revision !== active.current.revision
       )
         return;
-      if (data.type === "viewport") {
+      if (
+        data.type === "size" &&
+        typeof data.height === "number" &&
+        Number.isFinite(data.height)
+      ) {
+        setMeasuredHeight(Math.max(180, Math.min(440, data.height)));
+      } else if (data.type === "viewport") {
         const next = graphViewport(data);
         if (next) {
           setZoom(Math.round(next.scale * 100));
@@ -276,9 +299,20 @@ export default function Graph({
     };
   }, [debounced, kind, token, attempt, problem]);
   return (
-    <div className="graph-preview" data-render-ms={elapsed ?? undefined}>
+    <div
+      className="graph-preview"
+      data-kind={kind}
+      style={
+        kind === "chart"
+          ? undefined
+          : ({
+              "--graph-height": `${canvasExpanded ? 560 : compactHeight}px`,
+            } as CSSProperties)
+      }
+      data-render-ms={elapsed ?? undefined}
+    >
       <div className="graph-actions">
-        <span>
+        <span className="graph-kind">
           {kind === "mermaid"
             ? "Mermaid 图表"
             : kind === "chart"
@@ -307,12 +341,21 @@ export default function Graph({
                 <button
                   onClick={() => send({ type: "command", action: "actual" })}
                 >
-                  100%
+                  原始比例
                 </button>
                 <output aria-label="脑图缩放比例">{zoom}%</output>
               </>
             )}
           </>
+        )}
+        {kind !== "chart" && (
+          <button
+            aria-pressed={canvasExpanded}
+            onClick={() => setCanvasExpanded(!canvasExpanded)}
+          >
+            {canvasExpanded ? <Minimize2 size={15} /> : <Expand size={15} />}
+            {canvasExpanded ? "收起画布" : "展开画布"}
+          </button>
         )}
         <button
           disabled={stale || !!status || !!problem}
