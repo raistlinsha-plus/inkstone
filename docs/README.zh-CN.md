@@ -6,7 +6,7 @@ Inkstone 将 Markdown 写作、文档空间和带引用的多轮问答放在一�
 
 [English](../README.md) · [源码快速开始](QUICKSTART.md) · [后续计划](ROADMAP.md) · [发布审查](GITHUB-READINESS-v0.7.md)
 
-当前代码为 **v0.7.0-rc.4 源码候选**，已发布制品以 [Releases](https://github.com/raistlinsha-plus/inkstone/releases) 为准。目标是 macOS 13+ Apple Silicon，界面为中文，目前没有已签名、公证的一键安装包。
+当前开发候选为 **v0.7.0-rc.5**，公开源码预览为 v0.7.0-rc.4。目标是 macOS 13+ Apple Silicon，界面为中文。验收与发行状态见[候选交付记录](DELIVERY-v0.7-rc5.md)。
 
 ![带引用的问答，使用虚构阅读活动资料](assets/launch-v0.7/02-conversation.png)
 

@@ -2,6 +2,14 @@
 
 Historical versions below describe local development deliveries, not earlier public GitHub releases. v0.6.6 is the first public source preview. See [release notes](docs/PUBLIC-RELEASE-v0.6.6.md).
 
+## v0.7.0-rc.5 · 2026-11-07 · Local stability candidate
+
+- Save the next question to its conversation while the current answer generates. Restore saved drafts after interruption and keep unsent text when regenerating an existing answer.
+- Honor stop requests received while saving the submitted question, before starting the model request.
+- Move document save and recovery draft handling into a dedicated hook. Keep the existing editor and workspace interfaces.
+- Use a documentation check for eligible PRs. Run complete macOS verification on main, and reuse Cargo caches saved from main. See the [candidate delivery record](docs/DELIVERY-v0.7-rc5.md).
+- Update zstd to 0.13.4 and zstd-safe to 7.4.0. Add version-pinned license texts for sqlite-vec, jieba-macros and the Apple Silicon Rolldown binding.
+
 ## v0.7.0-rc.4 · 2026-11-07 · Stable-scope candidate
 
 - Prepare the next source-preview update: bilingual task-focused README, fictional Quickstart examples, fresh synthetic UI media, release/PR copy and a discoverability plan. Replace the credential test’s timing assumption with explicit worker completion and control the history-search test’s debounce clock while preserving its 200-row pagination/archive assertions; expand current public-doc checks and correct release-manifest catalog metadata to schema4. [Readiness review](docs/GITHUB-READINESS-v0.7.md). No remote publication in this preparation.

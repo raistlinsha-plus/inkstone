@@ -1,6 +1,6 @@
 # Inkstone roadmap
 
-The current local candidate is **v0.7.0-rc.4**. See Releases for the currently published artifacts. This roadmap describes priorities rather than promised delivery dates.
+The current local candidate is **v0.7.0-rc.5**. See the [delivery record](DELIVERY-v0.7-rc5.md) for the current verification results and Releases for published artifacts.
 
 ## Ready to try in the candidate
 
@@ -11,7 +11,7 @@ The current local candidate is **v0.7.0-rc.4**. See Releases for the currently p
 
 ## Before stable v0.7
 
-- Verify the publication commit on GitHub CI after merging the deterministic credential-test fix.
+- Verify the exact commit selected for stable publication on GitHub CI.
 - Complete visible native Mac checks for IME, shortcuts, dialogs and VoiceOver.
 - Review final artwork and observe growth over at least five distinct natural usage days.
 - Complete third-party binary-distribution notices, signing, notarization and cross-machine installation before offering a stable installer.
@@ -21,6 +21,7 @@ The current local candidate is **v0.7.0-rc.4**. See Releases for the currently p
 - Make the first import → indexing → cited answer easier to understand, including costs and fallback states.
 - Evaluate retrieval with independently reviewed questions and realistic larger collections; report false answers and unnecessary refusals separately.
 - Improve asset sizes, startup/performance measurement and module boundaries without expanding the format surface at the same time.
+- Pilot quiet pixel and ink companion actions after stabilizing the first-use workflow and evaluating retrieval quality.
 
 PDF/OCR, cloud collaboration, arbitrary multi-document Q&A selection, other operating systems and a floating desktop pet remain future ideas, not current capabilities.
 
