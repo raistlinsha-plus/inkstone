@@ -41,6 +41,8 @@ fn sources(
 }
 fn response(text: String, sources: Vec<SearchResult>, finish: &str) -> ChatResponse {
     ChatResponse {
+        external_sources: vec![],
+        trace: None,
         memory: None,
         finish_reason: finish.into(),
         text,

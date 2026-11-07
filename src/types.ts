@@ -81,6 +81,7 @@ export interface IndexPlan {
   remote: boolean;
 }
 export interface SearchResult {
+  external?: import("./assistant/types").ExternalSource;
   id: number;
   path: string;
   text: string;
@@ -109,6 +110,8 @@ export interface SearchResponse {
   rerankStatus: string;
 }
 export interface ChatResponse {
+  externalSources?: import("./assistant/types").ExternalSource[];
+  trace?: import("./assistant/types").RetrievalTrace;
   memory?: import("./assistant/types").MemoryUsage;
   finishReason: string;
   text: string;

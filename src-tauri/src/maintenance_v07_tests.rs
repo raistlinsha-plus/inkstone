@@ -99,6 +99,8 @@ fn fixture(data: &Path) -> Fixture {
     .unwrap();
     let source=serde_json::from_value(json!({"id":1,"path":doc.path,"text":"甲方案为120人。","heading":"实际已保存的合成工作","startLine":3,"endLine":3,"hash":saved.hash,"score":1.0,"documentId":doc.id,"title":doc.title,"evidence":true,"matchKind":"keyword"})).unwrap();
     let response = crate::models::ChatResponse {
+        external_sources: vec![],
+        trace: None,
         memory: None,
         finish_reason: "stop".into(),
         text: "甲方案为120人。[S1]".into(),

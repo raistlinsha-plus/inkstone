@@ -102,6 +102,12 @@ pub fn validate_snapshot(path: &Path) -> Result<(), String> {
                         memory::validate_usage(usage)?;
                     }
                     let sources = response["sources"].as_array().ok_or("会话来源快照无效")?;
+                    if let Some(trace) = response.get("trace") {
+                        crate::assistant_sources::validate_trace(trace)?;
+                    }
+                    if let Some(external) = response.get("externalSources") {
+                        crate::assistant_sources::validate_metadata(external, sources.len())?;
+                    }
                     if sources.len() > 200 {
                         return Err("会话来源快照过大".into());
                     }
@@ -127,6 +133,9 @@ pub fn validate_snapshot(path: &Path) -> Result<(), String> {
     }
     if version >= 2 {
         memory::validate_snapshot(&c)?;
+    }
+    if version >= 3 {
+        attachments::validate_snapshot(&c)?;
     }
     Ok(())
 }

@@ -1,4 +1,6 @@
 import type { SearchResult } from "./types";
+import type { ExternalSource } from "./assistant/types";
+import { publicCitationUrl, sourceKind } from "./assistant/sourceDisplay";
 import { parseMarkdown, type MarkdownNode } from "./content/blocks";
 
 export interface AnswerSnapshot {
@@ -18,6 +20,7 @@ const plain = (text: string) =>
 export interface AnswerTransferOptions {
   incomplete?: boolean;
   rejectedCharts?: number[];
+  externalSources?: ExternalSource[];
 }
 function transferableBody(text: string, options: AnswerTransferOptions) {
   const edits: { from: number; to: number; value: string }[] = [];
@@ -108,6 +111,16 @@ export function answerMarkdown(
         .join("/");
     return `${i + 1}. [${plain(s.title || s.heading || s.path.split("/").at(-1) || "资料")}](${href}) · 第 ${s.startLine}–${s.endLine} 行 · 版本 \`${s.hash}\`${s.documentId ? ` · 文档 \`${s.documentId}\`` : ""}`;
   });
+  for (const source of options.externalSources ?? []) {
+    const label = plain(source.label);
+    const url = publicCitationUrl(source.url);
+    const title = url
+      ? `[${label}](${url.replace(/[()]/g, (c) => (c === "(" ? "%28" : "%29"))})`
+      : label;
+    sourceLines.push(
+      `${source.citation}. ${sourceKind(source)} · ${title}${source.capturedAt ? ` · ${plain(source.capturedAt)}` : ""}`,
+    );
+  }
   return [
     heading ? `# ${plain(question)}\n` : "",
     body.text,

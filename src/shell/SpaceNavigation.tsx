@@ -1,19 +1,32 @@
-import { CalendarDays, Database, Folder, Search } from "lucide-react";
+import {
+  BookOpen,
+  CalendarDays,
+  Database,
+  Folder,
+  Search,
+  Sparkles,
+} from "lucide-react";
 export default function SpaceNavigation({
   disabled,
+  generalDisabled = disabled,
   calendarOpen,
   canIndex,
   indexDirty,
   onHome,
+  onGeneralAsk,
+  onWiki,
   onCalendar,
   onSearch,
   onIndex,
 }: {
   disabled: boolean;
+  generalDisabled?: boolean;
   calendarOpen: boolean;
   canIndex: boolean;
   indexDirty: boolean;
   onHome: () => void;
+  onGeneralAsk?: () => void;
+  onWiki?: () => void;
   onCalendar: () => void;
   onSearch: () => void;
   onIndex: () => void;
@@ -39,6 +52,28 @@ export default function SpaceNavigation({
         <CalendarDays size={17} />
         <span>日历</span>
       </button>
+      {onGeneralAsk && (
+        <button
+          title="AI 问答"
+          aria-label="AI 问答"
+          disabled={generalDisabled}
+          onClick={onGeneralAsk}
+        >
+          <Sparkles size={17} />
+          <span>问答</span>
+        </button>
+      )}
+      {onWiki && (
+        <button
+          title="知识 Wiki"
+          aria-label="知识 Wiki"
+          disabled={disabled}
+          onClick={onWiki}
+        >
+          <BookOpen size={17} />
+          <span>Wiki</span>
+        </button>
+      )}
       <button title="搜索资料" aria-label="搜索资料" onClick={onSearch}>
         <Search size={17} />
         <span>搜索</span>

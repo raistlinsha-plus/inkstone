@@ -1686,13 +1686,14 @@ dependencies = [
 
 [[package]]
 name = "inkstone"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "base64 0.22.1",
  "chrono",
  "chrono-tz",
  "core-foundation 0.10.1",
  "futures-util",
+ "html5ever",
  "jieba-rs",
  "keyring",
  "percent-encoding",

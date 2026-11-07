@@ -1,5 +1,10 @@
 import { imeBoundary, isImeEvent } from "./platform/ime";
 import { isTauri } from "@tauri-apps/api/core";
+import { appVersion } from "./version";
+import QuestionSources from "./assistant/QuestionSources";
+import ExternalSourcePreview from "./assistant/ExternalSourcePreview";
+import WebSearchSettings from "./assistant/WebSearchSettings";
+import WikiPanel from "./knowledge/WikiPanel";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -45,6 +50,8 @@ import {
 import {
   selectedCandidate,
   type Conversation,
+  type AssistantSourcePlan,
+  type ExternalSource,
   type HistoryPreview,
   type Turn,
 } from "./assistant/types";
@@ -99,6 +106,7 @@ interface PendingMutation {
   done: Promise<void>;
   finish: () => void;
 }
+const enableGeneralAsk = appVersion !== "0.7.2";
 const emptyStats: Stats = {
   documents: 0,
   chunks: 0,
@@ -241,11 +249,23 @@ export default function App() {
   const [answerChartWarnings, setAnswerChartWarnings] = useState<string[]>([]);
   const [rejectedCharts, setRejectedCharts] = useState<number[]>([]);
   const [chatStage, setChatStage] = useState("");
-  const assistant = useAssistant(workspace?.root);
+  const [generalAsk, setGeneralAsk] = useState(false);
+  const [sourcePlan, setSourcePlan] = useState<AssistantSourcePlan>({});
+  const [sourceBusy, setSourceBusy] = useState(false);
+  const sourceBusyRef = useRef(false);
+  const [externalPreview, setExternalPreview] = useState<ExternalSource | null>(
+    null,
+  );
+  const [webSettingsOpen, setWebSettingsOpen] = useState(false);
+  const [wikiOpen, setWikiOpen] = useState(false);
+  const assistant = useAssistant(workspace?.root, generalAsk);
+  const assistantRef = useRef(assistant);
+  assistantRef.current = assistant;
   const [assistantExpanded, setAssistantExpanded] = useState(false);
   const compactWindow = useCompactWindow();
   const focusedKnowledge =
-    panelOpen && (compactWindow || (assistantExpanded && panel === "ask"));
+    panelOpen &&
+    (compactWindow || ((assistantExpanded || generalAsk) && panel === "ask"));
   const [evidencePreview, setEvidencePreview] = useState<SearchResult | null>(
     null,
   );
@@ -267,7 +287,8 @@ export default function App() {
     setAssistantScopeChanged(false);
     setAssistantRunError("");
     setEvidencePreview(null);
-  }, [workspace?.root]);
+    setExternalPreview(null);
+  }, [assistant.workspaceKey]);
 
   useEffect(() => {
     const next = assistant.conversation;
@@ -286,8 +307,13 @@ export default function App() {
     root: string;
     path?: string;
     target?: InsertionTarget;
+    general?: boolean;
   }>(null);
   const [answerTitle, setAnswerTitle] = useState("");
+  const [answerProject, setAnswerProject] = useState("");
+  const [answerExternalSources, setAnswerExternalSources] = useState<
+    ExternalSource[]
+  >([]);
   const [answerTransferError, setAnswerTransferError] = useState("");
   const [answerSavedPath, setAnswerSavedPath] = useState("");
   const answerTransferRef = useRef(answerTransfer);
@@ -310,7 +336,7 @@ export default function App() {
       questionRef.current = "";
       setQuestion("");
     } else if (questionRef.current) {
-      assistant.saveDraft(submitted.scope, questionRef.current);
+      assistantRef.current.saveDraft(submitted.scope, questionRef.current);
     }
   }
   const chatEventsReady = useRef<Promise<unknown>>(Promise.resolve());
@@ -428,9 +454,8 @@ export default function App() {
   const parser = useRef<Worker | null>(null);
   const parserError = useRef("");
   const parseSeq = useRef(0);
-  const busy =
+  const generalBusy =
     booting ||
-    !!startupError ||
     libraryMutationBusy ||
     indexBusy ||
     chatBusy ||
@@ -438,6 +463,7 @@ export default function App() {
     calendarWriting ||
     workspaceBusy ||
     nameBusy;
+  const busy = generalBusy || !!startupError;
   const taskBusy = indexBusy || chatBusy || importBusy || libraryMutationBusy;
   const interaction = useRef({
     busy: taskBusy,
@@ -473,6 +499,7 @@ export default function App() {
       workspaceTransition.current ||
       importBusyRef.current ||
       chatInFlight.current ||
+      sourceBusyRef.current ||
       closingRef.current
     );
   }
@@ -874,12 +901,12 @@ export default function App() {
           await invoke("cancel_chat", { requestId: stoppedRequest.current });
         }
         if (questionRef.current.trim())
-          assistant.saveDraft(
+          assistantRef.current.saveDraft(
             assistantScopeResolver.current(),
             questionRef.current,
           );
         // A failed assistant draft must cancel exit, just like a document draft.
-        await assistant.flushDraft();
+        await assistantRef.current.flushDraft();
         cancelSearch();
         await invoke("quit_app");
       } catch (e) {
@@ -1087,6 +1114,7 @@ export default function App() {
     setWelcome(true);
   }
   async function openLibraryDocument(doc: LibraryDocument) {
+    if (generalAsk && !(await leaveGeneralForDocument())) return;
     if (doc.projectId === workspaceRef.current?.managedProjectId) {
       if (await openPath(doc.path)) await refreshLibrary();
     } else await useLibrary(doc.projectId, doc.path);
@@ -1889,6 +1917,7 @@ export default function App() {
     }
   }
   function activateConversation(next: Conversation) {
+    setSourcePlan({});
     clearMemorySelection();
     setScope(next.scope ? "current" : "workspace");
     setAssistantScopeChanged(false);
@@ -1901,6 +1930,7 @@ export default function App() {
     try {
       await assistant.flushDraft();
       assistant.clear();
+      setSourcePlan({});
       clearMemorySelection();
       setQuestion("");
       setAsked("");
@@ -1913,6 +1943,7 @@ export default function App() {
     }
   }
   function currentAssistantScope() {
+    if (generalAsk) return null;
     return assistant.conversation && !assistantScopeChanged
       ? assistant.conversation.scope
       : scope === "current"
@@ -1924,15 +1955,60 @@ export default function App() {
     setHistoryBackground(undefined);
     setSkipPreferences(false);
   }, [workspace?.root, assistantScope]);
-  useEffect(() => setPreferencesOpen(false), [workspace?.root]);
+  useEffect(() => setPreferencesOpen(false), [workspace?.root, generalAsk]);
+  useEffect(() => setWikiOpen(false), [workspace?.root]);
+  async function switchGeneral(next: boolean) {
+    if (next && !enableGeneralAsk) return false;
+    if (generalAsk === next) return true;
+    if (navigationBlocked()) return false;
+    try {
+      await assistant.flushDraft();
+      if (navigationBlocked()) return false;
+      setSourcePlan({});
+      clearMemorySelection();
+      setGeneralAsk(next);
+      return true;
+    } catch (error) {
+      fail(error);
+      return false;
+    }
+  }
+  async function leaveGeneralForDocument() {
+    if (!generalAsk) return true;
+    if (!(await switchGeneral(false))) return false;
+    setPanelOpen(false);
+    return true;
+  }
   function openAsk() {
-    setPanel("ask");
-    setPanelOpen(true);
+    openKnowledgePanel("ask");
+  }
+  function openGeneralAsk() {
+    void switchGeneral(true).then((ready) => {
+      if (ready) {
+        setPanel("ask");
+        setPanelOpen(true);
+      }
+    });
+  }
+  function closeKnowledge() {
+    if (generalAsk) void leaveGeneralForDocument();
+    else setPanelOpen(false);
+  }
+  function openKnowledgePanel(next: "ask" | "search") {
+    const openPanel = () => {
+      setPanel(next);
+      setPanelOpen(true);
+    };
+    if (!generalAsk) openPanel();
+    else
+      void switchGeneral(false).then((ready) => {
+        if (ready) openPanel();
+      });
   }
   async function ask(options?: { retry: Turn }) {
     const prompt = options?.retry.question ?? question;
     if (
-      !workspace ||
+      (!workspace && !generalAsk) ||
       assistant.loading ||
       navigationBlocked() ||
       !prompt.trim()
@@ -1940,7 +2016,7 @@ export default function App() {
       return;
     const epoch = workspaceEpoch.current,
       navigation = openSequence.current;
-    if (!options?.retry) {
+    if (!options?.retry && !generalAsk) {
       const range = calendarQueryRange(prompt);
       if (range) {
         await routeDateQuery(range);
@@ -1957,7 +2033,12 @@ export default function App() {
       setSettingsOpen(true);
       return;
     }
-    if (scope === "current" && !document && !assistant.conversation?.scope) {
+    if (
+      !generalAsk &&
+      scope === "current" &&
+      !document &&
+      !assistant.conversation?.scope
+    ) {
       notify("请先打开一篇文档");
       return;
     }
@@ -1980,10 +2061,12 @@ export default function App() {
     setAssistantRunError("");
     const snapshot: AnswerSnapshot = {
       id,
-      workspaceRoot: workspace.root,
-      scopeLabel: frozenScope
-        ? `当前文档 · ${basename(frozenScope)}`
-        : `当前空间 · ${workspace.name}`,
+      workspaceRoot: workspace?.root ?? "",
+      scopeLabel: generalAsk
+        ? "通用问答"
+        : frozenScope
+          ? `当前文档 · ${basename(frozenScope)}`
+          : `当前空间 · ${workspace?.name ?? ""}`,
       scopePath: frozenScope,
       mode: retrievalMode,
       model: settings.chat.model,
@@ -1996,6 +2079,7 @@ export default function App() {
     setChatStage("正在准备本轮资料…");
     setAnswer("");
     setAnswerSources([]);
+    setAnswerExternalSources([]);
     setAnswerWarning("");
     setChatBusy(true);
     try {
@@ -2013,6 +2097,7 @@ export default function App() {
           requestId: id,
           semantic,
           retrievalMode,
+          ...(generalAsk && !options?.retry ? { sources: sourcePlan } : {}),
           memoryOptions: {
             skipPreferences,
             history:
@@ -2036,11 +2121,12 @@ export default function App() {
           next,
           turn,
           candidate,
-          workspace.root,
+          workspace?.root ?? "",
           retrievalMode,
         );
         setAnswer(record.text);
         setAnswerSources(record.sources);
+        setAnswerExternalSources(record.externalSources ?? []);
         setAnswerSnapshot(record.snapshot);
         setAnswerComplete(record.complete);
         setAnswerChartWarnings(record.chartWarnings);
@@ -2094,6 +2180,7 @@ export default function App() {
           {
             incomplete: !(record?.complete ?? answerComplete),
             rejectedCharts: record?.rejectedCharts ?? rejectedCharts,
+            externalSources: record?.externalSources ?? answerExternalSources,
           },
         ),
       );
@@ -2111,8 +2198,16 @@ export default function App() {
     kind: "save" | "insert",
     record?: AnswerRecord,
   ) {
-    if (navigationBlocked() || !workspace || !(record?.text ?? answer).trim())
+    if (
+      navigationBlocked() ||
+      (!workspace && !generalAsk) ||
+      !(record?.text ?? answer).trim()
+    )
       return;
+    if (kind === "save" && generalAsk && !libraryView.projects.length) {
+      notify("请先创建一个文档空间，也可复制回答为 Markdown。");
+      return;
+    }
     try {
       const live = syncEditor();
       const target =
@@ -2123,7 +2218,8 @@ export default function App() {
         throw Error("请先选择正文中的插入位置。");
       const transfer = {
         kind,
-        root: workspace.root,
+        root: workspace?.root ?? "",
+        general: generalAsk,
         path: live?.path,
         target,
         content: answerMarkdown(
@@ -2133,16 +2229,20 @@ export default function App() {
           record?.snapshot ?? answerSnapshot,
           kind === "insert"
             ? live!.path
-            : workspace.managedProjectId
+            : workspace?.managedProjectId || generalAsk
               ? "documents/new/回答.md"
               : "回答.md",
           kind === "save",
           {
             incomplete: !(record?.complete ?? answerComplete),
             rejectedCharts: record?.rejectedCharts ?? rejectedCharts,
+            externalSources: record?.externalSources ?? answerExternalSources,
           },
         ),
       };
+      setAnswerProject(
+        workspace?.managedProjectId ?? libraryView.projects[0]?.id ?? "",
+      );
       setAnswerTitle(answerFileName(record?.question ?? asked));
       setAnswerTransferError("");
       setAnswerSavedPath("");
@@ -2155,8 +2255,8 @@ export default function App() {
   async function commitAnswerTransfer() {
     const transfer = answerTransferRef.current,
       ws = workspaceRef.current;
-    if (!transfer || !ws || nameMutation.current) return;
-    if (transfer.root !== ws.root) {
+    if (!transfer || (!ws && !transfer.general) || nameMutation.current) return;
+    if (transfer.root !== (ws?.root ?? "")) {
       setAnswerTransferError("空间已变化，请重新选择保存目标。");
       return;
     }
@@ -2195,15 +2295,18 @@ export default function App() {
     setNameBusy(true);
     const current = () =>
       nameMutation.current === operation &&
-      workspaceRef.current?.root === ws.root &&
+      workspaceRef.current?.root === ws?.root &&
       operation.epoch === workspaceEpoch.current;
     try {
       let path = title;
-      if (ws.managedProjectId) {
+      const projectId = transfer.general ? answerProject : ws?.managedProjectId;
+      if (transfer.general && !projectId) throw Error("请选择保存空间。");
+      if (projectId) {
         const created = await invoke("library_create_document", {
-          projectId: ws.managedProjectId,
+          projectId,
           title,
           content: transfer.content,
+          fromAssistant: true,
         });
         path = created.path;
       } else await invoke("create_file", { path, content: transfer.content });
@@ -2212,8 +2315,9 @@ export default function App() {
         setIndexDirty(true);
         notify("回答已保存为本地文档");
         try {
-          if (ws.managedProjectId) await refreshLibrary();
-          await refreshFiles();
+          if (projectId) await refreshLibrary();
+          if (ws && (!projectId || ws.managedProjectId === projectId))
+            await refreshFiles();
         } catch (e) {
           if (current())
             setAnswerTransferError(
@@ -2441,15 +2545,25 @@ export default function App() {
           </div>
           <SpaceNavigation
             disabled={busy || booting}
+            generalDisabled={generalBusy || !settings}
             calendarOpen={calendarOpen}
             canIndex={!!workspace && !busy}
             indexDirty={indexDirty}
-            onHome={() => void showLibraryHome()}
-            onCalendar={() => void loadCalendar()}
-            onSearch={() => {
-              setPanelOpen(true);
-              setPanel("search");
-            }}
+            onHome={() =>
+              void leaveGeneralForDocument().then((ready) => {
+                if (ready) void showLibraryHome();
+              })
+            }
+            onCalendar={() =>
+              void leaveGeneralForDocument().then((ready) => {
+                if (ready) void loadCalendar();
+              })
+            }
+            onGeneralAsk={enableGeneralAsk ? openGeneralAsk : undefined}
+            onWiki={
+              workspace?.managedProjectId ? () => setWikiOpen(true) : undefined
+            }
+            onSearch={() => openKnowledgePanel("search")}
             onIndex={() => setIndexOpen(true)}
           />
           <div className="file-tree">
@@ -2467,7 +2581,11 @@ export default function App() {
                 <Tree
                   files={workspace.files}
                   selected={document?.path}
-                  onOpen={(path) => void openPath(path)}
+                  onOpen={(path) =>
+                    void leaveGeneralForDocument().then((ready) => {
+                      if (ready) void openPath(path);
+                    })
+                  }
                 />
                 <button
                   className="button"
@@ -2547,7 +2665,7 @@ export default function App() {
               className="settings-button"
               title="模型与设置"
               aria-label="模型与设置"
-              disabled={!settings || busy}
+              disabled={!settings || generalBusy}
               onClick={() => setSettingsOpen(true)}
             >
               <Settings2 size={17} />
@@ -2957,18 +3075,28 @@ export default function App() {
             <div className="panel-tabs">
               <button
                 className={panel === "search" ? "active" : ""}
-                onClick={() => setPanel("search")}
+                onClick={() => openKnowledgePanel("search")}
               >
                 <Search size={15} />
                 检索
               </button>
               <button
                 className={panel === "ask" ? "active" : ""}
+                aria-label={generalAsk ? "通用问答当前页" : undefined}
                 onClick={() => setPanel("ask")}
               >
                 <Sparkles size={15} />
-                问答
+                {generalAsk ? "AI 问答" : "问答"}
               </button>
+              {enableGeneralAsk && !generalAsk && (
+                <button
+                  type="button"
+                  onClick={openGeneralAsk}
+                  disabled={chatBusy}
+                >
+                  通用问答
+                </button>
+              )}
               {compactWindow && panel === "search" && (
                 <button
                   className="return-to-editor"
@@ -2981,12 +3109,12 @@ export default function App() {
               <button
                 className="icon-button"
                 aria-label="收起知识侧栏"
-                onClick={() => setPanelOpen(false)}
+                onClick={closeKnowledge}
               >
                 <PanelRightClose size={15} />
               </button>
             </div>
-            {panel === "ask" ? (
+            {generalAsk && panel === "ask" ? null : panel === "ask" ? (
               <details className="assistant-configuration">
                 <summary>
                   资料与检索设置 ·{" "}
@@ -3106,22 +3234,27 @@ export default function App() {
                   disabled={chatBusy || assistant.loading}
                   expanded={focusedKnowledge}
                   onExpand={() =>
-                    compactWindow
-                      ? setPanelOpen(false)
+                    generalAsk || compactWindow
+                      ? closeKnowledge()
                       : setAssistantExpanded(!assistantExpanded)
                   }
                   onNew={() => void newConversation()}
                   onActivate={activateConversation}
                   onError={fail}
-                  onUseHistory={workspace ? setHistoryBackground : undefined}
+                  onUseHistory={
+                    workspace && !generalAsk ? setHistoryBackground : undefined
+                  }
                   scope={assistantScope}
                   onPreferences={
-                    workspace ? () => setPreferencesOpen(true) : undefined
+                    workspace || generalAsk
+                      ? () => setPreferencesOpen(true)
+                      : undefined
                   }
                 />
-                {preferencesOpen && workspace && (
+                {preferencesOpen && (workspace || generalAsk) && (
                   <AnswerPreferences
-                    workspaceRoot={workspace.root}
+                    workspaceRoot={workspace?.root}
+                    general={generalAsk}
                     onClose={() => setPreferencesOpen(false)}
                   />
                 )}
@@ -3175,10 +3308,13 @@ export default function App() {
                         : null
                     }
                     onOpen={setEvidencePreview}
+                    onOpenExternal={setExternalPreview}
+                    allowInsert={!generalAsk}
                     onCopy={(record) => void copyAnswer(record)}
                     onTransfer={prepareAnswerTransfer}
                     onRetry={(turn) => void ask({ retry: turn })}
                     onEdit={(turn) => {
+                      if (generalAsk) setSourcePlan(turn.sources ?? {});
                       setAssistantScopeChanged(false);
                       setScope(
                         assistant.conversation?.scope ? "current" : "workspace",
@@ -3209,11 +3345,15 @@ export default function App() {
                         <span />
                         <i />
                       </div>
-                      <h3>向自己的知识提问</h3>
+                      <h3>
+                        {generalAsk ? "今天想做些什么？" : "向自己的知识提问"}
+                      </h3>
                       <p>
-                        从一个问题开始，打开回答的来源核对，再将回答保存到文档。
+                        {generalAsk
+                          ? "直接聊天、写作或解释。需要时可添加文件和知识空间。"
+                          : "从一个问题开始，打开回答的来源核对，再将回答保存到文档。"}
                       </p>
-                      {!stats.documents && workspace && (
+                      {!generalAsk && !stats.documents && workspace && (
                         <div className="assistant-first-use">
                           {workspace.managedProjectId && (
                             <button
@@ -3235,11 +3375,18 @@ export default function App() {
                         </div>
                       )}
                       <div className="example-searches">
-                        {[
-                          "比较资料中的两种方案，列出相同点与差异",
-                          "总结这些资料，并注明尚未确定的部分",
-                          "当前资料还缺少哪些信息？",
-                        ].map((text) => (
+                        {(generalAsk
+                          ? [
+                              "解释一下什么是 BM25",
+                              "帮我把这段话改成一封邮件",
+                              "给我三个不同的写作开头",
+                            ]
+                          : [
+                              "比较资料中的两种方案，列出相同点与差异",
+                              "总结这些资料，并注明尚未确定的部分",
+                              "当前资料还缺少哪些信息？",
+                            ]
+                        ).map((text) => (
                           <button
                             key={text}
                             onClick={() => {
@@ -3274,6 +3421,32 @@ export default function App() {
                     void ask();
                   }}
                 >
+                  {generalAsk && (
+                    <QuestionSources
+                      view={libraryView}
+                      currentDocument={libraryView.documents.find(
+                        (item) =>
+                          item.projectId === workspace?.managedProjectId &&
+                          item.path === document?.path &&
+                          item.status === "ready",
+                      )}
+                      conversationId={
+                        assistant.conversation?.archived
+                          ? undefined
+                          : assistant.conversation?.id
+                      }
+                      disabled={chatBusy || assistant.loading}
+                      selected={sourcePlan}
+                      onChange={setSourcePlan}
+                      ensureConversation={async () =>
+                        (await assistant.ensureGeneral()).id
+                      }
+                      onBusy={(next) => {
+                        sourceBusyRef.current = next;
+                        setSourceBusy(next);
+                      }}
+                    />
+                  )}
                   {historyBackground && (
                     <section
                       className="assistant-background-chip"
@@ -3303,11 +3476,13 @@ export default function App() {
                     本轮停用回答偏好
                   </label>
                   <textarea
-                    aria-label="向当前空间提问"
+                    aria-label={generalAsk ? "向 AI 提问" : "向当前空间提问"}
                     value={question}
                     maxLength={1500}
                     disabled={assistant.loading}
-                    placeholder="向你的资料提问…"
+                    placeholder={
+                      generalAsk ? "写下你的问题或想法…" : "向你的资料提问…"
+                    }
                     onChange={(e) => {
                       questionRef.current = e.target.value;
                       setQuestion(e.target.value);
@@ -3331,9 +3506,11 @@ export default function App() {
                     <span>
                       {chatBusy && question.trim()
                         ? "下一问草稿自动保存"
-                        : assistant.conversation
-                          ? "基于会话固定范围 · Enter发送 / Shift+Enter换行"
-                          : "首次发送后固定资料范围 · Enter发送 / Shift+Enter换行"}
+                        : generalAsk
+                          ? "Enter 发送 / Shift+Enter 换行"
+                          : assistant.conversation
+                            ? "基于会话固定范围 · Enter发送 / Shift+Enter换行"
+                            : "首次发送后固定资料范围 · Enter发送 / Shift+Enter换行"}
                     </span>
                     {chatBusy ? (
                       <button
@@ -3358,7 +3535,10 @@ export default function App() {
                         title="发送问题"
                         aria-label="发送问题"
                         disabled={
-                          !workspace || assistant.loading || !question.trim()
+                          (!workspace && !generalAsk) ||
+                          sourceBusy ||
+                          assistant.loading ||
+                          !question.trim()
                         }
                       >
                         <ArrowUp size={17} />
@@ -3417,8 +3597,58 @@ export default function App() {
           }}
         />
       )}
+      {externalPreview && (
+        <ExternalSourcePreview
+          key={externalPreview.id}
+          source={externalPreview}
+          conversationId={assistant.conversation?.id}
+          onClose={() => setExternalPreview(null)}
+          onError={fail}
+          onOpenDocument={
+            externalPreview.kind === "document" &&
+            libraryView.documents.some(
+              (doc) =>
+                doc.id === externalPreview.documentId &&
+                doc.projectId === externalPreview.projectId &&
+                doc.status === "ready",
+            )
+              ? () => {
+                  const doc = libraryView.documents.find(
+                    (item) =>
+                      item.id === externalPreview.documentId &&
+                      item.projectId === externalPreview.projectId,
+                  );
+                  setExternalPreview(null);
+                  if (doc) void openLibraryDocument(doc);
+                }
+              : undefined
+          }
+        />
+      )}
+      {wikiOpen && workspace?.managedProjectId && (
+        <WikiPanel
+          key={workspace.managedProjectId}
+          projectId={workspace.managedProjectId}
+          view={libraryView}
+          workspaceRoot={workspace.root}
+          onClose={() => setWikiOpen(false)}
+          onOpenSource={(source) => {
+            setWikiOpen(false);
+            void leaveGeneralForDocument().then((ready) => {
+              if (ready) void openPath(source.path, source);
+            });
+          }}
+        />
+      )}
+      {webSettingsOpen && (
+        <WebSearchSettings onClose={() => setWebSettingsOpen(false)} />
+      )}
       {settingsOpen && settings && (
         <SettingsModal
+          onWebSearch={() => {
+            setSettingsOpen(false);
+            setWebSettingsOpen(true);
+          }}
           value={settings}
           onClose={() => setSettingsOpen(false)}
           onSave={(next) => {
@@ -3672,13 +3902,15 @@ export default function App() {
           <Answer
             text={answer}
             sources={answerSources}
+            externalSources={answerExternalSources}
             pending={chatBusy || !answerComplete}
             rejectedCharts={rejectedCharts}
             viewKey={`answer:${answerSnapshot?.id}:expanded`}
             onError={notify}
             onOpen={(source) => {
               setAnswerExpanded(false);
-              void openPath(source.path, source);
+              if (source.external) setExternalPreview(source.external);
+              else void openPath(source.path, source);
             }}
           />
           {answerWarning && <p className="panel-warning">{answerWarning}</p>}
@@ -3713,9 +3945,25 @@ export default function App() {
           </div>
           <p className="muted">
             {answerTransfer.kind === "save"
-              ? `保存到 ${workspace?.name ?? "当前空间"}，包含原始 Markdown、结构数据与来源版本。`
+              ? "保存原始 Markdown、结构数据与来源版本。"
               : `插入到 ${basename(answerTransfer.path ?? "")} 的原光标位置，可一次撤销。`}
           </p>
+          {answerTransfer.general && answerTransfer.kind === "save" && (
+            <label className="answer-file-label">
+              保存空间
+              <select
+                value={answerProject}
+                disabled={nameBusy || !!answerSavedPath}
+                onChange={(event) => setAnswerProject(event.target.value)}
+              >
+                {libraryView.projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {answerTransfer.kind === "save" && (
             <label className="answer-file-label">
               文件名
@@ -3766,7 +4014,16 @@ export default function App() {
                   const path = answerSavedPath;
                   closeAnswerTransfer();
                   setAnswerExpanded(false);
-                  void openPath(path);
+                  const projectId = answerTransfer.general
+                    ? answerProject
+                    : workspace?.managedProjectId;
+                  void switchGeneral(false).then((ready) => {
+                    if (!ready) return;
+                    setPanelOpen(false);
+                    if (projectId && projectId !== workspace?.managedProjectId)
+                      void useLibrary(projectId, path);
+                    else void openPath(path);
+                  });
                 }}
               >
                 打开新文档

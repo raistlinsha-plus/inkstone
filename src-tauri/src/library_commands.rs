@@ -235,9 +235,16 @@ pub async fn library_create_document(
     project_id: String,
     title: String,
     content: String,
+    from_assistant: Option<bool>,
 ) -> Result<library::Document, String> {
     let _permit = crate::maintenance::mutation(&state.data_dir)?;
-    let doc = library::create_document(&state.data_dir, &project_id, &title, &content)?;
+    let doc = library::create_document_with_origin(
+        &state.data_dir,
+        &project_id,
+        &title,
+        &content,
+        from_assistant.unwrap_or(false),
+    )?;
     if let Ok(ws) = documents::library_workspace(&state.data_dir, &project_id) {
         let _ = documents::refresh_local(&ws, &state.data_dir, &doc.path, &content);
     }
@@ -334,6 +341,7 @@ pub async fn library_import(
                 .push("副本已保存；本地索引有未完成项，请更新知识库。".into());
         }
         let _ = calendar::refresh(&data, &project_id);
+        crate::wiki::schedule(app);
         if !result.cancelled {
             if let Some(id) = resume_job_id {
                 let _ = library::retried(&data, &id);

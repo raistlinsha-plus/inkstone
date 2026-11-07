@@ -1,10 +1,13 @@
 import Markdown from "./preview/Markdown";
 import type { SearchResult } from "./types";
+import type { ExternalSource } from "./assistant/types";
+import { answerCitations } from "./assistant/sourceDisplay";
 
 export default function Answer({
   text,
   sources,
   onOpen,
+  externalSources = [],
   pending = false,
   rejectedCharts = [],
   viewKey,
@@ -12,6 +15,7 @@ export default function Answer({
 }: {
   text: string;
   sources: SearchResult[];
+  externalSources?: ExternalSource[];
   onOpen: (source: SearchResult) => void;
   pending?: boolean;
   rejectedCharts?: number[];
@@ -24,7 +28,7 @@ export default function Answer({
         source={text}
         path=""
         readOnly
-        citations={sources}
+        citations={answerCitations(sources, externalSources)}
         onCitation={onOpen}
         pending={pending}
         rejectedCharts={rejectedCharts}

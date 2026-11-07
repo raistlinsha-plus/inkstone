@@ -163,19 +163,24 @@ function PreferenceRow({
 
 export default function AnswerPreferences({
   workspaceRoot,
+  general = false,
   onClose,
 }: {
-  workspaceRoot: string;
+  workspaceRoot?: string;
+  general?: boolean;
   onClose: () => void;
 }) {
   const [data, setData] = useState<Settings>();
-  const [scope, setScope] = useState<Scope>("space");
+  const [scope, setScope] = useState<Scope>(general ? "global" : "space");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [refresh, setRefresh] = useState(0);
   useEffect(() => {
     let active = true;
-    void invoke<Settings>("assistant_memory_settings", { workspaceRoot }).then(
+    void invoke<Settings>("assistant_memory_settings", {
+      workspaceRoot,
+      ...(general ? { general: true } : {}),
+    }).then(
       (result) => {
         if (active) {
           setData(result);
@@ -189,11 +194,15 @@ export default function AnswerPreferences({
     return () => {
       active = false;
     };
-  }, [workspaceRoot, refresh]);
+  }, [workspaceRoot, general, refresh]);
   function save(change: Change) {
     setBusy(true);
     setError("");
-    void invoke<Settings>("assistant_memory_update", { workspaceRoot, change })
+    void invoke<Settings>("assistant_memory_update", {
+      workspaceRoot,
+      change,
+      ...(general ? { general: true } : {}),
+    })
       .then(setData, (reason) => setError(String(reason)))
       .finally(() => setBusy(false));
   }
@@ -211,7 +220,8 @@ export default function AnswerPreferences({
         </button>
       </div>
       <p>
-        偏好只影响表达方式。发送问答时，启用的选项会随请求发送给聊天模型。当前空间的启用项优先。
+        偏好只影响表达方式。发送问答时，启用的选项会随请求发送给聊天模型。
+        {general ? "通用问答" : "当前空间"}的启用项优先。
       </p>
       <label>
         编辑范围
@@ -222,7 +232,7 @@ export default function AnswerPreferences({
             setScope(event.target.value === "global" ? "global" : "space")
           }
         >
-          <option value="space">当前空间</option>
+          <option value="space">{general ? "通用问答" : "当前空间"}</option>
           <option value="global">全部空间</option>
         </select>
       </label>

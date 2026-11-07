@@ -4,6 +4,8 @@ fn make(data: &Path, workspace: &str) -> Conversation {
 }
 fn response(text: &str) -> ChatResponse {
     ChatResponse {
+        external_sources: vec![],
+        trace: None,
         memory: None,
         finish_reason: "stop".into(),
         text: text.into(),

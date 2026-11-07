@@ -96,7 +96,12 @@ export interface Commands {
   library_trash: Command<{ id: string; restore: boolean }, void>;
   library_rename: Command<{ id: string; title: string }, void>;
   library_create_document: Command<
-    { projectId: string; title: string; content?: string },
+    {
+      projectId: string;
+      title: string;
+      content?: string;
+      fromAssistant?: boolean;
+    },
     LibraryDocument
   >;
   library_reveal: Command<{ projectId: string }, void>;

@@ -14,7 +14,10 @@ use std::{
 };
 use uuid::Uuid;
 
-pub(crate) const SCHEMA: i64 = 2;
+pub(crate) const SCHEMA: i64 = 3;
+pub const GENERAL_OWNER: &str = "general";
+#[path = "assistant_attachments.rs"]
+pub mod attachments;
 #[path = "assistant_memory.rs"]
 pub mod memory;
 const MAX_TURNS: i64 = 200;
@@ -39,6 +42,8 @@ pub struct Turn {
     pub created_at: String,
     pub selected_candidate_id: Option<String>,
     pub candidates: Vec<Candidate>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sources: Option<crate::assistant_sources::Selection>,
 }
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -85,6 +90,9 @@ pub struct Started {
     pub grounded_question: String,
     pub prompt_question: String,
     pub scope: Option<String>,
+    pub sources: Option<crate::assistant_sources::Selection>,
+    pub previous_answer: Option<String>,
+    pub previous_questions: Vec<String>,
 }
 fn err(e: impl std::fmt::Display) -> String {
     format!("会话存储：{e}")
@@ -149,8 +157,11 @@ fn open(data: &Path) -> Result<Connection, String> {
         )
         .map_err(err)?;
     }
-    if version < SCHEMA {
+    if version < 2 {
         memory::migrate(&mut c)?;
+    }
+    if version < 3 {
+        attachments::migrate(&mut c)?;
     }
     c.execute("UPDATE candidates SET status='failed',error='上次生成未完成，请重新生成。' WHERE status='generating' AND process_id<>?",[process_id()]).map_err(err)?;
     Ok(c)
@@ -218,11 +229,15 @@ fn read(c: &Connection, workspace: &str, id: &str) -> Result<Conversation, Strin
                 created_at: r.get(3)?,
                 selected_candidate_id: r.get(4)?,
                 candidates: vec![],
+                sources: None,
             })
         })
         .map_err(err)?;
     for t in turns {
         let mut t = t.map_err(err)?;
+        if workspace == GENERAL_OWNER {
+            t.sources = attachments::selection(c, &t.id)?;
+        }
         let mut st=c.prepare("SELECT id,request_id,status,created_at,error,response,requested_mode FROM candidates WHERE turn_id=? ORDER BY rowid").map_err(err)?;
         let rows = st
             .query_map([&t.id], |r| {
@@ -516,6 +531,32 @@ pub fn begin_with_mode(
     request: &str,
     requested_mode: &str,
 ) -> Result<Started, String> {
+    begin_with_sources(
+        data,
+        workspace,
+        id,
+        expected,
+        question,
+        parent,
+        regenerate,
+        request,
+        requested_mode,
+        None,
+    )
+}
+
+pub fn begin_with_sources(
+    data: &Path,
+    workspace: &str,
+    id: &str,
+    expected: i64,
+    question: &str,
+    parent: Option<&str>,
+    regenerate: Option<&str>,
+    request: &str,
+    requested_mode: &str,
+    selected_sources: Option<crate::assistant_sources::Selection>,
+) -> Result<Started, String> {
     if !["keyword", "hybrid", "rerank"].contains(&requested_mode) {
         return Err("未知检索方式".into());
     }
@@ -567,6 +608,35 @@ pub fn begin_with_mode(
         tx.execute("INSERT INTO turns(id,conversation_id,parent_turn_id,question,created_at) VALUES(?,?,?,?,?)",params![turn,id,parent,question,time]).map_err(err)?;
         (turn, question, parent.map(str::to_string))
     };
+    let mut sources = None;
+    let mut previous_answer = None;
+    if workspace == GENERAL_OWNER {
+        let selection = if regenerate.is_some() {
+            attachments::selection(&tx, &turn_id)?.unwrap_or_default()
+        } else {
+            selected_sources.unwrap_or_default()
+        };
+        selection.validate()?;
+        attachments::validate_owned(&tx, id, &selection.attachments)?;
+        if regenerate.is_none() {
+            tx.execute(
+                "INSERT INTO turn_sources(turn_id, selection) VALUES(?,?)",
+                params![&turn_id, serde_json::to_string(&selection).map_err(err)?],
+            )
+            .map_err(err)?;
+        }
+        sources = Some(selection);
+        if let Some(parent) = &parent {
+            previous_answer = tx.query_row(
+                "SELECT c.response FROM turns t JOIN candidates c ON c.id=t.selected_candidate_id
+                   WHERE t.id=? AND c.status='complete'",
+                [parent],
+                |r| r.get::<_, Option<String>>(0),
+            ).optional().map_err(err)?.flatten()
+                .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
+                .and_then(|v| v["text"].as_str().map(|v| v.chars().take(1200).collect()));
+        }
+    }
     let history = prior_questions(&tx, id, parent.as_deref())?;
     let (grounded_question, prompt_question) = queries(&question, &history);
     let followup_sources = if grounding::is_followup(&question, parent.is_some()) {
@@ -606,6 +676,13 @@ pub fn begin_with_mode(
         grounded_question,
         prompt_question,
         scope,
+        sources,
+        previous_answer,
+        previous_questions: if workspace == GENERAL_OWNER {
+            history
+        } else {
+            Vec::new()
+        },
     })
 }
 pub fn finish(
@@ -683,6 +760,30 @@ fn export_candidate(markdown: &mut String, candidate: &Candidate, selected: bool
                     s["endLine"],
                     s["hash"].as_str().unwrap_or("")
                 ));
+            }
+        }
+        if let Some(sources) = r["externalSources"].as_array() {
+            for source in sources {
+                let label = source["label"]
+                    .as_str()
+                    .unwrap_or("")
+                    .replace(['\n', '\r', '[', ']'], " ");
+                let kind = match source["kind"].as_str() {
+                    Some("web") => "网页",
+                    Some("attachment") => "附件",
+                    _ => "文档",
+                };
+                markdown.push_str(&format!("- S{} · {kind} · {label}", source["citation"]));
+                if let Some(url) = source["url"]
+                    .as_str()
+                    .filter(|url| crate::web_retrieval::valid_source_url(url))
+                {
+                    markdown.push_str(&format!(" · <{url}>"));
+                }
+                if let Some(at) = source["capturedAt"].as_str() {
+                    markdown.push_str(&format!(" · 抓取时间 {at}"));
+                }
+                markdown.push('\n');
             }
         }
     } else if let Some(error) = &candidate.error {

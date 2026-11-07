@@ -15,6 +15,7 @@ import type { CalendarDocument } from "./content/calendar";
 import type { EditorHandle } from "./Editor";
 import type { ComponentProps, Ref } from "react";
 import type { FileData, Settings, Workspace } from "./types";
+import { appVersion } from "./version";
 const api = vi.hoisted(() => ({
   invoke: vi.fn(),
   confirm: vi.fn(),
@@ -1059,6 +1060,58 @@ const syntheticAnswer = {
   chartWarnings: [],
   rejectedCharts: [],
 };
+
+test.skipIf(appVersion === "0.7.2")(
+  "standalone question needs no workspace and can open a web citation",
+  async () => {
+    overrides.set("bootstrap", () => ({
+      settings: {
+        ...settings,
+        chat: { ...settings.chat, enabled: true, model: "test-model" },
+      },
+      lastWorkspace: null,
+    }));
+    overrides.set("open_library", () => Promise.reject(Error("空间不可用")));
+    overrides.set("ask_question", () => ({
+      ...syntheticAnswer,
+      text: "## 通用回答\n\n来自示例网页 [1]。",
+      externalSources: [
+        {
+          id: "source-web",
+          kind: "web",
+          label: "示例网页",
+          url: "https://example.org/",
+          citation: 1,
+        },
+      ],
+      trace: { route: "公开网页", steps: ["查阅网页"], unread: [] },
+    }));
+    render(<App />);
+    await screen.findByRole("button", { name: "重新打开资料" });
+    fireEvent.click(screen.getByRole("button", { name: "AI 问答" }));
+    fireEvent.change(await screen.findByLabelText("向 AI 提问"), {
+      target: { value: "请说明这个公开问题" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+    await screen.findByRole("heading", { name: "通用回答" });
+    expect(calls("assistant_create")[0][1]).toMatchObject({
+      general: true,
+      scope: null,
+    });
+    expect(calls("assistant_ask")[0][1]).toMatchObject({
+      general: true,
+      sources: {},
+    });
+    expect(screen.getByText("本轮查阅")).toBeTruthy();
+    fireEvent.click(screen.getByTitle("查看来源 1：示例网页"));
+    const preview = await screen.findByRole("dialog", { name: "查看来源" });
+    expect(within(preview).getByText("example.org")).toBeTruthy();
+    fireEvent.click(within(preview).getByRole("button", { name: "打开网页" }));
+    expect(calls("open_external")[0][1]).toEqual({
+      url: "https://example.org/",
+    });
+  },
+);
 
 test("an answer keeps its request scope and explicit retrieval mode when controls change after completion", async () => {
   const pending = deferred<typeof syntheticAnswer>();

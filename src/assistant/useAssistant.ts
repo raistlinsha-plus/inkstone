@@ -12,7 +12,16 @@ type RunningQuestion = {
 };
 
 /** Persistent assistant data; request ownership is scoped to the current workspace. */
-export function useAssistant(root: string | undefined) {
+export function useAssistant(
+  workspaceRoot: string | undefined,
+  general = false,
+) {
+  const root = general ? "general:" : workspaceRoot;
+  const request = useCallback(
+    <T>(command: string, args: Record<string, unknown>) =>
+      invoke<T>(command, general ? { ...args, general: true } : args),
+    [general],
+  );
   const [conversation, setConversation] = useState<Conversation | null>(null),
     [summaries, setSummaries] = useState<ConversationSummary[]>([]),
     [error, setError] = useState(""),
@@ -30,20 +39,23 @@ export function useAssistant(root: string | undefined) {
     current.current = next;
     setConversation(next);
   }, []);
-  const list = useCallback(async (includeArchived = true, query = "") => {
-    const epoch = generation.current;
-    if (!rootRef.current) return;
-    const rows = await invoke<ConversationSummary[]>("assistant_list", {
-      includeArchived,
-      query,
-    });
-    if (epoch === generation.current)
-      setSummaries(Array.isArray(rows) ? rows : []);
-  }, []);
+  const list = useCallback(
+    async (includeArchived = true, query = "") => {
+      const epoch = generation.current;
+      if (!rootRef.current) return;
+      const rows = await request<ConversationSummary[]>("assistant_list", {
+        includeArchived,
+        query,
+      });
+      if (epoch === generation.current)
+        setSummaries(Array.isArray(rows) ? rows : []);
+    },
+    [request],
+  );
   const search = useCallback(
     async (includeArchived: boolean, query: string, offset = 0) => {
       const epoch = generation.current;
-      const rows = await invoke<ConversationSummary[]>("assistant_list", {
+      const rows = await request<ConversationSummary[]>("assistant_list", {
         includeArchived,
         query,
         offset,
@@ -51,7 +63,7 @@ export function useAssistant(root: string | undefined) {
       if (epoch !== generation.current) throw Error("空间已变化");
       return Array.isArray(rows) ? rows : [];
     },
-    [],
+    [request],
   );
   useEffect(() => {
     ++generation.current;
@@ -65,7 +77,7 @@ export function useAssistant(root: string | undefined) {
     if (root) {
       setLoading(true);
       void (async () => {
-        const rows = await invoke<ConversationSummary[]>("assistant_list", {
+        const rows = await request<ConversationSummary[]>("assistant_list", {
           includeArchived: true,
           query: "",
         });
@@ -75,7 +87,7 @@ export function useAssistant(root: string | undefined) {
           ? rows.find((x) => !x.archived)
           : undefined;
         if (first && !current.current) {
-          const next = await invoke<Conversation>("assistant_get", {
+          const next = await request<Conversation>("assistant_get", {
             conversationId: first.id,
           });
           if (active && !current.current) install(next);
@@ -93,7 +105,7 @@ export function useAssistant(root: string | undefined) {
       ++generation.current;
       if (draftTimer.current) clearTimeout(draftTimer.current);
     };
-  }, [root, install, list]);
+  }, [root, install, list, request]);
   const serial = useCallback(<T>(fn: () => Promise<T>) => {
     const epoch = generation.current;
     const job = queue.current
@@ -109,7 +121,7 @@ export function useAssistant(root: string | undefined) {
     (scope: string | null, title?: string) =>
       serial(async () => {
         const epoch = generation.current;
-        const next = await invoke<Conversation>("assistant_create", {
+        const next = await request<Conversation>("assistant_create", {
           scope,
           title,
         });
@@ -119,7 +131,7 @@ export function useAssistant(root: string | undefined) {
         await list();
         return next;
       }),
-    [serial, install, list],
+    [serial, install, list, request],
   );
   const load = useCallback(
     async (id: string) => {
@@ -127,7 +139,7 @@ export function useAssistant(root: string | undefined) {
       setLoading(true);
       setError("");
       try {
-        const next = await invoke<Conversation>("assistant_get", {
+        const next = await request<Conversation>("assistant_get", {
           conversationId: id,
         });
         if (epoch !== generation.current) return null;
@@ -140,7 +152,7 @@ export function useAssistant(root: string | undefined) {
         if (epoch === generation.current) setLoading(false);
       }
     },
-    [install],
+    [install, request],
   );
   const update = useCallback(
     (patch: {
@@ -153,7 +165,7 @@ export function useAssistant(root: string | undefined) {
         const c = current.current;
         if (!c) throw Error("请先建立会话");
         const epoch = generation.current;
-        const next = await invoke<Conversation>("assistant_update", {
+        const next = await request<Conversation>("assistant_update", {
           conversationId: c.id,
           expectedRevision: c.revision,
           ...patch,
@@ -163,7 +175,7 @@ export function useAssistant(root: string | undefined) {
         await list();
         return next;
       }),
-    [serial, install, list],
+    [serial, install, list, request],
   );
   const flushDraft = useCallback(async () => {
     if (draftTimer.current) clearTimeout(draftTimer.current);
@@ -187,7 +199,7 @@ export function useAssistant(root: string | undefined) {
           current.current.archived ||
           current.current.scope !== draft.scope
         ) {
-          const next = await invoke<Conversation>("assistant_create", {
+          const next = await request<Conversation>("assistant_create", {
             scope: draft.scope,
           });
           if (epoch !== generation.current) throw Error("空间已变化");
@@ -196,7 +208,7 @@ export function useAssistant(root: string | undefined) {
         }
         const c = current.current!;
         if (c.draft !== draft.text) {
-          const next = await invoke<Conversation>("assistant_update", {
+          const next = await request<Conversation>("assistant_update", {
             conversationId: c.id,
             expectedRevision: c.revision,
             draft: draft.text,
@@ -215,7 +227,22 @@ export function useAssistant(root: string | undefined) {
         setDraftError("问答草稿未保存：" + String(e));
       throw e;
     }
-  }, [serial, install, list]);
+  }, [serial, install, list, request]);
+  const ensureGeneral = useCallback(async () => {
+    await flushDraft();
+    return serial(async () => {
+      if (current.current && !current.current.archived) return current.current;
+      const epoch = generation.current;
+      const next = await request<Conversation>("assistant_create", {
+        scope: null,
+      });
+      if (epoch !== generation.current) throw Error("会话已切换");
+      if (!next?.id) throw Error("会话服务暂不可用");
+      install(next);
+      await list();
+      return next;
+    });
+  }, [flushDraft, serial, request, install, list]);
   const persistDebouncedDraft = useCallback(async () => {
     const draft = pendingDraft.current;
     const run = runningQuestion.current;
@@ -234,7 +261,7 @@ export function useAssistant(root: string | undefined) {
       .then(async () => {
         if (pendingDraft.current !== draft || run.epoch !== generation.current)
           return false;
-        return invoke<boolean>("assistant_save_running_draft", {
+        return request<boolean>("assistant_save_running_draft", {
           conversationId: run.conversationId,
           requestId: run.id,
           draft: draft.text,
@@ -259,7 +286,7 @@ export function useAssistant(root: string | undefined) {
       // the race. The normal queue will use the conversation's final revision.
       await flushDraft();
     }
-  }, [flushDraft]);
+  }, [flushDraft, request]);
   const saveDraft = useCallback(
     (scope: string | null, text: string) => {
       pendingDraft.current = { scope, text };
@@ -301,7 +328,7 @@ export function useAssistant(root: string | undefined) {
         setError("");
         let next: Conversation;
         try {
-          next = await invoke<Conversation>("assistant_ask", {
+          next = await request<Conversation>("assistant_ask", {
             ...input,
             conversationId: c.id,
             expectedRevision: c.revision,
@@ -316,7 +343,7 @@ export function useAssistant(root: string | undefined) {
           // accepted revision before a queued draft retries; never invent one.
           if (epoch === generation.current) {
             try {
-              const latest = await invoke<Conversation>("assistant_get", {
+              const latest = await request<Conversation>("assistant_get", {
                 conversationId: c.id,
               });
               if (epoch === generation.current && latest?.id === c.id)
@@ -335,7 +362,7 @@ export function useAssistant(root: string | undefined) {
         return next;
       });
     },
-    [create, install, list, serial, flushDraft],
+    [create, install, list, serial, flushDraft, request],
   );
   const select = useCallback(
     (turnId: string, candidateId: string) =>
@@ -343,7 +370,7 @@ export function useAssistant(root: string | undefined) {
         const c = current.current;
         if (!c) throw Error("会话已关闭");
         const epoch = generation.current;
-        const next = await invoke<Conversation>("assistant_select_candidate", {
+        const next = await request<Conversation>("assistant_select_candidate", {
           conversationId: c.id,
           turnId,
           candidateId,
@@ -351,7 +378,7 @@ export function useAssistant(root: string | undefined) {
         });
         if (epoch === generation.current) install(next);
       }),
-    [serial, install],
+    [serial, install, request],
   );
   const remove = useCallback(
     () =>
@@ -361,14 +388,14 @@ export function useAssistant(root: string | undefined) {
         const c = current.current;
         if (!c) return;
         const epoch = generation.current;
-        await invoke("assistant_delete", {
+        await request("assistant_delete", {
           conversationId: c.id,
           expectedRevision: c.revision,
         });
         if (epoch === generation.current) install(null);
         await list();
       }),
-    [serial, install, list],
+    [serial, install, list, request],
   );
   const clear = useCallback(() => {
     if (draftTimer.current) clearTimeout(draftTimer.current);
@@ -379,6 +406,7 @@ export function useAssistant(root: string | undefined) {
   }, [install]);
   return {
     workspaceKey: root,
+    general,
     conversation,
     summaries,
     error: draftError || error,
@@ -387,6 +415,7 @@ export function useAssistant(root: string | undefined) {
     list,
     search,
     create,
+    ensureGeneral,
     load,
     update,
     start,

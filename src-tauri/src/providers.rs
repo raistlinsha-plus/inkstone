@@ -614,6 +614,41 @@ pub async fn embed(
     }
     Ok(all)
 }
+pub async fn complete_json(
+    client: &reqwest::Client,
+    provider: &Provider,
+    key: Option<&str>,
+    system: &str,
+    user: &str,
+    cancel: &AtomicBool,
+) -> Result<Value, String> {
+    if system.chars().count() + user.chars().count() > provider.context_chars {
+        return Err("结构化请求超过模型上下文上限".into());
+    }
+    let body = json!({
+        "model": provider.model, "stream": false, "max_tokens": 3000,
+        "messages": [{"role":"system","content":system},{"role":"user","content":user}]
+    });
+    let response = request(client, provider, key, "chat/completions", body, cancel).await?;
+    let envelope = bounded_json(response, 512 * 1024, cancel).await?;
+    let raw = envelope
+        .pointer("/choices/0/message/content")
+        .and_then(Value::as_str)
+        .ok_or("模型未返回结构化结果")?
+        .trim();
+    let raw = raw
+        .strip_prefix("```json")
+        .or_else(|| raw.strip_prefix("```"))
+        .and_then(|v| v.strip_suffix("```"))
+        .unwrap_or(raw)
+        .trim();
+    let value: Value = serde_json::from_str(raw).map_err(|_| "模型未返回有效的 JSON 对象")?;
+    if !value.is_object() {
+        return Err("模型未返回 JSON 对象".into());
+    }
+    Ok(value)
+}
+
 pub struct ChatOutput {
     pub text: String,
     pub finish_reason: String,
@@ -652,7 +687,30 @@ pub async fn chat(
     request_id: &str,
 ) -> Result<ChatOutput, String> {
     let context = chat_source_text(sources);
-    let body = json!({"model":provider.model,"stream":true,"messages":[{"role":"system","content":ANSWER_SYSTEM},{"role":"user","content":format!("资料开始\n{context}\n资料结束\n\n问题：{question}")}],"max_tokens":4096});
+    stream_chat(
+        client,
+        provider,
+        key,
+        ANSWER_SYSTEM,
+        &format!("资料开始\n{context}\n资料结束\n\n问题：{question}"),
+        cancel,
+        app,
+        request_id,
+    )
+    .await
+}
+
+pub async fn stream_chat(
+    client: &reqwest::Client,
+    provider: &Provider,
+    key: Option<&str>,
+    system: &str,
+    user: &str,
+    cancel: &AtomicBool,
+    app: Option<&tauri::AppHandle>,
+    request_id: &str,
+) -> Result<ChatOutput, String> {
+    let body = json!({"model":provider.model,"stream":true,"messages":[{"role":"system","content":system},{"role":"user","content":user}],"max_tokens":4096});
     let response = request(client, provider, key, "chat/completions", body, cancel).await?;
     let content_type = response
         .headers()

@@ -144,9 +144,13 @@ export function ConversationHeader({
         <div className="assistant-conversation-title">
           <strong>{c?.title || "新会话"}</strong>
           <small>
-            {c
-              ? `固定范围 · ${c.scopeLabel}${c.archived ? " · 已归档" : ""}`
-              : "首次发送后固定资料范围"}
+            {controller.general
+              ? c?.archived
+                ? "通用问答 · 已归档"
+                : "通用问答 · 每轮可添加资料"
+              : c
+                ? `固定范围 · ${c.scopeLabel}${c.archived ? " · 已归档" : ""}`
+                : "首次发送后固定资料范围"}
           </small>
         </div>
         <div className="assistant-toolbar-actions">
@@ -223,7 +227,10 @@ export function ConversationHeader({
                         markdown: string;
                         allMarkdown: string;
                         json: string;
-                      }>("assistant_export", { conversationId: c.id });
+                      }>("assistant_export", {
+                        conversationId: c.id,
+                        ...(controller.general ? { general: true } : {}),
+                      });
                       setExportText(data.markdown);
                       setExportData({
                         current: data.markdown,
@@ -364,7 +371,11 @@ export function ConversationHeader({
                   </div>
                 ))}
                 {!searching && !searchError && !rows.length && (
-                  <p className="muted">本空间暂无匹配会话。</p>
+                  <p className="muted">
+                    {controller.general
+                      ? "暂无匹配的通用会话。"
+                      : "本空间暂无匹配会话。"}
+                  </p>
                 )}
               </div>
               {searchError && <p role="alert">{searchError}</p>}

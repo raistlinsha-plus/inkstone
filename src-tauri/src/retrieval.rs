@@ -313,6 +313,73 @@ pub fn generation_context(
     }
     sources
 }
+pub fn merge_wiki(results: &mut Vec<SearchResult>, wiki: Vec<SearchResult>) {
+    let mut credited = HashSet::new();
+    for hit in wiki {
+        let overlaps = |candidate: &SearchResult| {
+            candidate.path == hit.path
+                && candidate.hash == hit.hash
+                && candidate.start_line <= hit.end_line
+                && hit.start_line <= candidate.end_line
+        };
+        if let Some(candidate) = results.iter_mut().find(|item| overlaps(item)) {
+            if credited.insert((
+                candidate.path.clone(),
+                candidate.start_line,
+                candidate.end_line,
+            )) {
+                candidate.score += hit.score;
+                candidate.match_kind = "wiki".into();
+            }
+        } else {
+            results.push(hit);
+        }
+    }
+    results.sort_by(|a, b| {
+        b.score
+            .total_cmp(&a.score)
+            .then(a.path.cmp(&b.path))
+            .then(a.start_line.cmp(&b.start_line))
+    });
+}
+
+pub fn balance_candidates(results: &mut Vec<SearchResult>) {
+    let mut seen = HashSet::new();
+    let (first, rest): (Vec<_>, Vec<_>) = std::mem::take(results)
+        .into_iter()
+        .partition(|item| seen.insert(item.path.clone()));
+    results.extend(first.into_iter().chain(rest));
+}
+
+pub fn apply_rerank_policy(
+    results: &mut [SearchResult],
+    ranking: &[(usize, f64)],
+    min_score: f64,
+    strict: bool,
+) {
+    let original = results
+        .iter()
+        .map(|r| (r.evidence, r.match_kind == "wiki"))
+        .collect::<Vec<_>>();
+    for (i, item) in results.iter_mut().enumerate() {
+        item.rerank_score = None;
+        item.evidence = !strict && original[i].0;
+    }
+    for &(i, score) in ranking {
+        if let Some(item) = results.get_mut(i) {
+            item.rerank_score = Some(score);
+            item.evidence = original[i].0 && (!strict || score >= min_score);
+            item.match_kind = match (original[i].1, item.evidence) {
+                (true, true) => "wiki-reranked",
+                (true, false) => "wiki",
+                (_, true) => "reranked",
+                _ => "candidate",
+            }
+            .into();
+        }
+    }
+}
+
 pub fn apply_rerank(results: &mut [SearchResult], ranking: &[(usize, f64)], min_score: f64) {
     // Relevance is not entailment: a high score for an entity's document does
     // not prove it contains the requested phone number, year or other fact.
@@ -556,16 +623,21 @@ pub fn answer_context(
     }
     let mut counts = HashMap::<String, usize>::new();
     let mut selected = vec![];
+    let mut duplicates = vec![];
     let mut deferred = vec![];
     for r in prepared {
         let n = counts.entry(r.path.clone()).or_default();
-        if *n < 3 {
+        if *n == 0 {
             *n += 1;
             selected.push(r);
+        } else if *n < 3 {
+            *n += 1;
+            duplicates.push(r);
         } else {
             deferred.push(r);
         }
     }
+    selected.extend(duplicates);
     selected.extend(deferred);
     selected.into_iter().take(6).collect()
 }

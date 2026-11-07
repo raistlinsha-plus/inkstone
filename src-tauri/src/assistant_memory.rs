@@ -17,8 +17,7 @@ pub(super) fn migrate(c: &mut Connection) -> Result<(), String> {
         CREATE TABLE IF NOT EXISTS handled_answer_preferences (id TEXT PRIMARY KEY);",
     )
     .map_err(err)?;
-    tx.pragma_update(None, "user_version", super::SCHEMA)
-        .map_err(err)?;
+    tx.pragma_update(None, "user_version", 2).map_err(err)?;
     tx.commit().map_err(err)
 }
 
