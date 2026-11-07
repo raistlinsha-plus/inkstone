@@ -10,7 +10,7 @@ Inkstone brings local Markdown documents and evidence-based conversations into o
 - Keep ordinary document lists stable while opening notes. Use a separate Recent view and per-space sort preferences.
 - Inspect trash items without accidentally restoring them. Permanently delete a single managed copy only after reviewing its scope and typing a confirmation; imported originals and historical exported data remain.
 - Refine narrow-window layouts, structured content spacing and New/Import button alignment.
-- Replace the CI credential test's fixed-delay assumption with an explicit completion signal; production Keychain rules are unchanged.
+- Make CI checks deterministic: wait for credential-worker completion and explicitly advance the history-search debounce in its 200-row integration test. Production credential and search behavior are unchanged.
 
 ## Try it
 

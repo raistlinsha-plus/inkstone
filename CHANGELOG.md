@@ -4,7 +4,7 @@ Historical versions below describe local development deliveries, not earlier pub
 
 ## v0.7.0-rc.4 · 2026-11-07 · Stable-scope candidate
 
-- Prepare the next source-preview update: bilingual task-focused README, fictional Quickstart examples, fresh synthetic UI media, release/PR copy and a discoverability plan. Replace the credential test’s timing assumption with explicit worker completion; expand current public-doc checks and correct release-manifest catalog metadata to schema4. [Readiness review](docs/GITHUB-READINESS-v0.7.md). No remote publication in this preparation.
+- Prepare the next source-preview update: bilingual task-focused README, fictional Quickstart examples, fresh synthetic UI media, release/PR copy and a discoverability plan. Replace the credential test’s timing assumption with explicit worker completion and control the history-search test’s debounce clock while preserving its 200-row pagination/archive assertions; expand current public-doc checks and correct release-manifest catalog metadata to schema4. [Readiness review](docs/GITHUB-READINESS-v0.7.md). No remote publication in this preparation.
 
 - Local deployment maintenance: consolidate daily launch at `/Applications/Inkstone.app`, unregister/remove duplicate application bundles and historical generated caches while retaining source and data backups. [Installation and cleanup record](docs/LOCAL-INSTALLATION.md). Application version unchanged.
 
