@@ -53,11 +53,18 @@ const currentDocuments = [
   "docs/DELIVERY-v0.7-rc4.md",
   "docs/DELIVERY-v0.7-rc5.md",
   "docs/DELIVERY-v0.7.1.md",
+  "docs/DELIVERY-v0.7.2.md",
+  "docs/DELIVERY-v0.7.3.md",
   "docs/REVIEW-v0.7-rc4.md",
   "docs/launch/v0.7/README.md",
   "docs/launch/v0.7/RELEASE-NOTES.md",
   "docs/launch/v0.7/PR-BODY.md",
   "docs/launch/v0.7/OUTREACH.md",
+  "docs/launch/v0.7.3/PROMOTION.md",
+  "docs/launch/v0.7.3/RELEASE-v0.7.2.md",
+  "docs/launch/v0.7.3/RELEASE-v0.7.3.md",
+  "evals/v0.7.2/RESULTS.md",
+  "examples/v0.7.3/README.md",
 ];
 for (const file of currentDocuments) {
   const text = await readFile(resolve(root, file), "utf8");

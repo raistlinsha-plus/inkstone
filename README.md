@@ -1,21 +1,22 @@
 # Inkstone · 砚台
 
-**Write locally. Ask your notes. Check the sources.**
+**Write locally. Build a Wiki from your notes. Check the sources.**
 
-A Markdown workspace and evidence-based knowledge assistant for **macOS 13+ on Apple Silicon**. Bring your own compatible model API. Keep an optional ink companion beside your work.
+A Markdown workspace for **macOS 13+ on Apple Silicon** with a source-linked Wiki and a standalone AI chat workspace. Bring your own compatible model API. Keep an optional ink companion beside your work.
 
 [中文](docs/README.zh-CN.md) · [Start from source](docs/QUICKSTART.md) · [Roadmap](docs/ROADMAP.md) · [Releases](https://github.com/raistlinsha-plus/inkstone/releases) · [Feedback](https://github.com/raistlinsha-plus/inkstone/issues)
 
-**v0.7.1 · local development delivery.** The public source preview is v0.7.0-rc.4. The interface uses Chinese labels. The update adds a first-use guide, answer preferences, explicitly selected history context and optional companion recall. [Local delivery record](docs/DELIVERY-v0.7.1.md).
+**v0.7.3 · source preview.** v0.7.2 adds knowledge Wikis and opt-in, model-routed web search. v0.7.3 adds standalone conversations and per-turn sources. The interface uses Chinese labels. See [v0.7.2 delivery](docs/DELIVERY-v0.7.2.md), [v0.7.3 delivery](docs/DELIVERY-v0.7.3.md) and the [published source tags](https://github.com/raistlinsha-plus/inkstone/releases).
 
 ![Inkstone cited conversation using fictional reading-activity data](docs/assets/launch-v0.7/02-conversation.png)
 
-*Current production UI with isolated synthetic data and simulated model responses. This screenshot demonstrates the interface, not a live-model quality result. No private documents or credentials are shown.*
+*Earlier v0.7 interface with fictional documents and simulated model responses. The screenshot shows the citation workflow.*
 
 ## What makes Inkstone useful?
 
 - **Documents you can keep.** Copy-import local Markdown/text, organize document spaces, preserve originals, and compare source updates explicitly. History, backups and recovery stay local.
-- **Answers you can inspect.** Continue scoped conversations, follow references back to source snapshots, branch questions and save a useful answer as a document. BM25, optional vectors and reranking work behind explicit evidence checks; missing facts can be refused.
+- **Wikis with source links.** Select ready documents in one managed space, organize them into linked topics, and review changes or open the original lines. Local recall combines BM25, optional vectors and verified Wiki references. Reranking is optional.
+- **Chat with the sources you choose.** Start directly, select one local space or attach a text file. The app can add public web evidence when you authorize Brave Search in settings. Inspect this turn’s sources, continue the conversation or save a useful answer as a document.
 - **Rich content inside Markdown.** Edit JSON trees, Mermaid, mindmaps, calendars and constrained ECharts blocks in the document body, then switch back to source.
 - **A quieter companion.** Optionally enable Motuan, Yanzhou or Zhiwei. Confirm real work milestones to unlock fixed stories and stage artwork. Companions add no separate model call; current art is static release-candidate art.
 
@@ -25,7 +26,7 @@ A Markdown workspace and evidence-based knowledge assistant for **macOS 13+ on A
 
 ![Synthetic UI walkthrough: document, answer, source and missing-information follow-up](docs/assets/launch-v0.7/workflow.gif)
 
-The walkthrough uses fictional data and fixture responses, with no live model request. It shows the UI workflow, not measured response speed or guaranteed answer accuracy. [Larger MP4 and publishing materials](docs/launch/v0.7/README.md).
+This earlier v0.7 walkthrough shows document import, scoped questions and source inspection using fictional data and fixture responses. [Larger MP4 and walkthrough notes](docs/launch/v0.7/README.md).
 
 ## Try it from source
 
@@ -36,19 +37,19 @@ npm ci --registry=https://registry.npmjs.org
 npm run desktop
 ```
 
-Start with the [fictional reading plan](examples/v0.7/阅读活动方案.md): compare 120 vs 80 participants, inspect the source, then ask about missing satisfaction data. [Quickstart](docs/QUICKSTART.md) explains importing, indexing, model setup and expected limits. Source installation downloads dependencies and compiles locally; first setup takes additional time.
+Start with two fictional reading-plan notes. Ask how many events were planned and completed, check the two original passages, then ask whether satisfaction was measured. The first build downloads dependencies and compiles locally. [v0.7.3 walkthrough](examples/v0.7.3/README.md) · [Quickstart](docs/QUICKSTART.md)
 
-Editing and keyword search do not require model credentials. To generate answers or use vectors, configure your own compatible API and model in settings. Reranking uses a separately configured Cohere-compatible endpoint.
+Editing and keyword search work without model credentials. Configure a compatible model API for answers, Wiki organization or vectors. Optional reranking uses a separately configured Cohere-compatible endpoint, and optional web search uses your Brave Search API key.
 
 Build an independent local app with `npm run bundle`. Use `/Applications/Inkstone.app` as the single daily installation and keep temporary build/test bundles separate. This is a locally ad-hoc signed build, not a notarized public installer. It runs without Node or a development server after building. [Installation/data boundaries](docs/LOCAL-INSTALLATION.md).
 
 ## Local data, explicit model requests
 
-Documents, history, indexes, conversations and companion state stay on your Mac. Model operations transmit selected text, questions, candidate snippets or evidence to **the provider you configure**, which may charge usage fees. Multi-turn generation can include limited earlier user questions and enabled presentation preferences. Keys use macOS Keychain. Keyword-only search makes no model request. No weights, hosted account or document server are bundled. [Security policy](SECURITY.md).
+Documents, indexes, conversations, Wiki state and companion state are stored on your Mac. Model operations send the applicable question, selected content or evidence to **the provider you configure**, which may charge usage fees. With web search enabled, the model plans from the current question and Brave receives a validated public query. Web citations retain source metadata so you can open the current page. Keys use macOS Keychain. [Security policy](SECURITY.md) · [Search boundaries](docs/DELIVERY-v0.7.2.md)
 
 ## Candidate status
 
-Local integration tests and synthetic-browser checks are recorded in the [current readiness assessment](docs/GITHUB-READINESS-v0.7.md). They do not establish native accessibility, cross-machine installation or general RAG accuracy. Five natural usage days, final artwork, native IME/VoiceOver, third-party binary notices and macOS distribution acceptance remain gates before a stable release. PDF/OCR, cloud collaboration, arbitrary document-set Q&A and a floating desktop pet are not shipped. [Known limits](docs/KNOWN-LIMITATIONS.md).
+Live Brave Search account verification, independent retrieval evaluation, native accessibility and cross-machine installation remain separate gates. The source preview supports TXT, Markdown, JSON and MMD attachments in standalone chat. PDF/OCR, cloud collaboration, multi-space selection in one turn and a floating desktop pet remain future scope. [Delivery and limits](docs/DELIVERY-v0.7.3.md) · [Known limitations](docs/KNOWN-LIMITATIONS.md)
 
 Want to help? Try a workflow, report a small fictional reproduction, or independently review a retrieval case. [Contributing](CONTRIBUTING.md) · [Architecture](docs/ARCHITECTURE-v0.7.md) · [Technology](docs/TECH-STACK-v0.7.md). If this direction is useful to you, a star helps others find it.
 

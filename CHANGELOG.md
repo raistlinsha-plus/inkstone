@@ -1,6 +1,20 @@
 # Changelog
 
-Historical versions below describe local development deliveries, not earlier public GitHub releases. v0.6.6 is the first public source preview. See [release notes](docs/PUBLIC-RELEASE-v0.6.6.md).
+Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
+
+## v0.7.3 · 通用问答源码预览
+
+- 新增独立 AI 问答工作台。支持直接聊天、写作、翻译和解释，独立会话与文档空间会话分开保留。
+- 每轮可选一个受管理空间、其中最多 5 篇文档，以及最多 5 份 UTF-8 TXT、Markdown、JSON 或 MMD 附件。附件是本机会话副本，单文件上限 2 MiB。
+- 合并可用的本地与公开网页证据，显示查阅路径、来源和未读范围。来源选择随本轮保存，问答内容通过明确操作保存为文档。
+- 会话库 schema 3 增加附件与每轮来源选择，备份验证覆盖新旧会话格式。[本版交付](docs/DELIVERY-v0.7.3.md)
+
+## v0.7.2 · 知识 Wiki 与自动联网源码预览
+
+- 在受管理空间明确授权可用文档，建立带原文定位的知识 Wiki。提供范围、增量整理、草稿审阅和版本恢复；启用自动维护后只自动发布符合规则的常规整理。
+- 将 Wiki 主题和章节用于原文召回，与本地 BM25、可选向量融合。保留候选重排与原文证据核验的独立门槛。
+- 新增可关闭的 Brave Search BYOK。启用后模型按当前问题提出查询，应用校验查询及网页访问范围。回答可引用已读取的公开正文，历史保留网页出处元数据。真实 Brave 帐号端到端调用未验收。
+- 备份可纳入 Wiki 页面、来源和审阅记录。[本版交付](docs/DELIVERY-v0.7.2.md)
 
 ## v0.7.1 · 2026-11-07 · 本机交付
 
