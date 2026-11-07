@@ -100,7 +100,6 @@ export interface Commands {
       projectId: string;
       title: string;
       content?: string;
-      fromAssistant?: boolean;
     },
     LibraryDocument
   >;

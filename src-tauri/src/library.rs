@@ -399,24 +399,6 @@ pub fn create_document(
     name: &str,
     content: &str,
 ) -> Result<Document, String> {
-    create_document_with_origin(data, project, name, content, false)
-}
-pub fn is_assistant_output(data: &Path, id: &str) -> Result<bool, String> {
-    conn(data)?
-        .query_row(
-            "SELECT EXISTS(SELECT 1 FROM preferences WHERE key=?)",
-            [format!("assistant-origin:{id}")],
-            |row| row.get(0),
-        )
-        .map_err(err)
-}
-pub fn create_document_with_origin(
-    data: &Path,
-    project: &str,
-    name: &str,
-    content: &str,
-    from_assistant: bool,
-) -> Result<Document, String> {
     let mut name = title(name)?;
     if Path::new(&name).extension().is_none() {
         name.push_str(".md")
@@ -428,30 +410,15 @@ pub fn create_document_with_origin(
         return Err("文档超过 2 MB".into());
     }
     let root = project_root(data, project)?;
-    let mut c = conn(data)?;
+    let c = conn(data)?;
     let id = uuid::Uuid::new_v4().to_string();
     let name = unique_title(&c, project, &name);
     let path = format!("documents/{id}/{name}");
-    let tx = c
-        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
-        .map_err(err)?;
-    if from_assistant {
-        tx.execute(
-            "INSERT INTO preferences(key,value) VALUES(?,'1')",
-            [format!("assistant-origin:{id}")],
-        )
-        .map_err(err)?;
-    }
-    tx.execute("INSERT INTO documents(id,project,path,title,original_hash,source,updated,status) VALUES(?,?,?,?,?,'',?,'pending')",params![id,project,path,name,files::hash(content),now()]).map_err(err)?;
-    tx.commit().map_err(err)?;
+    c.execute("INSERT INTO documents(id,project,path,title,original_hash,source,updated,status) VALUES(?,?,?,?,?,'',?,'pending')",params![id,project,path,name,files::hash(content),now()]).map_err(err)?;
     let dest = root.join(&path);
     fs::create_dir_all(dest.parent().unwrap()).map_err(err)?;
     if let Err(e) = files::write_atomic(&dest, content.as_bytes()) {
         let _ = c.execute("DELETE FROM documents WHERE id=?", [&id]);
-        let _ = c.execute(
-            "DELETE FROM preferences WHERE key=?",
-            [format!("assistant-origin:{id}")],
-        );
         return Err(e);
     }
     c.execute("UPDATE documents SET status='ready' WHERE id=?", [&id])
