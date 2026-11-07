@@ -4,6 +4,8 @@ Historical versions below describe local development deliveries, not earlier pub
 
 ## v0.7.0-rc.4 · 2026-11-07 · Stable-scope candidate
 
+- Local deployment maintenance: consolidate daily launch at `/Applications/Inkstone.app`, unregister/remove duplicate application bundles and historical generated caches while retaining source and data backups. [Installation and cleanup record](docs/LOCAL-INSTALLATION.md). Application version unchanged.
+
 - Default to stable natural-name document ordering, with an explicit Recent view, pinned groups, per-space durable preferences and list scroll anchors. Reading no longer influences equal-timestamp ordering.
 - Add read-only trash details, explicit restore, and single-document permanent deletion with preview/confirmation, durable staging, rollback before commitment, resumable cleanup and source invalidation. External originals, prior conversations, confirmed experience text and user backups remain separate.
 - Migrate the catalog to schema4 with a consistent pre-migration catalog snapshot; retain index schema3 and backup format2. Refuse backups of unfinished deletion state and reject late saves/drafts against unavailable managed documents.

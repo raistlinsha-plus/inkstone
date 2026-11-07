@@ -80,3 +80,7 @@ Tauri 2/Rust承载本机文件、数据库和网络；React 19/TypeScript运行�
 ## rc.4 文档生命周期边界
 
 共享排序选择器与每空间偏好独立于 opened。`library/lifecycle.rs` 管理专属副本清单、短期预览、prepared/committed 阶段日志、回退与续清；维护独占阻止备份或在途写入产生半态。副本删除时清理未确认经历凭据，历史问答/确认卡片文本保留但不成为新证据。完整协议见[正式版设计](design/v0.7-stable/ARCHITECTURE.md)。
+
+## 本机部署边界
+
+生产 bundle ID 为 `local.inkstone.desktop`，本机唯一日常程序入口为 `/Applications/Inkstone.app`。程序副本、当前源码与编译缓存、生产资料、隔离验收资料和恢复压缩包分别管理；多个旧程序原先共享同一资料目录，此次整理不重复合并文档。部署及清理规则见[本机管理说明](LOCAL-INSTALLATION.md)。

@@ -67,7 +67,7 @@ npm run desktop
 npm run bundle
 ```
 
-独立包位于`src-tauri/target/release/bundle/macos/Inkstone.app`，运行时不依赖Node或开发服务器。`desktop-e2e`使用隔离应用身份、禁用系统凭据并限制为回环模型夹具；生产包不启用此feature。
+独立包位于`src-tauri/target/release/bundle/macos/Inkstone.app`，运行时不依赖Node或开发服务器。`desktop-e2e`使用隔离应用身份、禁用系统凭据并限制为回环模型夹具；生产包不启用此feature。 本机仅保留 `/Applications/Inkstone.app` 作为日常安装，编译产物与压缩归档分别管理，详见[部署整理约定](LOCAL-INSTALLATION.md)。
 
 本轮没有新增第三方依赖或变更锁定依赖版本。完整默认检查、隔离WebView冷启动、浏览器呈现与生产应用安装分别记录，最终结果见[rc.4审查](REVIEW-v0.7-rc4.md)。本轮未将真实WebKit交互、中文候选、Keychain授权、VoiceOver或多日自然成长算作通过；真实API冒烟也单独记录。
 

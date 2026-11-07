@@ -35,7 +35,7 @@ Build a standalone local app:
 npm run bundle
 ```
 
-Output: `src-tauri/target/release/bundle/macos/Inkstone.app`. This uses a local ad-hoc signature. Developer ID signing, notarization, cross-machine installation and Intel/Windows/Linux acceptance are incomplete; this release provides source rather than an unverified installer. The bundled app does not need Node or a development server to run.
+Output: `src-tauri/target/release/bundle/macos/Inkstone.app`. This uses a local ad-hoc signature. Developer ID signing, notarization, cross-machine installation and Intel/Windows/Linux acceptance are incomplete; this release provides source rather than an unverified installer. The bundled app does not need Node or a development server to run. For daily local use, install only at `/Applications/Inkstone.app`; build outputs and acceptance apps are temporary. See [single-installation and data management](docs/LOCAL-INSTALLATION.md).
 
 To try the editor, create a document space and copy-import [the synthetic sample](examples/v0.6.6/首发体验.md). Existing files remain unchanged. Advanced external-directory mode edits originals directly and is separate from managed spaces.
 

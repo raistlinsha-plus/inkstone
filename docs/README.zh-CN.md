@@ -35,7 +35,7 @@ npm run desktop
 npm run bundle
 ```
 
-输出位置为 `src-tauri/target/release/bundle/macos/Inkstone.app`。当前使用本地临时签名，Developer ID、公证及跨机安装尚未完成；本次首发提供源码与构建说明。构建后的应用运行不依赖 Node 或开发服务器。
+输出位置为 `src-tauri/target/release/bundle/macos/Inkstone.app`。当前使用本地临时签名，Developer ID、公证及跨机安装尚未完成；本次首发提供源码与构建说明。构建后的应用运行不依赖 Node 或开发服务器。 日常唯一安装入口为 `/Applications/Inkstone.app`，构建输出及隔离验收包仅临时保留；见[本机版本、启动入口与资料管理](LOCAL-INSTALLATION.md)。
 
 ## 第一次试用
 
