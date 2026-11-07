@@ -380,6 +380,7 @@ pub fn apply_rerank_policy(
     }
 }
 
+#[cfg(test)]
 pub fn apply_rerank(results: &mut [SearchResult], ranking: &[(usize, f64)], min_score: f64) {
     // Relevance is not entailment: a high score for an entity's document does
     // not prove it contains the requested phone number, year or other fact.

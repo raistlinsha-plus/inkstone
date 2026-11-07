@@ -2306,7 +2306,6 @@ export default function App() {
           projectId,
           title,
           content: transfer.content,
-          fromAssistant: true,
         });
         path = created.path;
       } else await invoke("create_file", { path, content: transfer.content });

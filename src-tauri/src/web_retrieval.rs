@@ -192,17 +192,40 @@ pub(crate) fn safe_query(question: &str, proposed: &str) -> Result<PublicQuery, 
 }
 
 pub(crate) fn explicitly_offline(question: &str) -> bool {
-    let q = question.to_lowercase();
+    let q = question
+        .to_lowercase()
+        .replace(['\u{2018}', '\u{2019}'], "'")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
     [
         "别联网",
         "不联网",
         "不要联网",
         "无需联网",
         "禁止联网",
+        "不能联网",
+        "不要联网搜索",
+        "不要访问互联网",
+        "禁止访问互联网",
+        "不要使用互联网",
+        "不要搜索互联网",
+        "不使用互联网",
         "只用本地",
         "仅用本地",
+        "只使用本地",
+        "仅使用本地",
         "只看本地",
         "仅限本地",
+        "只用附件",
+        "仅用附件",
+        "只用所选资料",
+        "仅用所选资料",
+        "只使用所选资料",
+        "仅使用所选资料",
+        "仅限所选资料",
+        "只用选中的资料",
+        "仅使用选中的资料",
         "只按这份",
         "只按这些",
         "仅按这份",
@@ -216,13 +239,29 @@ pub(crate) fn explicitly_offline(question: &str) -> bool {
         "别查网页",
         "不要查网页",
         "不要搜索网页",
+        "别搜索网页",
+        "别搜网页",
         "不要用搜索",
         "不使用搜索",
         "离线回答",
         "无需上网",
+        "不要上网",
         "别上网",
         "不上网",
         "no web",
+        "no internet",
+        "without web access",
+        "without internet",
+        "without browsing",
+        "without going online",
+        "do not go online",
+        "don't go online",
+        "do not access the internet",
+        "don't access the internet",
+        "do not use the web",
+        "don't use the web",
+        "do not use the internet",
+        "don't use the internet",
         "don't search",
         "do not search",
         "do not browse",
@@ -230,6 +269,8 @@ pub(crate) fn explicitly_offline(question: &str) -> bool {
         "offline only",
         "use only",
         "only use",
+        "only the selected sources",
+        "only the attached",
         "based only on",
         "local only",
     ]
@@ -811,6 +852,26 @@ mod tests {
         assert!(safe_query("只根据附件解释 Rust", "Rust latest").is_err());
         assert!(safe_query("不要联网，Rust 的最新版本是什么", "Rust latest").is_err());
         assert!(safe_query("请查 Rust site:foo.com", "Rust site:foo.com").is_err());
+    }
+
+    #[test]
+    fn explicit_source_limits_override_an_online_plan() {
+        for question in [
+            "仅使用所选资料，核对 Python version",
+            "不要访问互联网，核对 Python version",
+            "Check Python version without internet access",
+            "Check Python version, do not use the web",
+            "Check Python version, DON’T  USE THE WEB",
+        ] {
+            assert!(explicitly_offline(question), "{question}");
+            assert!(
+                safe_query(question, "Python version").is_err(),
+                "{question}"
+            );
+        }
+        let compare = "比较所选资料与 Python 官网最新 version";
+        assert!(!explicitly_offline(compare));
+        assert!(safe_query(compare, "Python version official").is_ok());
     }
 
     #[test]
