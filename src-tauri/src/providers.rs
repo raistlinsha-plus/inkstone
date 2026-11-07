@@ -163,6 +163,13 @@ mod isolation_tests {
         assert!(super::set_key("embedding", Some("synthetic-test-value"), false).is_err());
         assert!(super::set_key("embedding", None, true).is_ok());
     }
+    #[test]
+    fn isolated_provider_can_change_address_without_a_key() {
+        let address = "http://127.0.0.1:18925/v1";
+        assert!(super::set_key_for("chat", address, None, true).is_ok());
+        assert!(super::set_key_for("chat", address, Some("test-only"), false).is_err());
+        assert_eq!(super::key_for("chat", address, true).unwrap(), None);
+    }
 }
 pub fn credential_origin(address: &str) -> String {
     files::hash(address.as_bytes())
@@ -282,6 +289,14 @@ pub fn set_key_for(
     value: Option<&str>,
     clear: bool,
 ) -> Result<(), String> {
+    #[cfg(feature = "desktop-e2e")]
+    {
+        // An address change normally writes a Keychain denial marker. An
+        // isolated build has no credentials to invalidate at the old address.
+        let _ = address;
+        set_key(kind, value, clear)
+    }
+    #[cfg(not(feature = "desktop-e2e"))]
     write_bound_key(&KeychainStore, kind, address, value, clear)
 }
 pub fn has_key_for(kind: &str, address: &str, allow_legacy: bool) -> Result<bool, String> {
