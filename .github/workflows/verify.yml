@@ -1,6 +1,7 @@
 name: Verify macOS source
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -14,24 +15,87 @@ jobs:
     timeout-minutes: 35
     env:
       CARGO_BUILD_JOBS: 2
+      CARGO_INCREMENTAL: 0
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+          fetch-depth: 2
+      - name: Classify verification scope
+        id: scope
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          # Limit the shortcut to documents already checked by docs:check.
+          if [[ "$GITHUB_EVENT_NAME" == pull_request && -n "$PR_BASE" ]] &&
+             [[ "$(git rev-parse HEAD^1)" == "$PR_BASE" ]] &&
+             git diff --quiet "$PR_BASE" HEAD -- . \
+               ':(exclude)README.md' ':(exclude)CHANGELOG.md' \
+               ':(exclude)CONTRIBUTING.md' ':(exclude)SECURITY.md' \
+               ':(exclude)docs/README.zh-CN.md' ':(exclude)docs/ROADMAP.md' \
+               ':(exclude)docs/KNOWN-LIMITATIONS.md' ':(exclude)docs/QUICKSTART.md'; then
+            echo 'docs_only=true' >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24.14.0
-          cache: npm
+          cache: ${{ steps.scope.outputs.docs_only != 'true' && 'npm' || '' }}
+      - name: Documentation checks
+        if: steps.scope.outputs.docs_only == 'true'
+        run: npm run docs:check
       - name: Install verified toolchain
+        if: steps.scope.outputs.docs_only != 'true'
         run: |
           npm install --global npm@11.9.0 --registry=https://registry.npmjs.org
           rustup toolchain install 1.99.1 --profile minimal
           rustup default 1.99.1
           rustup target add aarch64-apple-darwin --toolchain 1.99.1
+      - name: Identify native build inputs
+        if: steps.scope.outputs.docs_only != 'true'
+        id: native
+        run: |
+          {
+            sw_vers
+            xcodebuild -version
+            xcrun --sdk macosx --show-sdk-version
+            rustc -vV
+            rustup target list --installed
+          } > "$RUNNER_TEMP/inkstone-native-inputs.txt"
+          echo "key=$(shasum -a 256 "$RUNNER_TEMP/inkstone-native-inputs.txt" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+      - name: Restore Cargo dependencies and compilation cache
+        if: steps.scope.outputs.docs_only != 'true'
+        id: cargo-cache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: &cargo-cache-paths |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+            src-tauri/target/debug/.fingerprint
+            src-tauri/target/debug/build
+            src-tauri/target/debug/deps
+            src-tauri/target/aarch64-apple-darwin/release/.fingerprint
+            src-tauri/target/aarch64-apple-darwin/release/build
+            src-tauri/target/aarch64-apple-darwin/release/deps
+            src-tauri/target/release/.fingerprint
+            src-tauri/target/release/build
+            src-tauri/target/release/deps
+          key: cargo-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.native.outputs.key }}-${{ hashFiles('toolchain.json', 'src-tauri/Cargo.lock', 'src-tauri/Cargo.toml', 'src-tauri/tauri.conf.json', '.github/workflows/verify.yml') }}
       - run: npm ci --registry=https://registry.npmjs.org
+        if: steps.scope.outputs.docs_only != 'true'
       - name: Full offline-model gates
+        if: steps.scope.outputs.docs_only != 'true'
         run: npm run verify
       - name: macOS application bundle (local ad-hoc signature)
+        if: steps.scope.outputs.docs_only != 'true'
         run: npm run bundle -- --target aarch64-apple-darwin
       - name: Verify local signature
+        if: steps.scope.outputs.docs_only != 'true'
         run: codesign --verify --deep --strict src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Inkstone.app
+      - name: Save Cargo cache from main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cargo-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: *cargo-cache-paths
+          key: ${{ steps.cargo-cache.outputs.cache-primary-key }}
