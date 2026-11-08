@@ -1084,7 +1084,7 @@ test.skipIf(appVersion === "0.7.2")(
           citation: 1,
         },
       ],
-      trace: { route: "公开网页", steps: ["查阅网页"], unread: [] },
+      trace: { route: "web", steps: ["查阅网页"], unread: [] },
     }));
     render(<App />);
     await screen.findByRole("button", { name: "重新打开资料" });
@@ -1103,6 +1103,7 @@ test.skipIf(appVersion === "0.7.2")(
       sources: {},
     });
     expect(screen.getByText("本轮查阅")).toBeTruthy();
+    expect(screen.getByText("公开网页", { selector: ".assistant-evidence small" })).toBeTruthy();
     fireEvent.click(screen.getByTitle("查看来源 1：示例网页"));
     const preview = await screen.findByRole("dialog", { name: "查看来源" });
     expect(within(preview).getByText("example.org")).toBeTruthy();

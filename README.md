@@ -6,7 +6,7 @@ A Markdown workspace for **macOS 13+ on Apple Silicon** with a source-linked Wik
 
 [中文](docs/README.zh-CN.md) · [Start from source](docs/QUICKSTART.md) · [Roadmap](docs/ROADMAP.md) · [Releases](https://github.com/raistlinsha-plus/inkstone/releases) · [Feedback](https://github.com/raistlinsha-plus/inkstone/issues)
 
-**v0.7.3 · source preview.** v0.7.2 adds knowledge Wikis and opt-in, model-routed web search. v0.7.3 adds standalone conversations and per-turn sources. The interface uses Chinese labels. See [v0.7.2 delivery](docs/DELIVERY-v0.7.2.md), [v0.7.3 delivery](docs/DELIVERY-v0.7.3.md) and the [published source tags](https://github.com/raistlinsha-plus/inkstone/releases).
+**Local development · v0.7.5.** The current branch adds Brave connection diagnostics and an offline retrieval comparison. The public preview milestones introduced knowledge Wikis, optional model-routed web search, and standalone conversations with per-turn sources. The interface uses Chinese labels. [v0.7.5 delivery](docs/DELIVERY-v0.7.5.md) · [Published source tags](https://github.com/raistlinsha-plus/inkstone/releases)
 
 ![Inkstone cited conversation using fictional reading-activity data](docs/assets/launch-v0.7/02-conversation.png)
 
@@ -49,7 +49,7 @@ Documents, indexes, conversations, Wiki state and companion state are stored on 
 
 ## Candidate status
 
-Live Brave Search account verification, independent retrieval evaluation, native accessibility and cross-machine installation remain separate gates. The source preview supports TXT, Markdown, JSON and MMD attachments in standalone chat. PDF/OCR, cloud collaboration, multi-space selection in one turn and a floating desktop pet remain future scope. [Delivery and limits](docs/DELIVERY-v0.7.3.md) · [Known limitations](docs/KNOWN-LIMITATIONS.md)
+Live Brave Search account verification, externally reviewed answer quality, native accessibility and cross-machine installation remain separate gates. Standalone chat supports TXT, Markdown, JSON and MMD attachments. PDF/OCR, cloud collaboration, multi-space selection in one turn and a floating desktop pet remain future scope. [Offline retrieval comparison](evals/v0.7.5/README.md) · [Known limitations](docs/KNOWN-LIMITATIONS.md)
 
 Want to help? Try a workflow, report a small fictional reproduction, or independently review a retrieval case. [Contributing](CONTRIBUTING.md) · [Architecture](docs/ARCHITECTURE-v0.7.md) · [Technology](docs/TECH-STACK-v0.7.md). If this direction is useful to you, a star helps others find it.
 

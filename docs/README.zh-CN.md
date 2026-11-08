@@ -6,7 +6,7 @@ Inkstone 将 Markdown 写作、文档空间、Wiki 与独立 AI 问答放在一�
 
 [English](../README.md) · [源码快速开始](QUICKSTART.md) · [后续计划](ROADMAP.md) · [公开版本](https://github.com/raistlinsha-plus/inkstone/releases)
 
-当前开发线为 **v0.7.3 源码预览**，目标为 macOS 13+ Apple Silicon。v0.7.2 加入知识 Wiki 和可选自动联网，v0.7.3 加入独立通用问答与每轮资料选择。[v0.7.2 交付](DELIVERY-v0.7.2.md) · [v0.7.3 交付](DELIVERY-v0.7.3.md)
+当前本机开发版本为 **v0.7.5**，目标为 macOS 13+ Apple Silicon。本版增加 Brave 连通诊断和本地检索对照。源码预览里，v0.7.2 加入知识 Wiki 和可选自动联网，v0.7.3 加入独立通用问答与每轮资料选择。[v0.7.5 交付](DELIVERY-v0.7.5.md)
 
 ![带引用的问答，使用虚构阅读活动资料](assets/launch-v0.7/02-conversation.png)
 
@@ -41,7 +41,7 @@ npm run desktop
 
 ## 当前边界与参与方式
 
-源码预览仍有真实 Brave Search 帐号、原生辅助功能、跨机安装和更大语料评测等待单独验收。独立问答支持 TXT、Markdown、JSON、MMD 文本附件。PDF/OCR、云协作、单轮跨空间选取资料和悬浮桌宠列在后续范围。[本次交付边界](DELIVERY-v0.7.3.md)
+真实 Brave Search 帐号、原生辅助功能、跨机安装和更大语料评测等待单独验收。独立问答支持 TXT、Markdown、JSON、MMD 文本附件。PDF/OCR、云协作、单轮跨空间选取资料和悬浮桌宠列在后续范围。[本地检索评测](../evals/v0.7.5/README.md)
 
 欢迎提交虚构最小复现、可用性反馈和独立问答评测；不要上传密钥、真实资料或私人备份。[贡献指南](../CONTRIBUTING.md) · [已知限制](KNOWN-LIMITATIONS.md)。如果这个方向对你有用，也欢迎点一个 Star 帮助更多人发现。
 

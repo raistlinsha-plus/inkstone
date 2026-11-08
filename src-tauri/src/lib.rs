@@ -2622,6 +2622,7 @@ pub fn run() {
             assistant::attachments::assistant_attachment_delete,
             web_retrieval::web_search_settings,
             web_retrieval::save_web_search_settings,
+            web_retrieval::test_web_search_connection,
             wiki::wiki_status,
             wiki::wiki_set_policy,
             wiki::wiki_compile,

@@ -227,7 +227,11 @@ pub async fn web(
         }
     };
     progress(app, request_id, "web_search", "正在搜索网页并核对公开来源");
-    match web_retrieval::search(state, query, cancel).await {
+    finish_web_search(web_retrieval::search(state, query, cancel).await)
+}
+
+fn finish_web_search(result: Result<web_retrieval::WebResults, String>) -> WebTurn {
+    match result {
         Ok(result) => {
             let mut out = WebTurn {
                 expected: true,
@@ -259,7 +263,9 @@ pub async fn web(
                     },
                 });
             }
-            if out.evidence.is_empty() {
+            if result.searched == 0 {
+                out.warning = Some("本轮公开搜索未返回网页候选。".into());
+            } else if out.evidence.is_empty() {
                 out.warning = Some("未取得可引用的网页正文，搜索摘要未用作证据。".into());
             } else if result.discarded > 0 {
                 out.warning = Some(format!(
@@ -269,9 +275,13 @@ pub async fn web(
             }
             out
         }
-        _ => WebTurn {
+        // search() returns a bounded, user-facing reason without request data.
+        Err(reason) => WebTurn {
             expected: true,
-            warning: Some("联网搜索暂不可用，公开资料未核验。".into()),
+            warning: Some(format!(
+                "{}。公开资料未核验，可在「模型与设置 → 自动联网设置」测试连接。",
+                reason.trim_end_matches('。'),
+            )),
             ..Default::default()
         },
     }
@@ -564,7 +574,8 @@ pub async fn general(
     if let Some(warning) = web.warning {
         notices.push(warning);
     }
-    let grounded = !selection.is_empty() || web.expected;
+    let selected_scope = !selection.is_empty();
+    let grounded = selected_scope || web.expected;
     let system = if grounded {
         providers::ANSWER_SYSTEM
     } else {
@@ -615,17 +626,23 @@ pub async fn general(
     trace.route = match (has_local, has_web) {
         (true, true) => "mixed",
         (true, false) => "local",
+        (false, _) if selected_scope => "no-evidence",
         (false, true) => "web",
-        (false, false) if grounded => "no-evidence",
+        (false, false) if web.expected => "web-unavailable",
         _ => "direct",
     }
     .into();
-    let unavailable = (grounded && external.is_empty()) || (!selection.is_empty() && !has_local);
+    let unavailable = (grounded && external.is_empty()) || (selected_scope && !has_local);
     if unavailable {
-        notices.push("所选范围未找到足够证据。请检查资料、索引或联网设置。".into());
+        let text = if selected_scope {
+            notices.push("所选范围未找到足够证据。请检查资料、索引或联网设置。".into());
+            "未能从本轮指定资料核实请求。"
+        } else {
+            "本轮未取得足够的网页证据，暂时无法核实请求。"
+        };
         return Ok(response(
             "no_evidence",
-            "未能从本轮指定资料核实请求。".into(),
+            text.into(),
             "",
             vec![],
             trace,
@@ -812,17 +829,41 @@ mod tests {
     }
 
     #[test]
-    fn trace_distinguishes_unchecked_web_from_an_empty_search_result() {
+    fn trace_distinguishes_failed_empty_and_unreadable_web_searches() {
+        for reason in [
+            "Brave Search 请求超时。",
+            "Brave Search 额度或速率受限，请稍后再试。",
+        ] {
+            let web = finish_web_search(Err(reason.into()));
+            let mut trace = Trace::default();
+            web_trace(&mut trace, &web, false);
+            assert_eq!(trace.route, "web-unavailable");
+            assert!(trace.steps.is_empty());
+            let warning = web.warning.unwrap();
+            assert!(warning.contains(reason));
+            assert!(!warning.contains("。。"));
+            assert!(warning.contains("测试连接"));
+        }
+
+        let web = finish_web_search(Ok(web_retrieval::WebResults {
+            searched: 0,
+            discarded: 0,
+            evidence: vec![],
+        }));
         let mut trace = Trace::default();
-        let mut web = WebTurn {
-            expected: true,
-            ..Default::default()
-        };
-        web_trace(&mut trace, &web, false);
-        assert_eq!(trace.route, "web-unavailable");
-        assert!(trace.steps.is_empty());
-        web.examined = Some(0);
         web_trace(&mut trace, &web, false);
         assert_eq!(trace.steps, ["公开网页 · 检查 0 条候选"]);
+        assert!(web.warning.unwrap().contains("未返回网页候选"));
+
+        let web = finish_web_search(Ok(web_retrieval::WebResults {
+            searched: 2,
+            discarded: 2,
+            evidence: vec![],
+        }));
+        let mut trace = Trace::default();
+        web_trace(&mut trace, &web, true);
+        assert_eq!(trace.route, "local");
+        assert_eq!(trace.steps, ["公开网页 · 检查 2 条候选"]);
+        assert!(web.warning.unwrap().contains("未取得可引用的网页正文"));
     }
 }

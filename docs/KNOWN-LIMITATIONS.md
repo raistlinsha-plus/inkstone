@@ -1,6 +1,6 @@
 # Known preview limitations
 
-The current development line is v0.7.3 source preview for macOS 13+ on Apple Silicon. Developer ID signing, notarization and cross-machine installation are pending. Native Pinyin candidate confirmation, VoiceOver reading and long-running performance checks require dedicated acceptance. Synthetic-browser checks cover selected workflows with fixture IPC. [Current delivery record](DELIVERY-v0.7.3.md) · [Published artifacts](https://github.com/raistlinsha-plus/inkstone/releases)
+The current local development line is v0.7.5 for macOS 13+ on Apple Silicon. Developer ID signing, notarization and cross-machine installation are pending. Native Pinyin candidate confirmation, VoiceOver reading and long-running performance checks require dedicated acceptance. Synthetic-browser checks cover selected workflows with fixture IPC. [Current delivery record](DELIVERY-v0.7.5.md) · [Published artifacts](https://github.com/raistlinsha-plus/inkstone/releases)
 
 RAG reports document recall, evidence availability, citation/answer review and chart semantics separately. The synthetic cases are authored by the same development agent and are not independent user research. A high recall or rerank score does not establish answer correctness. Keyword evidence remains conservative for paraphrases. Vector-only is an evaluation baseline rather than a user-facing mode; it cannot bypass the BM25 evidence policy. API compatibility and provider billing vary. Missing usage/cost data stays unknown.
 

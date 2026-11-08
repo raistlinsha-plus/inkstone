@@ -1,6 +1,6 @@
 # Inkstone roadmap
 
-The current development line is **v0.7.3 source preview**. v0.7.2 introduces Wiki and public-web retrieval. v0.7.3 adds a standalone chat workspace. [v0.7.2 delivery](DELIVERY-v0.7.2.md) · [v0.7.3 delivery](DELIVERY-v0.7.3.md) · [GitHub Releases](https://github.com/raistlinsha-plus/inkstone/releases)
+The current local development line is **v0.7.5**. It adds Brave connection diagnostics and a reproducible local retrieval comparison. Published source previews and tags are tracked separately. [v0.7.5 delivery](DELIVERY-v0.7.5.md) · [GitHub Releases](https://github.com/raistlinsha-plus/inkstone/releases)
 
 ## Ready to try in the source preview
 
@@ -21,7 +21,7 @@ The current development line is **v0.7.3 source preview**. v0.7.2 introduces Wik
 ## Next usability and evaluation work
 
 - Test the first import → Wiki approval → original-source check and the first standalone question on a clean profile. Use feedback to improve model setup, costs and fallback explanations.
-- Evaluate local-only and Wiki-assisted retrieval on the same reviewed questions. Measure necessary-source coverage, citation support, unsupported answers, unnecessary refusals, latency and model calls.
+- Extend the v0.7.5 local retrieval comparison with independently reviewed paraphrases and answer/citation judgments. Measure necessary-source coverage, unsupported answers, unnecessary refusals, latency and model calls.
 - Verify actual Brave routing with an authorized provider account. Record search-worthiness, public-query blocks, useful webpage evidence and failure reasons before broadening the web path.
 - Improve asset sizes, startup/performance measurement and module boundaries without expanding the format surface at the same time.
 - Pilot ink-and-pixel motion, expression variants and staged companion artwork as a separate track. Check reduced motion, quiet settings and growth over ordinary work sessions.

@@ -56,6 +56,7 @@ const currentDocuments = [
   "docs/DELIVERY-v0.7.2.md",
   "docs/DELIVERY-v0.7.3.md",
   "docs/DELIVERY-v0.7.4.md",
+  "docs/DELIVERY-v0.7.5.md",
   "docs/REVIEW-v0.7-rc4.md",
   "docs/launch/v0.7/README.md",
   "docs/launch/v0.7/RELEASE-NOTES.md",
@@ -65,6 +66,7 @@ const currentDocuments = [
   "docs/launch/v0.7.3/RELEASE-v0.7.2.md",
   "docs/launch/v0.7.3/RELEASE-v0.7.3.md",
   "evals/v0.7.2/RESULTS.md",
+  "evals/v0.7.5/README.md",
   "examples/v0.7.3/README.md",
 ];
 for (const file of currentDocuments) {

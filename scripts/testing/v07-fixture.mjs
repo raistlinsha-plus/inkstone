@@ -145,6 +145,16 @@ export function installV07Fixture() {
     }
     if (command.startsWith("plugin:")) return null;
     if (command === "bootstrap") return { settings, lastWorkspace: null };
+    if (command === "web_search_settings")
+      return { provider: "brave", enabled: false, hasKey: false };
+    if (command === "test_web_search_connection")
+      return {
+        status: "page_unreadable",
+        searchElapsedMs: 115,
+        pageElapsedMs: 325,
+        candidateCount: 3,
+        httpStatus: 200,
+      };
     if (command === "open_library") return ws();
     if (command === "library_list")
       return {

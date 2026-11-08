@@ -20,6 +20,17 @@ const preferenceLabels: Record<string, string> = {
   length: "回答篇幅",
   original_units: "资料单位",
 };
+const retrievalLabels = new Map([
+  ["direct", "直接回答"],
+  ["local", "本地资料"],
+  ["web", "公开网页"],
+  ["mixed", "本地资料和公开网页"],
+  ["web-unavailable", "公开资料未核验"],
+  ["no-evidence", "所选资料缺少足够证据"],
+  ["bm25", "本地关键词（BM25）"],
+  ["hybrid", "本地关键词和向量"],
+  ["selected", "指定资料"],
+]);
 
 export interface AnswerRecord {
   question: string;
@@ -133,7 +144,11 @@ export function ConversationTimeline({
           <summary>检索与模型</summary>
           <p>{record.snapshot?.model || "未调用问答模型"}</p>
           {record.snapshot?.retrievalMode && (
-            <p>实际检索 · {record.snapshot.retrievalMode}</p>
+            <p>
+              实际检索 ·{" "}
+              {retrievalLabels.get(record.snapshot.retrievalMode) ??
+                record.snapshot.retrievalMode}
+            </p>
           )}
           {record.snapshot?.rerankStatus && (
             <p>重排 · {record.snapshot.rerankStatus}</p>
@@ -188,7 +203,9 @@ export function ConversationTimeline({
       {record.trace && (
         <details className="assistant-evidence">
           <summary>本轮查阅</summary>
-          <small>{record.trace.route}</small>
+          <small>
+            {retrievalLabels.get(record.trace.route) ?? record.trace.route}
+          </small>
           {record.trace.steps.map((step, index) => (
             <small key={index}>{step}</small>
           ))}
