@@ -25,6 +25,8 @@ struct Trial {
     replace: Option<String>,
     expectation: Expectation,
     required: Vec<Line>,
+    #[serde(default)]
+    forbidden: Vec<String>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
@@ -65,6 +67,7 @@ struct Totals {
     conflict_cases_with_both_passages: usize,
     partial_cases_with_known_passage: usize,
     no_support_cases_with_context: usize,
+    forbidden_context_count: usize,
     context_ranges_verified: usize,
     p50_retrieval_micros: u128,
     p95_retrieval_micros: u128,
@@ -79,6 +82,11 @@ impl Totals {
         self.required_in_candidates += candidate_count;
         self.required_in_context += context_count;
         self.context_ranges_verified += measurement.context_count;
+        self.forbidden_context_count += measurement
+            .context_sources
+            .iter()
+            .filter(|source| case.forbidden.iter().any(|id| id == source.document))
+            .count();
         self.timings.push(measurement.retrieval_micros);
         match case.expectation {
             Expectation::Complete => {
@@ -205,9 +213,8 @@ fn context_sources<'a>(
         .collect()
 }
 
-#[test]
-fn independent_offline_retrieval_v075() {
-    let benchmark: Benchmark = serde_json::from_str(FIXTURE).unwrap();
+fn measure(fixture: &str) -> Value {
+    let benchmark: Benchmark = serde_json::from_str(fixture).unwrap();
     let seed = seed(&benchmark.corpus, 1200, |key| {
         !benchmark.wiki_excluded.iter().any(|item| item == key)
     });
@@ -298,9 +305,9 @@ fn independent_offline_retrieval_v075() {
     for total in &mut totals {
         total.summarize_timings();
     }
-    let report = json!({
+    json!({
         "schema": 1,
-        "fixtureSha256": files::hash(FIXTURE),
+        "fixtureSha256": files::hash(fixture),
         "documents": seed.docs.len(),
         "wikiPages": benchmark.corpus.pages.len(),
         "cases": benchmark.cases.len(),
@@ -311,8 +318,11 @@ fn independent_offline_retrieval_v075() {
         "answerCitationSupport": null,
         "totals": { (MODES[0]): totals[0], (MODES[1]): totals[1] },
         "trials": trials
-    });
-    if let Some(path) = std::env::var_os("INKSTONE_V075_RETRIEVAL_REPORT") {
+    })
+}
+
+fn write_report(env: &str, report: &Value) {
+    if let Some(path) = std::env::var_os(env) {
         let path = PathBuf::from(path);
         assert!(path.is_absolute(), "Report path must be absolute");
         let file = std::fs::OpenOptions::new()
@@ -320,7 +330,83 @@ fn independent_offline_retrieval_v075() {
             .write(true)
             .open(path)
             .unwrap();
-        serde_json::to_writer_pretty(file, &report).unwrap();
+        serde_json::to_writer_pretty(file, report).unwrap();
     }
+}
+
+#[test]
+fn independent_offline_retrieval_v075() {
+    let report = measure(FIXTURE);
+    write_report("INKSTONE_V075_RETRIEVAL_REPORT", &report);
     println!("v0.7.5 offline retrieval summary: {}", report["totals"]);
+}
+
+#[test]
+fn evidence_regression_and_holdout_v076() {
+    let regression = measure(FIXTURE);
+    let holdout = measure(include_str!("../../../evals/v0.7.6/retrieval-holdout.json"));
+    for report in [&regression, &holdout] {
+        for mode in MODES {
+            let totals = &report["totals"][mode];
+            assert_eq!(totals["noSupportCasesWithContext"], 0, "{mode}: {totals}");
+            assert_eq!(totals["forbiddenContextCount"], 0, "{mode}: {totals}");
+        }
+    }
+    assert!(
+        regression["totals"]["bm25+wiki"]["requiredInContext"]
+            .as_u64()
+            .unwrap()
+            > 12
+    );
+    assert!(
+        holdout["totals"]["bm25+wiki"]["requiredInContext"]
+            .as_u64()
+            .unwrap()
+            > holdout["totals"]["bm25"]["requiredInContext"]
+                .as_u64()
+                .unwrap()
+    );
+    assert_eq!(
+        holdout["totals"]["bm25+wiki"]["conflictCasesWithBothPassages"],
+        1
+    );
+    println!(
+        "v0.7.6 regression: {}; held-out: {}",
+        regression["totals"], holdout["totals"]
+    );
+    write_report(
+        "INKSTONE_V076_RETRIEVAL_REPORT",
+        &json!({"regression": regression, "holdout": holdout}),
+    );
+}
+
+#[test]
+fn evidence_ignores_ambiguous_alias_even_after_filtering_to_a_single_document() {
+    let mut fixture: Benchmark =
+        serde_json::from_str(include_str!("../../../evals/v0.7.6/retrieval-holdout.json")).unwrap();
+    let page = fixture
+        .corpus
+        .pages
+        .iter_mut()
+        .find(|page| page.id == "greenhouse")
+        .unwrap();
+    page.sections.push(SeedSection {
+        heading: "另一种证件有效期".into(),
+        refs: vec![Line {
+            document: "volunteer-pass".into(),
+            line: 4,
+        }],
+    });
+    let seed = seed(&fixture.corpus, 1200, |_| true);
+    let (candidates, context, _) = retrieve(
+        &seed,
+        "玻璃房访客凭条可以用几小时？",
+        Some(&seed.docs["volunteer-pass"].path),
+        true,
+    );
+    assert_eq!(candidates.len(), 1);
+    assert!(
+        context.is_empty(),
+        "an alias shared by different subjects granted evidence"
+    );
 }

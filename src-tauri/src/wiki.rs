@@ -728,10 +728,22 @@ pub(crate) fn recall(
         .map_err(error)?;
     let mut sections = Vec::new();
     let mut hashes = HashMap::new();
+    let mut alias_pages = 0;
     for (rank, id) in ids.into_iter().enumerate() {
         let rev = store::current_revision(&db, &space, &id)?;
         let page = store::revision(&db, &space, &id, rev)?;
-        for mut section in page.sections {
+        let relation = crate::evidence::wiki_alias::requested(query, &page.aliases);
+        alias_pages += usize::from(relation.is_some());
+        let alias = relation.and_then(|relation| {
+            crate::evidence::wiki_alias::eligible_section(
+                relation,
+                page.sections
+                    .iter()
+                    .map(|section| section.refs.iter().map(|source| source.quote.as_str())),
+            )
+            .map(|index| (index, relation))
+        });
+        for (index, mut section) in page.sections.into_iter().enumerate() {
             section.refs.retain(|r| {
                 scope.is_none_or(|path| path == r.path)
                     && source_current(data, ws, &space, &policy, r, &mut hashes)
@@ -746,13 +758,16 @@ pub(crate) fn recall(
                     .map(|r| relevant(&terms, &r.quote))
                     .max()
                     .unwrap_or(0);
-            sections.push((score, rank, section));
+            let relation = alias
+                .filter(|(selected, _)| *selected == index)
+                .map(|(_, relation)| relation);
+            sections.push((score, rank, relation, section));
         }
     }
-    sections.sort_by_key(|(score, rank, _)| (std::cmp::Reverse(*score), *rank));
+    sections.sort_by_key(|(score, rank, _, _)| (std::cmp::Reverse(*score), *rank));
     let mut seen = HashSet::new();
     let mut results = Vec::new();
-    for (_, rank, section) in sections.into_iter().take(4) {
+    for (_, rank, relation, section) in sections.into_iter().take(4) {
         for r in section.refs {
             if results.len() == 12 {
                 return Ok(results);
@@ -771,6 +786,10 @@ pub(crate) fn recall(
                 r.document_id, r.start_line, r.end_line, r.hash
             ));
             let id = -(i64::from_str_radix(&digest[..14], 16).unwrap_or(1).max(1));
+            let anchored = alias_pages == 1
+                && relation.is_some_and(|relation| {
+                    crate::evidence::wiki_alias::supports(relation, &r.quote)
+                });
             results.push(SearchResult {
                 id,
                 path: r.path,
@@ -789,7 +808,12 @@ pub(crate) fn recall(
                 vector_rank: None,
                 rerank_score: None,
                 evidence: false,
-                match_kind: "wiki".into(),
+                match_kind: if anchored {
+                    crate::evidence::wiki_alias::ANCHORED
+                } else {
+                    "wiki"
+                }
+                .into(),
             });
         }
     }
