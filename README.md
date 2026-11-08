@@ -6,7 +6,7 @@ A Markdown workspace for **macOS 13+ on Apple Silicon** with a source-linked Wik
 
 [中文](docs/README.zh-CN.md) · [Start from source](docs/QUICKSTART.md) · [Roadmap](docs/ROADMAP.md) · [Releases](https://github.com/raistlinsha-plus/inkstone/releases) · [Feedback](https://github.com/raistlinsha-plus/inkstone/issues)
 
-**Local development · v0.7.8.** The current branch improves evidence selection, guided first use and chat, and adds a Motuan motion pilot. The interface uses Chinese labels. [Delivery index](docs/DELIVERY-INDEX-v0.7.8.md) · [Published source tags](https://github.com/raistlinsha-plus/inkstone/releases)
+**v0.7.8 · Source preview.** This version improves evidence selection, guided first use and chat, and adds a Motuan motion pilot. The interface uses Chinese labels. [Release notes](docs/launch/v0.7.8/RELEASE.md) · [Published source tags](https://github.com/raistlinsha-plus/inkstone/releases)
 
 ![Inkstone cited conversation using fictional reading-activity data](docs/assets/launch-v0.7/02-conversation.png)
 
