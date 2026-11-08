@@ -39,7 +39,7 @@
   gap: 10px;
   padding: 10px 14px;
 }
-.companion-summary > img {
+.companion-summary > :is(img, .motuan-sprite) {
   width: 64px;
   height: 74px;
   object-fit: contain;
@@ -76,10 +76,58 @@
 .companion-mini {
   padding: 6px 12px;
 }
-.companion-mini > img {
+.companion-mini > :is(img, .motuan-sprite) {
   width: 36px;
   height: 40px;
   object-fit: contain;
+}
+.motuan-sprite {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 7px;
+}
+.motuan-sprite-body {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .motuan-sprite[data-motion="gentle"][data-state="idle"] .motuan-sprite-body {
+    animation: motuan-idle 3.8s ease-in-out;
+  }
+  .motuan-sprite[data-motion="gentle"][data-state="reading"]
+    .motuan-sprite-body {
+    animation: motuan-read 1.9s ease-in-out 2;
+  }
+  .motuan-sprite[data-motion="gentle"][data-state="milestone"]
+    .motuan-sprite-body {
+    animation: motuan-celebrate 720ms ease-out;
+  }
+  .motuan-sprite[data-motion="gentle"] .motuan-sprite-celebrate {
+    animation: motuan-spark 720ms ease-out;
+  }
+}
+@keyframes motuan-idle {
+  45% {
+    transform: scaleY(1.035);
+  }
+}
+@keyframes motuan-read {
+  35% {
+    transform: rotate(-3deg) translateY(1px);
+  }
+}
+@keyframes motuan-celebrate {
+  35% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes motuan-spark {
+  0% {
+    opacity: 0;
+  }
+  70% {
+    opacity: 1;
+  }
 }
 .companion-mini strong {
   font-size: 12px;
@@ -439,6 +487,23 @@
   filter: grayscale(1);
   opacity: 0.4;
 }
+.motuan-bonus-placeholder {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16/9;
+  border-radius: 5px;
+  color: #66775f;
+  background: radial-gradient(ellipse, #e2e8d9, #f3eee0);
+}
+.motuan-bonus-scene img {
+  display: block;
+  border-radius: 7px;
+  border: 1px solid #d9e1d2;
+  margin: 0 auto;
+}
+.motuan-bonus-scene figcaption {
+  text-align: center;
+}
 .companion-album strong {
   font-weight: 500;
   font-size: 15px;
@@ -529,7 +594,7 @@
     padding: 8px 12px;
     gap: 8px;
   }
-  .companion-summary > img {
+  .companion-summary > :is(img, .motuan-sprite) {
     width: 50px;
     height: 60px;
   }

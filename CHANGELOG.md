@@ -2,6 +2,11 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v0.7.8 · 墨团动效试点
+
+- 墨团加入像素水墨形象、待机／陪读／里程碑表情和短动效，并随原有阶段装束变化。专注模式和减少动态设置采用静态呈现。
+- 相识阶段新增纪念 CG，沿用原来的成长和解锁记录。[本版交付](docs/DELIVERY-v0.7.8.md) · [三版交付导航](docs/DELIVERY-INDEX-v0.7.8.md)
+
 ## v0.7.7 · 问答体验与首次使用
 
 - 浏览空间时先核对可选文档，显式选择整个空间或具体文档。问答显示当前阶段，停止操作可防重复点击，重试保留下一问草稿。

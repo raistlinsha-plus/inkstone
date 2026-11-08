@@ -6,7 +6,7 @@ A Markdown workspace for **macOS 13+ on Apple Silicon** with a source-linked Wik
 
 [中文](docs/README.zh-CN.md) · [Start from source](docs/QUICKSTART.md) · [Roadmap](docs/ROADMAP.md) · [Releases](https://github.com/raistlinsha-plus/inkstone/releases) · [Feedback](https://github.com/raistlinsha-plus/inkstone/issues)
 
-**Local development · v0.7.5.** The current branch adds Brave connection diagnostics and an offline retrieval comparison. The public preview milestones introduced knowledge Wikis, optional model-routed web search, and standalone conversations with per-turn sources. The interface uses Chinese labels. [v0.7.5 delivery](docs/DELIVERY-v0.7.5.md) · [Published source tags](https://github.com/raistlinsha-plus/inkstone/releases)
+**Local development · v0.7.8.** The current branch improves evidence selection, guided first use and chat, and adds a Motuan motion pilot. The interface uses Chinese labels. [Delivery index](docs/DELIVERY-INDEX-v0.7.8.md) · [Published source tags](https://github.com/raistlinsha-plus/inkstone/releases)
 
 ![Inkstone cited conversation using fictional reading-activity data](docs/assets/launch-v0.7/02-conversation.png)
 
@@ -18,7 +18,7 @@ A Markdown workspace for **macOS 13+ on Apple Silicon** with a source-linked Wik
 - **Wikis with source links.** Select ready documents in one managed space, organize them into linked topics, and review changes or open the original lines. Local recall combines BM25, optional vectors and verified Wiki references. Reranking is optional.
 - **Chat with the sources you choose.** Start directly, select one local space or attach a text file. The app can add public web evidence when you authorize Brave Search in settings. Inspect this turn’s sources, continue the conversation or save a useful answer as a document.
 - **Rich content inside Markdown.** Edit JSON trees, Mermaid, mindmaps, calendars and constrained ECharts blocks in the document body, then switch back to source.
-- **A quieter companion.** Optionally enable Motuan, Yanzhou or Zhiwei. Confirm real work milestones to unlock fixed stories and stage artwork. Companions add no separate model call; current art is static release-candidate art.
+- **A quieter companion.** Optionally enable Motuan, Yanzhou or Zhiwei. Confirm real work milestones to unlock fixed stories and stage artwork. Motuan offers a gentle-motion pilot with a static option. Companions add no separate model call.
 
 ![Markdown document and an inline chart](docs/assets/launch-v0.7/01-editor.png)
 
