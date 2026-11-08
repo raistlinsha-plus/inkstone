@@ -535,7 +535,6 @@ Some unmodified transitive dependencies use MPL-2.0. They retain that license; s
 | [cargo: find-msvc-tools](https://crates.io/crates/find-msvc-tools/0.1.15) | 0.1.15 | MIT OR Apache-2.0 |
 | [cargo: flate2](https://crates.io/crates/flate2/1.1.10) | 1.1.10 | MIT OR Apache-2.0 |
 | [cargo: fnv](https://crates.io/crates/fnv/1.0.7) | 1.0.7 | Apache-2.0 / MIT |
-| [cargo: foldhash](https://crates.io/crates/foldhash/0.1.5) | 0.1.5 | Zlib |
 | [cargo: foldhash](https://crates.io/crates/foldhash/0.2.0) | 0.2.0 | Zlib |
 | [cargo: foreign-types](https://crates.io/crates/foreign-types/0.5.0) | 0.5.0 | MIT/Apache-2.0 |
 | [cargo: foreign-types-macros](https://crates.io/crates/foreign-types-macros/0.2.4) | 0.2.4 | MIT/Apache-2.0 |
@@ -555,10 +554,9 @@ Some unmodified transitive dependencies use MPL-2.0. They retain that license; s
 | [cargo: getrandom](https://crates.io/crates/getrandom/0.4.3) | 0.4.3 | MIT OR Apache-2.0 |
 | [cargo: glob](https://crates.io/crates/glob/0.3.4) | 0.3.4 | MIT OR Apache-2.0 |
 | [cargo: hashbrown](https://crates.io/crates/hashbrown/0.12.3) | 0.12.3 | MIT OR Apache-2.0 |
-| [cargo: hashbrown](https://crates.io/crates/hashbrown/0.15.5) | 0.15.5 | MIT OR Apache-2.0 |
 | [cargo: hashbrown](https://crates.io/crates/hashbrown/0.16.1) | 0.16.1 | MIT OR Apache-2.0 |
 | [cargo: hashbrown](https://crates.io/crates/hashbrown/0.17.1) | 0.17.1 | MIT OR Apache-2.0 |
-| [cargo: hashlink](https://crates.io/crates/hashlink/0.10.0) | 0.10.0 | MIT OR Apache-2.0 |
+| [cargo: hashlink](https://crates.io/crates/hashlink/0.12.2) | 0.12.2 | MIT OR Apache-2.0 |
 | [cargo: heck](https://crates.io/crates/heck/0.5.0) | 0.5.0 | MIT OR Apache-2.0 |
 | [cargo: hex](https://crates.io/crates/hex/0.4.3) | 0.4.3 | MIT OR Apache-2.0 |
 | [cargo: html5ever](https://crates.io/crates/html5ever/0.39.0) | 0.39.0 | MIT OR Apache-2.0 |
@@ -603,7 +601,7 @@ Some unmodified transitive dependencies use MPL-2.0. They retain that license; s
 | [cargo: libc](https://crates.io/crates/libc/0.2.191) | 0.2.191 | MIT OR Apache-2.0 |
 | [cargo: libflate](https://crates.io/crates/libflate/2.3.2) | 2.3.2 | MIT |
 | [cargo: libflate_lz77](https://crates.io/crates/libflate_lz77/2.3.0) | 2.3.0 | MIT |
-| [cargo: libsqlite3-sys](https://crates.io/crates/libsqlite3-sys/0.35.0) | 0.35.0 | MIT |
+| [cargo: libsqlite3-sys](https://crates.io/crates/libsqlite3-sys/0.39.1) | 0.39.1 | MIT |
 | [cargo: litemap](https://crates.io/crates/litemap/0.8.3) | 0.8.3 | Unicode-3.0 |
 | [cargo: lock_api](https://crates.io/crates/lock_api/0.4.14) | 0.4.14 | MIT OR Apache-2.0 |
 | [cargo: log](https://crates.io/crates/log/0.4.34) | 0.4.34 | MIT OR Apache-2.0 |
@@ -677,7 +675,7 @@ Some unmodified transitive dependencies use MPL-2.0. They retain that license; s
 | [cargo: rfd](https://crates.io/crates/rfd/0.16.1) | 0.16.1 | MIT |
 | [cargo: ring](https://crates.io/crates/ring/0.17.14) | 0.17.14 | Apache-2.0 AND ISC |
 | [cargo: rle-decode-fast](https://crates.io/crates/rle-decode-fast/1.0.3) | 1.0.3 | MIT OR Apache-2.0 |
-| [cargo: rusqlite](https://crates.io/crates/rusqlite/0.37.0) | 0.37.0 | MIT |
+| [cargo: rusqlite](https://crates.io/crates/rusqlite/0.41.1) | 0.41.1 | MIT |
 | [cargo: rustc-hash](https://crates.io/crates/rustc-hash/2.1.3) | 2.1.3 | Apache-2.0 OR MIT |
 | [cargo: rustc_version](https://crates.io/crates/rustc_version/0.4.1) | 0.4.1 | MIT OR Apache-2.0 |
 | [cargo: rustix](https://crates.io/crates/rustix/1.1.5) | 1.1.5 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |

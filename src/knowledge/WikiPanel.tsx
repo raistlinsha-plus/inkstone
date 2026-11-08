@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { RefreshCw, X } from "lucide-react";
 import type { LibraryView } from "../library";
 import type { SearchResult } from "../types";
 import ModalDialog from "../ModalDialog";
@@ -31,6 +32,12 @@ interface WikiChange {
   created: number;
   canRestore: boolean;
   sourceCount: number;
+  summaryIssues?: SummaryIssue[];
+  restoreSummaryIssues?: SummaryIssue[];
+}
+interface SummaryIssue {
+  claim: string;
+  reason: "missing" | "conflict";
 }
 interface WikiRef {
   documentId: string;
@@ -45,15 +52,33 @@ interface WikiPage extends WikiSummary {
   body: string;
   refs: WikiRef[];
   related?: { id: string; title: string }[];
+  summaryIssues?: SummaryIssue[];
 }
 interface WikiStatus {
   policy: WikiPolicy;
   pages: WikiSummary[];
   changes: WikiChange[];
   job: { status: string; message: string };
+  currentPendingCount?: number;
+  coverage?: WikiCoverage[];
 }
+type ReviewAction =
+  "publish" | "publish-excerpts" | "reject" | "restore" | "restore-excerpts";
+interface WikiCoverage {
+  documentId: string;
+  title: string;
+  status: keyof typeof coverageLabels;
+}
+const coverageLabels = {
+  pending: "等待整理",
+  included: "已找到原文引用",
+  omitted: "本次未引用，可重试",
+  partial: "超出本次处理限额，可重试",
+  retry: "整理未完成，可重试",
+  unavailable: "资料当前不可用",
+  empty: "资料没有可整理的文本",
+};
 const jobLabels: Record<string, string> = {
-  idle: "暂无任务",
   running: "整理中",
   ready: "整理完成",
   error: "整理失败",
@@ -90,20 +115,53 @@ export default function WikiPanel({
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const latestPage = useRef(0);
+  const latestStatus = useRef(0);
   const dirty = useRef(false);
+  const removingDocuments =
+    !!policy &&
+    status?.policy.documentIds.some((id) => !policy.documentIds.includes(id));
   const docs = view.documents.filter(
     (doc) => doc.projectId === projectId && doc.status === "ready",
   );
   const active = useRef(true);
-  const refresh = useCallback(async (resetPolicy = false) => {
-    const next = await invoke<WikiStatus>("wiki_status");
-    if (!active.current || !next) return;
+  const applyStatus = useCallback((next: WikiStatus, resetPolicy = false) => {
+    ++latestStatus.current;
     setStatus(next);
     if (!dirty.current || resetPolicy) {
       setPolicy(next.policy);
       dirty.current = false;
     }
   }, []);
+  const refresh = useCallback(
+    async (resetPolicy = false) => {
+      const request = ++latestStatus.current;
+      const next = await invoke<WikiStatus>("wiki_status");
+      if (!active.current || request !== latestStatus.current || !next) return;
+      applyStatus(next, resetPolicy);
+      return next;
+    },
+    [applyStatus],
+  );
+
+  useEffect(() => {
+    if (!status || !page) return;
+    const stillAvailable = change
+      ? status.changes.some(
+          (item) => item.id === change.id && item.status === change.status,
+        )
+      : status.pages.some(
+          (item) =>
+            item.id === page.id &&
+            item.revision === page.revision &&
+            item.stale === page.stale,
+        );
+    if (!stillAvailable) {
+      ++latestPage.current;
+      setPage(undefined);
+      setChange(undefined);
+      setBaseline(undefined);
+    }
+  }, [change, page, status]);
 
   useEffect(() => {
     active.current = true;
@@ -127,6 +185,7 @@ export default function WikiPanel({
     return () => {
       active.current = false;
       ++latestPage.current;
+      ++latestStatus.current;
       void off.then(
         (unlisten) => unlisten(),
         () => {},
@@ -155,7 +214,7 @@ export default function WikiPanel({
     }
   }, [page, baseline, view.documents, refresh]);
 
-  async function run(label: string, task: () => Promise<void>) {
+  async function run(label: string, task: () => Promise<unknown>) {
     setBusy(label);
     setError("");
     try {
@@ -176,10 +235,18 @@ export default function WikiPanel({
     if (!policy) return;
     const { revision: expectedRevision, ...settings } = policy;
     await run("保存中", async () => {
-      await invoke("wiki_set_policy", {
+      const next = await invoke<WikiStatus>("wiki_set_policy", {
         input: { expectedRevision, ...settings },
       });
-      await refresh(true);
+      if (!active.current) return;
+      if (removingDocuments) {
+        ++latestPage.current;
+        setPage(undefined);
+        setChange(undefined);
+        setBaseline(undefined);
+      }
+      if (next) applyStatus(next, true);
+      else await refresh(true);
       setTab("pages");
     });
   }
@@ -209,25 +276,37 @@ export default function WikiPanel({
     }
   }
 
-  async function review(action: "publish" | "reject" | "restore") {
-    if (!change) return;
-    const { id, pageId } = change;
+  async function review(action: ReviewAction) {
+    if (!selectedChange) return;
+    const { id, pageId } = selectedChange;
     await run("正在处理改动", async () => {
-      await invoke("wiki_review", { input: { id, action } });
+      const result = await invoke<WikiStatus>("wiki_review", {
+        input: { id, action },
+      });
+      if (!active.current) return;
+      ++latestPage.current;
       setChange(undefined);
       setPage(undefined);
-      await refresh();
-      if (action === "publish" || action === "restore") {
-        setTab("pages");
-        await inspect(pageId);
+      setBaseline(undefined);
+      if (result) applyStatus(result);
+      const next = result ?? (await refresh());
+      if (action === "reject") {
+        const rejected = next?.changes.find(
+          (item) => item.id === id && item.status === "rejected",
+        );
+        if (rejected) await inspect(pageId, rejected);
+        return;
       }
+      setTab("pages");
+      await inspect(pageId);
     });
   }
 
   async function organize(retryChangeId?: string) {
     await run("正在整理", async () => {
       const next = await invoke<WikiStatus>("wiki_compile", { retryChangeId });
-      if (next && active.current) setStatus(next);
+      if (!active.current) return;
+      if (next) applyStatus(next);
       else await refresh();
       if (retryChangeId && active.current) {
         setPage(undefined);
@@ -263,9 +342,18 @@ export default function WikiPanel({
     });
   }
 
-  const isRunning = busy === "正在整理" || status?.job?.status === "running";
+  const job = status?.job;
+  const isRunning = busy === "正在整理" || job?.status === "running";
   const pending =
     status?.changes.filter((item) => item.status === "pending") ?? [];
+  const pendingCount = status?.currentPendingCount ?? pending.length;
+  const selectedChange =
+    change &&
+    status?.changes.find(
+      (item) => item.id === change.id && item.status === change.status,
+    );
+  const summaryIssues = selectedChange?.summaryIssues ?? [];
+  const restoreIssues = selectedChange?.restoreSummaryIssues ?? [];
   const firstWiki = status && !status.pages.length;
   const scopeReady =
     status?.policy.enabled && !!status.policy.documentIds.length;
@@ -285,38 +373,44 @@ export default function WikiPanel({
     >
       <div className="modal-heading">
         <div>
-          <span className="eyebrow">SPACE WIKI</span>
           <h2>知识 Wiki</h2>
         </div>
-        <button type="button" disabled={!!busy && !isRunning} onClick={onClose}>
-          关闭
+        <button
+          className="icon-button"
+          type="button"
+          aria-label="关闭知识 Wiki"
+          disabled={!!busy && !isRunning}
+          onClick={onClose}
+        >
+          <X size={18} />
         </button>
       </div>
       <p className="muted">
         系统按授权范围整理主题、关系和原文位置。只有已生效且可核验的版本参与问答。
       </p>
-      <div className="wiki-toolbar">
+      <nav className="wiki-toolbar wiki-nav" aria-label="Wiki 页面导航">
         <button
           type="button"
           aria-pressed={tab === "pages"}
           onClick={() => setTab("pages")}
         >
-          页面
+          主题
         </button>
         <button
           type="button"
           aria-pressed={tab === "changes"}
           onClick={() => setTab("changes")}
         >
-          最近变更
+          审阅与变更{pendingCount ? ` · ${pendingCount}` : ""}
         </button>
         <button
           type="button"
           aria-pressed={tab === "policy"}
           onClick={() => setTab("policy")}
         >
-          范围与维护
+          资料范围
         </button>
+        <span className="wiki-toolbar-divider" />
         {isRunning ? (
           <button
             type="button"
@@ -342,19 +436,39 @@ export default function WikiPanel({
         )}
         <button
           type="button"
+          className="icon-button"
+          aria-label="刷新 Wiki"
+          title="刷新 Wiki"
           disabled={!!busy}
           onClick={() => void run("刷新中", () => refresh())}
         >
-          刷新
+          <RefreshCw size={16} />
         </button>
-      </div>
+      </nav>
       {!status && !error && <p role="status">正在读取 Wiki…</p>}
-      {(status || busy) && (
+      {status && (
+        <p className="wiki-pending-count" role="status">
+          当前待审阅 {pendingCount} 项
+        </p>
+      )}
+      {(busy || job?.status === "running") && (
         <p role="status">
-          {busy ||
-            jobLabels[status?.job?.status ?? "idle"] ||
-            status?.job?.status}
-          {status?.job?.message && ` · ${status.job.message}`}
+          {busy || jobLabels.running}
+          {job?.status === "running" && job.message && ` · ${job.message}`}
+        </p>
+      )}
+      {!isRunning && job && job.status !== "idle" && (
+        <p className="wiki-last-job muted">
+          <strong>上次整理</strong>
+          <span>
+            {jobLabels[job.status] ?? job.status}
+            {job.message && ` · ${job.message}`}
+          </span>
+        </p>
+      )}
+      {!isRunning && job?.status === "idle" && job.message && (
+        <p className="muted" role="status">
+          {job.message}
         </p>
       )}
       {error && (
@@ -362,7 +476,7 @@ export default function WikiPanel({
           {error}
         </p>
       )}
-      {(firstWiki || !!pending.length) && (
+      {tab !== "changes" && (firstWiki || !!pending.length) && (
         <section className="wiki-next-step" aria-label="整理与审阅进度">
           {firstWiki && (
             <ol>
@@ -381,22 +495,19 @@ export default function WikiPanel({
           {pending.length ? (
             <>
               <p>
-                {pending.length}{" "}
-                项改动待审阅。检查原文和正文后，可以发布或拒绝。
+                {pendingCount} 项改动待审阅。检查原文和正文后，可以发布或拒绝。
               </p>
-              {change?.status !== "pending" || tab !== "changes" ? (
-                <button
-                  className="button small"
-                  type="button"
-                  disabled={!!busy}
-                  onClick={() => {
-                    setTab("changes");
-                    void inspect(pending[0].pageId, pending[0]);
-                  }}
-                >
-                  查看待审阅改动
-                </button>
-              ) : null}
+              <button
+                className="button small"
+                type="button"
+                disabled={!!busy}
+                onClick={() => {
+                  setTab("changes");
+                  void inspect(pending[0].pageId, pending[0]);
+                }}
+              >
+                查看待审阅改动
+              </button>
             </>
           ) : docs.length === 0 ? (
             <>
@@ -432,6 +543,29 @@ export default function WikiPanel({
             </p>
           )}
         </section>
+      )}
+      {!!status?.coverage?.length && (
+        <details className="wiki-coverage">
+          <summary>
+            资料覆盖 ·{" "}
+            {
+              status.coverage.filter((item) => item.status === "included")
+                .length
+            }
+            /{status.coverage.length} 份已引用
+          </summary>
+          <p>
+            这里显示授权范围内各份资料的整理状态。请在候选正文中核对关键结论及其出处。
+          </p>
+          <ul>
+            {status.coverage.map((item) => (
+              <li key={item.documentId} data-status={item.status}>
+                <strong>{item.title || "不可用资料"}</strong>
+                <span>{coverageLabels[item.status]}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
       {tab === "policy" && policy && (
         <div className="wiki-policy">
@@ -503,6 +637,12 @@ export default function WikiPanel({
             ))}
             {!docs.length && <small>请先在当前空间导入或新建文档。</small>}
           </div>
+          {removingDocuments && (
+            <p className="panel-warning" role="status">
+              保存后，依赖已移除资料的 Wiki
+              页面、历史和待审阅改动将被永久清除。原始文档会保留，可用剩余资料重新整理。
+            </p>
+          )}
           <div className="modal-actions">
             <button
               type="button"
@@ -521,7 +661,7 @@ export default function WikiPanel({
               }
               onClick={() => void save()}
             >
-              保存范围与维护
+              {removingDocuments ? "保存并清除受影响的 Wiki" : "保存范围与维护"}
             </button>
           </div>
         </div>
@@ -589,8 +729,23 @@ export default function WikiPanel({
               </button>
             ))}
           </div>
-          {change && page && (
+          {selectedChange && page && (
             <div>
+              {selectedChange.status === "pending" &&
+                !!summaryIssues.length && (
+                  <WikiSummaryWarning
+                    title="摘要需要核对"
+                    issues={summaryIssues}
+                    guidance="可仅发布已核验的原文摘录。如需重新生成摘要，拒绝此改动后选择「重新整理已拒绝改动」。"
+                  />
+                )}
+              {selectedChange.canRestore && !!restoreIssues.length && (
+                <WikiSummaryWarning
+                  title="可恢复版本的摘要需要核对"
+                  issues={restoreIssues}
+                  guidance="该版本只能恢复已核验的原文摘录。"
+                />
+              )}
               {baseline && baseline.body !== page.body && (
                 <details className="wiki-baseline">
                   <summary>对照当前生效版 · 版本 {baseline.revision}</summary>
@@ -605,58 +760,106 @@ export default function WikiPanel({
               )}
               <WikiPageView
                 page={page}
-                showQuotes={change.status === "pending"}
+                showQuotes={selectedChange.status === "pending"}
                 onOpen={(index) => void openSource(index)}
                 onError={setError}
               />
-              <div className="modal-actions">
-                {change.status === "rejected" && (
-                  <button
-                    type="button"
-                    disabled={
-                      !!busy || !status.policy.enabled || status.policy.paused
-                    }
-                    onClick={() => void organize(change.id)}
-                  >
-                    重新整理已拒绝改动
-                  </button>
-                )}
-                {change.status === "pending" && (
-                  <>
-                    <button
-                      type="button"
-                      disabled={!!busy}
-                      onClick={() => void review("reject")}
-                    >
-                      拒绝改动
-                    </button>
-                    <button
-                      type="button"
-                      className="primary"
-                      disabled={!!busy}
-                      onClick={() => void review("publish")}
-                    >
-                      发布改动
-                    </button>
-                  </>
-                )}
-                {change.canRestore && (
-                  <button
-                    type="button"
-                    disabled={!!busy}
-                    onClick={() => void review("restore")}
-                  >
-                    恢复此版本
-                  </button>
-                )}
-              </div>
             </div>
           )}
         </div>
       )}
+      {tab === "changes" &&
+        status &&
+        selectedChange &&
+        page &&
+        (selectedChange.status === "rejected" ||
+          selectedChange.status === "pending" ||
+          selectedChange.canRestore) && (
+          <div
+            className="modal-actions wiki-review-actions"
+            role="group"
+            aria-label="Wiki 审阅操作"
+          >
+            {selectedChange.status === "rejected" && (
+              <button
+                type="button"
+                disabled={
+                  !!busy || !status.policy.enabled || status.policy.paused
+                }
+                onClick={() => void organize(selectedChange.id)}
+              >
+                重新整理已拒绝改动
+              </button>
+            )}
+            {selectedChange.status === "pending" && (
+              <>
+                <button
+                  type="button"
+                  disabled={!!busy}
+                  onClick={() => void review("reject")}
+                >
+                  拒绝改动
+                </button>
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={!!busy}
+                  onClick={() =>
+                    void review(
+                      summaryIssues.length ? "publish-excerpts" : "publish",
+                    )
+                  }
+                >
+                  {summaryIssues.length ? "仅发布原文摘录" : "发布改动"}
+                </button>
+              </>
+            )}
+            {selectedChange.canRestore && (
+              <button
+                type="button"
+                disabled={!!busy}
+                onClick={() =>
+                  void review(
+                    restoreIssues.length ? "restore-excerpts" : "restore",
+                  )
+                }
+              >
+                {restoreIssues.length ? "仅恢复原文摘录" : "恢复此版本"}
+              </button>
+            )}
+          </div>
+        )}
     </ModalDialog>
   );
 }
+
+function WikiSummaryWarning({
+  title,
+  issues,
+  guidance,
+}: {
+  title: string;
+  issues: SummaryIssue[];
+  guidance: string;
+}) {
+  return (
+    <section className="wiki-summary-warning" aria-label={title}>
+      <h3>{title}</h3>
+      <ul>
+        {issues.map(({ claim, reason }, index) => (
+          <li key={index}>
+            <strong>
+              {reason === "conflict" ? "与已引用原文不一致" : "缺少对应引文"}
+            </strong>{" "}
+            {claim}
+          </li>
+        ))}
+      </ul>
+      <p>{guidance}</p>
+    </section>
+  );
+}
+
 function WikiPageView({
   page,
   onOpen,
@@ -671,31 +874,40 @@ function WikiPageView({
   showQuotes?: boolean;
 }) {
   return (
-    <article className="wiki-page">
-      <h3>{page.title}</h3>
-      {page.stale && (
-        <p className="panel-warning">至少一处原文已变更，需重新整理。</p>
-      )}
-      <Markdown
-        source={page.body}
-        path=""
-        readOnly
-        onError={onError}
-        label="Wiki 正文"
-      />
-      {onRelated && !!page.related?.length && (
-        <div className="wiki-toolbar">
-          {page.related.map((item) => (
-            <button
-              type="button"
-              key={item.id}
-              onClick={() => onRelated(item.id)}
-            >
-              {item.title}
-            </button>
-          ))}
-        </div>
-      )}
+    <article className={`wiki-page ${showQuotes ? "wiki-page-review" : ""}`}>
+      <div className="wiki-page-body">
+        <h3>{page.title}</h3>
+        {page.stale && (
+          <p className="panel-warning">
+            部分原文或主题信息已过时，请重新整理。
+          </p>
+        )}
+        {!showQuotes && !!page.summaryIssues?.length && (
+          <p className="panel-warning">
+            此版本的摘要缺少可核验的原文，暂只显示已核验的摘录。
+          </p>
+        )}
+        <Markdown
+          source={page.body}
+          path=""
+          readOnly
+          onError={onError}
+          label="Wiki 正文"
+        />
+        {onRelated && !!page.related?.length && (
+          <div className="wiki-toolbar">
+            {page.related.map((item) => (
+              <button
+                type="button"
+                key={item.id}
+                onClick={() => onRelated(item.id)}
+              >
+                {item.title}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <details className="assistant-evidence" open={showQuotes || undefined}>
         <summary>原文位置 · {page.refs.length}</summary>
         <ul className="assistant-citation-list">
@@ -703,7 +915,7 @@ function WikiPageView({
             <li key={`${source.documentId}-${index}`}>
               <button
                 type="button"
-                disabled={!onOpen || page.stale}
+                disabled={!onOpen}
                 onClick={() => onOpen?.(index)}
               >
                 {source.title} · 第 {source.startLine}–{source.endLine} 行

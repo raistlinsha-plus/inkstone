@@ -9,8 +9,10 @@ import {
   branchTurns,
   selectedCandidate,
   type Candidate,
+  type CitationCheck,
   type Conversation,
   type ExternalSource,
+  type MemoryUsage,
   type RetrievalTrace,
   type Turn,
 } from "./types";
@@ -38,6 +40,8 @@ export interface AnswerRecord {
   sources: SearchResult[];
   externalSources?: ExternalSource[];
   trace?: RetrievalTrace;
+  memory?: MemoryUsage;
+  citationChecks?: CitationCheck[];
   snapshot: AnswerSnapshot | null;
   complete: boolean;
   rejectedCharts: number[];
@@ -58,6 +62,8 @@ export function answerRecord(
     sources: r?.sources ?? [],
     externalSources: r?.externalSources,
     trace: r?.trace,
+    memory: r?.memory,
+    citationChecks: r?.citationChecks,
     complete:
       candidate.status === "complete" &&
       ["stop", "no_evidence"].includes(r?.finishReason ?? ""),
@@ -98,6 +104,7 @@ export function ConversationTimeline({
   root,
   mode,
   busy,
+  switching = false,
   progress,
   live,
   onOpen,
@@ -115,6 +122,7 @@ export function ConversationTimeline({
   root: string;
   mode: "keyword" | "hybrid" | "rerank";
   busy: boolean;
+  switching?: boolean;
   progress?: string;
   live: AnswerRecord | null;
   onOpen: (source: SearchResult) => void;
@@ -140,28 +148,12 @@ export function ConversationTimeline({
   }, [conversation?.activeLeafId, live?.text, conversation?.revision]);
   const renderAnswer = (record: AnswerRecord, key: string, active = false) => (
     <>
-      <div className="assistant-turn-context">
-        {record.snapshot?.scopeLabel}
-        <details className="assistant-model-details">
-          <summary>检索与模型</summary>
-          <p>{record.snapshot?.model || "未调用问答模型"}</p>
-          {record.snapshot?.retrievalMode && (
-            <p>
-              实际检索 ·{" "}
-              {retrievalLabels.get(record.snapshot.retrievalMode) ??
-                record.snapshot.retrievalMode}
-            </p>
-          )}
-          {record.snapshot?.rerankStatus && (
-            <p>重排 · {record.snapshot.rerankStatus}</p>
-          )}
-        </details>
-      </div>
       {record.text && (
         <Answer
           text={record.text}
           sources={record.sources}
           externalSources={record.externalSources}
+          citationChecks={record.citationChecks}
           onOpen={(source) =>
             source.external ? onOpenExternal?.(source.external) : onOpen(source)
           }
@@ -177,6 +169,27 @@ export function ConversationTimeline({
           {w}
         </div>
       ))}
+      {!!record.citationChecks?.length && (
+        <section
+          className="assistant-citation-checks"
+          aria-label="引用核对结果"
+        >
+          <h4>部分结论需要核对</h4>
+          <ul>
+            {record.citationChecks.map((check, index) => (
+              <li key={index} data-review={check.status}>
+                <strong>
+                  {check.status === "conflict" ? "与来源不一致" : "待核对"}
+                </strong>{" "}
+                {check.excerpt}
+                {!!check.citations.length && (
+                  <small> · 引用 {check.citations.join("、")}</small>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {record.text && (
         <div className="assistant-turn-actions">
           <button disabled={active} onClick={() => onCopy(record)}>
@@ -195,24 +208,10 @@ export function ConversationTimeline({
           )}
         </div>
       )}
-      {record.trace && (
-        <details className="assistant-evidence">
-          <summary>本轮查阅</summary>
-          <small>
-            {retrievalLabels.get(record.trace.route) ?? record.trace.route}
-          </small>
-          {record.trace.steps.map((step, index) => (
-            <small key={index}>{step}</small>
-          ))}
-          {record.trace.unread.map((step, index) => (
-            <small key={`unread-${index}`}>未核验 · {step}</small>
-          ))}
-        </details>
-      )}
       {record.sources.length + (record.externalSources?.length ?? 0) > 0 && (
         <details className="assistant-evidence">
           <summary>
-            本轮资料依据 ·{" "}
+            本轮依据 ·{" "}
             {record.sources.length + (record.externalSources?.length ?? 0)}
           </summary>
           <p>选择一条来源，核对本轮使用的原文。</p>
@@ -244,6 +243,62 @@ export function ConversationTimeline({
           </ul>
         </details>
       )}
+      {(record.snapshot || record.trace || record.memory) && (
+        <details className="assistant-evidence assistant-technical">
+          <summary>技术详情</summary>
+          {record.snapshot && (
+            <>
+              <p>
+                {record.snapshot.scopeLabel} ·{" "}
+                {record.snapshot.model || "未调用问答模型"}
+              </p>
+              {record.snapshot.retrievalMode && (
+                <p>
+                  实际检索 ·{" "}
+                  {retrievalLabels.get(record.snapshot.retrievalMode) ??
+                    record.snapshot.retrievalMode}
+                  {record.snapshot.rerankStatus &&
+                    ` · 重排 ${record.snapshot.rerankStatus}`}
+                </p>
+              )}
+            </>
+          )}
+          {record.trace && (
+            <section aria-label="本轮查阅">
+              <p>本轮查阅</p>
+              <small>
+                {retrievalLabels.get(record.trace.route) ?? record.trace.route}
+              </small>
+              {record.trace.steps.map((step, index) => (
+                <small key={index}>{step}</small>
+              ))}
+              {record.trace.unread.map((step, index) => (
+                <small key={`unread-${index}`}>未核验 · {step}</small>
+              ))}
+            </section>
+          )}
+          {record.memory && (
+            <section aria-label="本轮上下文">
+              <p>
+                本轮上下文 · 已应用 {record.memory.preferences.length}{" "}
+                项表达偏好
+              </p>
+              {record.memory.preferences.map((preference) => (
+                <small key={preference.id}>
+                  {preferenceLabels[preference.key] ?? preference.key} ·{" "}
+                  {preference.scope === "space" ? "当前空间" : "全部空间"}
+                </small>
+              ))}
+              {record.memory.history && (
+                <small>已发送 1 条历史问题背景。</small>
+              )}
+              {record.memory.notes.map((note) => (
+                <small key={note}>{note}</small>
+              ))}
+            </section>
+          )}
+        </details>
+      )}
     </>
   );
   return (
@@ -257,7 +312,7 @@ export function ConversationTimeline({
             el.scrollHeight - el.scrollTop - el.clientHeight < 64;
       }}
     >
-      {path.length > 0 && (
+      {path.length > 1 && (
         <p className="assistant-path" aria-label="当前会话分支">
           当前分支 · {path.length}轮 · 每轮展示选中的回答
         </p>
@@ -270,7 +325,7 @@ export function ConversationTimeline({
               <div className="assistant-question-heading">
                 <span>你 · 第{index + 1}轮</span>
                 <button
-                  disabled={busy || conversation?.archived}
+                  disabled={busy || switching || conversation?.archived}
                   onClick={() => onEdit(turn)}
                 >
                   修改问题并分支
@@ -283,44 +338,6 @@ export function ConversationTimeline({
                 answerRecord(conversation!, turn, candidate, root, mode),
                 candidate.id,
               )}
-            {candidate?.response?.memory && (
-              <details className="assistant-memory-details">
-                <summary>本轮上下文</summary>
-                <p>
-                  已应用 {candidate.response.memory.preferences.length}{" "}
-                  项表达偏好
-                  {candidate.response.memory.preferences.length > 0 && (
-                    <>
-                      {" "}
-                      ·{" "}
-                      {Array.from(
-                        new Set(
-                          candidate.response.memory.preferences.map((pref) =>
-                            pref.scope === "space" ? "当前空间" : "全部空间",
-                          ),
-                        ),
-                      ).join(" / ")}
-                    </>
-                  )}
-                </p>
-                {candidate.response.memory.preferences.length > 0 && (
-                  <ul>
-                    {candidate.response.memory.preferences.map((preference) => (
-                      <li key={preference.id}>
-                        {preferenceLabels[preference.key] ?? preference.key} ·{" "}
-                        {preference.scope === "space" ? "当前空间" : "全部空间"}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {candidate.response.memory.history && (
-                  <p>已发送 1 条历史问题背景。</p>
-                )}
-                {candidate.response.memory.notes.map((note) => (
-                  <p key={note}>{note}</p>
-                ))}
-              </details>
-            )}
             {candidate && (
               <div className="assistant-branches">
                 <span>
@@ -336,7 +353,7 @@ export function ConversationTimeline({
                 {turn.candidates.length > 1 && (
                   <select
                     aria-label={`回答候选 ${turn.question}`}
-                    disabled={busy}
+                    disabled={busy || switching}
                     value={candidate.id}
                     onChange={(e) => {
                       const c = turn.candidates.find(
@@ -362,7 +379,7 @@ export function ConversationTimeline({
                   </select>
                 )}
                 <button
-                  disabled={busy || conversation?.archived}
+                  disabled={busy || switching || conversation?.archived}
                   onClick={() => onRetry(turn)}
                 >
                   重新生成
@@ -395,7 +412,11 @@ export function ConversationTimeline({
             {conversation.turns
               .filter((t) => !path.some((p) => p.id === t.id))
               .map((t) => (
-                <button key={t.id} disabled={busy} onClick={() => onBranch(t)}>
+                <button
+                  key={t.id}
+                  disabled={busy || switching}
+                  onClick={() => onBranch(t)}
+                >
                   {t.question}
                 </button>
               ))}
@@ -436,11 +457,16 @@ export function EvidencePreview({
     <ModalDialog
       label="本轮来源预览"
       className="assistant-evidence-dialog"
+      backdropClassName="assistant-source-backdrop"
       onClose={onClose}
     >
       <div className="modal-heading">
         <h2>{source.title || source.path.split("/").at(-1)}</h2>
-        <button onClick={onClose} aria-label="关闭来源预览">
+        <button
+          className="icon-button"
+          onClick={onClose}
+          aria-label="关闭来源预览"
+        >
           <X size={18} />
         </button>
       </div>

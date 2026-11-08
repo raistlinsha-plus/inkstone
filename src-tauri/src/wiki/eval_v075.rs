@@ -352,20 +352,10 @@ fn evidence_regression_and_holdout_v076() {
             assert_eq!(totals["forbiddenContextCount"], 0, "{mode}: {totals}");
         }
     }
-    assert!(
-        regression["totals"]["bm25+wiki"]["requiredInContext"]
-            .as_u64()
-            .unwrap()
-            > 12
-    );
-    assert!(
-        holdout["totals"]["bm25+wiki"]["requiredInContext"]
-            .as_u64()
-            .unwrap()
-            > holdout["totals"]["bm25"]["requiredInContext"]
-                .as_u64()
-                .unwrap()
-    );
+    assert_eq!(regression["totals"]["bm25"]["requiredInContext"], 15);
+    assert_eq!(regression["totals"]["bm25+wiki"]["requiredInContext"], 19);
+    assert_eq!(holdout["totals"]["bm25"]["requiredInContext"], 4);
+    assert_eq!(holdout["totals"]["bm25+wiki"]["requiredInContext"], 6);
     assert_eq!(
         holdout["totals"]["bm25+wiki"]["conflictCasesWithBothPassages"],
         1

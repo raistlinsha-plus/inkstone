@@ -58,12 +58,14 @@ export default function ModalDialog({
   onClose,
   busy = false,
   className = "",
+  backdropClassName = "",
   children,
 }: {
   label: string;
   onClose: () => void;
   busy?: boolean;
   className?: string;
+  backdropClassName?: string;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLElement>(null);
@@ -139,7 +141,7 @@ export default function ModalDialog({
   }, []);
   return (
     <div
-      className="modal-backdrop"
+      className={`modal-backdrop ${backdropClassName}`}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !busy) onClose();
       }}

@@ -47,9 +47,17 @@ fn root() -> PathBuf {
 fn out() -> PathBuf {
     root().join("artifacts/v0.6.5-development/evaluation")
 }
+fn candidate_out() -> PathBuf {
+    root()
+        .join(concat!("artifacts/v", env!("CARGO_PKG_VERSION")))
+        .join("evaluation")
+}
 fn write(name: &str, value: &Value) {
-    fs::create_dir_all(out()).unwrap();
-    let dest = out().join(name);
+    write_at(&out(), name, value);
+}
+fn write_at(folder: &Path, name: &str, value: &Value) {
+    fs::create_dir_all(folder).unwrap();
+    let dest = folder.join(name);
     let tmp = dest.with_extension("tmp");
     fs::write(&tmp, serde_json::to_vec_pretty(value).unwrap()).unwrap();
     fs::rename(tmp, dest).unwrap();
@@ -227,6 +235,101 @@ fn review() -> Value {
 fn protocol() -> Value {
     serde_json::from_slice(&fs::read(root().join("evals/v0.6.5/protocol.json")).unwrap()).unwrap()
 }
+
+#[test]
+fn candidate_development_quality_report() {
+    let (corpus, hash) = load("v0.8.0", "rc-64.json");
+    assert_eq!(corpus.cases.len(), 64);
+    assert_eq!(corpus.cases.iter().filter(|c| c.answerable).count(), 52);
+    let (_temp, ws, db) = setup(&corpus);
+    let records: Vec<_> = corpus
+        .cases
+        .iter()
+        .map(|case| {
+            let start = Instant::now();
+            let query = retrieval::knowledge_query(&case.question);
+            let mut hits = candidates(&ws, &db, &query, "bm25", None).unwrap();
+            let stages: Vec<_> = case
+                .gold_sources
+                .iter()
+                .map(|gold| {
+                    let mut matching = hits.iter().filter(|hit| {
+                        hit.path == gold.path
+                            && (hit.start_line..=hit.end_line).contains(&gold.line)
+                            && hit.text.contains(&gold.quote)
+                    });
+                    let Some(first) = matching.next() else {
+                        return (gold, false, false);
+                    };
+                    (
+                        gold,
+                        true,
+                        first.evidence || matching.any(|hit| hit.evidence),
+                    )
+                })
+                .collect();
+            retrieval::finish_ranking(&mut hits);
+            let sources = retrieval::generation_context(&ws, &hits, 6000, false);
+            let elapsed = start.elapsed().as_secs_f64() * 1000.0;
+            let gold_stages: Vec<_> = stages
+                .into_iter()
+                .map(|(gold, candidate, admitted)| {
+                    let in_context = sources.iter().any(|source| {
+                        source.path == gold.path
+                            && (source.start_line..=source.end_line).contains(&gold.line)
+                            && source.text.contains(&gold.quote)
+                    });
+                    json!({
+                        "path": gold.path,
+                        "line": gold.line,
+                        "candidate": candidate,
+                        "admitted": admitted,
+                        "inContext": in_context,
+                    })
+                })
+                .collect();
+            json!({
+                "id": case.id,
+                "kind": case.kind,
+                "answerable": case.answerable,
+                "mode": "bm25",
+                "status": "completed",
+                "metrics": metrics(case, &hits, &sources),
+                "goldStages": gold_stages,
+                "retrievalEvidenceMs": elapsed,
+            })
+        })
+        .collect();
+    let measured = summary(&records, "bm25");
+    println!("v0.8.0 development retrieval: {measured}");
+    write_at(
+        &candidate_out(),
+        "local-rc-64.json",
+        &json!({
+            "corpusHash": hash,
+            "authorIndependent": false,
+            "answerGenerationRun": false,
+            "externalCalls": 0,
+            "contextBudgetChars": 6000,
+            "summary": measured,
+            "records": records,
+        }),
+    );
+    assert!(
+        records
+            .iter()
+            .filter(|record| record["metrics"]["goldEvidenceInContext"] == true)
+            .count()
+            >= 45,
+        "RC-64 must fully cover at least 45 of 52 answerable cases"
+    );
+    assert!(
+        records
+            .iter()
+            .all(|record| record["metrics"]["unsupportedEvidencePositive"] == false),
+        "RC-64 no-target cases must not admit unsupported context"
+    );
+}
 #[test]
 fn local_frozen_quality_report() {
     let phase = std::env::var("INKSTONE_065_PHASE").unwrap_or("final".into());
@@ -270,14 +373,22 @@ fn local_frozen_quality_report() {
 #[ignore = "Explicit transient API environment and --ignored required. Synthetic documents only; real paid usage, bounded attempts/time."]
 async fn remote_quality_matrix() -> Result<(), String> {
     let corpus_name = std::env::var("INKSTONE_065_CORPUS")
-        .map_err(|_| "Set INKSTONE_065_CORPUS=seen-100|new-32")?;
+        .map_err(|_| "Set INKSTONE_065_CORPUS=seen-100|new-32|rc-64")?;
     let (version, file) = match corpus_name.as_str() {
         "seen-100" => ("v0.6.2", "corpus.json"),
         "new-32" => ("v0.6.5", "new-check.json"),
+        "rc-64" => ("v0.8.0", "rc-64.json"),
         _ => return Err("Unknown frozen corpus".into()),
     };
     let (corpus, hash) = load(version, file);
-    let p = protocol();
+    let protocol_version = if corpus_name == "rc-64" {
+        "v0.8.0"
+    } else {
+        "v0.6.5"
+    };
+    let protocol_bytes = fs::read(root().join(format!("evals/{protocol_version}/protocol.json")))
+        .map_err(|_| "Evaluation protocol unavailable")?;
+    let p: Value = serde_json::from_slice(&protocol_bytes).map_err(|_| "Invalid protocol")?;
     let embedding = Provider {
         enabled: true,
         base_url: std::env::var("INKSTONE_EVAL_BASE_URL")
@@ -331,6 +442,9 @@ async fn remote_quality_matrix() -> Result<(), String> {
         concat!(
             include_str!("db.rs"),
             include_str!("retrieval.rs"),
+            include_str!("evidence.rs"),
+            include_str!("evidence/predicate.rs"),
+            include_str!("evidence/wiki_alias.rs"),
             include_str!("providers.rs"),
             include_str!("models.rs"),
             include_str!("evaluation_v065.rs")
@@ -346,10 +460,16 @@ async fn remote_quality_matrix() -> Result<(), String> {
         .unwrap()
         .as_millis();
     let name = format!("remote-{corpus_name}-{run_id}.json");
+    let folder = if corpus_name == "rc-64" {
+        candidate_out()
+    } else {
+        out()
+    };
     let save = |records: &Vec<Value>, status: &str, error: Option<&str>| {
-        write(
+        write_at(
+            &folder,
             &name,
-            &json!({"version":"0.6.5","runId":run_id,"pipelineHash":pipeline_hash,"status":status,"error":error,"corpus":corpus_name,"corpusHash":hash,"protocolHash":files::hash(fs::read(root().join("evals/v0.6.5/protocol.json")).unwrap()),"models":{"embedding":embedding.model,"chat":chat.model,"rerank":reranker.model},"endpoint":embedding.base_url,"rerankEndpoint":reranker.endpoint,"config":{"batchSize":16,"chunkChars":1200,"contextChars":12000,"rerankCandidates":40,"rerankMinScore":0.5,"rerankStrict":false},"authorIndependent":false,"oldCasesAlreadyObserved":corpus_name=="seen-100","keychainAccessedByEvaluator":false,"credentials":"transient environment; local execution bootstrap separately documented","generationSubsetIds":p["generationCaseIds"],"usage":trace.snapshot(),"summary":summaries(records),"records":records}),
+            &json!({"version":protocol_version,"runId":run_id,"pipelineHash":pipeline_hash,"status":status,"error":error,"corpus":corpus_name,"corpusHash":hash,"protocolHash":files::hash(&protocol_bytes),"models":{"embedding":embedding.model,"chat":chat.model,"rerank":reranker.model},"endpoint":embedding.base_url,"rerankEndpoint":reranker.endpoint,"config":{"batchSize":16,"chunkChars":1200,"contextChars":12000,"rerankCandidates":40,"rerankMinScore":0.5,"rerankStrict":false},"authorIndependent":false,"oldCasesAlreadyObserved":corpus_name=="seen-100","keychainAccessedByEvaluator":false,"credentials":"transient environment; local execution bootstrap separately documented","generationSubsetIds":p["generationCaseIds"],"usage":trace.snapshot(),"summary":summaries(records),"records":records}),
         );
     };
     save(&records, "started", None);
@@ -378,7 +498,7 @@ async fn remote_quality_matrix() -> Result<(), String> {
                 retrieval::retain_current_sources(&ws,&mut hits);retrieval::finish_ranking(&mut hits);
                 let sources=retrieval::generation_context(&ws,&hits,chat.context_chars.saturating_sub(case.question.chars().count()+providers::ANSWER_SYSTEM.chars().count()+500),false);
                 let retrieval_ms=start.elapsed().as_secs_f64()*1000.0;let m=metrics(case,&hits,&sources);
-                let generate=corpus_name=="new-32"&&p["generationCaseIds"].as_array().unwrap().iter().any(|id|id==&case.id);
+                let generate=corpus_name!="seen-100"&&p["generationCaseIds"].as_array().unwrap().iter().any(|id|id==&case.id);
                 let gen_start=Instant::now();let (answer,finish,gen_error)=if !generate {(None,"not_run".into(),None)} else if sources.is_empty(){(Some("当前资料中没有找到足够直接、可引用的证据。".into()),"no_evidence".into(),None)}else{
                     match providers::chat(&client,&chat,key.as_deref(),&case.question,&sources,&cancel,None,&format!("v065-{}-{mode}",case.id)).await {Ok(a)=>(Some(a.text),a.finish_reason,None),Err(e)=>(None,"error".into(),Some(e))}
                 };

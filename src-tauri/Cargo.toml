@@ -1,6 +1,6 @@
 [package]
 name = "inkstone"
-version = "0.7.8"
+version = "0.8.0-rc.2"
 description = "Local Markdown editor and personal knowledge base"
 edition = "2021"
 license = "Apache-2.0"
@@ -21,7 +21,7 @@ tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }
-rusqlite = { version = "0.37", features = ["bundled"] }
+rusqlite = { version = "0.41.1", default-features = false, features = ["bundled", "cache", "fallible_uint"] }
 sqlite-vec = "0.1"
 html5ever = "0.39"
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls", "system-proxy"] }

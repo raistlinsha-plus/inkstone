@@ -1,5 +1,4 @@
 use crate::{calendar, documents, files, library, models::Workspace, workspace, AppState};
-use std::path::PathBuf;
 use tauri::State;
 #[tauri::command]
 pub async fn calendar_list(
@@ -50,16 +49,29 @@ pub async fn calendar_save(
     .map_err(|_| "日程保存未完成，请核对原文".to_string())?
 }
 #[tauri::command]
-pub fn export_calendar_ics(path: String, content: String) -> Result<(), String> {
-    let target = PathBuf::from(path);
-    if !target
-        .extension()
-        .is_some_and(|e| e.eq_ignore_ascii_case("ics"))
-        || content.len() > 8 * 1024 * 1024
+pub async fn export_calendar_ics(
+    app: tauri::AppHandle,
+    name: String,
+    content: String,
+) -> Result<(), String> {
+    if content.len() > 8 * 1024 * 1024
         || !content.starts_with("BEGIN:VCALENDAR")
         || !content.contains("END:VCALENDAR")
     {
         return Err("请导出有效的 ICS 文件（最多 8 MB）".into());
     }
-    files::write_atomic(&target, content.as_bytes())
+    let name = if name.len() <= 240
+        && !name.contains(['/', '\\', ':', '\0'])
+        && name.to_ascii_lowercase().ends_with(".ics")
+    {
+        &name
+    } else {
+        "Inkstone-日程.ics"
+    };
+    if let Some(target) =
+        crate::export_destination::choose(&app, name, "iCalendar 日历", "ics").await?
+    {
+        files::write_atomic(&target, content.as_bytes())?;
+    }
+    Ok(())
 }

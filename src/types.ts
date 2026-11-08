@@ -111,6 +111,7 @@ export interface SearchResponse {
 }
 export interface ChatResponse {
   externalSources?: import("./assistant/types").ExternalSource[];
+  citationChecks?: import("./assistant/types").CitationCheck[];
   trace?: import("./assistant/types").RetrievalTrace;
   memory?: import("./assistant/types").MemoryUsage;
   finishReason: string;

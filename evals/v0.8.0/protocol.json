@@ -1,0 +1,26 @@
+{
+  "fixtureAuthorship": "Implementation-team synthetic development fixture. Independently reviewed hidden release set is pending.",
+  "maxHttpAttempts": 240,
+  "maxWallSeconds": 1200,
+  "generationCaseIds": [
+    "rc-01",
+    "rc-04",
+    "rc-07",
+    "rc-15",
+    "rc-29",
+    "rc-39",
+    "rc-49",
+    "rc-51",
+    "rc-58",
+    "rc-61",
+    "rc-62",
+    "rc-63",
+    "rc-64"
+  ],
+  "targets": {
+    "noCrossScope": 0,
+    "knownHighRiskFalseEvidence": 0,
+    "citationSupport": 0.95,
+    "criticalCorrectAnswerOrRefusal": 0.9
+  }
+}

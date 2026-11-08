@@ -695,8 +695,13 @@ pub async fn general(
             &rank_used,
         ));
     }
-    let mut answer = response(
-        &output.finish_reason,
+    let finish = if state.cancel_chat.load(Ordering::SeqCst) {
+        "cancelled"
+    } else {
+        &output.finish_reason
+    };
+    Ok(response(
+        finish,
         output.text,
         &config.model,
         external,
@@ -705,11 +710,7 @@ pub async fn general(
         Some(usage),
         &local_mode,
         &rank_used,
-    );
-    if state.cancel_chat.load(Ordering::SeqCst) {
-        answer.finish_reason = "cancelled".into();
-    }
-    Ok(answer)
+    ))
 }
 
 fn response(
@@ -723,13 +724,12 @@ fn response(
     local_mode: &str,
     rank_used: &str,
 ) -> ChatResponse {
-    let audit = answer_validation::audit_charts(
-        &text,
-        &evidence
-            .iter()
-            .map(Evidence::chart_source)
-            .collect::<Vec<SearchResult>>(),
-    );
+    let excerpts = evidence
+        .iter()
+        .map(Evidence::chart_source)
+        .collect::<Vec<SearchResult>>();
+    let audit = answer_validation::audit_charts(&text, &excerpts);
+    let citation_checks = answer_validation::audit_citations(&text, finish, &excerpts);
     let retrieval_mode = match trace.route.as_str() {
         "local" if local_mode == "direct" => "selected",
         "local" => local_mode,
@@ -750,6 +750,7 @@ fn response(
         scope: None,
         chart_warnings: audit.warnings,
         rejected_charts: audit.rejected,
+        citation_checks,
     }
 }
 

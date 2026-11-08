@@ -2,6 +2,7 @@
 use crate::{db, models::SearchResult};
 use std::{collections::HashSet, path::Path};
 
+mod predicate;
 pub(crate) mod wiki_alias;
 
 fn terms(query: &str) -> Vec<String> {
@@ -120,7 +121,7 @@ fn attributed_comparison(query: &str) -> Option<(Vec<String>, [&str; 2])> {
     (fact.len() >= 2).then_some((fact, labels))
 }
 
-fn subquestion_terms(query: &str) -> Vec<Vec<String>> {
+fn subquestion_terms(query: &str) -> Vec<(&str, Vec<String>)> {
     let clauses = query
         .split(['？', '?', '；', ';'])
         .map(str::trim)
@@ -131,7 +132,7 @@ fn subquestion_terms(query: &str) -> Vec<Vec<String>> {
     }
     clauses
         .into_iter()
-        .map(|clause| {
+        .map(|question| {
             // Refuse to split statements or a clause with a trailing side
             // constraint. Each accepted clause is a standalone question.
             let clause = [
@@ -145,7 +146,7 @@ fn subquestion_terms(query: &str) -> Vec<Vec<String>> {
                 "在哪",
             ]
             .into_iter()
-            .find_map(|ending| clause.strip_suffix(ending))?
+            .find_map(|ending| question.strip_suffix(ending))?
             .trim();
             if clause.contains(['，', ',', '。', '：', ':', '“', '”', '"'])
                 || [
@@ -173,10 +174,74 @@ fn subquestion_terms(query: &str) -> Vec<Vec<String>> {
                 return None;
             }
             let words = terms(clause);
-            (words.len() >= 2).then_some(words)
+            (words.len() >= 2).then_some((question, words))
         })
         .collect::<Option<Vec<_>>>()
         .unwrap_or_default()
+}
+
+// A value question needs a factual body clause, even when the title contains
+// every query term. Unannounced or explicitly inapplicable values cannot fill it.
+fn requested_value(query: &str, body: &str) -> bool {
+    let query = query.trim().trim_end_matches(['？', '?', '。', '.']);
+    let Some(prefix) = [
+        "多少分贝",
+        "多少分钟",
+        "多少小时",
+        "多少个月",
+        "多少天",
+        "多少年",
+        "多少周",
+        "多少支",
+        "多少件",
+        "多少个",
+        "多少钱",
+        "几天",
+        "几小时",
+        "设定是多少",
+        "是多少",
+        "有多长",
+        "多长",
+        "多久",
+        "多少",
+        "是几度",
+        "几度",
+    ]
+    .into_iter()
+    .find_map(|ending| query.strip_suffix(ending)) else {
+        return true;
+    };
+    let prefix = prefix
+        .trim_end_matches([' ', '为'])
+        .trim_end_matches("具体");
+    let relation = if ["有效期", "有效时长"]
+        .iter()
+        .any(|attribute| prefix.ends_with(attribute))
+    {
+        wiki_alias::Relation::Validity
+    } else if prefix.ends_with("温度") {
+        wiki_alias::Relation::Temperature
+    } else {
+        for (attribute, units) in [
+            ("最低库存", &["支", "件", "个", "瓶", "盒", "包"][..]),
+            ("补助", &["元", "美元"][..]),
+            ("噪声上限", &["分贝", "db"][..]),
+        ] {
+            if let Some(subject) = prefix.strip_suffix(attribute) {
+                return wiki_alias::supports_named_quantity(subject, attribute, units, body);
+            }
+        }
+        return true;
+    };
+    wiki_alias::supports_value(relation, query, body)
+}
+
+fn years(text: &str) -> impl Iterator<Item = &str> {
+    text.match_indices('年').filter_map(|(at, _)| {
+        let prefix = text[..at].trim_end();
+        let digits = prefix.bytes().rev().take_while(u8::is_ascii_digit).count();
+        (digits == 4).then(|| &prefix[prefix.len() - digits..])
+    })
 }
 
 fn supports_clause(words: &[String], body: &HashSet<String>) -> bool {
@@ -207,6 +272,13 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
     } else {
         vec![]
     };
+    let predicate = (names.is_empty() && attributed.is_none() && subquestions.is_empty())
+        .then(|| predicate::Request::parse(&query))
+        .flatten();
+    let mut requested_years = years(&query);
+    let year = requested_years
+        .next()
+        .filter(|first| subquestions.is_empty() && requested_years.all(|other| other == *first));
     for r in results {
         let has_body = r.text.lines().any(|line| {
             let line = line.trim();
@@ -266,16 +338,22 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
                 labels.iter().filter(|label| source_name(r, label)).count() == 1
                     && supports_clause(fact, &body)
             } else {
-                ordinary
-                    || subquestions
-                        .iter()
-                        .any(|words| supports_clause(words, &body))
+                subquestions.iter().any(|(question, words)| {
+                    supports_clause(words, &body) && requested_value(question, &r.text)
+                })
             }
         } else {
-            ordinary
+            ordinary && requested_value(&query, &r.text)
         };
-        r.evidence =
-            (r.bm25_rank.is_some() || wiki) && has_body && (supported || original_alias_anchor);
+        r.evidence = (r.bm25_rank.is_some() || wiki)
+            && has_body
+            && year.is_none_or(|year| years(&text).any(|seen| seen == year))
+            && (supported
+                || original_alias_anchor
+                || (!wiki
+                    && predicate.as_ref().is_some_and(|request| {
+                        request.supports(r.title.as_deref(), &r.heading, &r.text)
+                    })));
         r.match_kind = if wiki {
             "wiki"
         } else if r.evidence {
@@ -364,6 +442,26 @@ mod tests {
         assert!(!hits[2].evidence);
         assert!(subquestion_terms("只根据交接通知的预约时长是多少？服务凭据交给谁？").is_empty());
         assert!(subquestion_terms("2026年预约时长是多少？前者交给谁？").is_empty());
+    }
+
+    #[test]
+    fn a_validity_question_needs_a_value_from_the_body() {
+        let title = "飞行培训结业证书有效期";
+        let mut hits = [
+            hit(title, "证书复印件由教务处归档。"),
+            hit(title, "有效期未公布。"),
+            hit(title, "飞行培训结业证书有效期将在新通知中另行公布。"),
+            hit(title, "飞行培训结业证书有效期为72小时。"),
+            hit("归档流程", "资料归档责任人是教务组长。"),
+        ];
+        let question = "飞行培训结业证书有效期是多少？";
+        mark(question, &mut hits);
+        assert!(hits[..3].iter().all(|hit| !hit.evidence));
+        assert!(hits[3].evidence);
+        assert!(!hits[4].evidence);
+        mark(&format!("{question}资料归档责任人是谁？"), &mut hits);
+        assert!(hits[..3].iter().all(|hit| !hit.evidence));
+        assert!(hits[3..].iter().all(|hit| hit.evidence));
     }
 
     #[test]

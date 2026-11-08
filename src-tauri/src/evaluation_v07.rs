@@ -54,6 +54,7 @@ fn response(text: String, sources: Vec<SearchResult>, finish: &str) -> ChatRespo
         scope: None,
         chart_warnings: vec![],
         rejected_charts: vec![],
+        citation_checks: vec![],
     }
 }
 fn root() -> PathBuf {

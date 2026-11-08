@@ -913,6 +913,12 @@ fn export_candidate(markdown: &mut String, candidate: &Candidate, selected: bool
     ));
     if let Some(r) = &candidate.response {
         let text = r["text"].as_str().unwrap_or("");
+        if r["citationChecks"]
+            .as_array()
+            .is_some_and(|checks| !checks.is_empty())
+        {
+            markdown.push_str("> 这份回答含有与引用不一致或待核对的结论，请查阅原文。\n\n");
+        }
         let unverified = candidate.status != "complete"
             || !["stop", "no_evidence"].contains(&r["finishReason"].as_str().unwrap_or(""))
             || r["rejectedCharts"]

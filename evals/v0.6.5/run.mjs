@@ -10,11 +10,11 @@ const args = process.argv.slice(2);
 if (
   args.length !== 3 ||
   args[0] !== "--corpus" ||
-  !["seen-100", "new-32"].includes(args[1]) ||
+  !["seen-100", "new-32", "rc-64"].includes(args[1]) ||
   args[2] !== "--run"
 )
   throw Error(
-    "Explicit paid API use: node evals/v0.6.5/run.mjs --corpus seen-100|new-32 --run",
+    "Explicit paid API use: node evals/v0.6.5/run.mjs --corpus seen-100|new-32|rc-64 --run",
   );
 for (const name of [
   "INKSTONE_EVAL_BASE_URL",
@@ -25,7 +25,7 @@ for (const name of [
 ])
   if (!process.env[name])
     throw Error("Missing explicit environment variable: " + name);
-for (const version of ["v0.6.2", "v0.6.5"]) {
+for (const version of ["v0.6.2", "v0.6.5", "v0.8.0"]) {
   const dir = resolve(root, "evals", version);
   const manifest = JSON.parse(
     await readFile(resolve(dir, "manifest.json"), "utf8"),
