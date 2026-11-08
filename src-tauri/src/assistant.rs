@@ -1,5 +1,6 @@
 //! Local knowledge conversations. Historical model text is never retrieval evidence.
 use crate::{
+    assistant_sources::{Selection, WebAccess},
     files, library, maintenance,
     models::{ChatResponse, Workspace},
 };
@@ -14,7 +15,7 @@ use std::{
 };
 use uuid::Uuid;
 
-pub(crate) const SCHEMA: i64 = 3;
+pub(crate) const SCHEMA: i64 = 4;
 pub const GENERAL_OWNER: &str = "general";
 #[path = "assistant_attachments.rs"]
 pub mod attachments;
@@ -43,7 +44,47 @@ pub struct Turn {
     pub selected_candidate_id: Option<String>,
     pub candidates: Vec<Candidate>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub sources: Option<crate::assistant_sources::Selection>,
+    pub sources: Option<Selection>,
+    #[serde(default)]
+    pub web_access: WebAccess,
+}
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(default, rename_all = "camelCase", deny_unknown_fields)]
+pub struct DraftContext {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sources: Option<Selection>,
+    pub web_access: WebAccess,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub branch: Option<DraftBranch>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DraftBranch {
+    pub parent_turn_id: Option<String>,
+}
+
+impl DraftContext {
+    fn is_empty(&self) -> bool {
+        self == &Self::default()
+    }
+
+    fn validate(&self, c: &Connection, workspace: &str, conversation: &str) -> Result<(), String> {
+        if let Some(sources) = &self.sources {
+            if workspace != GENERAL_OWNER {
+                return Err("附加资料只适用于通用问答".into());
+            }
+            sources.validate()?;
+        }
+        if let Some(parent) = self
+            .branch
+            .as_ref()
+            .and_then(|branch| branch.parent_turn_id.as_deref())
+        {
+            owned_turn(c, conversation, parent)?;
+        }
+        Ok(())
+    }
 }
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -54,6 +95,8 @@ pub struct Conversation {
     pub scope_label: String,
     pub archived: bool,
     pub draft: String,
+    #[serde(default, skip_serializing_if = "DraftContext::is_empty")]
+    pub draft_context: DraftContext,
     pub revision: i64,
     pub created_at: String,
     pub updated_at: String,
@@ -90,7 +133,8 @@ pub struct Started {
     pub grounded_question: String,
     pub prompt_question: String,
     pub scope: Option<String>,
-    pub sources: Option<crate::assistant_sources::Selection>,
+    pub sources: Option<Selection>,
+    pub web_access: WebAccess,
     pub previous_answer: Option<String>,
     pub previous_questions: Vec<String>,
 }
@@ -163,6 +207,25 @@ fn open(data: &Path) -> Result<Connection, String> {
     if version < 3 {
         attachments::migrate(&mut c)?;
     }
+    if version < 4 {
+        let tx = c
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+            .map_err(err)?;
+        let current: i64 = tx
+            .pragma_query_value(None, "user_version", |r| r.get(0))
+            .map_err(err)?;
+        if current < 4 {
+            tx.execute_batch(
+                "ALTER TABLE conversations ADD COLUMN draft_context TEXT NOT NULL DEFAULT '{}';
+                 ALTER TABLE turns ADD COLUMN web_access TEXT NOT NULL DEFAULT 'auto'
+                 CHECK (web_access IN ('auto','local-only'));",
+            )
+            .map_err(err)?;
+            tx.pragma_update(None, "user_version", SCHEMA)
+                .map_err(err)?;
+        }
+        tx.commit().map_err(err)?;
+    }
     c.execute("UPDATE candidates SET status='failed',error='上次生成未完成，请重新生成。' WHERE status='generating' AND process_id<>?",[process_id()]).map_err(err)?;
     Ok(c)
 }
@@ -217,24 +280,59 @@ fn clean(value: &str, max: usize, label: &str) -> Result<String, String> {
     }
 }
 fn read(c: &Connection, workspace: &str, id: &str) -> Result<Conversation, String> {
+    read_versioned(c, workspace, id, SCHEMA)
+}
+fn read_versioned(
+    c: &Connection,
+    workspace: &str,
+    id: &str,
+    version: i64,
+) -> Result<Conversation, String> {
     authorize(c, workspace, id)?;
-    let mut out=c.query_row("SELECT id,title,scope,scope_label,archived,draft,revision,created_at,updated_at,active_leaf_id FROM conversations WHERE id=?",[id],|r|Ok(Conversation{id:r.get(0)?,title:r.get(1)?,scope:r.get(2)?,scope_label:r.get(3)?,archived:r.get(4)?,draft:r.get(5)?,revision:r.get(6)?,created_at:r.get(7)?,updated_at:r.get(8)?,active_leaf_id:r.get(9)?,turns:vec![]})).map_err(err)?;
-    let mut statement=c.prepare("SELECT id,parent_turn_id,question,created_at,selected_candidate_id FROM turns WHERE conversation_id=? ORDER BY rowid").map_err(err)?;
+    let draft_column = if version >= 4 {
+        "draft_context"
+    } else {
+        "'{}'"
+    };
+    let (mut out, draft_context) = c.query_row(
+        &format!("SELECT id,title,scope,scope_label,archived,draft,revision,created_at,updated_at,active_leaf_id,{draft_column} FROM conversations WHERE id=?"),
+        [id],
+        |r| Ok((Conversation {
+            id: r.get(0)?, title: r.get(1)?, scope: r.get(2)?, scope_label: r.get(3)?,
+            archived: r.get(4)?, draft: r.get(5)?, draft_context: DraftContext::default(),
+            revision: r.get(6)?, created_at: r.get(7)?, updated_at: r.get(8)?,
+            active_leaf_id: r.get(9)?, turns: vec![],
+        }, r.get::<_, String>(10)?)),
+    ).map_err(err)?;
+    out.draft_context = serde_json::from_str(&draft_context).map_err(err)?;
+    out.draft_context.validate(c, workspace, id)?;
+    let web_column = if version >= 4 { "web_access" } else { "'auto'" };
+    let mut statement = c
+        .prepare(&format!(
+            "SELECT id,parent_turn_id,question,created_at,selected_candidate_id,{web_column}
+         FROM turns WHERE conversation_id=? ORDER BY rowid"
+        ))
+        .map_err(err)?;
     let turns = statement
         .query_map([id], |r| {
-            Ok(Turn {
-                id: r.get(0)?,
-                parent_turn_id: r.get(1)?,
-                question: r.get(2)?,
-                created_at: r.get(3)?,
-                selected_candidate_id: r.get(4)?,
-                candidates: vec![],
-                sources: None,
-            })
+            Ok((
+                Turn {
+                    id: r.get(0)?,
+                    parent_turn_id: r.get(1)?,
+                    question: r.get(2)?,
+                    created_at: r.get(3)?,
+                    selected_candidate_id: r.get(4)?,
+                    candidates: vec![],
+                    sources: None,
+                    web_access: WebAccess::default(),
+                },
+                r.get::<_, String>(5)?,
+            ))
         })
         .map_err(err)?;
     for t in turns {
-        let mut t = t.map_err(err)?;
+        let (mut t, web_access) = t.map_err(err)?;
+        t.web_access = WebAccess::from_stored(&web_access)?;
         if workspace == GENERAL_OWNER {
             t.sources = attachments::selection(c, &t.id)?;
         }
@@ -341,6 +439,7 @@ pub fn update(
     archived: Option<bool>,
     draft: Option<String>,
     active_leaf_id: Option<String>,
+    draft_context: Option<DraftContext>,
 ) -> Result<Conversation, String> {
     let _permit = maintenance::mutation(data)?;
     let mut c = open(data)?;
@@ -362,11 +461,15 @@ pub fn update(
         )
         .map_err(err)?;
     }
-    if let Some(draft) = draft {
-        validate_draft(&draft)?;
+    if draft.is_some() || draft_context.is_some() {
+        if let Some(draft) = &draft {
+            validate_draft(draft)?;
+        }
+        let draft_context = encode_draft_context(&tx, workspace, id, draft_context.as_ref())?;
         tx.execute(
-            "UPDATE conversations SET draft=? WHERE id=?",
-            params![draft, id],
+            "UPDATE conversations SET draft=COALESCE(?1,draft),
+               draft_context=COALESCE(?2,draft_context) WHERE id=?3",
+            params![draft, draft_context, id],
         )
         .map_err(err)?;
     }
@@ -389,27 +492,52 @@ fn validate_draft(draft: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn encode_draft_context(
+    c: &Connection,
+    workspace: &str,
+    id: &str,
+    context: Option<&DraftContext>,
+) -> Result<Option<String>, String> {
+    context
+        .map(|value| {
+            value.validate(c, workspace, id)?;
+            serde_json::to_string(value).map_err(err)
+        })
+        .transpose()
+}
+
 pub fn save_running_draft(
     data: &Path,
     workspace: &str,
     id: &str,
     request: &str,
     draft: &str,
+    draft_context: Option<&DraftContext>,
 ) -> Result<bool, String> {
     validate_draft(draft)?;
     let _permit = maintenance::mutation(data)?;
     let c = open(data)?;
+    let draft_context = encode_draft_context(&c, workspace, id, draft_context)?;
     // A single statement orders this write with begin and finish. A late write
     // cannot alter a finished candidate or a conversation in a different space.
     let updated = c
         .execute(
-            "UPDATE conversations SET draft=?1,revision=revision+1,updated_at=?2
-         WHERE id=?3 AND workspace_id=?4 AND archived=0 AND EXISTS (
+            "UPDATE conversations SET draft=?1,draft_context=COALESCE(?2,draft_context),
+             revision=revision+1,updated_at=?3
+         WHERE id=?4 AND workspace_id=?5 AND archived=0 AND EXISTS (
            SELECT 1 FROM turns t JOIN candidates a ON a.id=t.selected_candidate_id
            WHERE t.conversation_id=conversations.id AND t.id=conversations.active_leaf_id
-             AND a.turn_id=t.id AND a.request_id=?5 AND a.status='generating' AND a.process_id=?6
+             AND a.turn_id=t.id AND a.request_id=?6 AND a.status='generating' AND a.process_id=?7
          )",
-            params![draft, now(), id, workspace, request, process_id()],
+            params![
+                draft,
+                draft_context,
+                now(),
+                id,
+                workspace,
+                request,
+                process_id()
+            ],
         )
         .map_err(err)?;
     Ok(updated == 1)
@@ -520,6 +648,7 @@ fn queries(question: &str, history: &[String]) -> (String, String) {
     };
     (grounded, prompt)
 }
+#[cfg(test)]
 pub fn begin_with_mode(
     data: &Path,
     workspace: &str,
@@ -542,6 +671,7 @@ pub fn begin_with_mode(
         request,
         requested_mode,
         None,
+        None,
     )
 }
 
@@ -555,7 +685,8 @@ pub fn begin_with_sources(
     regenerate: Option<&str>,
     request: &str,
     requested_mode: &str,
-    selected_sources: Option<crate::assistant_sources::Selection>,
+    selected_sources: Option<Selection>,
+    requested_web_access: Option<WebAccess>,
 ) -> Result<Started, String> {
     if !["keyword", "hybrid", "rerank"].contains(&requested_mode) {
         return Err("未知检索方式".into());
@@ -566,10 +697,27 @@ pub fn begin_with_sources(
         .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
         .map_err(err)?;
     revision(&tx, workspace, id, expected)?;
+    let (archived, draft, draft_context): (bool, String, String) = tx
+        .query_row(
+            "SELECT archived,draft,draft_context FROM conversations WHERE id=?",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .map_err(err)?;
+    if archived {
+        return Err("请取消归档后继续此会话".into());
+    }
+    let matching_draft: DraftContext = if regenerate.is_none() && draft.trim() == question.trim() {
+        let context: DraftContext = serde_json::from_str(&draft_context).map_err(err)?;
+        context.validate(&tx, workspace, id)?;
+        context
+    } else {
+        DraftContext::default()
+    };
     clean(request, 128, "请求标识")?;
     let time = now();
     let candidate_id = Uuid::new_v4().to_string();
-    let (turn_id, question, parent) = if let Some(turn) = regenerate {
+    let (turn_id, question, parent, web_access) = if let Some(turn) = regenerate {
         owned_turn(&tx, id, turn)?;
         let count: i64 = tx
             .query_row(
@@ -581,14 +729,19 @@ pub fn begin_with_sources(
         if count >= MAX_CANDIDATES {
             return Err("此问题已保留12个候选，请新建问题继续".into());
         }
-        let (question, parent): (String, Option<String>) = tx
+        let (question, parent, access): (String, Option<String>, String) = tx
             .query_row(
-                "SELECT question,parent_turn_id FROM turns WHERE id=?",
+                "SELECT question,parent_turn_id,web_access FROM turns WHERE id=?",
                 [turn],
-                |r| Ok((r.get(0)?, r.get(1)?)),
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
             )
             .map_err(err)?;
-        (turn.into(), question, parent)
+        (
+            turn.into(),
+            question,
+            parent,
+            WebAccess::from_stored(&access)?,
+        )
     } else {
         let count: i64 = tx
             .query_row(
@@ -600,13 +753,22 @@ pub fn begin_with_sources(
         if count >= MAX_TURNS {
             return Err("此会话已达200轮，请导出或新建会话".into());
         }
+        let parent = matching_draft
+            .branch
+            .as_ref()
+            .map_or(parent, |branch| branch.parent_turn_id.as_deref());
         if let Some(parent) = parent {
             owned_turn(&tx, id, parent)?;
         }
         let question = clean(question, 8000, "问题")?;
         let turn = Uuid::new_v4().to_string();
-        tx.execute("INSERT INTO turns(id,conversation_id,parent_turn_id,question,created_at) VALUES(?,?,?,?,?)",params![turn,id,parent,question,time]).map_err(err)?;
-        (turn, question, parent.map(str::to_string))
+        let access = if matching_draft.web_access == WebAccess::LocalOnly {
+            WebAccess::LocalOnly
+        } else {
+            requested_web_access.unwrap_or_default()
+        };
+        tx.execute("INSERT INTO turns(id,conversation_id,parent_turn_id,question,created_at,web_access) VALUES(?,?,?,?,?,?)",params![turn,id,parent,question,time,access.stored()]).map_err(err)?;
+        (turn, question, parent.map(str::to_string), access)
     };
     let mut sources = None;
     let mut previous_answer = None;
@@ -614,10 +776,24 @@ pub fn begin_with_sources(
         let selection = if regenerate.is_some() {
             attachments::selection(&tx, &turn_id)?.unwrap_or_default()
         } else {
-            selected_sources.unwrap_or_default()
+            matching_draft
+                .sources
+                .or(selected_sources)
+                .unwrap_or_default()
         };
         selection.validate()?;
         attachments::validate_owned(&tx, id, &selection.attachments)?;
+        if let Some(project) = &selection.project_id {
+            library::project_root(data, project)
+                .map_err(|_| "所选空间已不可用，请重新确认本轮资料范围")?;
+            for document_id in &selection.document_ids {
+                if !library::get(data, document_id)
+                    .is_ok_and(|doc| doc.project_id == *project && doc.status == "ready")
+                {
+                    return Err("所选文档已移除或不在选定空间，请重新确认本轮资料范围".into());
+                }
+            }
+        }
         if regenerate.is_none() {
             tx.execute(
                 "INSERT INTO turn_sources(turn_id, selection) VALUES(?,?)",
@@ -656,8 +832,9 @@ pub fn begin_with_sources(
     )
     .map_err(err)?;
     tx.execute(
-        "UPDATE conversations SET active_leaf_id=?,draft=CASE WHEN ? THEN draft ELSE '' END,
-         title=CASE WHEN title='新会话' THEN ? ELSE title END WHERE id=?",
+        "UPDATE conversations SET active_leaf_id=?1,draft=CASE WHEN ?2 THEN draft ELSE '' END,
+         draft_context=CASE WHEN ?2 THEN draft_context ELSE '{}' END,
+         title=CASE WHEN title='新会话' THEN ?3 ELSE title END WHERE id=?4",
         params![
             turn_id,
             regenerate.is_some(),
@@ -677,6 +854,7 @@ pub fn begin_with_sources(
         prompt_question,
         scope,
         sources,
+        web_access,
         previous_answer,
         previous_questions: if workspace == GENERAL_OWNER {
             history

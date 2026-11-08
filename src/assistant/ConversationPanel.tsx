@@ -252,7 +252,10 @@ export function ConversationTimeline({
             <div className="assistant-question">
               <div className="assistant-question-heading">
                 <span>你 · 第{index + 1}轮</span>
-                <button disabled={busy} onClick={() => onEdit(turn)}>
+                <button
+                  disabled={busy || conversation?.archived}
+                  onClick={() => onEdit(turn)}
+                >
                   修改问题并分支
                 </button>
               </div>

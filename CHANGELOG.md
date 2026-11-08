@@ -2,6 +2,14 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v0.7.4 · 本机可靠性更新
+
+- 随问答草稿保存资料范围、分支位置和本轮网页搜索限制。提交成功后为下一轮重新选择范围，重新生成继续使用原轮次的权限和资料。
+- 区分翻译、改写等文本处理和时效核查。保留自动联网模式，新增「本轮不搜索网页」，后端在联网规划前执行。
+- 独立问答引用按保存时的原文哈希和行号定位。Wiki 引用绑定已显示版本。
+- Wiki 支持拒绝后在相同资料范围重新生成，处理原文空行引用。永久删除文档时清理相关 Wiki 派生内容。
+- [本版交付与验收边界](docs/DELIVERY-v0.7.4.md)。
+
 ## v0.7.3 · 通用问答源码预览
 
 - 新增独立 AI 问答工作台。支持直接聊天、写作、翻译和解释，独立会话与文档空间会话分开保留。

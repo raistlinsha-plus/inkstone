@@ -1113,6 +1113,103 @@ test.skipIf(appVersion === "0.7.2")(
   },
 );
 
+function enableTestChat() {
+  overrides.set("bootstrap", () => ({
+    settings: { ...settings, chat: { ...settings.chat, enabled: true } },
+    lastWorkspace: null,
+  }));
+}
+
+test("reopening a standalone draft restores its documents and no-web choice", async () => {
+  enableTestChat();
+  overrides.set("ask_question", () => syntheticAnswer);
+  await boot();
+  fireEvent.click(screen.getByRole("button", { name: "AI 问答" }));
+  const composer = await screen.findByLabelText("向 AI 提问");
+  fireEvent.click(screen.getByRole("button", { name: "添加资料" }));
+  fireEvent.change(screen.getByRole("combobox", { name: /知识空间/ }), {
+    target: { value: "p1" },
+  });
+  fireEvent.click(screen.getByRole("checkbox", { name: "a.md" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "b.md" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "本轮不搜索网页" }));
+  const draft = "请比较这两篇";
+  fireEvent.change(composer, { target: { value: draft } });
+  fireEvent.click(screen.getByTitle("新建会话"));
+  await waitFor(() => expect((composer as HTMLTextAreaElement).value).toBe(""));
+  const sources = { projectId: "p1", documentIds: ["a.md", "b.md"] };
+  expect(calls("assistant_update").at(-1)?.[1]).toMatchObject({
+    draft,
+    draftContext: { sources, webAccess: "local-only" },
+  });
+  fireEvent.click(screen.getByTitle("会话历史"));
+  fireEvent.click(await screen.findByRole("button", { name: /新会话.*0轮/ }));
+  await screen.findByRole("button", { name: "p1 · 2 篇" });
+  expect((composer as HTMLTextAreaElement).value).toBe(draft);
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: "本轮不搜索网页",
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+  await screen.findByRole("heading", { name: "季度分析" });
+  expect(calls("assistant_ask").at(-1)?.[1]).toMatchObject({
+    question: draft,
+    sources,
+    webAccess: "local-only",
+  });
+  expect(screen.queryByRole("button", { name: "p1 · 2 篇" })).toBeNull();
+});
+
+test.each([false, true])(
+  "a historical standalone citation checks the document version (changed: %s)",
+  async (changed) => {
+    enableTestChat();
+    const hash = "a".repeat(64);
+    disk.set("c.md", {
+      ...file("c.md", "第一行\n引用句\n结尾"),
+      hash: changed ? "b".repeat(64) : hash,
+    });
+    overrides.set("ask_question", () => ({
+      ...syntheticAnswer,
+      text: "## 有引用的回答\n\n见原文 [1]。",
+      externalSources: [
+        {
+          id: "c.md:2-2",
+          kind: "document",
+          label: "c.md · 第 2 行",
+          citation: 1,
+          projectId: "p2",
+          documentId: "c.md",
+          contentHash: hash,
+          excerpt: "引用句",
+        },
+      ],
+    }));
+    await boot();
+    fireEvent.click(screen.getByRole("button", { name: "AI 问答" }));
+    fireEvent.change(await screen.findByLabelText("向 AI 提问"), {
+      target: { value: "请引用" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+    await screen.findByRole("heading", { name: "有引用的回答" });
+    fireEvent.click(screen.getByTitle("查看来源 1：c.md · 第 2 行"));
+    const preview = await screen.findByRole("dialog", { name: "查看来源" });
+    fireEvent.click(within(preview).getByRole("button", { name: "打开文档" }));
+    const opened = await screen.findByTestId("opened-path");
+    expect(opened.textContent?.trim()).toBe(changed ? "c.md:" : "c.md:2");
+    expect(calls("open_library").at(-1)?.[1]).toMatchObject({
+      projectId: "p2",
+    });
+    const warning = api.confirm.mock.calls.find(
+      ([, options]) => options?.title === "引用版本不匹配",
+    );
+    expect(!!warning).toBe(changed);
+  },
+);
+
 test("an answer keeps its request scope and explicit retrieval mode when controls change after completion", async () => {
   const pending = deferred<typeof syntheticAnswer>();
   await askSynthetic(pending.promise);

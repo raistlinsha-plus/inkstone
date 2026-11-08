@@ -25,6 +25,7 @@ export default function QuestionSources({
   onBusy: (busy: boolean) => void;
 }) {
   const [files, setFiles] = useState<AssistantAttachment[]>([]);
+  const [inventoryOwner, setInventoryOwner] = useState<string>();
   const [revision, refresh] = useState(0);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
@@ -35,18 +36,33 @@ export default function QuestionSources({
   const docs = view.documents.filter(
     (doc) => doc.projectId === project?.id && doc.status === "ready",
   );
+  const availableDocuments = documentIds.filter((id) =>
+    docs.some((doc) => doc.id === id),
+  );
+  const availableAttachments =
+    inventoryOwner === conversationId && conversationId
+      ? attachedIds.filter((id) => files.some((file) => file.id === id))
+      : attachedIds;
+  const staleDocumentScope =
+    (!!selected.projectId && !project) ||
+    availableDocuments.length < documentIds.length;
+  const staleAttachments = availableAttachments.length < attachedIds.length;
 
   useEffect(() => {
     let active = true;
     if (!conversationId) {
       setFiles([]);
+      setInventoryOwner(undefined);
       return;
     }
     void invoke<AssistantAttachment[]>("assistant_attachment_list", {
       conversationId,
     }).then(
       (next) => {
-        if (active) setFiles(Array.isArray(next) ? next : []);
+        if (active && Array.isArray(next)) {
+          setFiles(next);
+          setInventoryOwner(conversationId);
+        }
       },
       (reason) => {
         if (active) setError(String(reason));
@@ -169,6 +185,27 @@ export default function QuestionSources({
             </button>
           ))}
       </div>
+      {(staleDocumentScope || staleAttachments) && (
+        <div role="alert">
+          草稿选定的部分资料已不可用。请重新确认本轮资料。
+          <button
+            type="button"
+            disabled={disabled || working}
+            onClick={() =>
+              onChange({
+                projectId:
+                  project && (!documentIds.length || availableDocuments.length)
+                    ? project.id
+                    : null,
+                documentIds: availableDocuments,
+                attachments: availableAttachments,
+              })
+            }
+          >
+            移除失效选择
+          </button>
+        </div>
+      )}
       {adding && (
         <div className="question-source-picker">
           <button

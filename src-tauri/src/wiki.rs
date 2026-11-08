@@ -18,7 +18,7 @@ use std::{
 use tauri::State;
 
 pub(crate) use compile::schedule;
-pub(crate) use store::validate_snapshot;
+pub(crate) use store::{purge_document, validate_snapshot};
 
 const MAX_SOURCES: usize = 100;
 const MAX_SECTIONS: usize = 12;
@@ -323,7 +323,23 @@ fn status(data: &Path, ws: &Workspace, space: &str) -> Result<Status, String> {
 pub(crate) async fn wiki_compile(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
+    retry_change_id: Option<String>,
 ) -> Result<Status, String> {
+    if let Some(id) = retry_change_id {
+        let (_, space) = active(&state)?;
+        let _permit = crate::maintenance::mutation(&state.data_dir)?;
+        let mut db = store::write(&state.data_dir)?;
+        let tx = db
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+            .map_err(error)?;
+        let policy = store::policy(&tx, &space)?;
+        let change = store::change(&tx, &space, &id)?;
+        if change.status != "rejected" || !policy.enabled || policy.paused {
+            return Err("只能在启用 Wiki 时重新整理已拒绝的改动".into());
+        }
+        allow_change_retry(&tx, &space, &policy, &change)?;
+        tx.commit().map_err(error)?;
+    }
     compile::invoke(&app, &state).await
 }
 
@@ -436,7 +452,9 @@ pub(crate) fn wiki_review(
     let policy = store::policy(&tx, &space)?;
     let change = store::change(&tx, &space, &input.id)?;
     match input.action.as_str() {
-        "reject" if change.status == "pending" => store::reject(&tx, &space, &change.id)?,
+        "reject" if change.status == "pending" => {
+            reject_change(&tx, &space, &policy, &change)?;
+        }
         "publish" if change.status == "pending" => {
             if !policy.enabled || policy.paused {
                 return Err("Wiki 已暂停，恢复后可继续审阅".into());
@@ -467,6 +485,38 @@ pub(crate) fn wiki_review(
     }
     tx.commit().map_err(error)?;
     status(&state.data_dir, &ws, &space)
+}
+
+fn reject_change(
+    db: &Connection,
+    space: &str,
+    policy: &Policy,
+    change: &store::Change,
+) -> Result<(), String> {
+    store::reject(db, space, &change.id)?;
+    allow_change_retry(db, space, policy, change)?;
+    let pending = store::pending_count(db, space)?;
+    store::record_job(
+        db,
+        space,
+        "ready",
+        &format!("已拒绝这项改动，待审阅 {pending} 项。可手动重新整理。"),
+    )
+}
+
+fn allow_change_retry(
+    db: &Connection,
+    space: &str,
+    policy: &Policy,
+    change: &store::Change,
+) -> Result<(), String> {
+    for source in change.content.originals() {
+        if policy.document_ids.contains(&source.document_id) {
+            let fingerprint = compile::source_fingerprint(policy, &source.title, &source.hash);
+            store::allow_manual_retry(db, space, &source.document_id, &fingerprint)?;
+        }
+    }
+    Ok(())
 }
 
 fn publish_checked(
@@ -580,35 +630,58 @@ pub(crate) fn wiki_read(
     })
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SourceRequest {
+    page_id: String,
+    revision: i64,
+    change_id: Option<String>,
+    document_id: String,
+    start_line: usize,
+    end_line: usize,
+    hash: String,
+}
+
+fn displayed_original(
+    db: &Connection,
+    space: &str,
+    input: &SourceRequest,
+) -> Result<Original, String> {
+    let page = if let Some(change_id) = &input.change_id {
+        let change = store::change(db, space, change_id)?;
+        if change.page_id != input.page_id || change.result.max(change.base) != input.revision {
+            return Err("改动版本已变化，请重新打开后核对原文".into());
+        }
+        change.content
+    } else {
+        store::revision(db, space, &input.page_id, input.revision)?
+    };
+    let source = page
+        .originals()
+        .find(|source| {
+            source.document_id == input.document_id
+                && source.start_line == input.start_line
+                && source.end_line == input.end_line
+                && source.hash == input.hash
+        })
+        .cloned()
+        .ok_or("该版本的原文定位不存在，请重新打开后核对")?;
+    Ok(source)
+}
+
 #[tauri::command]
 pub(crate) fn wiki_source(
     state: State<'_, AppState>,
-    page_id: String,
-    index: usize,
-    change_id: Option<String>,
+    input: SourceRequest,
 ) -> Result<Original, String> {
     let (ws, space) = active(&state)?;
     let db = store::read(&state.data_dir)?;
     let policy = store::policy(&db, &space)?;
-    let page = if let Some(change_id) = change_id {
-        let change = store::change(&db, &space, &change_id)?;
-        if change.page_id != page_id {
-            return Err("改动与页面不匹配".into());
-        }
-        change.content
-    } else {
-        store::revision(
-            &db,
-            &space,
-            &page_id,
-            store::current_revision(&db, &space, &page_id)?,
-        )?
-    };
-    let source = page.originals().nth(index).ok_or("原文定位不存在")?;
-    if !verified_original(&state.data_dir, &ws, &space, &policy, source) {
+    let source = displayed_original(&db, &space, &input)?;
+    if !verified_original(&state.data_dir, &ws, &space, &policy, &source) {
         return Err("原文已变化、已移除或不在当前 Wiki 授权范围".into());
     }
-    Ok(source.clone())
+    Ok(source)
 }
 
 fn relevant(terms: &[String], field: &str) -> usize {

@@ -132,6 +132,27 @@ export default function WikiPanel({
     };
   }, [refresh, workspaceRoot]);
 
+  useEffect(() => {
+    if (
+      [page, baseline].some((item) =>
+        item?.refs.some(
+          (source) =>
+            !view.documents.some(
+              (doc) => doc.id === source.documentId && doc.status !== "purging",
+            ),
+        ),
+      )
+    ) {
+      ++latestPage.current;
+      setPage(undefined);
+      setChange(undefined);
+      setBaseline(undefined);
+      void refresh().catch((reason) => {
+        if (active.current) setError(String(reason));
+      });
+    }
+  }, [page, baseline, view.documents, refresh]);
+
   async function run(label: string, task: () => Promise<void>) {
     setBusy(label);
     setError("");
@@ -196,13 +217,33 @@ export default function WikiPanel({
     });
   }
 
+  async function organize(retryChangeId?: string) {
+    await run("正在整理", async () => {
+      const next = await invoke<WikiStatus>("wiki_compile", { retryChangeId });
+      if (next && active.current) setStatus(next);
+      else await refresh();
+      if (retryChangeId && active.current) {
+        setPage(undefined);
+        setChange(undefined);
+        setBaseline(undefined);
+      }
+    });
+  }
+
   async function openSource(index: number) {
-    if (!page) return;
+    const reference = page?.refs[index];
+    if (!page || !reference) return;
     await run("正在核对来源", async () => {
       const source = await invoke<WikiRef>("wiki_source", {
-        pageId: page.id,
-        index,
-        changeId: change?.id,
+        input: {
+          pageId: page.id,
+          revision: page.revision,
+          changeId: change?.id ?? null,
+          documentId: reference.documentId,
+          startLine: reference.startLine,
+          endLine: reference.endLine,
+          hash: reference.hash,
+        },
       });
       if (!source?.path) throw Error("原文不可用");
       onOpenSource({
@@ -284,12 +325,7 @@ export default function WikiPanel({
               status.policy.paused ||
               !status.policy.documentIds.length
             }
-            onClick={() =>
-              void run("正在整理", async () => {
-                await invoke("wiki_compile");
-                await refresh();
-              })
-            }
+            onClick={() => void organize()}
           >
             整理所选资料
           </button>
@@ -491,6 +527,17 @@ export default function WikiPanel({
                 onError={setError}
               />
               <div className="modal-actions">
+                {change.status === "rejected" && (
+                  <button
+                    type="button"
+                    disabled={
+                      !!busy || !status.policy.enabled || status.policy.paused
+                    }
+                    onClick={() => void organize(change.id)}
+                  >
+                    重新整理已拒绝改动
+                  </button>
+                )}
                 {change.status === "pending" && (
                   <>
                     <button

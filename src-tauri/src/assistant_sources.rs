@@ -1,6 +1,31 @@
 use crate::{files, models::SearchResult};
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum WebAccess {
+    #[default]
+    Auto,
+    LocalOnly,
+}
+
+impl WebAccess {
+    pub(super) fn stored(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::LocalOnly => "local-only",
+        }
+    }
+
+    pub(super) fn from_stored(value: &str) -> Result<Self, String> {
+        match value {
+            "auto" => Ok(Self::Auto),
+            "local-only" => Ok(Self::LocalOnly),
+            _ => Err("会话联网权限无效".into()),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(default, rename_all = "camelCase", deny_unknown_fields)]
 pub struct Selection {
@@ -24,6 +49,11 @@ impl Selection {
                 .iter()
                 .chain(&self.attachments)
                 .any(|id| !valid(id))
+            || self
+                .document_ids
+                .iter()
+                .enumerate()
+                .any(|(index, id)| self.document_ids[..index].contains(id))
         {
             return Err("每轮仅可选一个空间、至多五篇文档和五份会话附件".into());
         }

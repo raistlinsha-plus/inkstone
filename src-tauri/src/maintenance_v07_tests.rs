@@ -136,6 +136,7 @@ fn fixture(data: &Path) -> Fixture {
         None,
         Some("下一次要核对的中文问题".into()),
         None,
+        None,
     )
     .unwrap();
     Fixture {
@@ -188,6 +189,13 @@ fn both_domain_snapshots_preserve_real_conversations_cards_preferences_and_wal_c
         None,
         Some("WAL里的最终草稿".into()),
         None,
+        Some(assistant::DraftContext {
+            web_access: crate::assistant_sources::WebAccess::LocalOnly,
+            branch: Some(assistant::DraftBranch {
+                parent_turn_id: Some(f.conversation.turns[0].id.clone()),
+            }),
+            ..Default::default()
+        }),
     )
     .unwrap();
     assert!(data.path().join("assistant.sqlite3-wal").is_file());

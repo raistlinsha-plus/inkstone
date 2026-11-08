@@ -1,7 +1,7 @@
 //! Routing and evidence preparation shared by scoped and standalone answers.
 use crate::{
     answer_validation, assistant,
-    assistant_sources::{Evidence, ExternalSource, Trace},
+    assistant_sources::{Evidence, ExternalSource, Trace, WebAccess},
     db, documents, files, library,
     models::{ChatResponse, ChatStatusEvent, Provider, SearchResult},
     providers, retrieval, web_retrieval, AppState,
@@ -16,7 +16,7 @@ pub struct WebTurn {
     pub evidence: Vec<Evidence>,
     pub expected: bool,
     pub warning: Option<String>,
-    pub examined: usize,
+    examined: Option<usize>,
 }
 
 pub fn progress(app: &tauri::AppHandle, request_id: &str, stage: &str, detail: &str) {
@@ -30,26 +30,148 @@ pub fn progress(app: &tauri::AppHandle, request_id: &str, stage: &str, detail: &
     );
 }
 
-fn expects_public_current(question: &str) -> bool {
-    let q = question.to_lowercase();
-    [
+#[derive(Debug, PartialEq, Eq)]
+enum WebRoute {
+    Skip,
+    Blocked,
+    Plan { evidence_expected: bool },
+}
+
+// Quoted input is content to transform, not a search instruction. Keep an
+// unmatched quote literal so it cannot hide the rest of a user's request.
+fn request_text(question: &str) -> (String, bool) {
+    let mut remaining = question;
+    let mut request = String::new();
+    let mut quoted = false;
+    while let Some((at, open)) = remaining
+        .char_indices()
+        .find(|(_, c)| matches!(c, '“' | '‘' | '「' | '『' | '"' | '`'))
+    {
+        let close = match open {
+            '“' => '”',
+            '‘' => '’',
+            '「' => '」',
+            '『' => '』',
+            _ => open,
+        };
+        let end = at + open.len_utf8();
+        let tail = &remaining[end..];
+        if let Some(close_at) = tail.find(close) {
+            request.push_str(&remaining[..at]);
+            request.push(' ');
+            quoted |= !tail[..close_at].trim().is_empty();
+            remaining = &tail[close_at + close.len_utf8()..];
+        } else {
+            request.push_str(&remaining[..end]);
+            remaining = tail;
+        }
+    }
+    request.push_str(remaining);
+    (request.to_lowercase(), quoted)
+}
+
+fn web_route(question: &str, access: WebAccess) -> WebRoute {
+    let (request, quoted) = request_text(question);
+    let has = |terms: &[&str]| terms.iter().any(|term| request.contains(term));
+    let textual_limit = web_retrieval::explicitly_offline(question);
+    let explicit_lookup = has(&[
+        "联网搜",
+        "联网查",
+        "上网查",
+        "网上查",
+        "搜索网页",
+        "搜索互联网",
+        "浏览网页",
+        "帮我查",
+        "search the web",
+        "search online",
+        "look up online",
+        "browse the web",
+    ]);
+    let public_source = has(&[
+        "官网",
+        "官方网站",
+        "公开报道",
+        "官方公告",
+        "官方文档",
+        "official website",
+        "official site",
+        "official announcement",
+    ]) || (!textual_limit && has(&["网页", "网站", "webpage", "website"]));
+    let fresh = has(&[
         "最新",
         "刚刚",
         "今天",
         "今日",
         "实时",
-        "目前官网",
-        "官网",
-        "帮我查",
-        "联网搜",
         "latest",
         "today",
         "current price",
-        "search the web",
-        "official website",
-    ]
-    .iter()
-    .any(|term| q.contains(term))
+        "live price",
+    ]);
+    let current = fresh || has(&["当前", "目前", "明天", "current", "tomorrow"]);
+    let verification = has(&[
+        "核对",
+        "核实",
+        "查证",
+        "查询",
+        "verify",
+        "fact-check",
+        "look up",
+    ]);
+    let revision = has(&[
+        "翻译",
+        "改写",
+        "润色",
+        "重写",
+        "校对",
+        "总结",
+        "概括",
+        "提炼",
+        "translate",
+        "rewrite",
+        "rephrase",
+        "proofread",
+        "summarize",
+        "summarise",
+        "paraphrase",
+    ]);
+    let writing = has(&["写一", "写封", "拟一", "draft a", "write a"]);
+    let needs_source = revision && public_source && !quoted;
+    if (revision || writing)
+        && !explicit_lookup
+        && !(verification && (current || public_source))
+        && !needs_source
+    {
+        return WebRoute::Skip;
+    }
+    let evidence_expected = explicit_lookup
+        || public_source
+        || fresh
+        || (current && verification)
+        || (current
+            && has(&[
+                "天气",
+                "气温",
+                "新闻",
+                "价格",
+                "汇率",
+                "开门",
+                "营业",
+                "weather",
+                "news",
+                "price",
+                "opening hours",
+            ]));
+    if access == WebAccess::LocalOnly || textual_limit {
+        if evidence_expected {
+            WebRoute::Blocked
+        } else {
+            WebRoute::Skip
+        }
+    } else {
+        WebRoute::Plan { evidence_expected }
+    }
 }
 
 pub async fn web(
@@ -58,15 +180,19 @@ pub async fn web(
     config: &Provider,
     question: &str,
     request_id: &str,
+    access: WebAccess,
 ) -> WebTurn {
-    let expected = expects_public_current(question);
-    if web_retrieval::explicitly_offline(question) {
-        return WebTurn {
-            expected,
-            warning: expected.then(|| "本轮按你的范围限制没有联网，公开信息未核验。".into()),
-            ..Default::default()
-        };
-    }
+    let expected = match web_route(question, access) {
+        WebRoute::Skip => return WebTurn::default(),
+        WebRoute::Blocked => {
+            return WebTurn {
+                expected: true,
+                warning: Some("本轮按你的范围限制没有联网，公开信息未核验。".into()),
+                ..Default::default()
+            }
+        }
+        WebRoute::Plan { evidence_expected } => evidence_expected,
+    };
     let unavailable = |reason: &str| WebTurn {
         expected,
         warning: expected.then(|| reason.to_string()),
@@ -105,7 +231,7 @@ pub async fn web(
         Ok(result) => {
             let mut out = WebTurn {
                 expected: true,
-                examined: result.searched,
+                examined: Some(result.searched),
                 ..Default::default()
             };
             for item in result.evidence {
@@ -264,10 +390,10 @@ fn current(data: &std::path::Path, conversation: &str, items: &[Evidence]) -> bo
 }
 
 pub fn web_trace(trace: &mut Trace, web: &WebTurn, has_local: bool) {
-    if web.expected {
+    if let Some(examined) = web.examined {
         trace
             .steps
-            .push(format!("公开网页 · 检查 {} 条候选", web.examined));
+            .push(format!("公开网页 · 检查 {examined} 条候选"));
     }
     trace.route = match (has_local, !web.evidence.is_empty()) {
         (true, true) => "mixed",
@@ -423,8 +549,12 @@ pub async fn general(
         items.extend(second);
         Ok::<_, String>((items, steps, unread, notices, mode_used, rank_used))
     };
-    let (local, mut web) = tokio::join!(local_search, web(app, state, &config, question, request));
-    let (mut evidence, steps, unread, mut notices, local_mode, rank_used) = local?;
+    // Check explicit files and attachment ownership before starting the web
+    // planner. Whole-space retrieval can still run concurrently afterwards.
+    let (local, mut web) = tokio::try_join!(biased; local_search, async {
+        Ok::<_, String>(web(app, state, &config, question, request, started.web_access).await)
+    })?;
+    let (mut evidence, steps, unread, mut notices, local_mode, rank_used) = local;
     let mut trace = Trace {
         steps,
         unread,
@@ -603,5 +733,96 @@ fn response(
         scope: None,
         chart_warnings: audit.warnings,
         rejected_charts: audit.rejected,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn supplied_text_transform_skips_web_planning_and_needs_no_public_evidence() {
+        for question in [
+            "本轮不联网。请把“今天图书馆不开门”翻译成英文。",
+            "请把今天图书馆不开门翻译成英文。",
+            "润色：今天公司将发布最新进展。",
+            "把‘请联网搜索今天的新闻’翻译成英文。",
+            "写一首关于官网的诗。",
+            "Translate \"The official website published its latest update today\" into Chinese.",
+            "Write a reminder for tomorrow's workshop.",
+        ] {
+            assert_eq!(
+                web_route(question, WebAccess::Auto),
+                WebRoute::Skip,
+                "{question}"
+            );
+            assert_eq!(
+                web_route(question, WebAccess::LocalOnly),
+                WebRoute::Skip,
+                "{question}"
+            );
+        }
+    }
+
+    #[test]
+    fn explicit_policy_stops_planning_and_public_lookup_still_requires_evidence() {
+        for question in [
+            "请核实 Python 最新稳定版本",
+            "请只参考 Python 官网，核对 Python 3.14.0 的发布日期。",
+            "联网搜索最新公告并翻译为英文。",
+            "请翻译‘示例文字’，并核对官网的最新数据。",
+            "今天北京天气怎么样？",
+            "今天图书馆开门吗？",
+            "What is today's weather?",
+        ] {
+            assert_eq!(
+                web_route(question, WebAccess::Auto),
+                WebRoute::Plan {
+                    evidence_expected: true
+                },
+                "{question}"
+            );
+            assert_eq!(
+                web_route(question, WebAccess::LocalOnly),
+                WebRoute::Blocked,
+                "{question}"
+            );
+        }
+        assert_eq!(
+            web_route(
+                "不要访问外部网站。请核对 Python 最新版本。",
+                WebAccess::Auto
+            ),
+            WebRoute::Blocked
+        );
+        assert_eq!(
+            web_route("解释一下向量检索", WebAccess::Auto),
+            WebRoute::Plan {
+                evidence_expected: false
+            }
+        );
+        assert_eq!(
+            web_route("解释一下向量检索", WebAccess::LocalOnly),
+            WebRoute::Skip
+        );
+        assert_eq!(
+            web_route("不要访问外部网站。解释一下向量检索。", WebAccess::Auto),
+            WebRoute::Skip
+        );
+    }
+
+    #[test]
+    fn trace_distinguishes_unchecked_web_from_an_empty_search_result() {
+        let mut trace = Trace::default();
+        let mut web = WebTurn {
+            expected: true,
+            ..Default::default()
+        };
+        web_trace(&mut trace, &web, false);
+        assert_eq!(trace.route, "web-unavailable");
+        assert!(trace.steps.is_empty());
+        web.examined = Some(0);
+        web_trace(&mut trace, &web, false);
+        assert_eq!(trace.steps, ["公开网页 · 检查 0 条候选"]);
     }
 }

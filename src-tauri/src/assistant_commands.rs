@@ -178,6 +178,7 @@ pub fn assistant_update(
     title: Option<String>,
     archived: Option<bool>,
     draft: Option<String>,
+    draft_context: Option<assistant::DraftContext>,
     active_leaf_id: Option<String>,
     general: Option<bool>,
 ) -> Result<assistant::Conversation, String> {
@@ -191,6 +192,7 @@ pub fn assistant_update(
         archived,
         draft,
         active_leaf_id,
+        draft_context,
     )
 }
 #[tauri::command]
@@ -199,10 +201,18 @@ pub fn assistant_save_running_draft(
     conversation_id: String,
     request_id: String,
     draft: String,
+    draft_context: Option<assistant::DraftContext>,
     general: Option<bool>,
 ) -> Result<bool, String> {
     let id = owner(&state, general)?;
-    assistant::save_running_draft(&state.data_dir, &id, &conversation_id, &request_id, &draft)
+    assistant::save_running_draft(
+        &state.data_dir,
+        &id,
+        &conversation_id,
+        &request_id,
+        &draft,
+        draft_context.as_ref(),
+    )
 }
 #[tauri::command]
 pub fn assistant_delete(
@@ -257,6 +267,7 @@ pub async fn assistant_ask(
     memory_options: Option<memory::Options>,
     general: Option<bool>,
     sources: Option<crate::assistant_sources::Selection>,
+    web_access: Option<crate::assistant_sources::WebAccess>,
 ) -> Result<assistant::Conversation, String> {
     let _busy = crate::begin_chat(&state, &request_id)?;
     let options = memory_options.unwrap_or_default();
@@ -277,6 +288,7 @@ pub async fn assistant_ask(
             &request_id,
             mode,
             sources,
+            web_access,
         )?;
         let _ = app.emit(
             "assistant-accepted",
@@ -302,7 +314,7 @@ pub async fn assistant_ask(
         memory::history(&state.data_dir, &id, c.scope.as_deref(), reference)?;
     }
     let generation = state.workspace_generation.load(Ordering::SeqCst);
-    let started = assistant::begin_with_mode(
+    let started = assistant::begin_with_sources(
         &state.data_dir,
         &id,
         &conversation_id,
@@ -318,6 +330,8 @@ pub async fn assistant_ask(
             } else {
                 "hybrid"
             }),
+        None,
+        web_access,
     )?;
     // Acknowledgement follows durable acceptance. UI retains the input on all
     // failures before begin; a dropped event falls back to the final response.
@@ -359,6 +373,7 @@ pub async fn assistant_ask(
                         options,
                     }),
                     Some(&started.grounded_question),
+                    started.web_access,
                 )
                 .await
             }

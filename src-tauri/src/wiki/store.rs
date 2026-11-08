@@ -1,6 +1,6 @@
 use super::{error, Content, Policy, MAX_REFS, MAX_SECTIONS, MAX_SOURCES};
 use crate::db;
-use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
+use rusqlite::{params, Connection, OpenFlags, OptionalExtension, TransactionBehavior};
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
     fs,
@@ -304,6 +304,20 @@ pub(super) fn reject(c: &Connection, space: &str, id: &str) -> Result<(), String
     Ok(())
 }
 
+pub(super) fn allow_manual_retry(
+    c: &Connection,
+    space: &str,
+    doc: &str,
+    fingerprint: &str,
+) -> Result<(), String> {
+    c.execute(
+        "UPDATE processed SET fingerprint='retry:' || fingerprint WHERE space=? AND document=? AND fingerprint=?",
+        params![space, doc, fingerprint],
+    )
+    .map_err(error)?;
+    Ok(())
+}
+
 pub(super) fn publish(c: &Connection, space: &str, change: &Change) -> Result<(), String> {
     let revision = change.base.checked_add(1).ok_or("Wiki 版本号超过上限")?;
     let title_key = title_key(&change.content.title);
@@ -387,13 +401,93 @@ pub(super) fn processed(
     space: &str,
     doc: &str,
     fingerprint: &str,
+    automatic: bool,
 ) -> Result<bool, String> {
     c.query_row(
-        "SELECT EXISTS(SELECT 1 FROM processed WHERE space=? AND document=? AND fingerprint=?)",
-        params![space, doc, fingerprint],
+        "SELECT EXISTS(SELECT 1 FROM processed WHERE space=?1 AND document=?2 AND (fingerprint=?3 OR (?4 AND fingerprint='retry:' || ?3)))",
+        params![space, doc, fingerprint, automatic],
         |row| row.get(0),
     )
     .map_err(error)
+}
+
+pub(crate) fn purge_document(data: &Path, space: &str, doc: &str) -> Result<(), String> {
+    if !exists(data)? {
+        return Ok(());
+    }
+    let mut c = write(data)?;
+    c.pragma_update(None, "secure_delete", true)
+        .map_err(error)?;
+    let tx = c
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(error)?;
+    const CITES_DOCUMENT: &str = "instr(payload,?2)>0 AND EXISTS (SELECT 1 FROM json_each(payload,'$.sections') s JOIN json_each(s.value,'$.refs') r WHERE json_extract(r.value,'$.documentId')=?2)";
+    let affected_pages = {
+        let mut stmt = tx
+            .prepare(&format!(
+                "SELECT DISTINCT page FROM revisions WHERE space=?1 AND {CITES_DOCUMENT}"
+            ))
+            .map_err(error)?;
+        let rows = stmt
+            .query_map(params![space, doc], |r| r.get::<_, String>(0))
+            .map_err(error)?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(error)?
+    };
+    // A synthesized page can paraphrase the deleted source anywhere. Do not preserve its history
+    // or expose another revision of it silently. Unrelated pages remain available.
+    for page in &affected_pages {
+        for table in ["changes", "revisions", "page_search"] {
+            tx.execute(
+                &format!("DELETE FROM {table} WHERE space=? AND page=?"),
+                params![space, page],
+            )
+            .map_err(error)?;
+        }
+        tx.execute(
+            "DELETE FROM pages WHERE space=? AND id=?",
+            params![space, page],
+        )
+        .map_err(error)?;
+    }
+    let removed_candidates = tx
+        .execute(
+            &format!("DELETE FROM changes WHERE space=?1 AND {CITES_DOCUMENT}"),
+            params![space, doc],
+        )
+        .map_err(error)?;
+    if !affected_pages.is_empty() {
+        // Rebuild the FTS shadow index so deleted terms are also absent from later backups.
+        tx.execute("INSERT INTO page_search(page_search) VALUES('rebuild')", [])
+            .map_err(error)?;
+    }
+    if !affected_pages.is_empty() || removed_candidates > 0 {
+        // Allow still-authorized sources of discarded pages/candidates to be organized again.
+        tx.execute("DELETE FROM processed WHERE space=?", [space])
+            .map_err(error)?;
+        record_job(
+            &tx,
+            space,
+            "idle",
+            "已清理删除文档关联的 Wiki 内容，可重新整理剩余资料",
+        )?;
+    } else {
+        tx.execute(
+            "DELETE FROM processed WHERE space=? AND document=?",
+            params![space, doc],
+        )
+        .map_err(error)?;
+    }
+    let mut policy = policy(&tx, space)?;
+    if policy.document_ids.iter().any(|id| id == doc) {
+        policy.document_ids.retain(|id| id != doc);
+        policy.revision = policy
+            .revision
+            .checked_add(1)
+            .ok_or("Wiki 授权版本号超过上限")?;
+        policy.enabled &= !policy.document_ids.is_empty();
+        save_policy(&tx, space, &policy)?;
+    }
+    tx.commit().map_err(error)
 }
 
 pub(super) fn mark_processed(

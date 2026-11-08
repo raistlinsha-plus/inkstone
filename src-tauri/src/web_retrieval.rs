@@ -131,7 +131,11 @@ pub(crate) struct PublicQuery(String);
 /// are eligible. This gate accepts neither source context nor arbitrary URLs.
 pub(crate) fn safe_query(question: &str, proposed: &str) -> Result<PublicQuery, String> {
     let denied = "未找到可安全发送的公开查询词，本轮保留可用的本地结果";
-    if explicitly_offline(question) || sensitive(question) || sensitive(proposed) {
+    if explicitly_offline(question)
+        || sensitive(question)
+        || sensitive(proposed)
+        || private_work(question)
+    {
         return Err(denied.into());
     }
     let words: Vec<&str> = proposed.split_whitespace().collect();
@@ -198,7 +202,7 @@ pub(crate) fn explicitly_offline(question: &str) -> bool {
         .split_whitespace()
         .collect::<Vec<_>>()
         .join(" ");
-    [
+    let no_web = [
         "别联网",
         "不联网",
         "不要联网",
@@ -211,30 +215,19 @@ pub(crate) fn explicitly_offline(question: &str) -> bool {
         "不要使用互联网",
         "不要搜索互联网",
         "不使用互联网",
-        "只用本地",
-        "仅用本地",
-        "只使用本地",
-        "仅使用本地",
-        "只看本地",
-        "仅限本地",
-        "只用附件",
-        "仅用附件",
-        "只用所选资料",
-        "仅用所选资料",
-        "只使用所选资料",
-        "仅使用所选资料",
-        "仅限所选资料",
-        "只用选中的资料",
-        "仅使用选中的资料",
-        "只按这份",
-        "只按这些",
-        "仅按这份",
-        "只看这份",
-        "只用这份",
-        "只根据",
-        "仅根据",
-        "只参考",
-        "仅参考",
+        "不要访问外部网站",
+        "禁止访问外部网站",
+        "请勿访问外部网站",
+        "不允许访问外部网站",
+        "不要使用外部网站",
+        "不访问外部网站",
+        "别访问外部网站",
+        "不要访问任何网站",
+        "不要查外网",
+        "不访问外网",
+        "别查外网",
+        "禁止外发",
+        "不要外发",
         "不查网页",
         "别查网页",
         "不要查网页",
@@ -248,8 +241,16 @@ pub(crate) fn explicitly_offline(question: &str) -> bool {
         "不要上网",
         "别上网",
         "不上网",
+        "关闭联网",
+        "关掉联网",
         "no web",
         "no internet",
+        "no external websites",
+        "without external websites",
+        "do not access external websites",
+        "don't access external websites",
+        "do not use external websites",
+        "don't use external websites",
         "without web access",
         "without internet",
         "without browsing",
@@ -267,15 +268,115 @@ pub(crate) fn explicitly_offline(question: &str) -> bool {
         "do not browse",
         "don't browse",
         "offline only",
-        "use only",
-        "only use",
-        "only the selected sources",
-        "only the attached",
-        "based only on",
         "local only",
+        "work offline",
+        "answer offline",
     ]
     .iter()
-    .any(|needle| q.contains(needle))
+    .any(|needle| q.contains(needle));
+
+    // "Only the supplied documents" is a local restriction, while "only
+    // Python's official website" explicitly describes a public source.
+    let only_local_chinese = ["只", "仅", "只允许", "仅允许"].iter().any(|only| {
+        q.match_indices(only).any(|(at, _)| {
+            if q[..at].ends_with('不') {
+                return false;
+            }
+            let after = q[at + only.len()..].trim_start();
+            [
+                "使用", "依照", "依据", "根据", "基于", "参考", "限于", "限", "用", "看", "按",
+            ]
+            .iter()
+            .filter_map(|verb| after.strip_prefix(verb))
+            .any(|object| {
+                let object = object.trim_start();
+                [
+                    "本地",
+                    "附件",
+                    "所选",
+                    "选中",
+                    "已选",
+                    "这份",
+                    "这两份",
+                    "这几份",
+                    "这些",
+                    "此处",
+                    "本文",
+                    "原文",
+                    "提供的",
+                    "给出的",
+                    "给你的",
+                    "上传",
+                    "以下",
+                    "下列",
+                    "上述",
+                    "手头",
+                    "当前文档",
+                    "当前空间",
+                    "公司内部",
+                    "我发的",
+                ]
+                .iter()
+                .any(|target| object.starts_with(target))
+            })
+        })
+    });
+    let only_local_english = [
+        "use only ",
+        "only use ",
+        "based only on ",
+        "only based on ",
+        "only ",
+    ]
+    .iter()
+    .any(|prefix| {
+        q.match_indices(prefix).any(|(at, _)| {
+            if q[..at].ends_with("not ") {
+                return false;
+            }
+            let object = q[at + prefix.len()..].trim_start_matches("the ");
+            [
+                "selected ",
+                "attached ",
+                "uploaded ",
+                "provided ",
+                "supplied ",
+                "given ",
+                "local ",
+                "internal ",
+                "these documents",
+                "this document",
+                "this text",
+            ]
+            .iter()
+            .any(|target| object.starts_with(target))
+        })
+    });
+    no_web || only_local_chinese || only_local_english
+}
+
+fn private_work(question: &str) -> bool {
+    let q = question.to_lowercase();
+    [
+        "我的客户",
+        "我们的客户",
+        "客户资料",
+        "客户隐私",
+        "内部项目",
+        "my client",
+        "our client",
+        "client records",
+        "internal project",
+    ]
+    .iter()
+    .any(|term| q.contains(term))
+        || (q.contains("客户")
+            && ["梳理", "跟进", "整理", "交付"]
+                .iter()
+                .any(|term| q.contains(term))
+            && ["项目", "会议", "文件", "记录"]
+                .iter()
+                .any(|term| q.contains(term)))
 }
 
 fn appears_in_question(question: &str, word: &str) -> bool {
@@ -283,10 +384,17 @@ fn appears_in_question(question: &str, word: &str) -> bool {
         return question.contains(word);
     }
     // ASCII tokens must not be newly extracted from larger words/identifiers.
-    let part = |c: char| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.' | '+');
+    let part = |c: char| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '+');
     question.match_indices(word).any(|(start, _)| {
-        !question[..start].chars().next_back().is_some_and(part)
+        // A period joins a version or hostname only when text continues
+        // immediately beyond it. Sentence-ending punctuation is a boundary.
+        !question[..start]
+            .trim_end_matches('.')
+            .chars()
+            .next_back()
+            .is_some_and(part)
             && !question[start + word.len()..]
+                .trim_start_matches('.')
                 .chars()
                 .next()
                 .is_some_and(part)
@@ -843,6 +951,8 @@ mod tests {
         )
         .is_ok());
         assert!(safe_query("请查 Rust 1.90 发布说明", "rust 1.90 official").is_ok());
+        assert!(safe_query("Check Rust 1.90.0.", "rust 1.90.0 official").is_ok());
+        assert!(safe_query("Check Rust 1.90.0.", "rust 1.90 official").is_err());
         assert!(safe_query("请查最新版 Firefox", "Firefox 最新").is_ok());
         assert!(safe_query("请查 RustyTools", "Rust latest").is_err());
         assert!(safe_query("请找公开规范", "Acme latest").is_err());
@@ -859,9 +969,14 @@ mod tests {
         for question in [
             "仅使用所选资料，核对 Python version",
             "不要访问互联网，核对 Python version",
+            "不要访问外部网站。请核对 Python version。",
+            "只根据选中的文件核对 Python version。",
+            "只根据这两份文档核对 Python version。",
             "Check Python version without internet access",
             "Check Python version, do not use the web",
             "Check Python version, DON’T  USE THE WEB",
+            "Do not access external websites. Check Python version.",
+            "Only use the selected documents to check Python version.",
         ] {
             assert!(explicitly_offline(question), "{question}");
             assert!(
@@ -872,6 +987,23 @@ mod tests {
         let compare = "比较所选资料与 Python 官网最新 version";
         assert!(!explicitly_offline(compare));
         assert!(safe_query(compare, "Python version official").is_ok());
+        for official in [
+            "请只参考 Python 官网，核对 Python 3.14.0 的发布日期。",
+            "Only use Python's official website to verify Python 3.14.0.",
+        ] {
+            assert!(!explicitly_offline(official), "{official}");
+            assert!(
+                safe_query(official, "Python 3.14.0 release").is_ok(),
+                "{official}"
+            );
+        }
+    }
+
+    #[test]
+    fn explicit_client_work_is_never_a_public_query() {
+        assert!(safe_query("帮我梳理客户张三的星芒项目。", "张三 星芒项目").is_err());
+        assert!(safe_query("Summarize my client Acme's project", "Acme project").is_err());
+        assert!(safe_query("查最新版客户关系管理软件 Firefox", "Firefox latest").is_ok());
     }
 
     #[test]

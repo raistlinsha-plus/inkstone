@@ -3,6 +3,7 @@ import { isTauri } from "@tauri-apps/api/core";
 import { appVersion } from "./version";
 import QuestionSources from "./assistant/QuestionSources";
 import ExternalSourcePreview from "./assistant/ExternalSourcePreview";
+import { documentCitation } from "./assistant/sourceDisplay";
 import WebSearchSettings from "./assistant/WebSearchSettings";
 import WikiPanel from "./knowledge/WikiPanel";
 import { listen } from "@tauri-apps/api/event";
@@ -50,7 +51,7 @@ import {
 import {
   selectedCandidate,
   type Conversation,
-  type AssistantSourcePlan,
+  type AssistantDraftContext,
   type ExternalSource,
   type HistoryPreview,
   type Turn,
@@ -99,6 +100,8 @@ import type {
   Stats,
   Workspace,
 } from "./types";
+
+type OpeningSource = SearchResult & { requireVersion?: true };
 
 interface PendingMutation {
   epoch: number;
@@ -250,7 +253,9 @@ export default function App() {
   const [rejectedCharts, setRejectedCharts] = useState<number[]>([]);
   const [chatStage, setChatStage] = useState("");
   const [generalAsk, setGeneralAsk] = useState(false);
-  const [sourcePlan, setSourcePlan] = useState<AssistantSourcePlan>({});
+  const [draftContext, setDraftContext] = useState<AssistantDraftContext>({});
+  const draftContextRef = useRef(draftContext);
+  const branchParent = draftContext.branch?.parentTurnId;
   const [sourceBusy, setSourceBusy] = useState(false);
   const sourceBusyRef = useRef(false);
   const [externalPreview, setExternalPreview] = useState<ExternalSource | null>(
@@ -261,6 +266,17 @@ export default function App() {
   const assistant = useAssistant(workspace?.root, generalAsk);
   const assistantRef = useRef(assistant);
   assistantRef.current = assistant;
+  function restoreDraftContext(next: AssistantDraftContext = {}) {
+    draftContextRef.current = next;
+    setDraftContext(next);
+  }
+  function saveAssistantDraft(scope: string | null, text: string) {
+    assistantRef.current.saveDraft(scope, text, draftContextRef.current);
+  }
+  function changeDraftContext(next: AssistantDraftContext) {
+    restoreDraftContext(next);
+    saveAssistantDraft(currentAssistantScope(), questionRef.current);
+  }
   const [assistantExpanded, setAssistantExpanded] = useState(false);
   const compactWindow = useCompactWindow();
   const focusedKnowledge =
@@ -272,7 +288,6 @@ export default function App() {
   const [assistantScopeChanged, setAssistantScopeChanged] = useState(false);
   const assistantScopeResolver = useRef(currentAssistantScope);
   assistantScopeResolver.current = currentAssistantScope;
-  const [branchParent, setBranchParent] = useState<string | null | undefined>();
   const [assistantRunError, setAssistantRunError] = useState("");
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [skipPreferences, setSkipPreferences] = useState(false);
@@ -282,8 +297,9 @@ export default function App() {
     setSkipPreferences(false);
   }
   useEffect(() => {
+    questionRef.current = "";
     setQuestion("");
-    setBranchParent(undefined);
+    restoreDraftContext();
     setAssistantScopeChanged(false);
     setAssistantRunError("");
     setEvidencePreview(null);
@@ -293,10 +309,16 @@ export default function App() {
   useEffect(() => {
     const next = assistant.conversation;
     if (next && !chatInFlight.current) {
-      setQuestion((old) => old || next.draft);
+      if (
+        !questionRef.current &&
+        !Object.keys(draftContextRef.current).length
+      ) {
+        questionRef.current = next.draft;
+        setQuestion(next.draft);
+        restoreDraftContext(next.draftContext);
+      }
       setScope(next.scope ? "current" : "workspace");
       setAssistantScopeChanged(false);
-      setBranchParent(undefined);
     }
   }, [assistant.conversation?.id]);
 
@@ -331,12 +353,14 @@ export default function App() {
     const submitted = submittedQuestion.current;
     if (!submitted || submitted.id !== id || submitted.cleared) return;
     submitted.cleared = true;
+    // A new turn consumes its choices. Regeneration uses its historical scope.
+    if (!submitted.retry) restoreDraftContext();
     // Clear only the exact submitted value, after the backend has persisted it.
     if (!submitted.retry && questionRef.current === submitted.text) {
       questionRef.current = "";
       setQuestion("");
     } else if (questionRef.current) {
-      assistantRef.current.saveDraft(submitted.scope, questionRef.current);
+      saveAssistantDraft(submitted.scope, questionRef.current);
     }
   }
   const chatEventsReady = useRef<Promise<unknown>>(Promise.resolve());
@@ -900,8 +924,11 @@ export default function App() {
           stoppedRequest.current = requestRef.current;
           await invoke("cancel_chat", { requestId: stoppedRequest.current });
         }
-        if (questionRef.current.trim())
-          assistantRef.current.saveDraft(
+        if (
+          questionRef.current.trim() ||
+          Object.keys(draftContextRef.current).length
+        )
+          saveAssistantDraft(
             assistantScopeResolver.current(),
             questionRef.current,
           );
@@ -1034,6 +1061,7 @@ export default function App() {
     projectId?: string,
     path?: string,
     committedReopen = false,
+    target?: SearchResult,
   ): Promise<boolean> {
     if (!committedReopen && navigationBlocked()) return false;
     const request = ++openSequence.current,
@@ -1089,7 +1117,7 @@ export default function App() {
       request !== openSequence.current
     )
       return false;
-    if (path) return openPath(path, undefined, true);
+    if (path) return openPath(path, target, true);
     return true;
   }
   async function showLibraryHome() {
@@ -1113,11 +1141,17 @@ export default function App() {
     setCalendarOpen(false);
     setWelcome(true);
   }
-  async function openLibraryDocument(doc: LibraryDocument) {
-    if (generalAsk && !(await leaveGeneralForDocument())) return;
+  async function openLibraryDocument(
+    doc: LibraryDocument,
+    target?: SearchResult,
+  ) {
+    if (generalAsk && !(await leaveGeneralForDocument())) return false;
     if (doc.projectId === workspaceRef.current?.managedProjectId) {
-      if (await openPath(doc.path)) await refreshLibrary();
-    } else await useLibrary(doc.projectId, doc.path);
+      if (!(await openPath(doc.path, target))) return false;
+      await refreshLibrary();
+      return true;
+    }
+    return useLibrary(doc.projectId, doc.path, false, target);
   }
   function showImport(task?: ImportTask) {
     const state = interaction.current;
@@ -1233,7 +1267,7 @@ export default function App() {
   }
   async function openPath(
     path: string,
-    target?: SearchResult,
+    target?: OpeningSource,
     skipLeave = false,
     restore?: { selection: number; scroll: number; mode: EditorMode },
   ): Promise<boolean> {
@@ -1293,6 +1327,27 @@ export default function App() {
         content = file.content;
         recovered = false;
       }
+      if (
+        target &&
+        (target.requireVersion || target.external?.kind === "document")
+      ) {
+        if (file.missing) {
+          notify("引用的原文已不可用，仍可核对回答保存的摘录");
+          return false;
+        }
+        if (
+          target.hash !== file.hash ||
+          content !== file.content ||
+          target.endLine > content.split("\n").length
+        ) {
+          const openCurrent = await confirm(
+            "当前正文与引用快照无法匹配。打开当前文档时将跳过原引用行号。",
+            { title: "引用版本不匹配", kind: "warning" },
+          );
+          if (!openCurrent || !current()) return false;
+          target = undefined;
+        }
+      }
       const conflict =
         file.missing ||
         (!!file.draft && recovered && file.draft.baseHash !== file.hash);
@@ -1341,13 +1396,12 @@ export default function App() {
         setPanelOpen(false);
       setLine(target?.startLine);
       if (target) {
+        const citedLine = target.startLine;
         setMode(
           documentKind(path) === "markdown" &&
             target.hash === file.hash &&
             codeBlocks(content).some(
-              (b) =>
-                b.line - 1 <= target.startLine &&
-                b.endLine + 1 >= target.startLine,
+              (b) => b.line - 1 <= citedLine && b.endLine + 1 >= citedLine,
             )
             ? "visual"
             : "source",
@@ -1917,12 +1971,12 @@ export default function App() {
     }
   }
   function activateConversation(next: Conversation) {
-    setSourcePlan({});
+    restoreDraftContext(next.draftContext);
     clearMemorySelection();
     setScope(next.scope ? "current" : "workspace");
     setAssistantScopeChanged(false);
+    questionRef.current = next.draft;
     setQuestion(next.draft);
-    setBranchParent(undefined);
     setAssistantRunError("");
   }
   async function newConversation() {
@@ -1930,12 +1984,12 @@ export default function App() {
     try {
       await assistant.flushDraft();
       assistant.clear();
-      setSourcePlan({});
+      restoreDraftContext();
       clearMemorySelection();
+      questionRef.current = "";
       setQuestion("");
       setAsked("");
       setAnswer("");
-      setBranchParent(undefined);
       setAssistantScopeChanged(true);
       setAssistantRunError("");
     } catch (e) {
@@ -1964,7 +2018,7 @@ export default function App() {
     try {
       await assistant.flushDraft();
       if (navigationBlocked()) return false;
-      setSourcePlan({});
+      restoreDraftContext();
       clearMemorySelection();
       setGeneralAsk(next);
       return true;
@@ -2009,6 +2063,7 @@ export default function App() {
     const prompt = options?.retry.question ?? question;
     if (
       (!workspace && !generalAsk) ||
+      (options?.retry && assistant.conversation?.archived) ||
       assistant.loading ||
       navigationBlocked() ||
       !prompt.trim()
@@ -2046,6 +2101,7 @@ export default function App() {
       frozenScope = options?.retry
         ? (assistant.conversation?.scope ?? null)
         : currentAssistantScope();
+    const frozenDraftContext = draftContextRef.current;
     streamBuffer.current?.clear();
     requestRef.current = id;
     stoppedRequest.current = "";
@@ -2092,12 +2148,21 @@ export default function App() {
           question: prompt,
           parentTurnId: options?.retry
             ? options.retry.parentTurnId
-            : branchParent,
+            : frozenDraftContext.branch?.parentTurnId,
           regenerateTurnId: options?.retry?.id,
           requestId: id,
           semantic,
           retrievalMode,
-          ...(generalAsk && !options?.retry ? { sources: sourcePlan } : {}),
+          ...(!options?.retry
+            ? {
+                ...(generalAsk
+                  ? { sources: frozenDraftContext.sources ?? {} }
+                  : {}),
+                ...(frozenDraftContext.webAccess === "local-only"
+                  ? { webAccess: "local-only" as const }
+                  : {}),
+              }
+            : {}),
           memoryOptions: {
             skipPreferences,
             history:
@@ -2133,7 +2198,6 @@ export default function App() {
         setRejectedCharts(record.rejectedCharts);
         setAnswerWarning(record.warning);
       }
-      setBranchParent(undefined);
       if (!options?.retry) setAssistantScopeChanged(false);
       setChatStage("");
     } catch (e) {
@@ -2153,7 +2217,7 @@ export default function App() {
         setChatBusy(false);
         submittedQuestion.current = null;
         if (questionRef.current.trim())
-          assistant.saveDraft(frozenScope, questionRef.current);
+          saveAssistantDraft(frozenScope, questionRef.current);
       }
     }
   }
@@ -2383,9 +2447,18 @@ export default function App() {
           value={scope}
           disabled={chatBusy}
           onChange={(e) => {
-            setScope(e.target.value as "workspace" | "current");
+            const next = e.target.value as "workspace" | "current";
+            setScope(next);
             setAssistantScopeChanged(true);
-            setBranchParent(undefined);
+            const { branch, ...context } = draftContextRef.current;
+            if (branch) {
+              restoreDraftContext(context);
+              if (panel === "ask")
+                saveAssistantDraft(
+                  next === "current" ? (document?.path ?? null) : null,
+                  questionRef.current,
+                );
+            }
           }}
         >
           <option value="workspace">当前空间</option>
@@ -2492,6 +2565,20 @@ export default function App() {
       onAsk={openAsk}
     />
   );
+  const citedDocument =
+    externalPreview?.kind === "document"
+      ? libraryView.documents.find(
+          (doc) =>
+            doc.id === externalPreview.documentId &&
+            doc.projectId === externalPreview.projectId &&
+            doc.status === "ready",
+        )
+      : undefined;
+  const citedTarget =
+    citedDocument && externalPreview
+      ? documentCitation(externalPreview, citedDocument.path)
+      : undefined;
+
   return (
     <div
       {...imeBoundary}
@@ -2546,6 +2633,7 @@ export default function App() {
             disabled={busy || booting}
             generalDisabled={generalBusy || !settings}
             calendarOpen={calendarOpen}
+            generalOpen={generalAsk && panelOpen && panel === "ask"}
             canIndex={!!workspace && !busy}
             indexDirty={indexDirty}
             onHome={() =>
@@ -3281,7 +3369,12 @@ export default function App() {
                 {branchParent !== undefined && (
                   <div className="assistant-draft-hint">
                     正在修改问题，发送后保留原分支。
-                    <button onClick={() => setBranchParent(undefined)}>
+                    <button
+                      onClick={() => {
+                        const { branch, ...context } = draftContextRef.current;
+                        if (branch) changeDraftContext(context);
+                      }}
+                    >
                       取消分支编辑
                     </button>
                   </div>
@@ -3313,18 +3406,26 @@ export default function App() {
                     onTransfer={prepareAnswerTransfer}
                     onRetry={(turn) => void ask({ retry: turn })}
                     onEdit={(turn) => {
-                      if (generalAsk) setSourcePlan(turn.sources ?? {});
+                      if (assistant.conversation?.archived) return;
                       setAssistantScopeChanged(false);
                       setScope(
                         assistant.conversation?.scope ? "current" : "workspace",
                       );
                       setQuestion(turn.question);
                       questionRef.current = turn.question;
-                      assistant.saveDraft(
+                      restoreDraftContext({
+                        ...(generalAsk && turn.sources
+                          ? { sources: turn.sources }
+                          : {}),
+                        ...(turn.webAccess === "local-only"
+                          ? { webAccess: turn.webAccess }
+                          : {}),
+                        branch: { parentTurnId: turn.parentTurnId },
+                      });
+                      saveAssistantDraft(
                         assistant.conversation?.scope ?? null,
                         turn.question,
                       );
-                      setBranchParent(turn.parentTurnId);
                     }}
                     onSelect={(turn, candidate) =>
                       void assistant.select(turn.id, candidate.id).catch(fail)
@@ -3391,10 +3492,7 @@ export default function App() {
                             onClick={() => {
                               questionRef.current = text;
                               setQuestion(text);
-                              assistant.saveDraft(
-                                currentAssistantScope(),
-                                text,
-                              );
+                              saveAssistantDraft(currentAssistantScope(), text);
                             }}
                           >
                             {text}
@@ -3435,8 +3533,17 @@ export default function App() {
                           : assistant.conversation?.id
                       }
                       disabled={chatBusy || assistant.loading}
-                      selected={sourcePlan}
-                      onChange={setSourcePlan}
+                      selected={draftContext.sources ?? {}}
+                      onChange={(sources) => {
+                        const { sources: previous, ...context } =
+                          draftContextRef.current;
+                        const hasSelection =
+                          sources.projectId || sources.attachments?.length;
+                        if (hasSelection || previous)
+                          changeDraftContext(
+                            hasSelection ? { ...context, sources } : context,
+                          );
+                      }}
                       ensureConversation={async () =>
                         (await assistant.ensureGeneral()).id
                       }
@@ -3446,6 +3553,24 @@ export default function App() {
                       }}
                     />
                   )}
+                  <label className="assistant-skip-preference">
+                    <input
+                      type="checkbox"
+                      checked={draftContext.webAccess === "local-only"}
+                      disabled={chatBusy || assistant.loading}
+                      onChange={(event) => {
+                        const { webAccess, ...context } =
+                          draftContextRef.current;
+                        if (event.target.checked)
+                          changeDraftContext({
+                            ...context,
+                            webAccess: "local-only",
+                          });
+                        else if (webAccess) changeDraftContext(context);
+                      }}
+                    />
+                    本轮不搜索网页
+                  </label>
                   {historyBackground && (
                     <section
                       className="assistant-background-chip"
@@ -3485,7 +3610,7 @@ export default function App() {
                     onChange={(e) => {
                       questionRef.current = e.target.value;
                       setQuestion(e.target.value);
-                      assistant.saveDraft(
+                      saveAssistantDraft(
                         currentAssistantScope(),
                         e.target.value,
                       );
@@ -3604,21 +3729,13 @@ export default function App() {
           onClose={() => setExternalPreview(null)}
           onError={fail}
           onOpenDocument={
-            externalPreview.kind === "document" &&
-            libraryView.documents.some(
-              (doc) =>
-                doc.id === externalPreview.documentId &&
-                doc.projectId === externalPreview.projectId &&
-                doc.status === "ready",
-            )
+            citedDocument && citedTarget
               ? () => {
-                  const doc = libraryView.documents.find(
-                    (item) =>
-                      item.id === externalPreview.documentId &&
-                      item.projectId === externalPreview.projectId,
-                  );
-                  setExternalPreview(null);
-                  if (doc) void openLibraryDocument(doc);
+                  void openLibraryDocument(citedDocument, citedTarget)
+                    .then((opened) => {
+                      if (opened) setExternalPreview(null);
+                    })
+                    .catch(fail);
                 }
               : undefined
           }
@@ -3634,7 +3751,8 @@ export default function App() {
           onOpenSource={(source) => {
             setWikiOpen(false);
             void leaveGeneralForDocument().then((ready) => {
-              if (ready) void openPath(source.path, source);
+              if (ready)
+                void openPath(source.path, { ...source, requireVersion: true });
             });
           }}
         />

@@ -54,6 +54,11 @@ export default function ExternalSourcePreview({
       {source.kind === "web" && !source.excerpt && (
         <p>本轮只保存了出处，打开网页可核对当前版本。</p>
       )}
+      {source.kind === "document" && !onOpenDocument && (
+        <p role="status">
+          当前无法定位到引用版本。以上摘录来自回答保存时的快照。
+        </p>
+      )}
       {url && <p className="assistant-source-url">{new URL(url).hostname}</p>}
       <div className="modal-actions">
         {url && (
