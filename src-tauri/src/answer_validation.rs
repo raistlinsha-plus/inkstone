@@ -4,6 +4,11 @@ use crate::models::SearchResult;
 use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 use serde_json::value::RawValue;
 use serde_json::Value;
+use std::ops::Range;
+
+mod citations;
+pub(crate) use citations::{audit_citations, CitationCheck};
+pub(crate) use citations::{audit_wiki_summary, SummaryIssue};
 
 #[derive(Default)]
 pub struct ChartAudit {
@@ -55,6 +60,13 @@ fn decimal_identity(raw: &str) -> Option<String> {
 }
 
 fn numeric_tokens(text: &str) -> Vec<String> {
+    number_spans(text, false)
+        .into_iter()
+        .map(|(_, value)| value)
+        .collect()
+}
+
+fn number_spans(text: &str, allow_unit_suffix: bool) -> Vec<(Range<usize>, String)> {
     let bytes = text.as_bytes();
     let mut tokens = vec![];
     let mut i = 0;
@@ -109,14 +121,14 @@ fn numeric_tokens(text: &str) -> Vec<String> {
         let right = !bytes
             .get(i)
             .is_some_and(|c| c.is_ascii_alphabetic() || *c == b'_');
-        if left && right {
+        if left && (right || allow_unit_suffix) {
             let token = if grouped {
                 text[start..i].replace(',', "")
             } else {
                 text[start..i].to_string()
             };
             if let Some(n) = decimal_identity(&token) {
-                tokens.push(n);
+                tokens.push((start..i, n));
             }
         }
     }

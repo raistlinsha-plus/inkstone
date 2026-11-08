@@ -269,6 +269,8 @@ export default function App() {
   const assistant = useAssistant(workspace?.root, generalAsk);
   const assistantRef = useRef(assistant);
   assistantRef.current = assistant;
+  const newConversationInFlight = useRef(false);
+  const [openingConversation, setOpeningConversation] = useState(false);
   function restoreDraftContext(next: AssistantDraftContext = {}) {
     draftContextRef.current = next;
     setDraftContext(next);
@@ -538,6 +540,7 @@ export default function App() {
       workspaceTransition.current ||
       importBusyRef.current ||
       chatInFlight.current ||
+      newConversationInFlight.current ||
       sourceBusyRef.current ||
       closingRef.current
     );
@@ -1995,7 +1998,9 @@ export default function App() {
     setAssistantRunError(undefined);
   }
   async function newConversation() {
-    if (chatBusy) return;
+    if (assistant.loading || navigationBlocked()) return;
+    newConversationInFlight.current = true;
+    setOpeningConversation(true);
     try {
       await assistant.flushDraft();
       assistant.clear();
@@ -2007,8 +2012,12 @@ export default function App() {
       setAnswer("");
       setAssistantScopeChanged(true);
       setAssistantRunError(undefined);
+      setFocusQuestion(true);
     } catch (e) {
       fail(e);
+    } finally {
+      newConversationInFlight.current = false;
+      setOpeningConversation(false);
     }
   }
   function currentAssistantScope() {
@@ -2290,6 +2299,7 @@ export default function App() {
             incomplete: !(record?.complete ?? answerComplete),
             rejectedCharts: record?.rejectedCharts ?? rejectedCharts,
             externalSources: record?.externalSources ?? answerExternalSources,
+            citationChecks: record?.citationChecks,
           },
         ),
       );
@@ -2346,6 +2356,7 @@ export default function App() {
             incomplete: !(record?.complete ?? answerComplete),
             rejectedCharts: record?.rejectedCharts ?? rejectedCharts,
             externalSources: record?.externalSources ?? answerExternalSources,
+            citationChecks: record?.citationChecks,
           },
         ),
       };
@@ -2619,6 +2630,43 @@ export default function App() {
       onSettings={() => setSettingsOpen(true)}
       onAsk={openAsk}
     />
+  );
+  const composerLocked = assistant.loading || openingConversation;
+  const turnControls = (
+    <>
+      <label
+        className="assistant-skip-preference"
+        title="仍可向已配置的聊天模型发送问题和所选资料"
+      >
+        <input
+          type="checkbox"
+          checked={draftContext.webAccess === "local-only"}
+          disabled={chatBusy || composerLocked}
+          onChange={(event) => {
+            const { webAccess, ...context } = draftContextRef.current;
+            if (event.target.checked)
+              changeDraftContext({ ...context, webAccess: "local-only" });
+            else if (webAccess) changeDraftContext(context);
+          }}
+        />
+        本轮不搜索网页
+      </label>
+      <details className="assistant-composer-options">
+        <summary>{skipPreferences ? "已停用回答偏好" : "更多选项"}</summary>
+        <div>
+          <label className="assistant-skip-preference">
+            <input
+              type="checkbox"
+              checked={skipPreferences}
+              disabled={chatBusy || composerLocked}
+              onChange={(event) => setSkipPreferences(event.target.checked)}
+            />
+            本轮停用回答偏好
+          </label>
+          <p>所选资料可发给聊天模型。本轮选项随发送重置。</p>
+        </div>
+      </details>
+    </>
   );
   const citedDocument =
     externalPreview?.kind === "document"
@@ -3373,7 +3421,7 @@ export default function App() {
               <>
                 <ConversationHeader
                   controller={assistant}
-                  disabled={chatBusy || assistant.loading}
+                  disabled={chatBusy || composerLocked || sourceBusy}
                   expanded={focusedKnowledge}
                   onExpand={() =>
                     generalAsk || compactWindow
@@ -3434,6 +3482,7 @@ export default function App() {
                   <div className="assistant-draft-hint">
                     正在修改问题，发送后保留原分支。
                     <button
+                      disabled={composerLocked}
                       onClick={() => {
                         const { branch, ...context } = draftContextRef.current;
                         if (branch) changeDraftContext(context);
@@ -3449,6 +3498,7 @@ export default function App() {
                     root={workspace?.root ?? ""}
                     mode={retrievalMode}
                     busy={chatBusy}
+                    switching={composerLocked}
                     progress={chatStopping ? "正在停止生成…" : chatStage}
                     live={
                       chatBusy
@@ -3554,6 +3604,7 @@ export default function App() {
                         ).map((text) => (
                           <button
                             key={text}
+                            disabled={composerLocked}
                             onClick={() => {
                               questionRef.current = text;
                               setQuestion(text);
@@ -3578,64 +3629,12 @@ export default function App() {
                 )}
                 <form
                   className="ask-form"
+                  aria-busy={openingConversation || undefined}
                   onSubmit={(e) => {
                     e.preventDefault();
                     void ask();
                   }}
                 >
-                  {generalAsk && (
-                    <QuestionSources
-                      view={libraryView}
-                      currentDocument={libraryView.documents.find(
-                        (item) =>
-                          item.projectId === workspace?.managedProjectId &&
-                          item.path === document?.path &&
-                          item.status === "ready",
-                      )}
-                      conversationId={
-                        assistant.conversation?.archived
-                          ? undefined
-                          : assistant.conversation?.id
-                      }
-                      disabled={chatBusy || assistant.loading}
-                      selected={draftContext.sources ?? {}}
-                      onChange={(sources) => {
-                        const { sources: previous, ...context } =
-                          draftContextRef.current;
-                        const hasSelection =
-                          sources.projectId || sources.attachments?.length;
-                        if (hasSelection || previous)
-                          changeDraftContext(
-                            hasSelection ? { ...context, sources } : context,
-                          );
-                      }}
-                      ensureConversation={async () =>
-                        (await assistant.ensureGeneral()).id
-                      }
-                      onBusy={(next) => {
-                        sourceBusyRef.current = next;
-                        setSourceBusy(next);
-                      }}
-                    />
-                  )}
-                  <label className="assistant-skip-preference">
-                    <input
-                      type="checkbox"
-                      checked={draftContext.webAccess === "local-only"}
-                      disabled={chatBusy || assistant.loading}
-                      onChange={(event) => {
-                        const { webAccess, ...context } =
-                          draftContextRef.current;
-                        if (event.target.checked)
-                          changeDraftContext({
-                            ...context,
-                            webAccess: "local-only",
-                          });
-                        else if (webAccess) changeDraftContext(context);
-                      }}
-                    />
-                    本轮不搜索网页
-                  </label>
                   {historyBackground && (
                     <section
                       className="assistant-background-chip"
@@ -3644,7 +3643,7 @@ export default function App() {
                       <strong>历史背景 · {historyBackground.title}</strong>
                       <button
                         type="button"
-                        disabled={chatBusy}
+                        disabled={chatBusy || composerLocked}
                         onClick={() => setHistoryBackground(undefined)}
                       >
                         移除
@@ -3653,23 +3652,12 @@ export default function App() {
                       <small>发送时会将以上背景一并发给聊天模型。</small>
                     </section>
                   )}
-                  <label className="assistant-skip-preference">
-                    <input
-                      type="checkbox"
-                      checked={skipPreferences}
-                      disabled={chatBusy}
-                      onChange={(event) =>
-                        setSkipPreferences(event.target.checked)
-                      }
-                    />
-                    本轮停用回答偏好
-                  </label>
                   <textarea
                     ref={questionInput}
                     aria-label={generalAsk ? "向 AI 提问" : "向当前空间提问"}
                     value={question}
                     maxLength={1500}
-                    disabled={assistant.loading}
+                    disabled={composerLocked}
                     placeholder={
                       generalAsk ? "写下你的问题或想法…" : "向你的资料提问…"
                     }
@@ -3692,6 +3680,49 @@ export default function App() {
                       }
                     }}
                   />
+                  {generalAsk ? (
+                    <QuestionSources
+                      view={libraryView}
+                      currentDocument={libraryView.documents.find(
+                        (item) =>
+                          item.projectId === workspace?.managedProjectId &&
+                          item.path === document?.path &&
+                          item.status === "ready",
+                      )}
+                      conversationId={
+                        assistant.conversation?.archived
+                          ? undefined
+                          : assistant.conversation?.id
+                      }
+                      disabled={chatBusy || composerLocked}
+                      controls={turnControls}
+                      selected={draftContext.sources ?? {}}
+                      onChange={(sources) => {
+                        const { sources: previous, ...context } =
+                          draftContextRef.current;
+                        const hasSelection =
+                          sources.projectId || sources.attachments?.length;
+                        if (hasSelection || previous)
+                          changeDraftContext(
+                            hasSelection ? { ...context, sources } : context,
+                          );
+                      }}
+                      ensureConversation={async () =>
+                        (await assistant.ensureGeneral()).id
+                      }
+                      onBusy={(next) => {
+                        sourceBusyRef.current = next;
+                        setSourceBusy(next);
+                      }}
+                    />
+                  ) : (
+                    <section
+                      className="question-source-chips"
+                      aria-label="本轮选项"
+                    >
+                      {turnControls}
+                    </section>
+                  )}
                   <div>
                     <span>
                       {chatBusy && question.trim()
@@ -3721,7 +3752,7 @@ export default function App() {
                         disabled={
                           (!workspace && !generalAsk) ||
                           sourceBusy ||
-                          assistant.loading ||
+                          composerLocked ||
                           !question.trim()
                         }
                       >

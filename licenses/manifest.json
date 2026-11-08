@@ -5366,16 +5366,6 @@
   {
     "kind": "cargo",
     "name": "foldhash",
-    "version": "0.1.5",
-    "license": "Zlib",
-    "files": [
-      "LICENSE"
-    ],
-    "source": "https://crates.io/crates/foldhash/0.1.5"
-  },
-  {
-    "kind": "cargo",
-    "name": "foldhash",
     "version": "0.2.0",
     "license": "Zlib",
     "files": [
@@ -5580,17 +5570,6 @@
   {
     "kind": "cargo",
     "name": "hashbrown",
-    "version": "0.15.5",
-    "license": "MIT OR Apache-2.0",
-    "files": [
-      "LICENSE-APACHE",
-      "LICENSE-MIT"
-    ],
-    "source": "https://crates.io/crates/hashbrown/0.15.5"
-  },
-  {
-    "kind": "cargo",
-    "name": "hashbrown",
     "version": "0.16.1",
     "license": "MIT OR Apache-2.0",
     "files": [
@@ -5613,13 +5592,13 @@
   {
     "kind": "cargo",
     "name": "hashlink",
-    "version": "0.10.0",
+    "version": "0.12.2",
     "license": "MIT OR Apache-2.0",
     "files": [
       "LICENSE-APACHE",
       "LICENSE-MIT"
     ],
-    "source": "https://crates.io/crates/hashlink/0.10.0"
+    "source": "https://crates.io/crates/hashlink/0.12.2"
   },
   {
     "kind": "cargo",
@@ -6116,12 +6095,12 @@
   {
     "kind": "cargo",
     "name": "libsqlite3-sys",
-    "version": "0.35.0",
+    "version": "0.39.1",
     "license": "MIT",
     "files": [
       "LICENSE"
     ],
-    "source": "https://crates.io/crates/libsqlite3-sys/0.35.0"
+    "source": "https://crates.io/crates/libsqlite3-sys/0.39.1"
   },
   {
     "kind": "cargo",
@@ -6891,12 +6870,12 @@
   {
     "kind": "cargo",
     "name": "rusqlite",
-    "version": "0.37.0",
+    "version": "0.41.1",
     "license": "MIT",
     "files": [
       "LICENSE"
     ],
-    "source": "https://crates.io/crates/rusqlite/0.37.0"
+    "source": "https://crates.io/crates/rusqlite/0.41.1"
   },
   {
     "kind": "cargo",

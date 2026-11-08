@@ -65,6 +65,11 @@ export interface MemoryUsage {
   history: { conversationId: string; turnId: string } | null;
   notes: string[];
 }
+export interface CitationCheck {
+  excerpt: string;
+  citations: number[];
+  status: "conflict" | "unverified";
+}
 export interface AssistantSourcePlan {
   projectId?: string | null;
   documentIds?: string[];

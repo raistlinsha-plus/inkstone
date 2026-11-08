@@ -8,7 +8,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-const SCHEMA: i64 = 1;
+const SCHEMA: i64 = 2;
 const MAX_PAYLOAD: usize = 300_000;
 const MAX_PAGES: i64 = 200;
 
@@ -41,9 +41,6 @@ fn read_at(file: &Path) -> Result<Connection, String> {
     let c = Connection::open_with_flags(file, OpenFlags::SQLITE_OPEN_READ_ONLY).map_err(error)?;
     c.busy_timeout(std::time::Duration::from_secs(2))
         .map_err(error)?;
-    if version(&c)? != SCHEMA {
-        return Err("Wiki 存储版本不受支持".into());
-    }
     Ok(c)
 }
 
@@ -51,19 +48,50 @@ pub(super) fn read(data: &Path) -> Result<Connection, String> {
     if !exists(data)? {
         return Err("尚未建立 Wiki".into());
     }
-    read_at(&path(data))
+    let c = read_at(&path(data))?;
+    if version(&c)? == 1 {
+        drop(c);
+        upgrade_legacy(data)?;
+        return read_at(&path(data));
+    }
+    if version(&c)? != SCHEMA {
+        return Err("Wiki 存储版本不受支持".into());
+    }
+    Ok(c)
 }
 
 pub(super) fn write(data: &Path) -> Result<Connection, String> {
     exists(data)?;
-    let c = Connection::open(path(data)).map_err(error)?;
+    let mut c = Connection::open(path(data)).map_err(error)?;
     c.busy_timeout(std::time::Duration::from_secs(2))
         .map_err(error)?;
-    match version(&c)? {
-        SCHEMA => Ok(c),
+    c.pragma_update(None, "secure_delete", true)
+        .map_err(error)?;
+    if version(&c)? == SCHEMA {
+        return Ok(c);
+    }
+    let tx = c
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(error)?;
+    match version(&tx)? {
+        SCHEMA => (),
+        1 => {
+            // Older revisions record citations only. No part of the generated payload can
+            // reliably be attributed to the inputs it read, including titles and aliases.
+            tx.execute_batch("
+                DELETE FROM page_search;
+                INSERT INTO page_search(page_search) VALUES('rebuild');
+                DELETE FROM changes;
+                DELETE FROM revisions;
+                DELETE FROM pages;
+                DELETE FROM processed;
+                UPDATE jobs SET status='idle',message='旧版 Wiki 未记录完整来源，已移除旧生成内容。授权范围仍保留，可重新整理。';
+                INSERT OR IGNORE INTO jobs SELECT space,'idle','旧版 Wiki 未记录完整来源，已移除旧生成内容。授权范围仍保留，可重新整理。' FROM policies;
+                PRAGMA user_version=2;
+            ").map_err(error)?;
+        }
         0 => {
-            c.execute_batch("
-                BEGIN IMMEDIATE;
+            tx.execute_batch("
                 CREATE TABLE IF NOT EXISTS policies(space TEXT PRIMARY KEY,payload TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS pages(space TEXT NOT NULL,id TEXT NOT NULL,title_key TEXT NOT NULL,current INTEGER NOT NULL,PRIMARY KEY(space,id),UNIQUE(space,title_key));
                 CREATE TABLE IF NOT EXISTS revisions(space TEXT NOT NULL,page TEXT NOT NULL,revision INTEGER NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(space,page,revision));
@@ -73,13 +101,20 @@ pub(super) fn write(data: &Path) -> Result<Connection, String> {
                 CREATE TABLE IF NOT EXISTS jobs(space TEXT PRIMARY KEY,status TEXT NOT NULL,message TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS calls(space TEXT NOT NULL, day INTEGER NOT NULL, count INTEGER NOT NULL, PRIMARY KEY(space,day));
                 CREATE VIRTUAL TABLE IF NOT EXISTS page_search USING fts5(space UNINDEXED,page UNINDEXED,title,summary,sections);
-                PRAGMA user_version=1;
-                COMMIT;
+                PRAGMA user_version=2;
             ").map_err(error)?;
-            Ok(c)
         }
-        _ => Err("Wiki 存储版本不受支持".into()),
+        _ => return Err("Wiki 存储版本不受支持".into()),
     }
+    tx.commit().map_err(error)?;
+    Ok(c)
+}
+
+pub(crate) fn upgrade_legacy(data: &Path) -> Result<(), String> {
+    if exists(data)? && version(&read_at(&path(data))?)? == 1 {
+        write(data)?;
+    }
+    Ok(())
 }
 
 fn encode<T: Serialize>(value: &T) -> Result<String, String> {
@@ -128,14 +163,6 @@ pub(super) fn pages(c: &Connection, space: &str) -> Result<Vec<(String, i64, Con
         Ok((id, revision, decode(&raw)?))
     })
     .collect()
-}
-
-pub(super) fn topic_titles(c: &Connection, space: &str) -> Result<Vec<String>, String> {
-    let mut stmt = c.prepare("SELECT json_extract(r.payload,'$.title') FROM pages p JOIN revisions r ON r.space=p.space AND r.page=p.id AND r.revision=p.current WHERE p.space=? ORDER BY p.title_key LIMIT 40").map_err(error)?;
-    let rows = stmt
-        .query_map([space], |row| row.get::<_, String>(0))
-        .map_err(error)?;
-    rows.collect::<Result<Vec<_>, _>>().map_err(error)
 }
 
 pub(super) fn title_key(value: &str) -> String {
@@ -310,11 +337,9 @@ pub(super) fn allow_manual_retry(
     doc: &str,
     fingerprint: &str,
 ) -> Result<(), String> {
-    c.execute(
-        "UPDATE processed SET fingerprint='retry:' || fingerprint WHERE space=? AND document=? AND fingerprint=?",
-        params![space, doc, fingerprint],
-    )
-    .map_err(error)?;
+    if coverage(c, space, doc, fingerprint)?.0 == "included" {
+        mark_coverage(c, space, doc, fingerprint, "retry")?;
+    }
     Ok(())
 }
 
@@ -396,40 +421,54 @@ pub(super) fn reserve_call(c: &Connection, space: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub(super) fn processed(
+pub(super) fn coverage(
     c: &Connection,
     space: &str,
     doc: &str,
     fingerprint: &str,
-    automatic: bool,
-) -> Result<bool, String> {
-    c.query_row(
-        "SELECT EXISTS(SELECT 1 FROM processed WHERE space=?1 AND document=?2 AND (fingerprint=?3 OR (?4 AND fingerprint='retry:' || ?3)))",
-        params![space, doc, fingerprint, automatic],
-        |row| row.get(0),
-    )
-    .map_err(error)
+) -> Result<(&'static str, i64), String> {
+    let stored: Option<(String, i64)> = c
+        .query_row(
+            "SELECT fingerprint,rowid FROM processed WHERE space=? AND document=?",
+            params![space, doc],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()
+        .map_err(error)?;
+    if let Some((stored, order)) = stored {
+        if let Some((status, _)) = stored
+            .split_once(':')
+            .filter(|(_, version)| *version == fingerprint)
+        {
+            if let Some(status) = ["included", "omitted", "partial", "retry"]
+                .into_iter()
+                .find(|known| *known == status)
+            {
+                return Ok((status, order));
+            }
+        }
+    }
+    Ok(("pending", 0))
 }
 
-pub(crate) fn purge_document(data: &Path, space: &str, doc: &str) -> Result<(), String> {
-    if !exists(data)? {
+pub(super) fn purge_derived(
+    tx: &Connection,
+    space: &str,
+    documents: &[&str],
+) -> Result<(), String> {
+    if documents.is_empty() {
         return Ok(());
     }
-    let mut c = write(data)?;
-    c.pragma_update(None, "secure_delete", true)
-        .map_err(error)?;
-    let tx = c
-        .transaction_with_behavior(TransactionBehavior::Immediate)
-        .map_err(error)?;
-    const CITES_DOCUMENT: &str = "instr(payload,?2)>0 AND EXISTS (SELECT 1 FROM json_each(payload,'$.sections') s JOIN json_each(s.value,'$.refs') r WHERE json_extract(r.value,'$.documentId')=?2)";
+    let documents = encode(&documents)?;
+    const READ_DOCUMENT: &str = "EXISTS (SELECT 1 FROM json_each(payload,'$.inputs') i WHERE json_extract(i.value,'$.documentId') IN (SELECT value FROM json_each(?2)))";
     let affected_pages = {
         let mut stmt = tx
             .prepare(&format!(
-                "SELECT DISTINCT page FROM revisions WHERE space=?1 AND {CITES_DOCUMENT}"
+                "SELECT DISTINCT page FROM revisions WHERE space=?1 AND {READ_DOCUMENT}"
             ))
             .map_err(error)?;
         let rows = stmt
-            .query_map(params![space, doc], |r| r.get::<_, String>(0))
+            .query_map(params![space, documents], |r| r.get::<_, String>(0))
             .map_err(error)?;
         rows.collect::<Result<Vec<_>, _>>().map_err(error)?
     };
@@ -451,8 +490,8 @@ pub(crate) fn purge_document(data: &Path, space: &str, doc: &str) -> Result<(), 
     }
     let removed_candidates = tx
         .execute(
-            &format!("DELETE FROM changes WHERE space=?1 AND {CITES_DOCUMENT}"),
-            params![space, doc],
+            &format!("DELETE FROM changes WHERE space=?1 AND {READ_DOCUMENT}"),
+            params![space, documents],
         )
         .map_err(error)?;
     if !affected_pages.is_empty() {
@@ -465,18 +504,30 @@ pub(crate) fn purge_document(data: &Path, space: &str, doc: &str) -> Result<(), 
         tx.execute("DELETE FROM processed WHERE space=?", [space])
             .map_err(error)?;
         record_job(
-            &tx,
+            tx,
             space,
             "idle",
-            "已清理删除文档关联的 Wiki 内容，可重新整理剩余资料",
+            "已清理退出资料范围的文档所影响的 Wiki 内容，可重新整理剩余资料",
         )?;
     } else {
         tx.execute(
-            "DELETE FROM processed WHERE space=? AND document=?",
-            params![space, doc],
+            "DELETE FROM processed WHERE space=? AND document IN (SELECT value FROM json_each(?))",
+            params![space, documents],
         )
         .map_err(error)?;
     }
+    Ok(())
+}
+
+pub(crate) fn purge_document(data: &Path, space: &str, doc: &str) -> Result<(), String> {
+    if !exists(data)? {
+        return Ok(());
+    }
+    let mut c = write(data)?;
+    let tx = c
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(error)?;
+    purge_derived(&tx, space, &[doc])?;
     let mut policy = policy(&tx, space)?;
     if policy.document_ids.iter().any(|id| id == doc) {
         policy.document_ids.retain(|id| id != doc);
@@ -490,18 +541,29 @@ pub(crate) fn purge_document(data: &Path, space: &str, doc: &str) -> Result<(), 
     tx.commit().map_err(error)
 }
 
-pub(super) fn mark_processed(
+pub(super) fn mark_coverage(
     c: &Connection,
     space: &str,
     doc: &str,
     fingerprint: &str,
+    status: &str,
 ) -> Result<(), String> {
-    c.execute("INSERT INTO processed VALUES(?,?,?) ON CONFLICT(space,document) DO UPDATE SET fingerprint=excluded.fingerprint", params![space,doc,fingerprint]).map_err(error)?;
+    let value = format!("{status}:{fingerprint}");
+    // Give retried sources a new position so an oversized document cannot starve other retries.
+    c.execute(
+        "INSERT OR REPLACE INTO processed VALUES(?,?,?)",
+        params![space, doc, value],
+    )
+    .map_err(error)?;
     Ok(())
 }
 
 pub(crate) fn validate_snapshot(file: &Path) -> Result<(), String> {
-    let c = read_at(file)?;
+    let c = crate::maintenance::open_snapshot_db(file)?;
+    let schema = version(&c)?;
+    if !(1..=SCHEMA).contains(&schema) {
+        return Err("Wiki 存储版本不受支持".into());
+    }
     let ok: String = c
         .query_row("PRAGMA integrity_check", [], |row| row.get(0))
         .map_err(error)?;
@@ -566,6 +628,31 @@ pub(crate) fn validate_snapshot(file: &Path) -> Result<(), String> {
                 || source.quote.chars().count() > 1200
             {
                 return Err("Wiki 备份的来源范围无效".into());
+            }
+        }
+        if schema == SCHEMA {
+            if content.inputs.is_empty()
+                || content.inputs.len() > MAX_SOURCES
+                || content
+                    .inputs
+                    .iter()
+                    .collect::<std::collections::HashSet<_>>()
+                    .len()
+                    != content.inputs.len()
+                || content
+                    .originals()
+                    .any(|r| !content.inputs.contains(&r.into()))
+            {
+                return Err("Wiki 备份未记录完整的编纂来源".into());
+            }
+            for input in &content.inputs {
+                crate::files::validate_relative(&input.path)?;
+                if input.document_id.is_empty()
+                    || input.hash.len() != 64
+                    || !input.hash.bytes().all(|c| c.is_ascii_hexdigit())
+                {
+                    return Err("Wiki 备份的编纂来源无效".into());
+                }
             }
         }
     }

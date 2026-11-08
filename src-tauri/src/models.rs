@@ -218,6 +218,8 @@ pub struct ChatResponse {
     pub scope: Option<String>,
     pub chart_warnings: Vec<String>,
     pub rejected_charts: Vec<usize>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub(crate) citation_checks: Vec<crate::answer_validation::CitationCheck>,
 }
 
 #[derive(Clone, Serialize)]

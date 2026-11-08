@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Paperclip, Plus, X } from "lucide-react";
 import type { LibraryDocument, LibraryView } from "../library";
+import { isImeEvent } from "../platform/ime";
 import type { AssistantAttachment, AssistantSourcePlan } from "./types";
 
 export default function QuestionSources({
@@ -14,6 +15,7 @@ export default function QuestionSources({
   onChange,
   ensureConversation,
   onBusy,
+  controls,
 }: {
   view: LibraryView;
   currentDocument?: LibraryDocument;
@@ -23,6 +25,7 @@ export default function QuestionSources({
   onChange: (value: AssistantSourcePlan) => void;
   ensureConversation: () => Promise<string>;
   onBusy: (busy: boolean) => void;
+  controls?: ReactNode;
 }) {
   const [files, setFiles] = useState<AssistantAttachment[]>([]);
   const [inventoryOwner, setInventoryOwner] = useState<string>();
@@ -32,6 +35,11 @@ export default function QuestionSources({
   const [adding, setAdding] = useState(false);
   const [browsingId, setBrowsingId] = useState("");
   const [documentQuery, setDocumentQuery] = useState("");
+  const pickerId = useId();
+  const pickerButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (disabled) setAdding(false);
+  }, [disabled]);
   const project = view.projects.find((item) => item.id === selected.projectId);
   const browsing = view.projects.find((item) => item.id === browsingId);
   const documentIds = selected.documentIds ?? [];
@@ -154,11 +162,23 @@ export default function QuestionSources({
     });
 
   return (
-    <section className="question-sources" aria-label="本轮资料">
+    <section
+      className="question-sources"
+      aria-label="本轮资料与选项"
+      onKeyDown={(event) => {
+        if (event.key !== "Escape" || isImeEvent(event.nativeEvent) || !adding)
+          return;
+        event.stopPropagation();
+        setAdding(false);
+        pickerButton.current?.focus();
+      }}
+    >
       <div className="question-source-chips">
         <button
+          ref={pickerButton}
           type="button"
           aria-expanded={adding}
+          aria-controls={adding ? pickerId : undefined}
           onClick={() => {
             if (!adding) {
               setBrowsingId(project?.id ?? "");
@@ -209,6 +229,7 @@ export default function QuestionSources({
               <X size={12} />
             </button>
           ))}
+        {controls}
       </div>
       {(staleDocumentScope || staleAttachments) && (
         <div role="alert">
@@ -233,34 +254,38 @@ export default function QuestionSources({
       )}
       {adding && (
         <div
+          id={pickerId}
           className="question-source-picker"
           role="group"
           aria-label="选择本轮资料"
         >
-          <button
-            type="button"
-            disabled={disabled || working}
-            onClick={() => void attach()}
-          >
-            附加临时文件
-          </button>
-          {currentDocument && (
+          <div className="question-source-picker-actions">
             <button
               type="button"
               disabled={disabled || working}
-              onClick={() => {
-                setBrowsingId(currentDocument.projectId);
-                setDocumentQuery("");
-                onChange({
-                  ...selected,
-                  projectId: currentDocument.projectId,
-                  documentIds: [currentDocument.id],
-                });
-              }}
+              onClick={() => void attach()}
             >
-              添加当前文档
+              <Paperclip size={15} />
+              附加临时文件
             </button>
-          )}
+            {currentDocument && (
+              <button
+                type="button"
+                disabled={disabled || working}
+                onClick={() => {
+                  setBrowsingId(currentDocument.projectId);
+                  setDocumentQuery("");
+                  onChange({
+                    ...selected,
+                    projectId: currentDocument.projectId,
+                    documentIds: [currentDocument.id],
+                  });
+                }}
+              >
+                添加当前文档
+              </button>
+            )}
+          </div>
           {!!view.projects.length && (
             <label>
               知识空间
@@ -292,6 +317,7 @@ export default function QuestionSources({
               </small>
               <button
                 type="button"
+                className="button small"
                 disabled={
                   disabled ||
                   working ||
@@ -379,7 +405,7 @@ export default function QuestionSources({
             </div>
           )}
           <small>
-            所选本地资料可能发送给配置的聊天模型。联网搜索只发送通过校验的公开查询。
+            所选资料可发送给已配置的聊天模型。本轮发送后将清除资料选择。
           </small>
         </div>
       )}

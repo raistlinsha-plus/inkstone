@@ -2,8 +2,7 @@ use super::*;
 
 /// Read-only domain validation for backup restore. Does not initialize or mutate a snapshot.
 pub fn validate_snapshot(path: &Path) -> Result<(), String> {
-    let c = Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
-        .map_err(err)?;
+    let c = crate::maintenance::open_snapshot_db(path)?;
     let version: i64 = c
         .pragma_query_value(None, "user_version", |r| r.get(0))
         .map_err(err)?;
@@ -107,6 +106,30 @@ pub fn validate_snapshot(path: &Path) -> Result<(), String> {
                     }
                     if let Some(external) = response.get("externalSources") {
                         crate::assistant_sources::validate_metadata(external, sources.len())?;
+                    }
+                    if let Some(checks) = response.get("citationChecks") {
+                        let total = sources.len()
+                            + response["externalSources"].as_array().map_or(0, Vec::len);
+                        let valid = checks.as_array().is_some_and(|checks| {
+                            checks.len() <= 16
+                                && checks.iter().all(|check| {
+                                    check["status"].as_str().is_some_and(|status| {
+                                        ["conflict", "unverified"].contains(&status)
+                                    }) && check["excerpt"].as_str().is_some_and(|text| {
+                                        (1..=180).contains(&text.chars().count())
+                                    }) && check["citations"].as_array().is_some_and(|ids| {
+                                        ids.len() <= total
+                                            && ids.iter().all(|id| {
+                                                id.as_u64().is_some_and(|id| {
+                                                    (1..=total as u64).contains(&id)
+                                                })
+                                            })
+                                    })
+                                })
+                        });
+                        if !valid || total == 0 || response["finishReason"] != "stop" {
+                            return Err("会话引文核对快照无效".into());
+                        }
                     }
                     if sources.len() > 200 {
                         return Err("会话来源快照过大".into());

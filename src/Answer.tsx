@@ -1,6 +1,6 @@
 import Markdown from "./preview/Markdown";
 import type { SearchResult } from "./types";
-import type { ExternalSource } from "./assistant/types";
+import type { CitationCheck, ExternalSource } from "./assistant/types";
 import { answerCitations } from "./assistant/sourceDisplay";
 
 export default function Answer({
@@ -8,6 +8,7 @@ export default function Answer({
   sources,
   onOpen,
   externalSources = [],
+  citationChecks,
   pending = false,
   rejectedCharts = [],
   viewKey,
@@ -16,6 +17,7 @@ export default function Answer({
   text: string;
   sources: SearchResult[];
   externalSources?: ExternalSource[];
+  citationChecks?: CitationCheck[];
   onOpen: (source: SearchResult) => void;
   pending?: boolean;
   rejectedCharts?: number[];
@@ -29,6 +31,7 @@ export default function Answer({
         path=""
         readOnly
         citations={answerCitations(sources, externalSources)}
+        citationChecks={citationChecks}
         onCitation={onOpen}
         pending={pending}
         rejectedCharts={rejectedCharts}

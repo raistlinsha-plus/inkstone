@@ -25,6 +25,7 @@ mod evaluation_v066;
 #[cfg(test)]
 mod evaluation_v07;
 mod evidence;
+mod export_destination;
 mod files;
 mod library;
 mod library_commands;
@@ -1844,7 +1845,7 @@ async fn ask_pipeline(
         return Ok(ChatResponse{external_sources:vec![],trace:Some(trace),memory: None,
             finish_reason:"no_evidence".into(),text:"本轮没有找到足够直接、可引用的证据。请检查资料范围、索引和联网设置，或换一个更具体的问题。".into(),
             sources,warning:(!warnings.is_empty()).then(||warnings.join("\n")),retrieval_mode:actual_mode,
-            rerank_status,model:String::new(),scope,chart_warnings:vec![],rejected_charts:vec![]});
+            rerank_status,model:String::new(),scope,chart_warnings:vec![],rejected_charts:vec![],citation_checks:vec![]});
     }
     let key = read_key(&state, "chat", &config.base_url, &state.cancel_chat).await?;
     if state.cancel_chat.load(Ordering::SeqCst) {
@@ -1870,6 +1871,7 @@ async fn ask_pipeline(
             scope,
             chart_warnings: vec![],
             rejected_charts: vec![],
+            citation_checks: vec![],
         });
     }
     let _ = app.emit(
@@ -1939,7 +1941,7 @@ async fn ask_pipeline(
         }
     }
     if !current {
-        return Ok(ChatResponse { external_sources: vec![], trace: None, memory: None, finish_reason: "source_changed".into(), text: "生成期间所用资料发生变化或已被移除，已撤回过期答案和引用。请重新提问以核对最新原文。".into(), sources: vec![], warning: Some("原文已变化，请勿使用生成期间显示的旧内容。".into()), retrieval_mode:actual_mode, rerank_status, model:config.model.clone(), scope,chart_warnings:vec![],rejected_charts:vec![] });
+        return Ok(ChatResponse { external_sources: vec![], trace: None, memory: None, finish_reason: "source_changed".into(), text: "生成期间所用资料发生变化或已被移除，已撤回过期答案和引用。请重新提问以核对最新原文。".into(), sources: vec![], warning: Some("原文已变化，请勿使用生成期间显示的旧内容。".into()), retrieval_mode:actual_mode, rerank_status, model:config.model.clone(), scope,chart_warnings:vec![],rejected_charts:vec![],citation_checks:vec![] });
     }
     let output = output?;
     let chart_sources = sources
@@ -1952,6 +1954,7 @@ async fn ask_pipeline(
         )
         .collect::<Vec<_>>();
     let chart_audit = answer_validation::audit_charts(&output.text, &chart_sources);
+    let citation_checks = answer_validation::audit_citations(&output.text, &output.finish_reason, &chart_sources);
     let mut warnings = warnings;
     if output.finish_reason == "cancelled" {
         warnings.push("已停止，保留的内容尚未完成，请核对后再使用。".into());
@@ -1974,6 +1977,7 @@ async fn ask_pipeline(
         scope,
         chart_warnings: chart_audit.warnings,
         rejected_charts: chart_audit.rejected,
+        citation_checks,
         text: output.text,
         sources,
         warning: if warnings.is_empty() {
@@ -1995,27 +1999,20 @@ fn chat_cancel_matches(active: Option<&str>, requested: Option<&str>) -> bool {
     requested.is_none() || requested.is_some_and(|id| active == Some(id))
 }
 #[tauri::command]
-async fn export_svg(path: String, content: String) -> Result<(), String> {
-    let target = PathBuf::from(path);
-    if target
-        .extension()
-        .is_none_or(|e| !e.eq_ignore_ascii_case("svg"))
-        || content.len() > 10 * 1024 * 1024
-        || !content.contains("<svg")
-    {
+async fn export_svg(app: tauri::AppHandle, content: String) -> Result<(), String> {
+    if content.len() > 10 * 1024 * 1024 || !content.contains("<svg") {
         return Err("请导出为 SVG 文件（上限 10 MB）".into());
     }
-    files::write_atomic(&target, content.as_bytes())
+    if let Some(target) =
+        export_destination::choose(&app, "Inkstone-图表.svg", "SVG 图像", "svg").await?
+    {
+        files::write_atomic(&target, content.as_bytes())?;
+    }
+    Ok(())
 }
 
-fn png_export_bytes(path: &str, data_url: &str) -> Result<Vec<u8>, String> {
+fn png_export_bytes(data_url: &str) -> Result<Vec<u8>, String> {
     use base64::Engine;
-    if PathBuf::from(path)
-        .extension()
-        .is_none_or(|e| !e.eq_ignore_ascii_case("png"))
-    {
-        return Err("请导出为 PNG 文件".into());
-    }
     let raw = data_url
         .strip_prefix("data:image/png;base64,")
         .ok_or("PNG 数据格式无效")?;
@@ -2047,9 +2044,14 @@ fn png_export_bytes(path: &str, data_url: &str) -> Result<Vec<u8>, String> {
     Ok(bytes)
 }
 #[tauri::command]
-async fn export_png(path: String, data_url: String) -> Result<(), String> {
-    let bytes = png_export_bytes(&path, &data_url)?;
-    files::write_atomic(&PathBuf::from(path), &bytes)
+async fn export_png(app: tauri::AppHandle, data_url: String) -> Result<(), String> {
+    let bytes = png_export_bytes(&data_url)?;
+    if let Some(target) =
+        export_destination::choose(&app, "Inkstone-图表.png", "PNG 图像", "png").await?
+    {
+        files::write_atomic(&target, &bytes)?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -2357,14 +2359,13 @@ mod v05_io_tests {
         assert!(active.lock().unwrap().is_none());
     }
     #[test]
-    fn png_export_checks_format_extension_and_dimensions_before_writing() {
+    fn png_export_checks_format_and_dimensions_before_writing() {
         use base64::Engine;
         let raw = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
         let data = format!("data:image/png;base64,{raw}");
-        assert!(png_export_bytes("chart.png", &data).is_ok());
-        assert!(png_export_bytes("chart.txt", &data).is_err());
-        assert!(png_export_bytes("chart.png", "data:image/svg+xml;base64,PHN2Zz4=").is_err());
-        assert!(png_export_bytes("chart.png", "data:image/png;base64,AAAA").is_err());
+        assert!(png_export_bytes(&data).is_ok());
+        assert!(png_export_bytes("data:image/svg+xml;base64,PHN2Zz4=").is_err());
+        assert!(png_export_bytes("data:image/png;base64,AAAA").is_err());
         let mut bytes = base64::engine::general_purpose::STANDARD
             .decode(raw)
             .unwrap();
@@ -2373,7 +2374,7 @@ mod v05_io_tests {
             "data:image/png;base64,{}",
             base64::engine::general_purpose::STANDARD.encode(bytes)
         );
-        assert!(png_export_bytes("chart.png", &oversized)
+        assert!(png_export_bytes(&oversized)
             .unwrap_err()
             .contains("尺寸"));
     }

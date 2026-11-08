@@ -355,6 +355,7 @@ pub async fn assistant_ask(
             scope: started.scope.clone(),
             chart_warnings: vec![],
             rejected_charts: vec![],
+            citation_checks: vec![],
         }),
         Ok(prepared) => match scope_label(&state, &ws, started.scope.as_deref()) {
             Ok(_) => {

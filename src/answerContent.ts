@@ -1,5 +1,5 @@
 import type { SearchResult } from "./types";
-import type { ExternalSource } from "./assistant/types";
+import type { CitationCheck, ExternalSource } from "./assistant/types";
 import { publicCitationUrl, sourceKind } from "./assistant/sourceDisplay";
 import { parseMarkdown, type MarkdownNode } from "./content/blocks";
 
@@ -21,6 +21,7 @@ export interface AnswerTransferOptions {
   incomplete?: boolean;
   rejectedCharts?: number[];
   externalSources?: ExternalSource[];
+  citationChecks?: CitationCheck[];
 }
 function transferableBody(text: string, options: AnswerTransferOptions) {
   const edits: { from: number; to: number; value: string }[] = [];
@@ -123,6 +124,9 @@ export function answerMarkdown(
   }
   return [
     heading ? `# ${plain(question)}\n` : "",
+    options.citationChecks?.length
+      ? `> 部分结论需要核对。${options.citationChecks.some((check) => check.status === "conflict") ? "有结论与来源不一致。" : ""}\n`
+      : "",
     body.text,
     "\n---\n",
     "## 回答来源\n",
@@ -139,6 +143,15 @@ export function answerMarkdown(
       : "",
     "\n引用编号对应生成时的资料版本；原文更新后请重新核对。",
     sourceLines.length ? "\n" + sourceLines.join("\n") : "\n本轮没有引用资料。",
+    options.citationChecks?.length
+      ? "\n### 待核对结论\n\n" +
+        options.citationChecks
+          .map(
+            (check) =>
+              `- ${check.status === "conflict" ? "与来源不一致" : "待核对"} · ${plain(check.excerpt)}${check.citations.length ? ` · 引用 ${check.citations.join("、")}` : ""}`,
+          )
+          .join("\n")
+      : "",
     "",
   ]
     .filter(Boolean)

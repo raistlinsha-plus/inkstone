@@ -17,6 +17,7 @@ fn response(text: &str) -> ChatResponse {
         scope: None,
         chart_warnings: vec![],
         rejected_charts: vec![],
+        citation_checks: vec![],
     }
 }
 fn start(data: &Path, c: &Conversation, q: &str, parent: Option<&str>) -> Started {

@@ -1,5 +1,6 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useState } from "react";
+import { X } from "lucide-react";
 import ModalDialog from "../ModalDialog";
 import { publicCitationUrl, sourceKind } from "./sourceDisplay";
 import type { ExternalSource } from "./types";
@@ -37,8 +38,23 @@ export default function ExternalSourcePreview({
     }
   }
   return (
-    <ModalDialog label="查看来源" className="source-dialog" onClose={onClose}>
-      <h2>{source.label}</h2>
+    <ModalDialog
+      label="查看来源"
+      className="source-dialog"
+      backdropClassName="assistant-source-backdrop"
+      onClose={onClose}
+    >
+      <div className="modal-heading">
+        <h2>{source.label}</h2>
+        <button
+          type="button"
+          className="icon-button"
+          aria-label="关闭来源预览"
+          onClick={onClose}
+        >
+          <X size={18} />
+        </button>
+      </div>
       <p>
         S{source.citation} · {sourceKind(source)}
         {source.capturedAt ? ` · ${source.capturedAt}` : ""}

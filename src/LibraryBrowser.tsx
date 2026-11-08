@@ -16,7 +16,6 @@ import { useViewPreferences } from "./library/useViewPreferences";
 import TrashDialog from "./library/TrashDialog";
 import { appVersion } from "./version";
 import { invoke } from "@tauri-apps/api/core";
-import { save } from "@tauri-apps/plugin-dialog";
 import {
   FileText,
   FolderPlus,
@@ -161,23 +160,11 @@ export default function LibraryBrowser({
   const exportDoc = async (d?: LibraryDocument, bundle = true) => {
     try {
       if (!(await onBeforeAction())) return;
-      const target = await save({
-        defaultPath: bundle
-          ? d
-            ? d.title + " 附件包.zip"
-            : (project?.title ?? "文档") + ".zip"
-          : d?.title,
-        filters: bundle
-          ? [{ name: "含附件的文档包", extensions: ["zip"] }]
-          : [{ name: "文档", extensions: [d?.path.split(".").at(-1) ?? "md"] }],
+      await invoke("library_export", {
+        projectId: d?.projectId ?? projectId,
+        documentId: d?.id ?? null,
+        bundle,
       });
-      if (target)
-        await invoke("library_export", {
-          projectId: d?.projectId ?? projectId,
-          documentId: d?.id ?? null,
-          path: target,
-          bundle,
-        });
       setMenu("");
     } catch (e) {
       onError(e);

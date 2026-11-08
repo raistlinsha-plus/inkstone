@@ -2,7 +2,7 @@ use crate::{
     calendar, check_idle, documents, library, open_workspace, workspace, AppState, WorkspaceView,
 };
 use std::{
-    path::PathBuf,
+    path::Path,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -189,16 +189,17 @@ fn refresh_update(
 }
 #[tauri::command]
 pub async fn library_apply_source_update(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     id: String,
     expected_managed_fingerprint: String,
     expected_source_fingerprint: String,
     keep_both: bool,
 ) -> Result<library::UpdateResult, String> {
-    let _permit = crate::maintenance::mutation(&state.data_dir)?;
+    let permit = crate::maintenance::mutation(&state.data_dir)?;
     check_idle(&state)?;
     let data = state.data_dir.clone();
-    tauri::async_runtime::spawn_blocking(move || {
+    let result = tauri::async_runtime::spawn_blocking(move || {
         let result = library::apply_source_update(
             &data,
             &id,
@@ -206,28 +207,35 @@ pub async fn library_apply_source_update(
             &expected_source_fingerprint,
             keep_both,
         )?;
-        Ok(refresh_update(&data, result))
+        Ok::<_, String>(refresh_update(&data, result))
     })
     .await
-    .map_err(|_| "来源更新未完成，请核对文档和历史记录".to_string())?
+    .map_err(|_| "来源更新未完成，请核对文档和历史记录".to_string())??;
+    drop(permit);
+    crate::wiki::schedule(app);
+    Ok(result)
 }
 #[tauri::command]
 pub async fn library_restore_version(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     id: String,
     version_id: String,
     expected_managed_fingerprint: String,
 ) -> Result<library::UpdateResult, String> {
-    let _permit = crate::maintenance::mutation(&state.data_dir)?;
+    let permit = crate::maintenance::mutation(&state.data_dir)?;
     check_idle(&state)?;
     let data = state.data_dir.clone();
-    tauri::async_runtime::spawn_blocking(move || {
+    let result = tauri::async_runtime::spawn_blocking(move || {
         let result =
             library::restore_version(&data, &id, &version_id, &expected_managed_fingerprint)?;
-        Ok(refresh_update(&data, result))
+        Ok::<_, String>(refresh_update(&data, result))
     })
     .await
-    .map_err(|_| "历史恢复未完成，请核对文档和历史记录".to_string())?
+    .map_err(|_| "历史恢复未完成，请核对文档和历史记录".to_string())??;
+    drop(permit);
+    crate::wiki::schedule(app);
+    Ok(result)
 }
 #[tauri::command]
 pub async fn library_create_document(
@@ -351,15 +359,44 @@ pub fn cancel_import(state: State<'_, AppState>) {
 }
 #[tauri::command]
 pub async fn library_export(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     project_id: String,
     document_id: Option<String>,
-    path: String,
     bundle: bool,
 ) -> Result<(), String> {
     let data = state.data_dir.clone();
+    let document = document_id
+        .as_deref()
+        .map(|id| library::get(&data, id))
+        .transpose()?;
+    if document
+        .as_ref()
+        .is_some_and(|d| d.project_id != project_id || d.status != "ready")
+    {
+        return Err("文档已移除或不在所选空间".into());
+    }
+    let (name, label, extension) = if bundle {
+        let title = match &document {
+            Some(d) => format!("{} 附件包", d.title),
+            None => library::project_title(&data, &project_id)?,
+        };
+        (
+            format!("{}.zip", title.replace(['/', '\\', ':'], "_")),
+            "含附件的文档包",
+            "zip",
+        )
+    } else {
+        let path = Path::new(&document.as_ref().ok_or("请选择文档")?.path);
+        let name = path.file_name().and_then(|name| name.to_str()).ok_or("文档文件名无效")?;
+        let extension = path.extension().and_then(|ext| ext.to_str()).ok_or("文档后缀无效")?;
+        (name.to_owned(), "文档", extension)
+    };
+    let Some(target) = crate::export_destination::choose(&app, &name, label, extension).await?
+    else {
+        return Ok(());
+    };
     tauri::async_runtime::spawn_blocking(move || {
-        let target = PathBuf::from(path);
         if bundle {
             library::export_bundle(&data, &project_id, document_id.as_deref(), &target)
         } else {

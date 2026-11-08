@@ -1,7 +1,7 @@
 //! Managed-library snapshots. All application mutations enter the gate before accepting work.
 //! A snapshot closes admission, drains accepted work, and releases admission on every error path.
 use crate::{files, library, models::Workspace};
-use rusqlite::{Connection, OpenFlags};
+use rusqlite::{config::DbConfig, Connection, OpenFlags};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 #[cfg(unix)]
@@ -347,11 +347,23 @@ fn parent_target(target: &Path) -> Result<PathBuf, String> {
     let name = target.file_name().ok_or("请选择目标文件名")?;
     Ok(parent.join(name))
 }
-fn sql_read(path: &Path) -> Result<Connection, String> {
-    Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).map_err(err)
+pub(crate) fn open_snapshot_db(path: &Path) -> Result<Connection, String> {
+    // macOS temporary directories may be reached through /var. Resolve ancestors only
+    // so SQLite can still reject a symbolic link in place of the database itself.
+    let path = parent_target(path)?;
+    let c = Connection::open_with_flags(
+        &path,
+        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NOFOLLOW,
+    )
+    .map_err(err)?;
+    c.set_db_config(DbConfig::SQLITE_DBCONFIG_DEFENSIVE, true)
+        .map_err(err)?;
+    c.set_db_config(DbConfig::SQLITE_DBCONFIG_TRUSTED_SCHEMA, false)
+        .map_err(err)?;
+    Ok(c)
 }
 fn catalog_check(path: &Path, schema: i64) -> Result<(), String> {
-    let c = sql_read(path)?;
+    let c = open_snapshot_db(path)?;
     let actual: i64 = c
         .pragma_query_value(None, "user_version", |r| r.get(0))
         .map_err(err)?;
@@ -373,12 +385,13 @@ fn catalog_check(path: &Path, schema: i64) -> Result<(), String> {
 fn valid_store_schema(name: &str, schema: i64) -> bool {
     match name {
         "assistant.sqlite3" => (1..=crate::assistant::SCHEMA).contains(&schema),
-        "companion.sqlite3" | "wiki.sqlite3" => schema == 1,
+        "companion.sqlite3" => schema == 1,
+        "wiki.sqlite3" => (1..=2).contains(&schema),
         _ => false,
     }
 }
 fn auxiliary_check(path: &Path, schema: i64) -> Result<(), String> {
-    let c = sql_read(path)?;
+    let c = open_snapshot_db(path)?;
     let version: i64 = c
         .pragma_query_value(None, "user_version", |r| r.get(0))
         .map_err(err)?;
@@ -421,7 +434,7 @@ fn auxiliary_members(data: &Path) -> Result<BTreeSet<String>, String> {
 // Logical rows, not SQLite page bytes/data_version: normal library::conn() calls may
 // repeat harmless PRAGMAs. A read transaction keeps each digest internally consistent.
 fn catalog_digest(path: &Path) -> Result<String, String> {
-    let mut c = sql_read(path)?;
+    let mut c = open_snapshot_db(path)?;
     let tx = c.transaction().map_err(err)?;
     let mut tables = tx.prepare("SELECT name,sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").map_err(err)?;
     let tables = tables
@@ -532,6 +545,7 @@ fn create_backup_with_hook(
     if pending {
         return Err("有未完成的文档删除，请先重试清理再备份".into());
     }
+    crate::wiki::upgrade_legacy(data)?;
     let stage = target.with_file_name(format!(".inkstone-snapshot-{}", uuid::Uuid::new_v4()));
     private_directory(&stage, false)?;
     let result = (|| {
@@ -552,7 +566,7 @@ fn create_backup_with_hook(
         let mut stores = vec![];
         for name in &auxiliary_names {
             let source = data.join(name);
-            let store_schema: i64 = sql_read(&source)?
+            let store_schema: i64 = open_snapshot_db(&source)?
                 .pragma_query_value(None, "user_version", |row| row.get(0))
                 .map_err(err)?;
             if !valid_store_schema(name, store_schema) {
@@ -562,7 +576,7 @@ fn create_backup_with_hook(
             let digest = catalog_digest(&source)?;
             let snapshot = stage.join(name);
             drop(private_file(&snapshot)?);
-            sql_read(&source)?
+            open_snapshot_db(&source)?
                 .execute("VACUUM INTO ?1", [snapshot.to_string_lossy().as_ref()])
                 .map_err(err)?;
             auxiliary_check(&snapshot, store_schema)?;
@@ -819,7 +833,7 @@ fn restored_catalog_check(stage: &Path, m: &Manifest) -> Result<(), String> {
             crate::wiki::validate_snapshot(&path)?;
         }
     }
-    let c = sql_read(&stage.join("library/catalog.sqlite3"))?;
+    let c = open_snapshot_db(&stage.join("library/catalog.sqlite3"))?;
     let mut q = c
         .prepare("SELECT project,path,status FROM documents")
         .map_err(err)?;
@@ -1219,6 +1233,37 @@ mod tests {
             output.write_all(&bytes).unwrap();
         }
         output.finish().unwrap();
+    }
+    #[test]
+    fn backup_opens_sqlite_defensively_and_rejects_corrupt_catalog() {
+        let data = tempfile::tempdir().unwrap();
+        let out = tempfile::tempdir().unwrap();
+        let db = data.path().join("source.sqlite3");
+        drop(Connection::open(&db).unwrap());
+        let connection = open_snapshot_db(&db).unwrap();
+        assert!(rusqlite::version_number() >= 3_053_002);
+        assert!(connection.db_config(DbConfig::SQLITE_DBCONFIG_DEFENSIVE).unwrap());
+        assert!(!connection.db_config(DbConfig::SQLITE_DBCONFIG_TRUSTED_SCHEMA).unwrap());
+        assert!(connection.execute("CREATE TABLE forbidden(id)", []).is_err());
+        #[cfg(unix)]
+        {
+            let link = data.path().join("link.sqlite3");
+            std::os::unix::fs::symlink(&db, &link).unwrap();
+            assert!(open_snapshot_db(&link).is_err());
+        }
+        let _ = library::conn(data.path()).unwrap();
+        let backup = out.path().join("valid.zip");
+        create_backup(data.path(), &backup).unwrap();
+        let bad = out.path().join("bad-database.zip");
+        rewrite_archive(&backup, &bad, |name, bytes| {
+            if name == "library/catalog.sqlite3" {
+                bytes[16..18].copy_from_slice(&[0, 0]);
+            }
+        });
+        assert!(!validate_backup(&bad).unwrap().valid);
+        let target = out.path().join("not-published");
+        assert!(restore_backup(&bad, &target, data.path()).is_err());
+        assert!(!target.exists());
     }
     #[test]
     fn self_consistent_archive_still_rejects_corrupt_history_and_assets() {

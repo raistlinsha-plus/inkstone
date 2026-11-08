@@ -2,6 +2,20 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v0.8.0-rc.2 · 问答漏证与 Wiki 审阅
+
+- 改进本地问答的原文证据选择。开发回归继续分别记录必需文档命中、片段覆盖与无答案题误入证。
+- Wiki 审阅标出待核对的摘要结论，发布端复核引文，支持仅发布核验过的原文摘录。
+- 区分上一次整理结果与当前待审数量。[候选交付和验收](docs/DELIVERY-v0.8.0-rc2.md)
+
+## v0.8.0-rc.1 · 问答证据与 Wiki 整理
+
+- 在有来源的回答中标记可识别的引用冲突和待核对结论。保留原文入口，复制与保存回答时附带核对状态。
+- Wiki 修订记录所有模型输入。删除资料或撤回授权时清除关联派生内容。旧 Wiki 生成内容需重新整理，原始文档与授权范围保留。
+- 压缩问答资料选择和来源面板，改善 Wiki 待审阅与资料覆盖反馈，保护新建会话时正在保存的草稿。
+- 升级 SQLite 并加强备份校验。图表、日历和文档导出的目标位置由原生保存面板返回。
+- 冻结已有检索门槛，并增加 64 道开发回归题。[候选交付与验证状态](docs/DELIVERY-v0.8.0-rc1.md)
+
 ## v0.7.8 · 墨团动效试点
 
 - 墨团加入像素水墨形象、待机／陪读／里程碑表情和短动效，并随原有阶段装束变化。专注模式和减少动态设置采用静态呈现。

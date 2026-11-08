@@ -8,7 +8,6 @@ import {
 } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { ZoomIn, ZoomOut, Download, Expand, Minimize2 } from "lucide-react";
-import { save } from "@tauri-apps/plugin-dialog";
 import DOMPurify from "dompurify";
 import type { MindNode } from "../content/mindmap";
 import { graphViewport, loadViewport, saveViewport } from "./viewport";
@@ -108,14 +107,8 @@ async function exportSvg(svg: string, format: "svg" | "png" = "svg") {
     }
   }
   if (isTauri()) {
-    const path = await save({
-      defaultPath: `Inkstone-图表.${format}`,
-      filters: [{ name: `${format.toUpperCase()} 图像`, extensions: [format] }],
-    });
-    if (path) {
-      if (format === "png") await invoke("export_png", { path, dataUrl: png });
-      else await invoke("export_svg", { path, content: clean });
-    }
+    if (format === "png") await invoke("export_png", { dataUrl: png });
+    else await invoke("export_svg", { content: clean });
   } else {
     const data =
       format === "png"

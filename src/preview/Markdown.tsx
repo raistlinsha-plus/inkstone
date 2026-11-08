@@ -99,6 +99,7 @@ export default function Markdown({
   viewKey = path,
   readOnly = false,
   citations,
+  citationChecks,
   onCitation,
   label = "Markdown 实时预览",
   pending = false,
@@ -113,6 +114,7 @@ export default function Markdown({
   viewKey?: string;
   readOnly?: boolean;
   citations?: (SearchResult | undefined)[];
+  citationChecks?: import("../assistant/types").CitationCheck[];
   onCitation?: (source: SearchResult) => void;
   label?: string;
   pending?: boolean;
@@ -155,14 +157,31 @@ export default function Markdown({
       const m = part.match(/^\[([1-9]\d*)\]$/),
         index = m ? Number(m[1]) - 1 : -1;
       const citation = citations[index];
+      const matching = citationChecks?.filter((check) =>
+        check.citations.includes(index + 1),
+      );
+      const hasConflict = matching?.some(
+        (check) => check.status === "conflict",
+      );
+      const note = hasConflict
+        ? "有结论与来源不一致"
+        : matching?.length
+          ? "有结论待核对"
+          : undefined;
       return citation ? (
         <button
           key={`${key}:${i}`}
+          type="button"
           className="citation"
-          title={`查看来源 ${index + 1}：${citation.title || citation.path}`}
+          aria-description={note}
+          data-review={
+            hasConflict ? "conflict" : note ? "unverified" : undefined
+          }
+          title={`查看来源 ${index + 1}：${citation.title || citation.path}${note ? ` · ${note}` : ""}`}
           onClick={() => onCitation(citation)}
         >
           {index + 1}
+          {note && <span aria-hidden="true">!</span>}
         </button>
       ) : (
         part

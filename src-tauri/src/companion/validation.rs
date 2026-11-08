@@ -2,8 +2,7 @@ use super::*;
 
 /// Read-only validation of a staged backup. Never initializes or mutates a store.
 pub fn validate_snapshot(path: &Path) -> Result<(), String> {
-    let c = Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
-        .map_err(err)?;
+    let c = crate::maintenance::open_snapshot_db(path)?;
     let version: i64 = c
         .pragma_query_value(None, "user_version", |r| r.get(0))
         .map_err(err)?;

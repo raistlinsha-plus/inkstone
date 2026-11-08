@@ -1,0 +1,1090 @@
+{
+  "documents": [
+    {
+      "path": "river-pass.md",
+      "text": "# 澄岚港访客证\n周末访客证自签发时起有效 24 小时。\n工作日访客证自签发时起有效 72 小时。\n访客证不能替代车辆临时通行证。\n"
+    },
+    {
+      "path": "river-parking.md",
+      "text": "# 澄岚港临时停车证\n临时停车证有效期为 48 小时。\n临时停车证补办费为 30 元。\n停车登记不接受访客证号。\n"
+    },
+    {
+      "path": "hill-course.md",
+      "text": "# 青芦山志愿者培训\n急救培训报名截止于 2027 年 3 月 12 日。\n青芦山急救培训每班最多 28 人。\n急救培训结业证明有效期另行公布。\n"
+    },
+    {
+      "path": "dock-course.md",
+      "text": "# 青芦港志愿者培训\n急救培训报名截止于 2027 年 3 月 19 日。\n青芦港急救培训每班最多 36 人。\n课后证书复印件由活动组归档。\n"
+    },
+    {
+      "path": "tea-lab.md",
+      "text": "# 霁禾试验室样品管理\n常温样品保留 14 天。\n冷藏样品必须保存在 4 摄氏度。\n待销毁样品不计入可用库存。\n"
+    },
+    {
+      "path": "tea-stock.md",
+      "text": "# 霁禾试验室耗材管理\n无菌管最低库存为 120 支。\n耗材补货审核每周三进行。\n每单补货上限为 240 支无菌管。\n"
+    },
+    {
+      "path": "reed-policy.md",
+      "text": "# 芦隐馆展览接待\n讲解团每组最多 16 人。\n临时寄存柜使用费为 5 元。\n讲解团预约需提前 2 天。\n"
+    },
+    {
+      "path": "reed-event.md",
+      "text": "# 芦隐馆夜场安排\n夜场末次入场时间为 20:30。\n夜场票不包含讲解服务。\n夜场无障碍入口设在东门。\n"
+    },
+    {
+      "path": "map-budget.md",
+      "text": "# 白桐步道预算现行版\n自 2027 年 1 月 1 日起，住宿补助上限为每晚 650 元。\n现行单次交通补助上限为 180 元。\n住宿补助不得与夜间值守补助叠加。\n"
+    },
+    {
+      "path": "map-history.md",
+      "text": "# 白桐步道预算历史版\n2026 年旧版住宿补助上限为每晚 500 元。\n2026 年单次交通补助上限为 120 元。\n这份历史版自 2027 年 1 月 1 日起废止。\n"
+    },
+    {
+      "path": "signal-club.md",
+      "text": "# 雾桥电台会员\n雾桥电台普通会员年费为 80 元。\n普通会员没有录音室预约权限。\n会员退款申请必须在付款后 7 天内提交。\n"
+    },
+    {
+      "path": "signal-studio.md",
+      "text": "# 雾桥电台录音室\n录音室每次预约时长为 90 分钟。\n录音室最多容纳 6 人。\n录音室噪声上限待公告。\n"
+    }
+  ],
+  "cases": [
+    {
+      "id": "rc-01",
+      "question": "按周末办理的访客凭证，从领证算起能用多长时间？",
+      "answerable": true,
+      "kind": "paraphrase",
+      "goldSources": [
+        {
+          "path": "river-pass.md",
+          "line": 2,
+          "quote": "周末访客证自签发时起有效 24 小时。"
+        }
+      ],
+      "rubric": {
+        "expectation": "周末访客证自签发时起有效 24 小时。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-02",
+      "question": "澄岚港工作日访客证有效期是多少？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "river-pass.md",
+          "line": 3,
+          "quote": "工作日访客证自签发时起有效 72 小时。"
+        }
+      ],
+      "rubric": {
+        "expectation": "工作日访客证自签发时起有效 72 小时。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-03",
+      "question": "澄岚港能用访客证代替车辆临时通行证吗？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "river-pass.md",
+          "line": 4,
+          "quote": "访客证不能替代车辆临时通行证。"
+        }
+      ],
+      "rubric": {
+        "expectation": "访客证不能替代车辆临时通行证。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-04",
+      "question": "澄岚港签发周末访客证后，72 小时还有效吗？",
+      "answerable": true,
+      "kind": "constraint",
+      "goldSources": [
+        {
+          "path": "river-pass.md",
+          "line": 2,
+          "quote": "周末访客证自签发时起有效 24 小时。"
+        }
+      ],
+      "rubric": {
+        "expectation": "拒绝 72 小时的前提，并说明周末为 24 小时。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-05",
+      "question": "澄岚港临时停车证有效期多少小时？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "river-parking.md",
+          "line": 2,
+          "quote": "临时停车证有效期为 48 小时。"
+        }
+      ],
+      "rubric": {
+        "expectation": "临时停车证有效期为 48 小时。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-06",
+      "question": "澄岚港临时停车证弄丢后，重办要多少钱？",
+      "answerable": true,
+      "kind": "paraphrase",
+      "goldSources": [
+        {
+          "path": "river-parking.md",
+          "line": 3,
+          "quote": "临时停车证补办费为 30 元。"
+        }
+      ],
+      "rubric": {
+        "expectation": "临时停车证补办费为 30 元。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-07",
+      "question": "澄岚港停车登记接受访客证号吗？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "river-parking.md",
+          "line": 4,
+          "quote": "停车登记不接受访客证号。"
+        }
+      ],
+      "rubric": {
+        "expectation": "停车登记不接受访客证号。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-08",
+      "question": "澄岚港停车证当天到次日同一时间，是否已达到 48 小时上限？",
+      "answerable": true,
+      "kind": "constraint",
+      "goldSources": [
+        {
+          "path": "river-parking.md",
+          "line": 2,
+          "quote": "临时停车证有效期为 48 小时。"
+        }
+      ],
+      "rubric": {
+        "expectation": "区分约 24 小时已过和 48 小时期限。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-09",
+      "question": "青芦山急救培训报名截止哪一天？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "hill-course.md",
+          "line": 2,
+          "quote": "急救培训报名截止于 2027 年 3 月 12 日。"
+        }
+      ],
+      "rubric": {
+        "expectation": "急救培训报名截止于 2027 年 3 月 12 日。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-10",
+      "question": "青芦山急救培训每班人数上限多少？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "hill-course.md",
+          "line": 3,
+          "quote": "青芦山急救培训每班最多 28 人。"
+        }
+      ],
+      "rubric": {
+        "expectation": "青芦山急救培训每班最多 28 人。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-11",
+      "question": "文件有说青芦山急救课结业证明的期限已公布吗？",
+      "answerable": true,
+      "kind": "paraphrase",
+      "goldSources": [
+        {
+          "path": "hill-course.md",
+          "line": 4,
+          "quote": "急救培训结业证明有效期另行公布。"
+        }
+      ],
+      "rubric": {
+        "expectation": "急救培训结业证明有效期另行公布。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-12",
+      "question": "青芦山急救课能否把 30 名学员排到同一个班？",
+      "answerable": true,
+      "kind": "constraint",
+      "goldSources": [
+        {
+          "path": "hill-course.md",
+          "line": 3,
+          "quote": "青芦山急救培训每班最多 28 人。"
+        }
+      ],
+      "rubric": {
+        "expectation": "说明 30 人超过 28 人上限。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-13",
+      "question": "青芦港志愿者最迟什么时候能报名急救培训？",
+      "answerable": true,
+      "kind": "paraphrase",
+      "goldSources": [
+        {
+          "path": "dock-course.md",
+          "line": 2,
+          "quote": "急救培训报名截止于 2027 年 3 月 19 日。"
+        }
+      ],
+      "rubric": {
+        "expectation": "急救培训报名截止于 2027 年 3 月 19 日。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-14",
+      "question": "青芦港急救培训每班人数上限多少？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "dock-course.md",
+          "line": 3,
+          "quote": "青芦港急救培训每班最多 36 人。"
+        }
+      ],
+      "rubric": {
+        "expectation": "青芦港急救培训每班最多 36 人。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-15",
+      "question": "青芦港课后证书复印件由谁归档？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "dock-course.md",
+          "line": 4,
+          "quote": "课后证书复印件由活动组归档。"
+        }
+      ],
+      "rubric": {
+        "expectation": "课后证书复印件由活动组归档。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-16",
+      "question": "青芦港急救培训一班可以排下 32 人吗？",
+      "answerable": true,
+      "kind": "constraint",
+      "goldSources": [
+        {
+          "path": "dock-course.md",
+          "line": 3,
+          "quote": "青芦港急救培训每班最多 36 人。"
+        }
+      ],
+      "rubric": {
+        "expectation": "说明 32 人在最多 36 人的范围内。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-17",
+      "question": "霁禾试验室常温样品保留多久？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "tea-lab.md",
+          "line": 2,
+          "quote": "常温样品保留 14 天。"
+        }
+      ],
+      "rubric": {
+        "expectation": "常温样品保留 14 天。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-18",
+      "question": "霁禾试验室冰箱的样品规定几摄氏度保存？",
+      "answerable": true,
+      "kind": "paraphrase",
+      "goldSources": [
+        {
+          "path": "tea-lab.md",
+          "line": 3,
+          "quote": "冷藏样品必须保存在 4 摄氏度。"
+        }
+      ],
+      "rubric": {
+        "expectation": "冷藏样品必须保存在 4 摄氏度。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-19",
+      "question": "霁禾试验室待销毁样品计入可用库存吗？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "tea-lab.md",
+          "line": 4,
+          "quote": "待销毁样品不计入可用库存。"
+        }
+      ],
+      "rubric": {
+        "expectation": "待销毁样品不计入可用库存。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-20",
+      "question": "霁禾常温样品留了 15 天是否仍在规定内？",
+      "answerable": true,
+      "kind": "constraint",
+      "goldSources": [
+        {
+          "path": "tea-lab.md",
+          "line": 2,
+          "quote": "常温样品保留 14 天。"
+        }
+      ],
+      "rubric": {
+        "expectation": "说明超过 14 天。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-21",
+      "question": "霁禾试验室无菌管最低库存多少？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "tea-stock.md",
+          "line": 2,
+          "quote": "无菌管最低库存为 120 支。"
+        }
+      ],
+      "rubric": {
+        "expectation": "无菌管最低库存为 120 支。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-22",
+      "question": "霁禾试验室哪天审核耗材补货？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "tea-stock.md",
+          "line": 3,
+          "quote": "耗材补货审核每周三进行。"
+        }
+      ],
+      "rubric": {
+        "expectation": "耗材补货审核每周三进行。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-23",
+      "question": "霁禾试验室一次最多能补多少支无菌管？",
+      "answerable": true,
+      "kind": "paraphrase",
+      "goldSources": [
+        {
+          "path": "tea-stock.md",
+          "line": 4,
+          "quote": "每单补货上限为 240 支无菌管。"
+        }
+      ],
+      "rubric": {
+        "expectation": "每单补货上限为 240 支无菌管。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-24",
+      "question": "霁禾的无菌管只剩 119 支，够最低库存吗？",
+      "answerable": true,
+      "kind": "constraint",
+      "goldSources": [
+        {
+          "path": "tea-stock.md",
+          "line": 2,
+          "quote": "无菌管最低库存为 120 支。"
+        }
+      ],
+      "rubric": {
+        "expectation": "说明少于 120 支。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-25",
+      "question": "芦隐馆一次讲解最多能带几个人？",
+      "answerable": true,
+      "kind": "paraphrase",
+      "goldSources": [
+        {
+          "path": "reed-policy.md",
+          "line": 2,
+          "quote": "讲解团每组最多 16 人。"
+        }
+      ],
+      "rubric": {
+        "expectation": "讲解团每组最多 16 人。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-26",
+      "question": "芦隐馆临时寄存柜使用费多少钱？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "reed-policy.md",
+          "line": 3,
+          "quote": "临时寄存柜使用费为 5 元。"
+        }
+      ],
+      "rubric": {
+        "expectation": "临时寄存柜使用费为 5 元。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-27",
+      "question": "芦隐馆预约讲解团需提前多久？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "reed-policy.md",
+          "line": 4,
+          "quote": "讲解团预约需提前 2 天。"
+        }
+      ],
+      "rubric": {
+        "expectation": "讲解团预约需提前 2 天。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-28",
+      "question": "芦隐馆讲解只提前 1 天约够吗？",
+      "answerable": true,
+      "kind": "constraint",
+      "goldSources": [
+        {
+          "path": "reed-policy.md",
+          "line": 4,
+          "quote": "讲解团预约需提前 2 天。"
+        }
+      ],
+      "rubric": {
+        "expectation": "说明规定提前 2 天。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-29",
+      "question": "芦隐馆夜场末次入场时间几点？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "reed-event.md",
+          "line": 2,
+          "quote": "夜场末次入场时间为 20:30。"
+        }
+      ],
+      "rubric": {
+        "expectation": "夜场末次入场时间为 20:30。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-30",
+      "question": "芦隐馆的夜场票能直接使用讲解服务吗？",
+      "answerable": true,
+      "kind": "paraphrase",
+      "goldSources": [
+        {
+          "path": "reed-event.md",
+          "line": 3,
+          "quote": "夜场票不包含讲解服务。"
+        }
+      ],
+      "rubric": {
+        "expectation": "夜场票不包含讲解服务。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-31",
+      "question": "芦隐馆夜场无障碍入口在哪？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "reed-event.md",
+          "line": 4,
+          "quote": "夜场无障碍入口设在东门。"
+        }
+      ],
+      "rubric": {
+        "expectation": "夜场无障碍入口设在东门。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-32",
+      "question": "芦隐馆夜场 21:00 到，能否按资料入场？",
+      "answerable": true,
+      "kind": "constraint",
+      "goldSources": [
+        {
+          "path": "reed-event.md",
+          "line": 2,
+          "quote": "夜场末次入场时间为 20:30。"
+        }
+      ],
+      "rubric": {
+        "expectation": "说明晚于 20:30。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-33",
+      "question": "白桐步道现在住宿补助每晚上限多少？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "map-budget.md",
+          "line": 2,
+          "quote": "自 2027 年 1 月 1 日起，住宿补助上限为每晚 650 元。"
+        }
+      ],
+      "rubric": {
+        "expectation": "自 2027 年 1 月 1 日起，住宿补助上限为每晚 650 元。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-34",
+      "question": "白桐步道现行单次交通补助上限多少？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "map-budget.md",
+          "line": 3,
+          "quote": "现行单次交通补助上限为 180 元。"
+        }
+      ],
+      "rubric": {
+        "expectation": "现行单次交通补助上限为 180 元。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-35",
+      "question": "白桐步道住宿和夜间值守两种补助能一起领吗？",
+      "answerable": true,
+      "kind": "paraphrase",
+      "goldSources": [
+        {
+          "path": "map-budget.md",
+          "line": 4,
+          "quote": "住宿补助不得与夜间值守补助叠加。"
+        }
+      ],
+      "rubric": {
+        "expectation": "住宿补助不得与夜间值守补助叠加。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-36",
+      "question": "白桐步道 2027 年每晚住宿 600 元是否高于补助上限？",
+      "answerable": true,
+      "kind": "constraint",
+      "goldSources": [
+        {
+          "path": "map-budget.md",
+          "line": 2,
+          "quote": "自 2027 年 1 月 1 日起，住宿补助上限为每晚 650 元。"
+        }
+      ],
+      "rubric": {
+        "expectation": "说明不高于 650 元上限，避免承诺其他报销资格。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-37",
+      "question": "过去 2026 年，白桐步道住宿每晚报销封顶多少钱？",
+      "answerable": true,
+      "kind": "paraphrase",
+      "goldSources": [
+        {
+          "path": "map-history.md",
+          "line": 2,
+          "quote": "2026 年旧版住宿补助上限为每晚 500 元。"
+        }
+      ],
+      "rubric": {
+        "expectation": "2026 年旧版住宿补助上限为每晚 500 元。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-38",
+      "question": "白桐步道 2026 年单次交通补助上限多少？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "map-history.md",
+          "line": 3,
+          "quote": "2026 年单次交通补助上限为 120 元。"
+        }
+      ],
+      "rubric": {
+        "expectation": "2026 年单次交通补助上限为 120 元。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-39",
+      "question": "白桐步道预算历史版何时废止？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "map-history.md",
+          "line": 4,
+          "quote": "这份历史版自 2027 年 1 月 1 日起废止。"
+        }
+      ],
+      "rubric": {
+        "expectation": "这份历史版自 2027 年 1 月 1 日起废止。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-40",
+      "question": "白桐步道 2026 年每晚住宿 600 元是否超当年上限？",
+      "answerable": true,
+      "kind": "constraint",
+      "goldSources": [
+        {
+          "path": "map-history.md",
+          "line": 2,
+          "quote": "2026 年旧版住宿补助上限为每晚 500 元。"
+        }
+      ],
+      "rubric": {
+        "expectation": "说明高于 500 元上限。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-41",
+      "question": "雾桥电台普通会员年费多少？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "signal-club.md",
+          "line": 2,
+          "quote": "雾桥电台普通会员年费为 80 元。"
+        }
+      ],
+      "rubric": {
+        "expectation": "雾桥电台普通会员年费为 80 元。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-42",
+      "question": "办雾桥电台普通会员能不能订录音间？",
+      "answerable": true,
+      "kind": "paraphrase",
+      "goldSources": [
+        {
+          "path": "signal-club.md",
+          "line": 3,
+          "quote": "普通会员没有录音室预约权限。"
+        }
+      ],
+      "rubric": {
+        "expectation": "普通会员没有录音室预约权限。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-43",
+      "question": "雾桥电台会员退款要在付款后多久申请？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "signal-club.md",
+          "line": 4,
+          "quote": "会员退款申请必须在付款后 7 天内提交。"
+        }
+      ],
+      "rubric": {
+        "expectation": "会员退款申请必须在付款后 7 天内提交。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-44",
+      "question": "付款后第 8 天才申请雾桥电台会员退款，还在规定期间吗？",
+      "answerable": true,
+      "kind": "constraint",
+      "goldSources": [
+        {
+          "path": "signal-club.md",
+          "line": 4,
+          "quote": "会员退款申请必须在付款后 7 天内提交。"
+        }
+      ],
+      "rubric": {
+        "expectation": "说明超出 7 天。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-45",
+      "question": "雾桥电台录音室每次预约时长多少？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "signal-studio.md",
+          "line": 2,
+          "quote": "录音室每次预约时长为 90 分钟。"
+        }
+      ],
+      "rubric": {
+        "expectation": "录音室每次预约时长为 90 分钟。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-46",
+      "question": "雾桥电台录音室最多容纳几人？",
+      "answerable": true,
+      "kind": "direct",
+      "goldSources": [
+        {
+          "path": "signal-studio.md",
+          "line": 3,
+          "quote": "录音室最多容纳 6 人。"
+        }
+      ],
+      "rubric": {
+        "expectation": "录音室最多容纳 6 人。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-47",
+      "question": "资料有写雾桥电台的录音室噪声标准已经公布了吗？",
+      "answerable": true,
+      "kind": "paraphrase",
+      "goldSources": [
+        {
+          "path": "signal-studio.md",
+          "line": 4,
+          "quote": "录音室噪声上限待公告。"
+        }
+      ],
+      "rubric": {
+        "expectation": "录音室噪声上限待公告。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-48",
+      "question": "雾桥电台录音室让 7 个人一起使用是否超额？",
+      "answerable": true,
+      "kind": "constraint",
+      "goldSources": [
+        {
+          "path": "signal-studio.md",
+          "line": 3,
+          "quote": "录音室最多容纳 6 人。"
+        }
+      ],
+      "rubric": {
+        "expectation": "说明超过 6 人。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-49",
+      "question": "澄岚港访客证续期手续费为多少元？",
+      "answerable": false,
+      "kind": "missing-value",
+      "goldSources": [],
+      "rubric": {
+        "expectation": "没有访客证续期手续费。临时停车证补办费属于另一证件。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-50",
+      "question": "澄岚机场周末访客证有效期是多少？",
+      "answerable": false,
+      "kind": "unknown-entity",
+      "goldSources": [],
+      "rubric": {
+        "expectation": "材料覆盖澄岚港，不可迁移到澄岚机场。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-51",
+      "question": "青芦山急救培训结业证明有效期具体多少天？",
+      "answerable": false,
+      "kind": "missing-value",
+      "goldSources": [],
+      "rubric": {
+        "expectation": "来源仅说明另行公布，无具体数值。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-52",
+      "question": "青芦港急救培训证书有效期具体多少天？",
+      "answerable": false,
+      "kind": "title-only",
+      "goldSources": [],
+      "rubric": {
+        "expectation": "归档句不包含有效期，不得引用为期限依据。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-53",
+      "question": "霁禾试验室冷藏样品最低库存多少支？",
+      "answerable": false,
+      "kind": "wrong-entity",
+      "goldSources": [],
+      "rubric": {
+        "expectation": "120 支属于无菌管，不属于样品。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-54",
+      "question": "霁禾试验室常温样品销毁手续费是多少？",
+      "answerable": false,
+      "kind": "missing-value",
+      "goldSources": [],
+      "rubric": {
+        "expectation": "只提供保留时间和库存口径，没有手续费。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-55",
+      "question": "芦隐馆夜场票含讲解，讲解收费多少钱？",
+      "answerable": false,
+      "kind": "wrong-context",
+      "goldSources": [],
+      "rubric": {
+        "expectation": "更正夜场票不含讲解；没有讲解价格，不得用寄存费替代。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-56",
+      "question": "芦隐馆夜场 2027 年 2 月 18 日是否营业？",
+      "answerable": false,
+      "kind": "unknown-date",
+      "goldSources": [],
+      "rubric": {
+        "expectation": "有末次入场时间，没有指定日期营业安排。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-57",
+      "question": "白桐步道夜间值守每次补助多少钱？",
+      "answerable": false,
+      "kind": "missing-value",
+      "goldSources": [],
+      "rubric": {
+        "expectation": "只明确不可叠加，没有夜间值守补助金额。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-58",
+      "question": "白桐步道 2024 年住宿每晚上限是多少？",
+      "answerable": false,
+      "kind": "unknown-date",
+      "goldSources": [],
+      "rubric": {
+        "expectation": "缺 2024 年资料；2026、2027 标准均不适用。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-59",
+      "question": "雾桥电台录音室噪声上限为多少分贝？",
+      "answerable": false,
+      "kind": "missing-value",
+      "goldSources": [],
+      "rubric": {
+        "expectation": "资料说待公告，禁止给出具体数值。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-60",
+      "question": "雾桥电视台会员一年多少钱？",
+      "answerable": false,
+      "kind": "unknown-entity",
+      "goldSources": [],
+      "rubric": {
+        "expectation": "资料属于雾桥电台，电视台是另一个实体。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-61",
+      "question": "澄岚港周末访客证和临时停车证有效期各是多少？",
+      "answerable": true,
+      "kind": "comparison",
+      "goldSources": [
+        {
+          "path": "river-pass.md",
+          "line": 2,
+          "quote": "周末访客证自签发时起有效 24 小时。"
+        },
+        {
+          "path": "river-parking.md",
+          "line": 2,
+          "quote": "临时停车证有效期为 48 小时。"
+        }
+      ],
+      "rubric": {
+        "expectation": "分别 24 和 48 小时，引用各自证件。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-62",
+      "question": "青芦山和青芦港两地急救课哪边报名截止更晚，分别是哪一天？",
+      "answerable": true,
+      "kind": "comparison",
+      "goldSources": [
+        {
+          "path": "hill-course.md",
+          "line": 2,
+          "quote": "急救培训报名截止于 2027 年 3 月 12 日。"
+        },
+        {
+          "path": "dock-course.md",
+          "line": 2,
+          "quote": "急救培训报名截止于 2027 年 3 月 19 日。"
+        }
+      ],
+      "rubric": {
+        "expectation": "青芦港更晚，分别是 2027 年 3 月 12 日与 19 日。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-63",
+      "question": "白桐步道新旧两版住宿上限各是多少、相差多少？",
+      "answerable": true,
+      "kind": "comparison",
+      "goldSources": [
+        {
+          "path": "map-budget.md",
+          "line": 2,
+          "quote": "自 2027 年 1 月 1 日起，住宿补助上限为每晚 650 元。"
+        },
+        {
+          "path": "map-history.md",
+          "line": 2,
+          "quote": "2026 年旧版住宿补助上限为每晚 500 元。"
+        }
+      ],
+      "rubric": {
+        "expectation": "2027 年起 650 元，2026 年 500 元，相差 150 元，分别引用。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    },
+    {
+      "id": "rc-64",
+      "question": "雾桥电台普通会员能否预约，录音室每次预约本身多长？",
+      "answerable": true,
+      "kind": "comparison",
+      "goldSources": [
+        {
+          "path": "signal-club.md",
+          "line": 3,
+          "quote": "普通会员没有录音室预约权限。"
+        },
+        {
+          "path": "signal-studio.md",
+          "line": 2,
+          "quote": "录音室每次预约时长为 90 分钟。"
+        }
+      ],
+      "rubric": {
+        "expectation": "普通会员不能预约，录音室规则规定 90 分钟。",
+        "citation": "核对每个关键断言及其引用，记录是否有多余或错误入证。"
+      }
+    }
+  ]
+}

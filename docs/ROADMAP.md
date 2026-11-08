@@ -1,6 +1,6 @@
 # Inkstone roadmap
 
-The current local development line is **v0.7.8**. v0.7.6 improves evidence selection, v0.7.7 refines first use and chat, and v0.7.8 introduces the Motuan motion pilot. [Delivery index](DELIVERY-INDEX-v0.7.8.md) · [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
+The current development candidate is **v0.8.0-rc.2**. Its scope covers source coverage in grounded answers and claim checks in Wiki review. [Candidate delivery](DELIVERY-v0.8.0-rc2.md) · [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
 
 ## Ready to try in the source preview
 
@@ -21,7 +21,7 @@ The current local development line is **v0.7.8**. v0.7.6 improves evidence selec
 ## Next usability and evaluation work
 
 - Observe first-time users completing import → question → source and Wiki scope → review → original source. Refine model setup and fallback explanations using those observations.
-- Extend the fixed local retrieval regression with externally reviewed questions and provider-generated answer and citation judgments. Keep source coverage, unsupported answers, unnecessary refusals, latency and model calls separate.
+- Use the 64-case development set to investigate context misses and incorrect admission. Run a separate, independently reviewed set for provider-generated answer and citation judgments. Keep source coverage, unsupported answers, unnecessary refusals, latency and model calls separate.
 - Verify actual Brave routing with an authorized provider account. Record search-worthiness, public-query blocks, useful webpage evidence and failure reasons before broadening the web path.
 - Improve asset sizes, startup/performance measurement and module boundaries without expanding the format surface at the same time.
 - Observe the Motuan pilot during ordinary work sessions over at least five natural usage days. Review motion, quiet settings and growth before adapting motion to the other companions.

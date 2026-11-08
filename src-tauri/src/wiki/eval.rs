@@ -106,7 +106,7 @@ fn seed(corpus: &Corpus, chunk_chars: usize, wiki_authorized: impl Fn(&str) -> b
     let tx = wiki.transaction().unwrap();
     store::save_policy(&tx, &space, &policy).unwrap();
     for seed in &corpus.pages {
-        let change = store::Change {
+        let mut change = store::Change {
             id: format!("change-{}", seed.id),
             page_id: seed.id.clone(),
             base: 0,
@@ -144,10 +144,20 @@ fn seed(corpus: &Corpus, chunk_chars: usize, wiki_authorized: impl Fn(&str) -> b
                             .collect(),
                     })
                     .collect(),
+                inputs: vec![],
             },
         };
+        change.content.inputs = change
+            .content
+            .originals()
+            .map(super::InputVersion::from)
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect();
         store::save_change(&tx, &space, &change).unwrap();
-        publish_checked(&tx, data.path(), &ws, &space, &policy, &change).unwrap();
+        // The frozen corpus includes a summary from before the publication guard.
+        // Seed it as archived data so retrieval still has to handle legacy input.
+        store::publish(&tx, &space, &change).unwrap();
     }
     tx.commit().unwrap();
     Seeded {

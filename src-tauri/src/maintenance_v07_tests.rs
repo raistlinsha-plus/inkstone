@@ -112,6 +112,7 @@ fn fixture(data: &Path) -> Fixture {
         scope: Some(doc.path.clone()),
         chart_warnings: vec![],
         rejected_charts: vec![],
+        citation_checks: vec![],
     };
     let convo = assistant::finish(data, &space, &request, Ok(&response), false).unwrap();
     let stopped = assistant::begin_with_mode(

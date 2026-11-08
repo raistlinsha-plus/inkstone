@@ -14,6 +14,7 @@ fn response(sources: Vec<SearchResult>) -> ChatResponse {
         scope: None,
         chart_warnings: vec![],
         rejected_charts: vec![],
+        citation_checks: vec![],
     }
 }
 fn fixture(data: &Path) -> (Workspace, Conversation, String, Vec<SearchResult>) {
