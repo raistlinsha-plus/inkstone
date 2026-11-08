@@ -1,6 +1,6 @@
 # Inkstone roadmap
 
-The current development line is **v0.7.3 source preview**. v0.7.2 introduces Wiki and public-web retrieval. v0.7.3 adds a standalone chat workspace. [v0.7.2 delivery](DELIVERY-v0.7.2.md) · [v0.7.3 delivery](DELIVERY-v0.7.3.md) · [GitHub Releases](https://github.com/raistlinsha-plus/inkstone/releases)
+The current local development line is **v0.7.8**. v0.7.6 improves evidence selection, v0.7.7 refines first use and chat, and v0.7.8 introduces the Motuan motion pilot. [Delivery index](DELIVERY-INDEX-v0.7.8.md) · [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
 
 ## Ready to try in the source preview
 
@@ -9,7 +9,7 @@ The current development line is **v0.7.3 source preview**. v0.7.2 introduces Wik
 - Opt-in, model-routed Brave Search for readable public pages. Live provider validation is pending.
 - Markdown documents containing JSON, Mermaid, mindmaps, calendars and constrained charts.
 - Stable document order, a separate Recent view, and explicitly confirmed permanent deletion with recovery bookkeeping.
-- Optional ink companions, fixed stories and locally stored growth records. Artwork is static candidate art.
+- Optional ink companions, fixed stories and locally stored growth records. Motuan has an opt-in pixel-and-ink motion pilot and an extra album reward for the second chapter.
 
 ## Before a stable distribution
 
@@ -20,11 +20,11 @@ The current development line is **v0.7.3 source preview**. v0.7.2 introduces Wik
 
 ## Next usability and evaluation work
 
-- Test the first import → Wiki approval → original-source check and the first standalone question on a clean profile. Use feedback to improve model setup, costs and fallback explanations.
-- Evaluate local-only and Wiki-assisted retrieval on the same reviewed questions. Measure necessary-source coverage, citation support, unsupported answers, unnecessary refusals, latency and model calls.
+- Observe first-time users completing import → question → source and Wiki scope → review → original source. Refine model setup and fallback explanations using those observations.
+- Extend the fixed local retrieval regression with externally reviewed questions and provider-generated answer and citation judgments. Keep source coverage, unsupported answers, unnecessary refusals, latency and model calls separate.
 - Verify actual Brave routing with an authorized provider account. Record search-worthiness, public-query blocks, useful webpage evidence and failure reasons before broadening the web path.
 - Improve asset sizes, startup/performance measurement and module boundaries without expanding the format surface at the same time.
-- Pilot ink-and-pixel motion, expression variants and staged companion artwork as a separate track. Check reduced motion, quiet settings and growth over ordinary work sessions.
+- Observe the Motuan pilot during ordinary work sessions over at least five natural usage days. Review motion, quiet settings and growth before adapting motion to the other companions.
 
 PDF/OCR, cloud collaboration, multi-space sourcing in a single turn, other operating systems and a floating desktop pet remain future ideas.
 

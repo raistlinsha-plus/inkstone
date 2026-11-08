@@ -32,7 +32,7 @@ pub fn validate_snapshot(path: &Path) -> Result<(), String> {
         .map_err(err)?;
     for row in rows {
         let (id, workspace) = row.map_err(err)?;
-        let convo = read(&c, &workspace, &id)?;
+        let convo = read_versioned(&c, &workspace, &id, version)?;
         if workspace.is_empty()
             || convo.title.trim().is_empty()
             || convo.title.chars().count() > 80

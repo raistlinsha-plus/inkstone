@@ -44,6 +44,37 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
 });
+
+test("saves changed source choices even when draft text has not changed", async () => {
+  let stored = { ...make(), draft: "只使用所选资料" };
+  api.invoke.mockImplementation(async (name: string, args: any) => {
+    if (name === "assistant_list") return [{ ...stored, turnCount: 0 }];
+    if (name === "assistant_get") return stored;
+    if (name === "assistant_update") {
+      stored = { ...stored, ...args, revision: stored.revision + 1 };
+      return stored;
+    }
+    throw Error(name);
+  });
+  const h = renderHook(() => useAssistant(undefined, true));
+  await waitFor(() => expect(h.result.current.conversation?.id).toBe("c1"));
+  const context = {
+    sources: { projectId: "inbox", documentIds: ["doc-a"], attachments: [] },
+    webAccess: "local-only" as const,
+  };
+  await act(async () => {
+    h.result.current.saveDraft(null, stored.draft, context);
+    await h.result.current.flushDraft();
+    await h.result.current.load("c1");
+  });
+  expect(h.result.current.conversation?.draftContext).toEqual(context);
+  await act(async () => {
+    h.result.current.saveDraft(null, stored.draft, {});
+    await h.result.current.flushDraft();
+  });
+  expect(h.result.current.conversation?.draftContext).toEqual({});
+});
+
 async function ready() {
   const h = renderHook(({ root }) => useAssistant(root), {
     initialProps: { root: "/space/a" },

@@ -316,11 +316,18 @@ pub fn generation_context(
 pub fn merge_wiki(results: &mut Vec<SearchResult>, wiki: Vec<SearchResult>) {
     let mut credited = HashSet::new();
     for hit in wiki {
+        let anchored = hit.match_kind == crate::evidence::wiki_alias::ANCHORED;
         let overlaps = |candidate: &SearchResult| {
             candidate.path == hit.path
                 && candidate.hash == hit.hash
                 && candidate.start_line <= hit.end_line
                 && hit.start_line <= candidate.end_line
+                // The alias check binds to these exact lines, never to a
+                // different BM25 excerpt that merely overlaps the quote.
+                && (!anchored
+                    || (candidate.start_line == hit.start_line
+                        && candidate.end_line == hit.end_line
+                        && candidate.text.lines().eq(hit.text.lines())))
         };
         if let Some(candidate) = results.iter_mut().find(|item| overlaps(item)) {
             if credited.insert((
@@ -329,6 +336,10 @@ pub fn merge_wiki(results: &mut Vec<SearchResult>, wiki: Vec<SearchResult>) {
                 candidate.end_line,
             )) {
                 candidate.score += hit.score;
+            }
+            if anchored {
+                candidate.match_kind = crate::evidence::wiki_alias::ANCHORED.into();
+            } else if candidate.match_kind != crate::evidence::wiki_alias::ANCHORED {
                 candidate.match_kind = "wiki".into();
             }
         } else {

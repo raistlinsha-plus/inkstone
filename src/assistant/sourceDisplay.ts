@@ -20,6 +20,46 @@ export function publicCitationUrl(value?: string | null) {
   }
 }
 
+export function documentCitation(
+  source: ExternalSource,
+  path: string,
+): SearchResult | undefined {
+  if (
+    source.kind !== "document" ||
+    !source.documentId ||
+    !source.id.startsWith(source.documentId + ":") ||
+    !source.contentHash ||
+    !/^[a-f\d]{64}$/.test(source.contentHash)
+  )
+    return;
+  const range = /^(\d+)-(\d+)$/.exec(
+    source.id.slice(source.documentId.length + 1),
+  );
+  if (!range) return;
+  const startLine = Number(range[1]);
+  const endLine = Number(range[2]);
+  if (
+    !Number.isSafeInteger(startLine) ||
+    !Number.isSafeInteger(endLine) ||
+    startLine < 1 ||
+    endLine < startLine
+  )
+    return;
+  return {
+    external: source,
+    id: source.citation,
+    documentId: source.documentId,
+    path,
+    title: source.label,
+    text: source.excerpt ?? "",
+    heading: "",
+    startLine,
+    endLine,
+    hash: source.contentHash,
+    score: 0,
+  };
+}
+
 export function answerCitations(
   local: SearchResult[],
   external: ExternalSource[],

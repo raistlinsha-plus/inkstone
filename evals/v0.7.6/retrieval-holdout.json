@@ -1,0 +1,28 @@
+{
+  "documents": {
+    "visitor-pass": {"title":"澄湾温室访客规则.md","content":"# 澄湾温室访客规则\n\n## 访客证有效期\n澄湾温室访客证的有效期为72小时。\n"},
+    "volunteer-pass": {"title":"澄湾志愿者规则.md","content":"# 澄湾志愿者规则\n\n## 志愿者证\n澄湾志愿者证的有效期为10天。\n"},
+    "ceramics-guide": {"title":"月原陶艺工房.md","content":"# 月原陶艺工房\n\n## 釉料保存\n备用釉料的保存温度为8摄氏度。\n\n## 交接登记\n釉料领取登记单须交给仓管员。\n"},
+    "warehouse-card": {"title":"堆栈巡检手册.md","content":"# 鸣泉堆栈\n\n## 巡检间隔\n鸣泉堆栈的巡检间隔为20分钟。\n"},
+    "warehouse-sheet": {"title":"堆栈交接清单.md","content":"# 鸣泉堆栈\n\n## 巡检间隔\n鸣泉堆栈的巡检间隔为35分钟。\n"},
+    "warehouse-rumor": {"title":"堆栈访谈摘录.md","content":"# 鸣泉堆栈\n\n## 巡检间隔\n鸣泉堆栈的巡检间隔为60分钟。\n"},
+    "empty": {"title":"棕桥釉料储存记录.md","content":"# 棕桥釉料储存记录\n\n## 温度\n棕桥釉料建议保持低温，温度值尚未公布。\n"}
+  },
+  "pages": [
+    {"id":"greenhouse","title":"澄湾温室入园","summary":"","aliases":["玻璃房访客凭条"],"sections":[{"heading":"临时访客有效时间","refs":[{"document":"visitor-pass","line":4}]}]},
+    {"id":"ceramics","title":"釉料物流","summary":"","aliases":["釉彩冷藏"],"sections":[{"heading":"釉彩冷藏温度","refs":[{"document":"ceramics-guide","line":4}]}]},
+    {"id":"warehouse","title":"鸣泉巡视","summary":"","aliases":["鸣泉检查节奏"],"sections":[{"heading":"巡检间隔","refs":[{"document":"warehouse-card","line":4},{"document":"warehouse-sheet","line":4},{"document":"warehouse-rumor","line":4}]}]},
+    {"id":"brown-bridge","title":"棕桥储存","summary":"","aliases":["棕桥釉彩冷藏"],"sections":[{"heading":"储藏温度","refs":[{"document":"empty","line":4}]}]}
+  ],
+  "wikiExcluded":["volunteer-pass"],
+  "cases":[
+    {"id":"visitor-duration","family":"paraphrase","query":"玻璃房访客凭条可以用几小时？","expectation":"complete","required":[{"document":"visitor-pass","line":4}]},
+    {"id":"glaze-temp","family":"paraphrase","query":"釉彩冷藏是多少度？","expectation":"complete","required":[{"document":"ceramics-guide","line":4}]},
+    {"id":"glaze-multiple","family":"multi-fact","query":"备用釉料的保存温度是多少？釉料领取登记单交给谁？","expectation":"complete","required":[{"document":"ceramics-guide","line":4},{"document":"ceramics-guide","line":7}]},
+    {"id":"stack-conflict","family":"conflict","query":"鸣泉堆栈巡检间隔，手册和清单的记录一致吗？","expectation":"conflict","required":[{"document":"warehouse-card","line":4},{"document":"warehouse-sheet","line":4}],"forbidden":["warehouse-rumor"]},
+    {"id":"visitor-numeric-residue","family":"missing","query":"玻璃房访客凭条仅限2029年12月，可以用几小时？","expectation":"none","required":[]},
+    {"id":"missing-value","family":"missing","query":"棕桥釉彩冷藏要求几度？","expectation":"none","required":[]},
+    {"id":"unrelated-attribute","family":"missing","query":"玻璃房访客凭条的申请费用多少钱？","expectation":"none","required":[]},
+    {"id":"scope-does-not-expand","family":"scope","query":"玻璃房访客凭条可以用几小时？","scope":"volunteer-pass","expectation":"none","required":[]}
+  ]
+}

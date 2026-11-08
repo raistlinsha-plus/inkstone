@@ -456,6 +456,7 @@ fn resume(data: &Path, op: &str) -> Result<PurgeResult, String> {
         }
         crate::calendar::purge_document(data, &d.project_id, &d.id)?;
         crate::companion::purge_source(data, &d.id)?;
+        crate::wiki::purge_document(data, &d.project_id, &d.id)?;
         fault("derived")?;
         let stage = safe(data, &format!("library/purge-staging/{op}"))?;
         if stage.exists() {
@@ -568,6 +569,17 @@ pub fn recover(data: &Path) -> Result<(), String> {
         if result.status == "pendingCleanup" {
             return Err(result.message);
         }
+    }
+    // Older versions could complete a purge without removing its Wiki derivatives.
+    let mut completed = c
+        .prepare("SELECT project,document FROM document_purges WHERE phase='completed'")
+        .map_err(err)?;
+    let rows = completed
+        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
+        .map_err(err)?;
+    for row in rows {
+        let (project, document) = row.map_err(err)?;
+        crate::wiki::purge_document(data, &project, &document)?;
     }
     Ok(())
 }

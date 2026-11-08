@@ -1729,6 +1729,7 @@ async fn ask_question(
         None,
         None,
         None,
+        assistant_sources::WebAccess::Auto,
     )
     .await
 }
@@ -1756,6 +1757,7 @@ async fn ask_pipeline(
     followup_gate: Option<&assistant::grounding::FollowupGate>,
     memory: Option<assistant::memory::Run>,
     web_question: Option<&str>,
+    web_access: assistant_sources::WebAccess,
 ) -> Result<ChatResponse, String> {
     let generation = state.workspace_generation.load(Ordering::SeqCst);
     let config = settings(&state)?.chat;
@@ -1775,7 +1777,8 @@ async fn ask_pipeline(
         async {
             match web_question {
                 Some(question) => {
-                    assistant_runtime::web(app, state, &config, question, request_id).await
+                    assistant_runtime::web(app, state, &config, question, request_id, web_access)
+                        .await
                 }
                 None => assistant_runtime::WebTurn::default(),
             }
@@ -2619,6 +2622,7 @@ pub fn run() {
             assistant::attachments::assistant_attachment_delete,
             web_retrieval::web_search_settings,
             web_retrieval::save_web_search_settings,
+            web_retrieval::test_web_search_connection,
             wiki::wiki_status,
             wiki::wiki_set_policy,
             wiki::wiki_compile,

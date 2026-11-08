@@ -1,0 +1,102 @@
+{
+  "documents": {
+    "access-east": {
+      "title": "青沙东闸.md",
+      "content": "# 青沙东闸\n\n## 通行核验\n临时通行证有效期为36小时。\n每张临时通行证只供一人使用。\n\n## 堆放限制\n东闸坡道不得停放手推车。\n"
+    },
+    "access-west": {
+      "title": "白屿西闸.md",
+      "content": "# 白屿西闸\n\n## 通行核验\n临时通行证有效期为48小时。\n西闸值班室设有归还箱。\n"
+    },
+    "cold-chain": {
+      "title": "冷月样本运输.md",
+      "content": "# 冷月样本运输\n\n## 保温箱\n样本运输须使用封闭保温箱，温度设定为4摄氏度。\n保温箱空载返程时保持箱盖开启。\n\n## 交接票据\n到站后须将签收单交给前台。\n"
+    },
+    "beacon-sheet": {
+      "title": "灯塔巡查值班表.md",
+      "content": "# 松岬灯塔\n\n## 巡检频次\n松岬灯塔巡检间隔为30分钟。\n本值班表发布日期为2026年4月3日。\n"
+    },
+    "beacon-guide": {
+      "title": "灯塔巡查作业卡.md",
+      "content": "# 松岬灯塔\n\n## 巡检频次\n松岬灯塔巡检间隔为45分钟。\n本作业卡发布日期为2026年4月3日。\n"
+    },
+    "equipment": {
+      "title": "手工教具回收.md",
+      "content": "# 手工教具回收\n\n## 清洗液稀释比例\n清洗液稀释比例为1:50。\n\n## 工具归还\n器具清洗后放入蓝色网篮。\n"
+    },
+    "warranty": {
+      "title": "桥面防滑涂层.md",
+      "content": "# 桥面防滑涂层\n\n## 工程保修期\n桥面防滑涂层的工程保修期为18个月。\n"
+    },
+    "unapproved": {
+      "title": "临时物料核验单.md",
+      "content": "# 未纳入 Wiki 的临时记录\n\n## 独立测试批次\n临时物料核验批次 QD-51 的交接代码为 ATL-93。\n"
+    },
+    "archive": {
+      "title": "North Pier Archive.md",
+      "content": "# North Pier Archive\n\n## Visiting hours\nThe North Pier Archive opens at 09:30 on weekdays.\n\n## Visitor restrictions\nCoats and bags must be left in the entrance lockers.\n"
+    }
+  },
+  "pages": [
+    {
+      "id": "port-access", "title": "码头临时证件", "summary": "", "aliases": ["双闸出入凭证", "访客通行期限"],
+      "sections": [
+        {"heading": "临时通行证有效期", "refs": [{"document": "access-east", "line": 4}, {"document": "access-west", "line": 4}]},
+        {"heading": "临时证件持有人", "refs": [{"document": "access-east", "line": 5}]}
+      ]
+    },
+    {
+      "id": "specimen", "title": "样本冷链交接", "summary": "", "aliases": ["低温转运", "样本配送"],
+      "sections": [
+        {"heading": "冷链目标温度", "refs": [{"document": "cold-chain", "line": 4}]},
+        {"heading": "交接票据", "refs": [{"document": "cold-chain", "line": 8}]}
+      ]
+    },
+    {
+      "id": "beacon", "title": "松岬灯塔巡检规则", "summary": "", "aliases": ["灯塔例行查看", "值班巡查节奏"],
+      "sections": [
+        {"heading": "巡检间隔", "refs": [{"document": "beacon-sheet", "line": 4}, {"document": "beacon-guide", "line": 4}]}
+      ]
+    },
+    {
+      "id": "cleanup", "title": "教具洗护与归还", "summary": "", "aliases": ["活动器材善后", "清洁剂配比"],
+      "sections": [
+        {"heading": "清洗液稀释比例", "refs": [{"document": "equipment", "line": 4}]},
+        {"heading": "工具归还", "refs": [{"document": "equipment", "line": 7}]}
+      ]
+    },
+    {
+      "id": "construction", "title": "桥面维护", "summary": "", "aliases": ["地面涂层质保"],
+      "sections": [
+        {"heading": "工程保修期", "refs": [{"document": "warranty", "line": 4}]}
+      ]
+    },
+    {
+      "id": "archive", "title": "North Pier Archive Visit", "summary": "", "aliases": ["Reading room public access"],
+      "sections": [
+        {"heading": "Visiting hours", "refs": [{"document": "archive", "line": 4}]},
+        {"heading": "Visitor restrictions", "refs": [{"document": "archive", "line": 7}]}
+      ]
+    }
+  ],
+  "wikiExcluded": ["unapproved"],
+  "cases": [
+    {"id": "east-term", "family": "exact", "query": "青沙东闸的临时通行证有效期是多少？", "expectation": "complete", "required": [{"document": "access-east", "line": 4}]},
+    {"id": "two-gates", "family": "cross-document", "query": "比较青沙东闸与白屿西闸的临时通行证有效期，分别列出并附来源。", "expectation": "complete", "required": [{"document": "access-east", "line": 4}, {"document": "access-west", "line": 4}]},
+    {"id": "two-gates-paraphrase", "family": "paraphrase", "query": "双闸出入凭证能用几天？", "expectation": "complete", "required": [{"document": "access-east", "line": 4}, {"document": "access-west", "line": 4}]},
+    {"id": "specimen-temp", "family": "exact", "query": "冷月样本运输的保温箱温度设定是多少？", "expectation": "complete", "required": [{"document": "cold-chain", "line": 4}]},
+    {"id": "specimen-alias", "family": "paraphrase", "query": "低温转运要求几度？", "expectation": "complete", "required": [{"document": "cold-chain", "line": 4}]},
+    {"id": "specimen-two-facts", "family": "multi-fact", "query": "样本运输的保温箱温度设定是多少？签收单交给谁？", "expectation": "complete", "required": [{"document": "cold-chain", "line": 4}, {"document": "cold-chain", "line": 8}]},
+    {"id": "beacon-conflict", "family": "conflict", "query": "松岬灯塔巡检间隔是多少？", "expectation": "conflict", "required": [{"document": "beacon-sheet", "line": 4}, {"document": "beacon-guide", "line": 4}]},
+    {"id": "beacon-conflict-attribution", "family": "conflict", "query": "松岬灯塔巡检间隔，值班表和作业卡的规定一致吗？", "expectation": "conflict", "required": [{"document": "beacon-sheet", "line": 4}, {"document": "beacon-guide", "line": 4}]},
+    {"id": "cleaner-ratio", "family": "exact", "query": "清洗液稀释比例是多少？", "expectation": "complete", "required": [{"document": "equipment", "line": 4}]},
+    {"id": "return-tools", "family": "paraphrase", "query": "活动器材善后时，擦洗过的东西收在哪？", "expectation": "complete", "required": [{"document": "equipment", "line": 7}]},
+    {"id": "incomplete-pair", "family": "missing", "query": "手工教具回收的清洗液稀释比例和清洗液采购费用分别是多少？", "expectation": "partial", "required": [{"document": "equipment", "line": 4}]},
+    {"id": "unrelated", "family": "missing", "query": "氢原子超精细跃迁的真空波长？", "expectation": "none", "required": []},
+    {"id": "missing-beacon", "family": "missing", "query": "松岬灯塔的产权转让金额和纳税税率？", "expectation": "none", "required": []},
+    {"id": "east-only", "family": "scope", "query": "临时通行证有效期是多少？", "scope": "access-east", "expectation": "complete", "required": [{"document": "access-east", "line": 4}]},
+    {"id": "outside-wiki-policy", "family": "scope", "query": "临时物料核验批次 QD-51 的交接代码？", "scope": "unapproved", "expectation": "complete", "required": [{"document": "unapproved", "line": 4}]},
+    {"id": "archive-hours", "family": "exact", "query": "North Pier Archive weekday visiting hours", "expectation": "complete", "required": [{"document": "archive", "line": 4}]},
+    {"id": "stale-source", "family": "stale", "query": "桥面防滑涂层的工程保修期是多少？", "scope": "warranty", "replace": "桥面维护文件修订中，暂未公布。\n", "expectation": "none", "required": []}
+  ]
+}

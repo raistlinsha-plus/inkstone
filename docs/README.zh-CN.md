@@ -6,7 +6,7 @@ Inkstone 将 Markdown 写作、文档空间、Wiki 与独立 AI 问答放在一�
 
 [English](../README.md) · [源码快速开始](QUICKSTART.md) · [后续计划](ROADMAP.md) · [公开版本](https://github.com/raistlinsha-plus/inkstone/releases)
 
-当前开发线为 **v0.7.3 源码预览**，目标为 macOS 13+ Apple Silicon。v0.7.2 加入知识 Wiki 和可选自动联网，v0.7.3 加入独立通用问答与每轮资料选择。[v0.7.2 交付](DELIVERY-v0.7.2.md) · [v0.7.3 交付](DELIVERY-v0.7.3.md)
+**v0.7.8 源码预览**面向 macOS 13+ Apple Silicon。本轮改进原文取证、问答与首次使用，并加入墨团动效试点。[发布说明](launch/v0.7.8/RELEASE.md) · [本轮交付导航](DELIVERY-INDEX-v0.7.8.md)
 
 ![带引用的问答，使用虚构阅读活动资料](assets/launch-v0.7/02-conversation.png)
 
@@ -18,7 +18,7 @@ Inkstone 将 Markdown 写作、文档空间、Wiki 与独立 AI 问答放在一�
 - **让 Wiki 回到原文。** 在受管理空间选定资料，按主题整理，查看最近变更，核对原文位置。关键词、可选向量和 Wiki 定位共同召回原文，重排可以单独配置。
 - **直接提问，按需加资料。** 在独立 AI 问答里解释、翻译或改写，或为当前问题选择一个空间、文档或文本附件。配置并授权 Brave Search 后，模型可按题自动查公开网页。查看每轮来源，将有用回答保存为文档。
 - **直接在正文表达结构。** JSON、Mermaid、脑图、日程与受约束的 ECharts 图表可在 Markdown 正文内呈现和编辑。
-- **选择安静的同伴。** 墨团、砚舟、知微提供阶段形象、固定故事及 CG；确认工作经历后成长，不按提问次数或付费调用数催促使用。当前素材为静态候选插画。
+- **选择安静的同伴。** 墨团、砚舟、知微提供阶段形象、固定故事及 CG。确认工作经历后成长，墨团可在温和陪伴中启用轻动效。
 
 ![虚构资料与正文图表](assets/launch-v0.7/01-editor.png)
 
@@ -41,7 +41,7 @@ npm run desktop
 
 ## 当前边界与参与方式
 
-源码预览仍有真实 Brave Search 帐号、原生辅助功能、跨机安装和更大语料评测等待单独验收。独立问答支持 TXT、Markdown、JSON、MMD 文本附件。PDF/OCR、云协作、单轮跨空间选取资料和悬浮桌宠列在后续范围。[本次交付边界](DELIVERY-v0.7.3.md)
+真实 Brave Search 帐号、原生辅助功能、跨机安装和更大语料评测等待单独验收。独立问答支持 TXT、Markdown、JSON、MMD 文本附件。PDF/OCR、云协作、单轮跨空间选取资料和悬浮桌宠列在后续范围。[本地检索评测](../evals/v0.7.5/README.md)
 
 欢迎提交虚构最小复现、可用性反馈和独立问答评测；不要上传密钥、真实资料或私人备份。[贡献指南](../CONTRIBUTING.md) · [已知限制](KNOWN-LIMITATIONS.md)。如果这个方向对你有用，也欢迎点一个 Star 帮助更多人发现。
 

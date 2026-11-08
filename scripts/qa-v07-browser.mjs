@@ -125,6 +125,38 @@ try {
     .catch(() => {});
   await shot("04-character-picker");
   await page.getByRole("button", { name: "关闭同伴面板", exact: true }).click();
+  await page.getByRole("button", { name: "模型与设置", exact: true }).click();
+  await page.getByRole("button", { name: "自动联网设置", exact: true }).click();
+  const diagnostic = page.getByRole("dialog", { name: "自动联网设置" });
+  const searchCalls = () =>
+    page.evaluate(() =>
+      window.__INKSTONE_QA_CALLS__.filter(
+        ({ command }) =>
+          command === "test_web_search_connection" ||
+          command === "save_web_search_settings",
+      ),
+    );
+  await diagnostic.getByRole("button", { name: "测试连接" }).waitFor();
+  assert.deepEqual(await searchCalls(), []);
+  await diagnostic.getByLabel("Brave Search API 密钥").fill("qa-fixture-key");
+  await diagnostic.getByRole("button", { name: "测试连接" }).click();
+  await diagnostic
+    .getByRole("status")
+    .getByText(/无法读取正文/)
+    .waitFor();
+  await diagnostic.getByText("HTTP 200", { exact: true }).waitFor();
+  assert.deepEqual(await searchCalls(), [
+    {
+      command: "test_web_search_connection",
+      args: { apiKey: "qa-fixture-key" },
+    },
+  ]);
+  await shot("06-brave-connection-diagnostic");
+  await diagnostic.getByRole("button", { name: "取消" }).click();
+  await diagnostic.waitFor({ state: "hidden" });
+  checks.push(
+    "explicit Brave probe shows a readable API response separately from an unreadable public page without saving settings",
+  );
   // Each screenshot owns a fresh browser context at its final dimensions.
   // Resizing one rendered Chrome surface can retain stale compositor tiles.
   const fixtureState = await context.storageState();

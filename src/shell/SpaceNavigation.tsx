@@ -10,6 +10,7 @@ export default function SpaceNavigation({
   disabled,
   generalDisabled = disabled,
   calendarOpen,
+  generalOpen,
   canIndex,
   indexDirty,
   onHome,
@@ -22,6 +23,7 @@ export default function SpaceNavigation({
   disabled: boolean;
   generalDisabled?: boolean;
   calendarOpen: boolean;
+  generalOpen: boolean;
   canIndex: boolean;
   indexDirty: boolean;
   onHome: () => void;
@@ -45,7 +47,8 @@ export default function SpaceNavigation({
       <button
         title="日历"
         aria-label="日历"
-        className={calendarOpen ? "active" : ""}
+        className={calendarOpen && !generalOpen ? "active" : ""}
+        aria-current={calendarOpen && !generalOpen ? "page" : undefined}
         disabled={disabled}
         onClick={onCalendar}
       >
@@ -56,6 +59,8 @@ export default function SpaceNavigation({
         <button
           title="AI 问答"
           aria-label="AI 问答"
+          className={generalOpen ? "active" : ""}
+          aria-current={generalOpen ? "page" : undefined}
           disabled={generalDisabled}
           onClick={onGeneralAsk}
         >

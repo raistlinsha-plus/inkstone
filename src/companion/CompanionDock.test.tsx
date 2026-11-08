@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -82,6 +83,7 @@ const mount = (saved = true) =>
       saved={saved}
     />,
   );
+const sprite = () => document.querySelector("[data-companion-sprite='motuan']");
 test("opt-in is explicit and selecting a role does not record work or call a model", async () => {
   current.settings.enabled = false;
   current.roles = {};
@@ -202,4 +204,139 @@ test("pet status reflects actual work failure without a celebratory line", async
   );
   await screen.findByText("模型连接失败，请重试");
   expect(screen.queryByText("回答已完成，可核对依据")).toBe(null);
+  expect(sprite()?.getAttribute("data-state")).toBe("idle");
+});
+
+test("Motuan reflects work in a decorative sprite and keeps focus and reduced-motion settings quiet", async () => {
+  const props = { workspace, documentPath: "note.md", documentHash: "hash" };
+  const ui = render(<CompanionDock {...props} />);
+  await waitFor(() =>
+    expect(sprite()?.getAttribute("data-state")).toBe("idle"),
+  );
+  expect(sprite()?.getAttribute("data-motion")).toBe("static");
+  expect(sprite()?.getAttribute("aria-hidden")).toBe("true");
+
+  ui.rerender(<CompanionDock {...props} activity="working" />);
+  expect(sprite()?.getAttribute("data-state")).toBe("reading");
+  expect(
+    mocked.invoke.mock.calls.every(([name]) => name === "companion_state"),
+  ).toBe(true);
+
+  fireEvent.click(screen.getByRole("button", { name: "同伴设置" }));
+  fireEvent.change(screen.getByLabelText("陪伴模式"), {
+    target: { value: "gentle" },
+  });
+  const reduced = screen.getByRole("checkbox", { name: "减少动态效果" });
+  await waitFor(() =>
+    expect((reduced as HTMLInputElement).disabled).toBe(false),
+  );
+  expect(sprite()?.getAttribute("data-motion")).toBe("static");
+  fireEvent.click(reduced);
+  await waitFor(() =>
+    expect(sprite()?.getAttribute("data-motion")).toBe("gentle"),
+  );
+  fireEvent.change(screen.getByLabelText("陪伴模式"), {
+    target: { value: "focus" },
+  });
+  await waitFor(() =>
+    expect(sprite()?.getAttribute("data-motion")).toBe("static"),
+  );
+  fireEvent.click(screen.getByRole("checkbox", { name: /开启角色陪伴/ }));
+  await waitFor(() => expect(sprite()).toBe(null));
+});
+
+test("Motuan celebrates only a confirmed milestone; ordinary and duplicate completions do not celebrate", async () => {
+  const call = mocked.invoke.getMockImplementation()!;
+  const confirmResult = vi.fn();
+  mocked.invoke.mockImplementation(async (name, args) => {
+    if (name === "companion_confirm") {
+      return {
+        status: await confirmResult(),
+        snapshot: structuredClone(current),
+      };
+    }
+    return call(name, args);
+  });
+  mount();
+  const complete = async (kind: "milestone" | "complete") => {
+    fireEvent.click(await screen.findByRole("button", { name: "本次完成" }));
+    const submit = await screen.findByRole("button", { name: "确认并记录" });
+    fireEvent.change(screen.getByLabelText("经历类型"), {
+      target: { value: kind },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: /我确认保存/ }));
+    fireEvent.click(submit);
+  };
+
+  confirmResult.mockResolvedValueOnce("counted");
+  await complete("complete");
+  await screen.findByText(/经历已记录/);
+  expect(sprite()?.getAttribute("data-state")).toBe("idle");
+
+  confirmResult.mockResolvedValueOnce("duplicate");
+  await complete("milestone");
+  await screen.findByText(/没有重复计入/);
+  expect(sprite()?.getAttribute("data-state")).toBe("idle");
+
+  let resolveMilestone!: (status: string) => void;
+  confirmResult.mockReturnValueOnce(
+    new Promise<string>((resolve) => {
+      resolveMilestone = resolve;
+    }),
+  );
+  await complete("milestone");
+  expect(sprite()?.getAttribute("data-state")).toBe("idle");
+  vi.useFakeTimers();
+  try {
+    await act(async () => resolveMilestone("counted"));
+    expect(sprite()?.getAttribute("data-state")).toBe("milestone");
+    act(() => vi.advanceTimersByTime(2600));
+    expect(sprite()?.getAttribute("data-state")).toBe("idle");
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("Motuan's bonus illustration uses the existing acquaintance unlock and preserves the main story CG", async () => {
+  current.eligible = 1;
+  current.events = 3;
+  current.days = 2;
+  const call = mocked.invoke.getMockImplementation()!;
+  mocked.invoke.mockImplementation(async (name, args) => {
+    if (name === "companion_story") {
+      current.roles.motuan = { read: [0, 1], outfit: 1, choices: {} };
+      current.eligible = null;
+      return structuredClone(current);
+    }
+    return call(name, args);
+  });
+  mount();
+  fireEvent.click(await screen.findByRole("button", { name: "相册" }));
+  const locked = screen.getByRole("button", { name: /墨团 · 纸签下的午后/ });
+  expect((locked as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.queryByAltText(/圆窗旁打盹/)).toBe(null);
+  fireEvent.click(screen.getByRole("button", { name: "关闭同伴面板" }));
+  fireEvent.click(screen.getByRole("button", { name: "打开新章" }));
+  await screen.findByRole("dialog", { name: "捡到一枚书签" });
+  fireEvent.click(screen.getByRole("button", { name: "读完这一章" }));
+  fireEvent.click(await screen.findByRole("button", { name: "相册" }));
+
+  const main = screen.getByRole("button", { name: /捡到一枚书签/ });
+  expect((main as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(screen.getByRole("button", { name: /墨团 · 纸签下的午后/ }));
+  expect(
+    await screen.findByRole("dialog", { name: "墨团 · 纸签下的午后" }),
+  ).toBeTruthy();
+  expect(screen.getByAltText(/圆窗旁打盹/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "返回相册" }));
+  expect(screen.getByRole("button", { name: /捡到一枚书签/ })).toBeTruthy();
+});
+
+test("other roles retain static artwork and their own story album", async () => {
+  current.settings.characterId = "zhiwei";
+  mount();
+  expect(await screen.findByAltText("知微 初遇阶段预览插画")).toBeTruthy();
+  expect(sprite()).toBe(null);
+  fireEvent.click(screen.getByRole("button", { name: "相册" }));
+  expect(screen.queryByRole("button", { name: /纸签下的午后/ })).toBe(null);
 });

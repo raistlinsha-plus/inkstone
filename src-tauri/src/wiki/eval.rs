@@ -2,11 +2,20 @@ use super::*;
 use crate::retrieval;
 use std::collections::BTreeMap;
 
+#[path = "eval_v075.rs"]
+mod v075;
+
 #[derive(Deserialize)]
 struct Fixture {
+    #[serde(flatten)]
+    corpus: Corpus,
+    cases: Vec<Case>,
+}
+
+#[derive(Deserialize)]
+struct Corpus {
     documents: BTreeMap<String, SourceDocument>,
     pages: Vec<SeedPage>,
-    cases: Vec<Case>,
 }
 
 #[derive(Deserialize)]
@@ -30,7 +39,7 @@ struct SeedSection {
     refs: Vec<Line>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Line {
     document: String,
     line: usize,
@@ -50,10 +59,14 @@ fn source_line(document: &SourceDocument, line: usize) -> &str {
     document.content.lines().nth(line - 1).unwrap()
 }
 
-#[test]
-fn authored_offline_bm25_and_wiki_cases() {
-    let fixture: Fixture =
-        serde_json::from_str(include_str!("../../../evals/v0.7.2/wiki-cases.json")).unwrap();
+struct Seeded {
+    data: tempfile::TempDir,
+    ws: Workspace,
+    index: Connection,
+    docs: BTreeMap<String, library::Document>,
+}
+
+fn seed(corpus: &Corpus, chunk_chars: usize, wiki_authorized: impl Fn(&str) -> bool) -> Seeded {
     let data = tempfile::tempdir().unwrap();
     let space = library::create_project(data.path(), "离线 Wiki 评测")
         .unwrap()
@@ -64,10 +77,10 @@ fn authored_offline_bm25_and_wiki_cases() {
     };
     let mut index = db::open(&ws.db).unwrap();
     let mut docs = BTreeMap::new();
-    for (key, source) in &fixture.documents {
+    for (key, source) in &corpus.documents {
         let doc =
             library::create_document(data.path(), &space, &source.title, &source.content).unwrap();
-        let chunks = db::local_chunks(&source.content, &doc.path, 1000);
+        let chunks = db::local_chunks(&source.content, &doc.path, chunk_chars);
         db::refresh_lexical(
             &mut index,
             &doc.path,
@@ -76,7 +89,7 @@ fn authored_offline_bm25_and_wiki_cases() {
             &doc.title,
         )
         .unwrap();
-        docs.insert(key, doc);
+        docs.insert(key.clone(), doc);
     }
     let policy = Policy {
         revision: 1,
@@ -84,7 +97,7 @@ fn authored_offline_bm25_and_wiki_cases() {
         topic: "离线 Wiki 评测".into(),
         document_ids: docs
             .iter()
-            .filter(|(key, _)| key.as_str() != "excluded")
+            .filter(|(key, _)| wiki_authorized(key))
             .map(|(_, doc)| doc.id.clone())
             .collect(),
         ..Default::default()
@@ -92,10 +105,10 @@ fn authored_offline_bm25_and_wiki_cases() {
     let mut wiki = store::write(data.path()).unwrap();
     let tx = wiki.transaction().unwrap();
     store::save_policy(&tx, &space, &policy).unwrap();
-    for seed in fixture.pages {
+    for seed in &corpus.pages {
         let change = store::Change {
             id: format!("change-{}", seed.id),
-            page_id: seed.id,
+            page_id: seed.id.clone(),
             base: 0,
             result: 0,
             policy_revision: policy.revision,
@@ -103,21 +116,21 @@ fn authored_offline_bm25_and_wiki_cases() {
             reason: "authored eval".into(),
             created: store::now(),
             content: Content {
-                title: seed.title,
-                summary: seed.summary,
-                aliases: seed.aliases,
+                title: seed.title.clone(),
+                summary: seed.summary.clone(),
+                aliases: seed.aliases.clone(),
                 related: vec![],
                 sections: seed
                     .sections
-                    .into_iter()
+                    .iter()
                     .map(|section| Section {
-                        heading: section.heading,
+                        heading: section.heading.clone(),
                         refs: section
                             .refs
-                            .into_iter()
+                            .iter()
                             .map(|item| {
                                 let doc = &docs[&item.document];
-                                let source = &fixture.documents[&item.document];
+                                let source = &corpus.documents[&item.document];
                                 Original {
                                     document_id: doc.id.clone(),
                                     title: doc.title.clone(),
@@ -137,6 +150,24 @@ fn authored_offline_bm25_and_wiki_cases() {
         publish_checked(&tx, data.path(), &ws, &space, &policy, &change).unwrap();
     }
     tx.commit().unwrap();
+    Seeded {
+        data,
+        ws,
+        index,
+        docs,
+    }
+}
+
+#[test]
+fn authored_offline_bm25_and_wiki_cases() {
+    let fixture: Fixture =
+        serde_json::from_str(include_str!("../../../evals/v0.7.2/wiki-cases.json")).unwrap();
+    let Seeded {
+        data,
+        ws,
+        index,
+        docs,
+    } = seed(&fixture.corpus, 1000, |key| key != "excluded");
 
     let mut totals = [[0; 2]; 2];
     let mut required = 0;
@@ -167,7 +198,7 @@ fn authored_offline_bm25_and_wiki_cases() {
                 .iter()
                 .filter(|item| {
                     let doc = &docs[&item.document];
-                    let phrase = source_line(&fixture.documents[&item.document], item.line);
+                    let phrase = source_line(&fixture.corpus.documents[&item.document], item.line);
                     results.iter().any(|hit| {
                         hit.path == doc.path
                             && (hit.start_line..=hit.end_line).contains(&item.line)

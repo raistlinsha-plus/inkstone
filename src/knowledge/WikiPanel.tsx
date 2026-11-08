@@ -70,12 +70,14 @@ export default function WikiPanel({
   workspaceRoot,
   view,
   onClose,
+  onImport,
   onOpenSource,
 }: {
   projectId: string;
   workspaceRoot: string;
   view: LibraryView;
   onClose: () => void;
+  onImport: () => void;
   onOpenSource: (source: SearchResult) => void;
 }) {
   const [status, setStatus] = useState<WikiStatus>();
@@ -131,6 +133,27 @@ export default function WikiPanel({
       );
     };
   }, [refresh, workspaceRoot]);
+
+  useEffect(() => {
+    if (
+      [page, baseline].some((item) =>
+        item?.refs.some(
+          (source) =>
+            !view.documents.some(
+              (doc) => doc.id === source.documentId && doc.status !== "purging",
+            ),
+        ),
+      )
+    ) {
+      ++latestPage.current;
+      setPage(undefined);
+      setChange(undefined);
+      setBaseline(undefined);
+      void refresh().catch((reason) => {
+        if (active.current) setError(String(reason));
+      });
+    }
+  }, [page, baseline, view.documents, refresh]);
 
   async function run(label: string, task: () => Promise<void>) {
     setBusy(label);
@@ -188,21 +211,46 @@ export default function WikiPanel({
 
   async function review(action: "publish" | "reject" | "restore") {
     if (!change) return;
+    const { id, pageId } = change;
     await run("正在处理改动", async () => {
-      await invoke("wiki_review", { input: { id: change.id, action } });
+      await invoke("wiki_review", { input: { id, action } });
       setChange(undefined);
       setPage(undefined);
       await refresh();
+      if (action === "publish" || action === "restore") {
+        setTab("pages");
+        await inspect(pageId);
+      }
+    });
+  }
+
+  async function organize(retryChangeId?: string) {
+    await run("正在整理", async () => {
+      const next = await invoke<WikiStatus>("wiki_compile", { retryChangeId });
+      if (next && active.current) setStatus(next);
+      else await refresh();
+      if (retryChangeId && active.current) {
+        setPage(undefined);
+        setChange(undefined);
+        setBaseline(undefined);
+      }
     });
   }
 
   async function openSource(index: number) {
-    if (!page) return;
+    const reference = page?.refs[index];
+    if (!page || !reference) return;
     await run("正在核对来源", async () => {
       const source = await invoke<WikiRef>("wiki_source", {
-        pageId: page.id,
-        index,
-        changeId: change?.id,
+        input: {
+          pageId: page.id,
+          revision: page.revision,
+          changeId: change?.id ?? null,
+          documentId: reference.documentId,
+          startLine: reference.startLine,
+          endLine: reference.endLine,
+          hash: reference.hash,
+        },
       });
       if (!source?.path) throw Error("原文不可用");
       onOpenSource({
@@ -216,6 +264,12 @@ export default function WikiPanel({
   }
 
   const isRunning = busy === "正在整理" || status?.job?.status === "running";
+  const pending =
+    status?.changes.filter((item) => item.status === "pending") ?? [];
+  const firstWiki = status && !status.pages.length;
+  const scopeReady =
+    status?.policy.enabled && !!status.policy.documentIds.length;
+  const firstStep = pending.length ? 2 : scopeReady ? 1 : 0;
   const filter = search.trim().toLocaleLowerCase();
   const pages = (status?.pages ?? []).filter(
     (item) =>
@@ -279,17 +333,9 @@ export default function WikiPanel({
             type="button"
             className="primary"
             disabled={
-              !!busy ||
-              !status?.policy.enabled ||
-              status.policy.paused ||
-              !status.policy.documentIds.length
+              !!busy || dirty.current || !scopeReady || status?.policy.paused
             }
-            onClick={() =>
-              void run("正在整理", async () => {
-                await invoke("wiki_compile");
-                await refresh();
-              })
-            }
+            onClick={() => void organize()}
           >
             整理所选资料
           </button>
@@ -315,6 +361,77 @@ export default function WikiPanel({
         <p className="panel-warning" role="alert">
           {error}
         </p>
+      )}
+      {(firstWiki || !!pending.length) && (
+        <section className="wiki-next-step" aria-label="整理与审阅进度">
+          {firstWiki && (
+            <ol>
+              {["选择资料范围", "整理所选资料", "审阅并发布"].map(
+                (label, index) => (
+                  <li
+                    key={label}
+                    aria-current={index === firstStep ? "step" : undefined}
+                  >
+                    {label}
+                  </li>
+                ),
+              )}
+            </ol>
+          )}
+          {pending.length ? (
+            <>
+              <p>
+                {pending.length}{" "}
+                项改动待审阅。检查原文和正文后，可以发布或拒绝。
+              </p>
+              {change?.status !== "pending" || tab !== "changes" ? (
+                <button
+                  className="button small"
+                  type="button"
+                  disabled={!!busy}
+                  onClick={() => {
+                    setTab("changes");
+                    void inspect(pending[0].pageId, pending[0]);
+                  }}
+                >
+                  查看待审阅改动
+                </button>
+              ) : null}
+            </>
+          ) : docs.length === 0 ? (
+            <>
+              <p>先复制导入一份资料，再选择可整理的文档。</p>
+              <button
+                className="button small"
+                type="button"
+                disabled={!!busy}
+                onClick={onImport}
+              >
+                复制导入资料
+              </button>
+            </>
+          ) : !scopeReady ? (
+            <>
+              <p>填写主题并勾选本空间的资料，首次可保留发布前全部审阅。</p>
+              {tab !== "policy" && (
+                <button
+                  className="button small"
+                  type="button"
+                  disabled={!!busy}
+                  onClick={() => setTab("policy")}
+                >
+                  选择整理范围
+                </button>
+              )}
+            </>
+          ) : (
+            <p>
+              {status?.policy.paused
+                ? "Wiki 已暂停。可在范围与维护中继续。"
+                : "整理范围已保存。可以开始整理并检查生成的页面。"}
+            </p>
+          )}
+        </section>
       )}
       {tab === "policy" && policy && (
         <div className="wiki-policy">
@@ -360,6 +477,7 @@ export default function WikiPanel({
           <p className="muted">
             整理时会把所选资料提交给配置的聊天模型。已选{" "}
             {policy.documentIds.length} 篇。
+            {dirty.current && " 请先保存更改再整理。"}
           </p>
           <div className="wiki-document-list">
             {docs.map((doc) => (
@@ -487,10 +605,22 @@ export default function WikiPanel({
               )}
               <WikiPageView
                 page={page}
+                showQuotes={change.status === "pending"}
                 onOpen={(index) => void openSource(index)}
                 onError={setError}
               />
               <div className="modal-actions">
+                {change.status === "rejected" && (
+                  <button
+                    type="button"
+                    disabled={
+                      !!busy || !status.policy.enabled || status.policy.paused
+                    }
+                    onClick={() => void organize(change.id)}
+                  >
+                    重新整理已拒绝改动
+                  </button>
+                )}
                 {change.status === "pending" && (
                   <>
                     <button
@@ -532,11 +662,13 @@ function WikiPageView({
   onOpen,
   onRelated,
   onError,
+  showQuotes = false,
 }: {
   page: WikiPage;
   onOpen?: (index: number) => void;
   onRelated?: (id: string) => void;
   onError: (message: string) => void;
+  showQuotes?: boolean;
 }) {
   return (
     <article className="wiki-page">
@@ -564,18 +696,22 @@ function WikiPageView({
           ))}
         </div>
       )}
-      <details className="assistant-evidence">
+      <details className="assistant-evidence" open={showQuotes || undefined}>
         <summary>原文位置 · {page.refs.length}</summary>
-        {page.refs.map((source, index) => (
-          <button
-            type="button"
-            key={`${source.documentId}-${index}`}
-            disabled={!onOpen || page.stale}
-            onClick={() => onOpen?.(index)}
-          >
-            {source.title} · 第 {source.startLine}–{source.endLine} 行
-          </button>
-        ))}
+        <ul className="assistant-citation-list">
+          {page.refs.map((source, index) => (
+            <li key={`${source.documentId}-${index}`}>
+              <button
+                type="button"
+                disabled={!onOpen || page.stale}
+                onClick={() => onOpen?.(index)}
+              >
+                {source.title} · 第 {source.startLine}–{source.endLine} 行
+              </button>
+              {showQuotes && <blockquote>{source.quote}</blockquote>}
+            </li>
+          ))}
+        </ul>
       </details>
     </article>
   );

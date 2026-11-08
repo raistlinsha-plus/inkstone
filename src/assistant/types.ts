@@ -16,6 +16,7 @@ export interface Turn {
   selectedCandidateId: string | null;
   candidates: Candidate[];
   sources?: AssistantSourcePlan;
+  webAccess?: AssistantWebAccess;
 }
 export interface Conversation {
   id: string;
@@ -24,6 +25,7 @@ export interface Conversation {
   scopeLabel: string;
   archived: boolean;
   draft: string;
+  draftContext?: AssistantDraftContext;
   revision: number;
   createdAt: string;
   updatedAt: string;
@@ -68,6 +70,12 @@ export interface AssistantSourcePlan {
   documentIds?: string[];
   attachments?: string[];
 }
+export type AssistantWebAccess = "auto" | "local-only";
+export interface AssistantDraftContext {
+  sources?: AssistantSourcePlan;
+  webAccess?: AssistantWebAccess;
+  branch?: { parentTurnId: string | null };
+}
 export interface AssistantAttachment {
   id: string;
   title: string;
@@ -83,6 +91,7 @@ export interface ExternalSource {
   attachmentId?: string | null;
   projectId?: string | null;
   documentId?: string | null;
+  contentHash?: string | null;
   citation: number;
 }
 export interface RetrievalTrace {
@@ -92,6 +101,7 @@ export interface RetrievalTrace {
 }
 export interface StartQuestion {
   sources?: AssistantSourcePlan;
+  webAccess?: AssistantWebAccess;
   memoryOptions?: { skipPreferences: boolean; history: HistoryRef | null };
   question: string;
   parentTurnId?: string | null;

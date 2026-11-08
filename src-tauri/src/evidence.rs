@@ -2,6 +2,8 @@
 use crate::{db, models::SearchResult};
 use std::{collections::HashSet, path::Path};
 
+pub(crate) mod wiki_alias;
+
 fn terms(query: &str) -> Vec<String> {
     db::query_terms(query)
         .into_iter()
@@ -77,6 +79,119 @@ fn names(query: &str, results: &[SearchResult]) -> Vec<String> {
     }
 }
 
+fn source_name(r: &SearchResult, name: &str) -> bool {
+    r.title
+        .as_ref()
+        .is_some_and(|t| t.to_lowercase().contains(name))
+        || Path::new(&r.path)
+            .file_stem()
+            .is_some_and(|t| t.to_string_lossy().to_lowercase().contains(name))
+}
+
+// Each side is attributed using the document's title. The factual part still
+// has to match the original body, and a document naming both sides is ambiguous.
+fn attributed_comparison(query: &str) -> Option<(Vec<String>, [&str; 2])> {
+    let (fact, attribution) = query
+        .trim_end_matches(['？', '?'])
+        .split_once(['，', ','])?;
+    let pair = [
+        "的规定一致吗",
+        "的记录一致吗",
+        "的说法一致吗",
+        "的结论一致吗",
+        "的规定是否一致",
+        "的记录是否一致",
+        "的说法是否一致",
+        "的结论是否一致",
+    ]
+    .into_iter()
+    .find_map(|suffix| attribution.trim().strip_suffix(suffix))?;
+    let (a, b) = pair.split_once(['和', '与', '及'])?;
+    let labels = [a.trim(), b.trim()];
+    if labels[0].contains(labels[1])
+        || labels[1].contains(labels[0])
+        || labels.iter().any(|name| {
+            !(2..=16).contains(&name.chars().count()) || name.chars().any(|c| !c.is_alphanumeric())
+        })
+    {
+        return None;
+    }
+    let fact = comparison_terms(fact);
+    (fact.len() >= 2).then_some((fact, labels))
+}
+
+fn subquestion_terms(query: &str) -> Vec<Vec<String>> {
+    let clauses = query
+        .split(['？', '?', '；', ';'])
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>();
+    if !(2..=4).contains(&clauses.len()) {
+        return vec![];
+    }
+    clauses
+        .into_iter()
+        .map(|clause| {
+            // Refuse to split statements or a clause with a trailing side
+            // constraint. Each accepted clause is a standalone question.
+            let clause = [
+                "是多少",
+                "多少",
+                "是什么",
+                "什么",
+                "是谁",
+                "谁",
+                "在哪里",
+                "在哪",
+            ]
+            .into_iter()
+            .find_map(|ending| clause.strip_suffix(ending))?
+            .trim();
+            if clause.contains(['，', ',', '。', '：', ':', '“', '”', '"'])
+                || [
+                    "其中",
+                    "前者",
+                    "后者",
+                    "只看",
+                    "仅限",
+                    "只根据",
+                    "仅根据",
+                    "只用",
+                    "仅用",
+                    "限定",
+                    "排除",
+                    "不要",
+                    "不考虑",
+                    "不引用",
+                    "以及",
+                    "同样",
+                    "也",
+                ]
+                .iter()
+                .any(|part| clause.contains(part))
+            {
+                return None;
+            }
+            let words = terms(clause);
+            (words.len() >= 2).then_some(words)
+        })
+        .collect::<Option<Vec<_>>>()
+        .unwrap_or_default()
+}
+
+fn supports_clause(words: &[String], body: &HashSet<String>) -> bool {
+    covered(words, body)
+        && words
+            .iter()
+            .filter(|word| body.contains(word.as_str()))
+            .count()
+            >= 2
+        && words
+            .iter()
+            .filter(|word| word.chars().any(|c| c.is_ascii_digit()))
+            .all(|word| body.contains(word.as_str()))
+}
+
 pub fn mark(query: &str, results: &mut [SearchResult]) {
     let query = query.to_lowercase();
     let original = terms(&query);
@@ -86,6 +201,12 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
         shared = shared.replace(name, " ");
     }
     let attributes = comparison_terms(&shared);
+    let attributed = attributed_comparison(&query);
+    let subquestions = if names.is_empty() && attributed.is_none() {
+        subquestion_terms(&query)
+    } else {
+        vec![]
+    };
     for r in results {
         let has_body = r.text.lines().any(|line| {
             let line = line.trim();
@@ -106,7 +227,7 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
             .split_whitespace()
             .map(str::to_owned)
             .collect::<HashSet<_>>();
-        let supported = if names.is_empty() {
+        let ordinary = if names.is_empty() {
             covered(&original, &tokens)
         } else {
             let own = names
@@ -134,8 +255,27 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
                     .filter(|t| t.chars().any(|c| c.is_ascii_digit()))
                     .all(|t| tokens.contains(t))
         };
-        let wiki = r.match_kind == "wiki";
-        r.evidence = (r.bm25_rank.is_some() || wiki) && has_body && supported;
+        let wiki = r.match_kind.starts_with("wiki");
+        let original_alias_anchor = r.match_kind == wiki_alias::ANCHORED;
+        let supported = if attributed.is_some() || !subquestions.is_empty() {
+            let body = db::tokenize(&r.text)
+                .split_whitespace()
+                .map(str::to_owned)
+                .collect::<HashSet<_>>();
+            if let Some((fact, labels)) = &attributed {
+                labels.iter().filter(|label| source_name(r, label)).count() == 1
+                    && supports_clause(fact, &body)
+            } else {
+                ordinary
+                    || subquestions
+                        .iter()
+                        .any(|words| supports_clause(words, &body))
+            }
+        } else {
+            ordinary
+        };
+        r.evidence =
+            (r.bm25_rank.is_some() || wiki) && has_body && (supported || original_alias_anchor);
         r.match_kind = if wiki {
             "wiki"
         } else if r.evidence {
@@ -210,5 +350,32 @@ mod tests {
         mark("比较晨露绘图室与白帆制图社的预约时长", &mut hits);
         assert!(!hits[0].evidence);
         assert!(hits[1].evidence);
+    }
+
+    #[test]
+    fn separate_questions_keep_numeric_and_scope_constraints() {
+        let mut hits = vec![
+            hit("活动票据", "2026年预约时长：最多80分钟。"),
+            hit("交接通知", "服务凭据交给管理员。"),
+            hit("错误年份", "2025年预约时长：最多90分钟。"),
+        ];
+        mark("2026年预约时长是多少？服务凭据交给谁？", &mut hits);
+        assert!(hits[0].evidence && hits[1].evidence);
+        assert!(!hits[2].evidence);
+        assert!(subquestion_terms("只根据交接通知的预约时长是多少？服务凭据交给谁？").is_empty());
+        assert!(subquestion_terms("2026年预约时长是多少？前者交给谁？").is_empty());
+    }
+
+    #[test]
+    fn source_attribution_keeps_two_named_versions_without_third_party() {
+        let mut hits = vec![
+            hit("北岭通知.md", "北岭取件期限为2天。"),
+            hit("北岭手册.md", "北岭取件期限为3天。"),
+            hit("北岭传闻.md", "北岭取件期限为5天。"),
+            hit("北岭通知与手册.md", "北岭取件期限为4天。"),
+        ];
+        mark("北岭取件期限，通知和手册的说法一致吗？", &mut hits);
+        assert!(hits[0].evidence && hits[1].evidence);
+        assert!(!hits[2].evidence && !hits[3].evidence);
     }
 }

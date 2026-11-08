@@ -29,10 +29,13 @@ import {
 import "./companion.css";
 
 import ExperienceJournal from "./ExperienceJournal";
+import MotuanSprite from "./MotuanSprite";
 import {
   CharacterPicker,
   GrowthOverview,
   AlbumCards,
+  MotuanBonusScene,
+  motuanBonusTitle,
   StoryContent,
 } from "./CompanionViews";
 
@@ -46,6 +49,7 @@ type View =
   | "preview"
   | "story"
   | "cg"
+  | "motuan-bonus"
   | "reset";
 const storyData = stories.characters as StoryCharacter[];
 export default function CompanionDock({
@@ -74,6 +78,7 @@ export default function CompanionDock({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState("");
+  const [milestone, setMilestone] = useState(false);
   const [selected, setSelected] = useState<CharacterId>("motuan"),
     [stage, setStage] = useState(0),
     [choice, setChoice] = useState<string | null>(null),
@@ -108,6 +113,7 @@ export default function CompanionDock({
     setView(null);
     setPreview(null);
     setBusy(false);
+    setMilestone(false);
     void refresh();
   }, [root, refresh]);
   useEffect(() => {
@@ -198,6 +204,11 @@ export default function CompanionDock({
     progress = snapshot?.roles[role],
     level = roleLevel(progress),
     outfit = progress?.outfit ?? level;
+  useEffect(() => {
+    if (!milestone) return;
+    const timeout = setTimeout(() => setMilestone(false), 2600);
+    return () => clearTimeout(timeout);
+  }, [milestone]);
   const updateSettings = (
     patch: Partial<NonNullable<typeof settings>> & { outfit?: number },
   ) => {
@@ -215,7 +226,12 @@ export default function CompanionDock({
                 : null,
           },
         }),
-      setSnapshot,
+      (next) => {
+        setSnapshot(next);
+        if (!next.settings.enabled || next.settings.characterId !== "motuan") {
+          setMilestone(false);
+        }
+      },
     );
   };
   const openStory = (n: number) => {
@@ -263,6 +279,13 @@ export default function CompanionDock({
         setSnapshot(result.snapshot);
         setView(null);
         setPreview(null);
+        if (
+          role === "motuan" &&
+          result.status === "counted" &&
+          cardKind === "milestone"
+        ) {
+          setMilestone(true);
+        }
         setNotice(
           result.status === "counted"
             ? "经历已记录。新章节会安静留在同伴入口。"
@@ -291,6 +314,14 @@ export default function CompanionDock({
         setSnapshot(s);
         setView("stories");
         setNotice("章节已处理，形象与相册已更新。");
+        if (
+          role === "motuan" &&
+          stage > 0 &&
+          !progress?.read.includes(stage) &&
+          s.roles.motuan?.read.includes(stage)
+        ) {
+          setMilestone(true);
+        }
       },
     );
   };
@@ -334,9 +365,11 @@ export default function CompanionDock({
           ? (episode?.title ?? "角色故事")
           : view === "cg"
             ? (episode?.title ?? "相册")
-            : view === "reset"
-              ? "清空同伴数据？"
-              : "书房手札";
+            : view === "motuan-bonus"
+              ? motuanBonusTitle
+              : view === "reset"
+                ? "清空同伴数据？"
+                : "书房手札";
   const pending = snapshot?.pending ?? [];
   const activityLabel = pending.length
     ? "工作已保存，经历待保存"
@@ -385,10 +418,24 @@ export default function CompanionDock({
               settings.compact ? "companion-mini" : "companion-summary"
             }
           >
-            <img
-              src={characterArt(role, outfit)}
-              alt={`${r.name} ${stages[outfit]}阶段预览插画`}
-            />
+            {role === "motuan" ? (
+              <MotuanSprite
+                mood={
+                  milestone
+                    ? "milestone"
+                    : activity === "working"
+                      ? "reading"
+                      : "idle"
+                }
+                outfit={outfit}
+                animate={settings.mode === "gentle" && !settings.reducedMotion}
+              />
+            ) : (
+              <img
+                src={characterArt(role, outfit)}
+                alt={`${r.name} ${stages[outfit]}阶段预览插画`}
+              />
+            )}
             <div>
               <strong>
                 {r.name}
@@ -557,7 +604,14 @@ export default function CompanionDock({
               <X size={18} />
             </button>
           </header>
-          {!["choose", "preview", "story", "cg", "reset"].includes(view) && (
+          {![
+            "choose",
+            "preview",
+            "story",
+            "cg",
+            "motuan-bonus",
+            "reset",
+          ].includes(view) && (
             <nav aria-label="同伴手札">
               <button
                 aria-current={view === "growth" ? "page" : undefined}
@@ -675,6 +729,7 @@ export default function CompanionDock({
                   setStage(n);
                   setView("cg");
                 }}
+                onOpenMotuanBonus={() => setView("motuan-bonus")}
               />
             )}
             {view === "story" && episode && (
@@ -697,6 +752,7 @@ export default function CompanionDock({
                 <figcaption>书房故事预览插画 · 虚构文字与场景</figcaption>
               </figure>
             )}
+            {view === "motuan-bonus" && <MotuanBonusScene />}
             {view === "preview" && preview && (
               <>
                 <p>工作已成功保存。确认后保存这张经历卡；取消不会增加成长。</p>
@@ -789,6 +845,12 @@ export default function CompanionDock({
                   />
                   减少动态效果
                 </label>
+                {role === "motuan" && (
+                  <p className="companion-note">
+                    墨团动效在温和陪伴中播放。专注模式、减少动态或 macOS
+                    的减少动态设置会让形象保持静止。
+                  </p>
+                )}
                 <button
                   onClick={() => {
                     setSelected(role);
@@ -902,6 +964,7 @@ export default function CompanionDock({
                         }),
                       (s) => {
                         setSnapshot(s);
+                        if (selected !== role) setMilestone(false);
                         setStage(0);
                         setChoice(null);
                         setView(
@@ -959,6 +1022,7 @@ export default function CompanionDock({
                           }),
                         (s) => {
                           setSnapshot(s);
+                          setMilestone(false);
                           setView(null);
                           setNotice("同伴资料已清空，工作文档和知识会话保留。");
                         },
@@ -968,6 +1032,8 @@ export default function CompanionDock({
                   确认清空同伴数据
                 </button>
               </>
+            ) : view === "motuan-bonus" ? (
+              <button onClick={() => setView("album")}>返回相册</button>
             ) : (
               <button disabled={busy} onClick={() => setView(null)}>
                 回到工作

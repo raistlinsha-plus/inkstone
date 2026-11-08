@@ -317,7 +317,8 @@ test("the managed workbench offers the first-question guide on startup", async (
     within(guide).getByRole("button", { name: "复制导入文档" }),
   ).toBeTruthy();
   fireEvent.click(within(guide).getByRole("button", { name: "打开问答" }));
-  expect(await screen.findByLabelText("向当前空间提问")).toBeTruthy();
+  const composer = await screen.findByLabelText("向当前空间提问");
+  expect(document.activeElement).toBe(composer);
 });
 
 test("startup remains loading until the space and its document list have both loaded", async () => {
@@ -1084,7 +1085,7 @@ test.skipIf(appVersion === "0.7.2")(
           citation: 1,
         },
       ],
-      trace: { route: "公开网页", steps: ["查阅网页"], unread: [] },
+      trace: { route: "web", steps: ["查阅网页"], unread: [] },
     }));
     render(<App />);
     await screen.findByRole("button", { name: "重新打开资料" });
@@ -1103,6 +1104,7 @@ test.skipIf(appVersion === "0.7.2")(
       sources: {},
     });
     expect(screen.getByText("本轮查阅")).toBeTruthy();
+    expect(screen.getByText("公开网页", { selector: ".assistant-evidence small" })).toBeTruthy();
     fireEvent.click(screen.getByTitle("查看来源 1：示例网页"));
     const preview = await screen.findByRole("dialog", { name: "查看来源" });
     expect(within(preview).getByText("example.org")).toBeTruthy();
@@ -1110,6 +1112,249 @@ test.skipIf(appVersion === "0.7.2")(
     expect(calls("open_external")[0][1]).toEqual({
       url: "https://example.org/",
     });
+  },
+);
+
+function enableTestChat() {
+  overrides.set("bootstrap", () => ({
+    settings: { ...settings, chat: { ...settings.chat, enabled: true } },
+    lastWorkspace: null,
+  }));
+}
+
+test("browsing a space does not attach it to an independent question", async () => {
+  enableTestChat();
+  overrides.set("ask_question", () => syntheticAnswer);
+  await boot();
+  fireEvent.click(screen.getByRole("button", { name: "AI 问答" }));
+  const composer = await screen.findByLabelText("向 AI 提问");
+  fireEvent.click(screen.getByRole("button", { name: "添加资料" }));
+  fireEvent.change(screen.getByRole("combobox", { name: "知识空间" }), {
+    target: { value: "p2" },
+  });
+  expect(screen.getByText("未添加资料")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "完成选择" }));
+  fireEvent.change(composer, { target: { value: "浏览完仍然直接提问" } });
+  fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+  await screen.findByRole("heading", { name: "季度分析" });
+  expect(calls("assistant_ask").at(-1)?.[1].sources).toEqual({});
+
+  fireEvent.click(screen.getByRole("button", { name: "添加资料" }));
+  fireEvent.change(screen.getByRole("combobox", { name: "知识空间" }), {
+    target: { value: "p2" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "使用整个空间" }));
+  expect(screen.getByRole("button", { name: "p2 · 整个空间" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("checkbox", { name: "c.md" }));
+  expect(screen.getByRole("button", { name: "p2 · 1 篇" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("checkbox", { name: "c.md" }));
+  expect(screen.getByText("未添加资料")).toBeTruthy();
+});
+
+test("first Wiki setup guides explicitly scoped compilation, review, publication and the original", async () => {
+  const reference = {
+    documentId: "a.md",
+    title: "a.md",
+    path: "a.md",
+    startLine: 1,
+    endLine: 1,
+    quote: "正文 a.md",
+    hash: "hash-a.md",
+  };
+  const page = {
+    id: "first-wiki",
+    title: "合成知识页",
+    summary: "合成结论",
+    revision: 1,
+    sourceCount: 1,
+    stale: false,
+    body: "合成 Wiki 正文。",
+    refs: [reference],
+  };
+  const change = {
+    id: "first-change",
+    pageId: page.id,
+    title: page.title,
+    status: "pending",
+    reason: "首次整理",
+    created: 1,
+    canRestore: false,
+    sourceCount: 1,
+  };
+  let status = {
+    policy: {
+      revision: 0,
+      enabled: false,
+      paused: false,
+      automatic: false,
+      topic: "",
+      documentIds: [] as string[],
+    },
+    pages: [] as (typeof page)[],
+    changes: [] as (typeof change)[],
+    job: { status: "idle", message: "" },
+  };
+  overrides.set("wiki_status", () => status);
+  overrides.set("wiki_set_policy", ({ input }) => {
+    const { expectedRevision, ...policy } = input;
+    status = {
+      ...status,
+      policy: { ...policy, revision: expectedRevision + 1 },
+    };
+  });
+  overrides.set("wiki_compile", () => {
+    status = {
+      ...status,
+      changes: [change],
+      job: { status: "ready", message: "" },
+    };
+    return status;
+  });
+  overrides.set("wiki_read", ({ changeId }) =>
+    changeId || status.pages.length ? page : null,
+  );
+  overrides.set("wiki_review", () => {
+    status = {
+      ...status,
+      pages: [page],
+      changes: [{ ...change, status: "published" }],
+    };
+  });
+  overrides.set("wiki_source", () => reference);
+  await boot();
+  fireEvent.click(screen.getByRole("button", { name: "知识 Wiki" }));
+  const panel = within(
+    await screen.findByRole("dialog", { name: "知识 Wiki" }),
+  );
+  fireEvent.click(await panel.findByRole("button", { name: "选择整理范围" }));
+  fireEvent.click(panel.getByRole("checkbox", { name: "启用当前空间的 Wiki" }));
+  fireEvent.change(panel.getByRole("textbox", { name: "关注主题" }), {
+    target: { value: "首用样例" },
+  });
+  fireEvent.click(panel.getByRole("checkbox", { name: "a.md" }));
+  fireEvent.click(panel.getByRole("button", { name: "保存范围与维护" }));
+  const organize = panel.getByRole("button", {
+    name: "整理所选资料",
+  }) as HTMLButtonElement;
+  await waitFor(() => expect(organize.disabled).toBe(false));
+  expect(calls("wiki_compile")).toHaveLength(0);
+  expect(calls("wiki_set_policy").at(-1)?.[1].input).toMatchObject({
+    automatic: false,
+    documentIds: ["a.md"],
+  });
+  fireEvent.click(organize);
+  fireEvent.click(await panel.findByRole("button", { name: "查看待审阅改动" }));
+  expect(await panel.findByText(reference.quote)).toBeTruthy();
+  fireEvent.click(panel.getByRole("button", { name: "发布改动" }));
+  await waitFor(() =>
+    expect(calls("wiki_read").at(-1)?.[1].changeId).toBeNull(),
+  );
+  expect(calls("wiki_review").at(-1)?.[1].input).toEqual({
+    id: change.id,
+    action: "publish",
+  });
+  fireEvent.click(await panel.findByText("原文位置 · 1"));
+  fireEvent.click(panel.getByRole("button", { name: "a.md · 第 1–1 行" }));
+  await waitFor(() =>
+    expect(screen.getByTestId("opened-path").textContent?.trim()).toBe(
+      "a.md:1",
+    ),
+  );
+  expect(calls("wiki_source").at(-1)?.[1].input).toMatchObject({
+    changeId: null,
+    documentId: "a.md",
+    revision: 1,
+    hash: "hash-a.md",
+  });
+});
+
+test("reopening a standalone draft restores its documents and no-web choice", async () => {
+  enableTestChat();
+  overrides.set("ask_question", () => syntheticAnswer);
+  await boot();
+  fireEvent.click(screen.getByRole("button", { name: "AI 问答" }));
+  const composer = await screen.findByLabelText("向 AI 提问");
+  fireEvent.click(screen.getByRole("button", { name: "添加资料" }));
+  fireEvent.change(screen.getByRole("combobox", { name: /知识空间/ }), {
+    target: { value: "p1" },
+  });
+  fireEvent.click(screen.getByRole("checkbox", { name: "a.md" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "b.md" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "本轮不搜索网页" }));
+  const draft = "请比较这两篇";
+  fireEvent.change(composer, { target: { value: draft } });
+  fireEvent.click(screen.getByTitle("新建会话"));
+  await waitFor(() => expect((composer as HTMLTextAreaElement).value).toBe(""));
+  const sources = { projectId: "p1", documentIds: ["a.md", "b.md"] };
+  expect(calls("assistant_update").at(-1)?.[1]).toMatchObject({
+    draft,
+    draftContext: { sources, webAccess: "local-only" },
+  });
+  fireEvent.click(screen.getByTitle("会话历史"));
+  fireEvent.click(await screen.findByRole("button", { name: /新会话.*0轮/ }));
+  await screen.findByRole("button", { name: "p1 · 2 篇" });
+  expect((composer as HTMLTextAreaElement).value).toBe(draft);
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: "本轮不搜索网页",
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+  await screen.findByRole("heading", { name: "季度分析" });
+  expect(calls("assistant_ask").at(-1)?.[1]).toMatchObject({
+    question: draft,
+    sources,
+    webAccess: "local-only",
+  });
+  expect(screen.queryByRole("button", { name: "p1 · 2 篇" })).toBeNull();
+});
+
+test.each([false, true])(
+  "a historical standalone citation checks the document version (changed: %s)",
+  async (changed) => {
+    enableTestChat();
+    const hash = "a".repeat(64);
+    disk.set("c.md", {
+      ...file("c.md", "第一行\n引用句\n结尾"),
+      hash: changed ? "b".repeat(64) : hash,
+    });
+    overrides.set("ask_question", () => ({
+      ...syntheticAnswer,
+      text: "## 有引用的回答\n\n见原文 [1]。",
+      externalSources: [
+        {
+          id: "c.md:2-2",
+          kind: "document",
+          label: "c.md · 第 2 行",
+          citation: 1,
+          projectId: "p2",
+          documentId: "c.md",
+          contentHash: hash,
+          excerpt: "引用句",
+        },
+      ],
+    }));
+    await boot();
+    fireEvent.click(screen.getByRole("button", { name: "AI 问答" }));
+    fireEvent.change(await screen.findByLabelText("向 AI 提问"), {
+      target: { value: "请引用" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+    await screen.findByRole("heading", { name: "有引用的回答" });
+    fireEvent.click(screen.getByTitle("查看来源 1：c.md · 第 2 行"));
+    const preview = await screen.findByRole("dialog", { name: "查看来源" });
+    fireEvent.click(within(preview).getByRole("button", { name: "打开文档" }));
+    const opened = await screen.findByTestId("opened-path");
+    expect(opened.textContent?.trim()).toBe(changed ? "c.md:" : "c.md:2");
+    expect(calls("open_library").at(-1)?.[1]).toMatchObject({
+      projectId: "p2",
+    });
+    const warning = api.confirm.mock.calls.find(
+      ([, options]) => options?.title === "引用版本不匹配",
+    );
+    expect(!!warning).toBe(changed);
   },
 );
 
@@ -1333,6 +1578,67 @@ test("pre-begin send failure preserves the question and its durable draft for re
     (screen.getByRole("button", { name: "发送问题" }) as HTMLButtonElement)
       .disabled,
   ).toBe(false);
+});
+
+test("the live answer reports one phase and disables repeated stop requests", async () => {
+  const answer = deferred<typeof syntheticAnswer>();
+  await askSynthetic(answer.promise);
+  const sent = calls("assistant_ask")[0][1];
+  const live = within(document.querySelector<HTMLElement>(".assistant-live")!);
+  act(() => {
+    api.events.get("chat-status")?.({
+      payload: { requestId: "older", stage: "planning", detail: "过期状态" },
+    });
+    api.events.get("chat-status")?.({
+      payload: {
+        requestId: sent.requestId,
+        stage: "web_search",
+        detail: "正在搜索网页并核对公开来源",
+      },
+    });
+  });
+  expect(live.getAllByRole("status")).toHaveLength(1);
+  expect(live.getByRole("status").textContent).toBe(
+    "正在搜索网页并核对公开来源",
+  );
+  const cancel = deferred<void>();
+  overrides.set("cancel_chat", () => cancel.promise);
+  const stop = screen.getByRole("button", { name: "停止生成" });
+  fireEvent.click(stop);
+  fireEvent.click(stop);
+  expect(calls("cancel_chat")).toHaveLength(1);
+  expect(stop.getAttribute("aria-disabled")).toBe("true");
+  expect(live.getByRole("status").textContent).toBe("正在停止生成…");
+  await act(async () => {
+    cancel.resolve(undefined);
+    answer.resolve(syntheticAnswer);
+  });
+  expect(screen.queryByRole("button", { name: "正在停止生成" })).toBeNull();
+});
+
+test("retrying a failed regeneration never sends the next question draft", async () => {
+  await askSynthetic(syntheticAnswer);
+  await screen.findByRole("heading", { name: "季度分析" });
+  const turnId = mockConversation.turns[0].id;
+  const input = screen.getByLabelText("向当前空间提问") as HTMLTextAreaElement;
+  fireEvent.change(input, { target: { value: "下一问的未发送草稿" } });
+  overrides.set("assistant_ask", () =>
+    Promise.reject(Error("原问题未重新发送")),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
+  const retry = await screen.findByRole("button", { name: "重试原问题" });
+  expect(input.value).toBe("下一问的未发送草稿");
+  overrides.delete("assistant_ask");
+  fireEvent.click(retry);
+  await waitFor(() => expect(calls("assistant_ask")).toHaveLength(3));
+  expect(calls("assistant_ask").at(-1)?.[1]).toMatchObject({
+    regenerateTurnId: turnId,
+    question: "请分析季度资料",
+  });
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: "停止生成" })).toBeNull(),
+  );
+  expect(input.value).toBe("下一问的未发送草稿");
 });
 
 test("rapid space navigation flushes question drafts even when the document is clean", async () => {

@@ -1,5 +1,6 @@
-import { Check } from "lucide-react";
+import { Check, LockKeyhole } from "lucide-react";
 import { characterArt, cgArt } from "./art";
+import motuanBonusArt from "./assets/motuan-pilot-cg.svg";
 import {
   characters,
   roleLevel,
@@ -105,12 +106,15 @@ export function AlbumCards({
   read,
   episodes,
   onOpen,
+  onOpenMotuanBonus,
 }: {
   role: CharacterId;
   read: number[];
   episodes: StoryEpisode[];
   onOpen: (stage: number) => void;
+  onOpenMotuanBonus: () => void;
 }) {
+  const motuanBonusUnlocked = read.includes(1);
   return (
     <>
       <p>每个角色两张主CG，处理相应章节后开放。资源为预览插画。</p>
@@ -134,10 +138,48 @@ export function AlbumCards({
             </small>
           </button>
         ))}
+        {role === "motuan" && (
+          <button
+            type="button"
+            disabled={!motuanBonusUnlocked}
+            onClick={onOpenMotuanBonus}
+          >
+            {motuanBonusUnlocked ? (
+              <img src={motuanBonusArt} alt="" loading="lazy" />
+            ) : (
+              <span className="motuan-bonus-placeholder" aria-hidden="true">
+                <LockKeyhole size={24} />
+              </span>
+            )}
+            <strong>{motuanBonusTitle}</strong>
+            <small>
+              {motuanBonusUnlocked
+                ? "相识纪念 · 已解锁"
+                : "相识纪念 · 处理相识章节后解锁"}
+            </small>
+          </button>
+        )}
       </div>
     </>
   );
 }
+
+export const motuanBonusTitle = "墨团 · 纸签下的午后";
+
+export function MotuanBonusScene() {
+  return (
+    <figure className="companion-full-cg motuan-bonus-scene">
+      <img
+        src={motuanBonusArt}
+        alt="墨团在圆窗旁打盹，摊开的书页里夹着一枚叶纹纸签"
+      />
+      <figcaption>
+        相识纪念 · 午后的光落在书脊上，墨团替你守着翻到的这一页。
+      </figcaption>
+    </figure>
+  );
+}
+
 export function StoryContent({
   role,
   episode,

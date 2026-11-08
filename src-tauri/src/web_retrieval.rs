@@ -17,7 +17,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 use tauri::State;
 
@@ -26,9 +26,12 @@ const KEY_KIND: &str = "web-brave";
 const SEARCH_RESULTS: usize = 10;
 const MAX_PAGES: usize = 4;
 const MAX_SEARCH_BYTES: usize = 384 * 1024;
+const MAX_SEARCH_ERROR_BYTES: usize = 8 * 1024;
 const MAX_PAGE_BYTES: usize = 768 * 1024;
 const MAX_EXCERPT_CHARS: usize = 2400;
 const WEB_TIMEOUT: Duration = Duration::from_secs(8);
+const DIAGNOSTIC_QUERY: &str = "Rust programming language documentation";
+const DIAGNOSTIC_PAGE_TIMEOUT: Duration = Duration::from_secs(4);
 
 #[derive(Default, Deserialize, Serialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -117,6 +120,115 @@ pub async fn save_web_search_settings(
     .map_err(|_| "保存联网搜索设置失败".to_string())?
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum DiagnosticStatus {
+    Ok,
+    MissingKey,
+    InvalidKey,
+    Keychain,
+    Timeout,
+    Connection,
+    Unauthorized,
+    Forbidden,
+    RateLimited,
+    ProviderError,
+    UnexpectedStatus,
+    InvalidResponse,
+    NoCandidates,
+    PageUnreadable,
+    Unavailable,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BraveDiagnostic {
+    status: DiagnosticStatus,
+    search_elapsed_ms: Option<u64>,
+    page_elapsed_ms: Option<u64>,
+    candidate_count: Option<usize>,
+    http_status: Option<u16>,
+}
+
+impl BraveDiagnostic {
+    fn new(status: DiagnosticStatus) -> Self {
+        Self {
+            status,
+            search_elapsed_ms: None,
+            page_elapsed_ms: None,
+            candidate_count: None,
+            http_status: None,
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn test_web_search_connection(
+    app: tauri::AppHandle,
+    api_key: Option<String>,
+) -> BraveDiagnostic {
+    use tauri::Manager;
+    if cfg!(feature = "desktop-e2e") {
+        return BraveDiagnostic::new(DiagnosticStatus::Unavailable);
+    }
+    let cancel = AtomicBool::new(false);
+    let key = match api_key.filter(|value| !value.trim().is_empty()) {
+        Some(value) => value,
+        None => {
+            match crate::read_key(&app.state::<AppState>(), KEY_KIND, ENDPOINT, &cancel).await {
+                Ok(Some(value)) => value,
+                Ok(None) => return BraveDiagnostic::new(DiagnosticStatus::MissingKey),
+                Err(_) => return BraveDiagnostic::new(DiagnosticStatus::Keychain),
+            }
+        }
+    };
+    run_diagnostic(key.trim()).await
+}
+
+fn elapsed_ms(started: Instant) -> u64 {
+    started.elapsed().as_millis().try_into().unwrap_or(u64::MAX)
+}
+
+async fn run_diagnostic(key: &str) -> BraveDiagnostic {
+    if validate_key(key).is_err() {
+        return BraveDiagnostic::new(DiagnosticStatus::InvalidKey);
+    }
+    let Ok(client) = public_client() else {
+        return BraveDiagnostic::new(DiagnosticStatus::Unavailable);
+    };
+    let started = Instant::now();
+    let result = request_candidates(&client, DIAGNOSTIC_QUERY, key).await;
+    let search_elapsed_ms = Some(elapsed_ms(started));
+    let urls = match result {
+        Ok((_, urls)) => urls,
+        Err(error) => {
+            return BraveDiagnostic {
+                search_elapsed_ms,
+                http_status: error.http_status.map(|status| status.as_u16()),
+                ..BraveDiagnostic::new(error.status)
+            };
+        }
+    };
+    let mut report = BraveDiagnostic {
+        search_elapsed_ms,
+        candidate_count: Some(urls.len()),
+        http_status: Some(StatusCode::OK.as_u16()),
+        ..BraveDiagnostic::new(DiagnosticStatus::NoCandidates)
+    };
+    if let Some(url) = urls.into_iter().next() {
+        let started = Instant::now();
+        let terms = query_terms(DIAGNOSTIC_QUERY);
+        let page =
+            tokio::time::timeout(DIAGNOSTIC_PAGE_TIMEOUT, fetch_page(&client, url, &terms)).await;
+        report.page_elapsed_ms = Some(elapsed_ms(started));
+        report.status = match page {
+            Ok(Some(_)) => DiagnosticStatus::Ok,
+            _ => DiagnosticStatus::PageUnreadable,
+        };
+    }
+    report
+}
+
 fn validate_key(value: &str) -> Result<(), String> {
     if !(8..=512).contains(&value.len()) || !value.bytes().all(|b| b.is_ascii_graphic()) {
         return Err("Brave Search API 密钥格式无效".into());
@@ -131,7 +243,11 @@ pub(crate) struct PublicQuery(String);
 /// are eligible. This gate accepts neither source context nor arbitrary URLs.
 pub(crate) fn safe_query(question: &str, proposed: &str) -> Result<PublicQuery, String> {
     let denied = "未找到可安全发送的公开查询词，本轮保留可用的本地结果";
-    if explicitly_offline(question) || sensitive(question) || sensitive(proposed) {
+    if explicitly_offline(question)
+        || sensitive(question)
+        || sensitive(proposed)
+        || private_work(question)
+    {
         return Err(denied.into());
     }
     let words: Vec<&str> = proposed.split_whitespace().collect();
@@ -198,7 +314,7 @@ pub(crate) fn explicitly_offline(question: &str) -> bool {
         .split_whitespace()
         .collect::<Vec<_>>()
         .join(" ");
-    [
+    let no_web = [
         "别联网",
         "不联网",
         "不要联网",
@@ -211,30 +327,19 @@ pub(crate) fn explicitly_offline(question: &str) -> bool {
         "不要使用互联网",
         "不要搜索互联网",
         "不使用互联网",
-        "只用本地",
-        "仅用本地",
-        "只使用本地",
-        "仅使用本地",
-        "只看本地",
-        "仅限本地",
-        "只用附件",
-        "仅用附件",
-        "只用所选资料",
-        "仅用所选资料",
-        "只使用所选资料",
-        "仅使用所选资料",
-        "仅限所选资料",
-        "只用选中的资料",
-        "仅使用选中的资料",
-        "只按这份",
-        "只按这些",
-        "仅按这份",
-        "只看这份",
-        "只用这份",
-        "只根据",
-        "仅根据",
-        "只参考",
-        "仅参考",
+        "不要访问外部网站",
+        "禁止访问外部网站",
+        "请勿访问外部网站",
+        "不允许访问外部网站",
+        "不要使用外部网站",
+        "不访问外部网站",
+        "别访问外部网站",
+        "不要访问任何网站",
+        "不要查外网",
+        "不访问外网",
+        "别查外网",
+        "禁止外发",
+        "不要外发",
         "不查网页",
         "别查网页",
         "不要查网页",
@@ -248,8 +353,16 @@ pub(crate) fn explicitly_offline(question: &str) -> bool {
         "不要上网",
         "别上网",
         "不上网",
+        "关闭联网",
+        "关掉联网",
         "no web",
         "no internet",
+        "no external websites",
+        "without external websites",
+        "do not access external websites",
+        "don't access external websites",
+        "do not use external websites",
+        "don't use external websites",
         "without web access",
         "without internet",
         "without browsing",
@@ -267,15 +380,115 @@ pub(crate) fn explicitly_offline(question: &str) -> bool {
         "do not browse",
         "don't browse",
         "offline only",
-        "use only",
-        "only use",
-        "only the selected sources",
-        "only the attached",
-        "based only on",
         "local only",
+        "work offline",
+        "answer offline",
     ]
     .iter()
-    .any(|needle| q.contains(needle))
+    .any(|needle| q.contains(needle));
+
+    // "Only the supplied documents" is a local restriction, while "only
+    // Python's official website" explicitly describes a public source.
+    let only_local_chinese = ["只", "仅", "只允许", "仅允许"].iter().any(|only| {
+        q.match_indices(only).any(|(at, _)| {
+            if q[..at].ends_with('不') {
+                return false;
+            }
+            let after = q[at + only.len()..].trim_start();
+            [
+                "使用", "依照", "依据", "根据", "基于", "参考", "限于", "限", "用", "看", "按",
+            ]
+            .iter()
+            .filter_map(|verb| after.strip_prefix(verb))
+            .any(|object| {
+                let object = object.trim_start();
+                [
+                    "本地",
+                    "附件",
+                    "所选",
+                    "选中",
+                    "已选",
+                    "这份",
+                    "这两份",
+                    "这几份",
+                    "这些",
+                    "此处",
+                    "本文",
+                    "原文",
+                    "提供的",
+                    "给出的",
+                    "给你的",
+                    "上传",
+                    "以下",
+                    "下列",
+                    "上述",
+                    "手头",
+                    "当前文档",
+                    "当前空间",
+                    "公司内部",
+                    "我发的",
+                ]
+                .iter()
+                .any(|target| object.starts_with(target))
+            })
+        })
+    });
+    let only_local_english = [
+        "use only ",
+        "only use ",
+        "based only on ",
+        "only based on ",
+        "only ",
+    ]
+    .iter()
+    .any(|prefix| {
+        q.match_indices(prefix).any(|(at, _)| {
+            if q[..at].ends_with("not ") {
+                return false;
+            }
+            let object = q[at + prefix.len()..].trim_start_matches("the ");
+            [
+                "selected ",
+                "attached ",
+                "uploaded ",
+                "provided ",
+                "supplied ",
+                "given ",
+                "local ",
+                "internal ",
+                "these documents",
+                "this document",
+                "this text",
+            ]
+            .iter()
+            .any(|target| object.starts_with(target))
+        })
+    });
+    no_web || only_local_chinese || only_local_english
+}
+
+fn private_work(question: &str) -> bool {
+    let q = question.to_lowercase();
+    [
+        "我的客户",
+        "我们的客户",
+        "客户资料",
+        "客户隐私",
+        "内部项目",
+        "my client",
+        "our client",
+        "client records",
+        "internal project",
+    ]
+    .iter()
+    .any(|term| q.contains(term))
+        || (q.contains("客户")
+            && ["梳理", "跟进", "整理", "交付"]
+                .iter()
+                .any(|term| q.contains(term))
+            && ["项目", "会议", "文件", "记录"]
+                .iter()
+                .any(|term| q.contains(term)))
 }
 
 fn appears_in_question(question: &str, word: &str) -> bool {
@@ -283,10 +496,17 @@ fn appears_in_question(question: &str, word: &str) -> bool {
         return question.contains(word);
     }
     // ASCII tokens must not be newly extracted from larger words/identifiers.
-    let part = |c: char| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.' | '+');
+    let part = |c: char| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '+');
     question.match_indices(word).any(|(start, _)| {
-        !question[..start].chars().next_back().is_some_and(part)
+        // A period joins a version or hostname only when text continues
+        // immediately beyond it. Sentence-ending punctuation is a boundary.
+        !question[..start]
+            .trim_end_matches('.')
+            .chars()
+            .next_back()
+            .is_some_and(part)
             && !question[start + word.len()..]
+                .trim_start_matches('.')
                 .chars()
                 .next()
                 .is_some_and(part)
@@ -369,11 +589,12 @@ pub(crate) struct WebResults {
 
 #[derive(Deserialize)]
 struct SearchResponse {
+    #[serde(rename = "type")]
+    kind: Option<String>,
     web: Option<WebBlock>,
 }
 #[derive(Deserialize)]
 struct WebBlock {
-    #[serde(default)]
     results: Vec<BraveHit>,
 }
 #[derive(Deserialize)]
@@ -525,19 +746,31 @@ fn public_client() -> Result<Client, String> {
         .map_err(|_| "无法初始化安全网页读取客户端".into())
 }
 
-async fn limited_body(response: reqwest::Response, limit: usize) -> Result<Vec<u8>, String> {
+enum BodyReadError {
+    TooLarge,
+    Timeout,
+    Interrupted,
+}
+
+async fn limited_body(response: reqwest::Response, limit: usize) -> Result<Vec<u8>, BodyReadError> {
     if response
         .content_length()
         .is_some_and(|length| length > limit as u64)
     {
-        return Err("网页或搜索响应超过大小限制".into());
+        return Err(BodyReadError::TooLarge);
     }
     let mut body = Vec::new();
     let mut chunks = response.bytes_stream();
     while let Some(chunk) = chunks.next().await {
-        let chunk = chunk.map_err(|_| "网页或搜索响应读取中断")?;
+        let chunk = chunk.map_err(|error| {
+            if error.is_timeout() {
+                BodyReadError::Timeout
+            } else {
+                BodyReadError::Interrupted
+            }
+        })?;
         if chunk.len() > limit - body.len() {
-            return Err("网页或搜索响应超过大小限制".into());
+            return Err(BodyReadError::TooLarge);
         }
         body.extend_from_slice(&chunk);
     }
@@ -562,9 +795,13 @@ fn response_is_public(response: &reqwest::Response) -> bool {
         .is_some_and(|address| globally_routable(address.ip()))
 }
 
-fn parse_hits(bytes: &[u8]) -> Result<(usize, Vec<Url>), String> {
-    let payload: SearchResponse =
-        serde_json::from_slice(bytes).map_err(|_| "搜索服务返回的结果格式无效")?;
+fn parse_hits(bytes: &[u8]) -> Option<(usize, Vec<Url>)> {
+    let payload: SearchResponse = serde_json::from_slice(bytes).ok()?;
+    if payload.kind.as_deref().is_some_and(|kind| kind != "search")
+        || (payload.kind.is_none() && payload.web.is_none())
+    {
+        return None;
+    }
     let hits = payload.web.map_or_else(Vec::new, |block| block.results);
     let count = hits.len().min(SEARCH_RESULTS);
     let mut seen = HashSet::new();
@@ -585,23 +822,14 @@ fn parse_hits(bytes: &[u8]) -> Result<(usize, Vec<Url>), String> {
         })
         .take(MAX_PAGES)
         .collect();
-    Ok((count, urls))
+    Some((count, urls))
 }
 
 fn safe_to_dispatch(state: &AppState, cancel: &AtomicBool) -> bool {
     !cancel.load(Ordering::SeqCst) && is_enabled(state)
 }
 
-async fn fetch_page(
-    client: &Client,
-    url: Url,
-    terms: &[String],
-    state: &AppState,
-    cancel: &AtomicBool,
-) -> Option<WebEvidence> {
-    if !safe_to_dispatch(state, cancel) {
-        return None;
-    }
+async fn fetch_page(client: &Client, url: Url, terms: &[String]) -> Option<WebEvidence> {
     let response = client
         .get(url.clone())
         .header(header::ACCEPT, "text/html,text/plain")
@@ -698,24 +926,56 @@ fn excerpt(blocks: &[String], terms: &[String]) -> String {
         .join("\n\n")
 }
 
-async fn discover(
-    state: &AppState,
-    query: &PublicQuery,
-    cancel: &AtomicBool,
-) -> Result<(Client, usize, Vec<Url>), String> {
-    let key = crate::read_key(state, KEY_KIND, ENDPOINT, cancel)
-        .await?
-        .ok_or("尚未配置 Brave Search API 密钥")?;
-    validate_key(&key)?;
-    if !safe_to_dispatch(state, cancel) {
-        return Err("联网搜索已关闭或取消".into());
+#[derive(Debug)]
+struct SearchFailure {
+    status: DiagnosticStatus,
+    http_status: Option<StatusCode>,
+}
+
+impl SearchFailure {
+    fn new(status: DiagnosticStatus, http_status: Option<StatusCode>) -> Self {
+        Self {
+            status,
+            http_status,
+        }
     }
-    let client = public_client()?;
-    let mut token =
-        header::HeaderValue::from_str(&key).map_err(|_| "Brave Search API 密钥格式无效")?;
+
+    fn from_http(status: StatusCode) -> Self {
+        let kind = match status {
+            StatusCode::UNAUTHORIZED => DiagnosticStatus::Unauthorized,
+            StatusCode::FORBIDDEN => DiagnosticStatus::Forbidden,
+            StatusCode::TOO_MANY_REQUESTS => DiagnosticStatus::RateLimited,
+            status if status.is_server_error() => DiagnosticStatus::ProviderError,
+            _ => DiagnosticStatus::UnexpectedStatus,
+        };
+        Self::new(kind, Some(status))
+    }
+
+    fn warning(&self) -> String {
+        match self.status {
+            DiagnosticStatus::InvalidKey => "Brave Search API 密钥格式无效。",
+            DiagnosticStatus::Timeout => "Brave Search 请求超时。",
+            DiagnosticStatus::Connection => "无法完成 Brave Search 连接，请检查网络后重试。",
+            DiagnosticStatus::Unauthorized => "Brave Search 未接受密钥，请检查自动联网设置。",
+            DiagnosticStatus::Forbidden => "Brave Search 拒绝访问，请检查密钥权限和订阅。",
+            DiagnosticStatus::RateLimited => "Brave Search 额度或速率受限，请稍后再试。",
+            DiagnosticStatus::ProviderError => "Brave Search 服务暂不可用，请稍后再试。",
+            DiagnosticStatus::InvalidResponse => "Brave Search 返回了无法处理的响应。",
+            _ => "Brave Search 暂不可用。",
+        }
+        .into()
+    }
+}
+
+fn brave_request(
+    client: &Client,
+    query: &str,
+    key: &str,
+) -> Result<reqwest::RequestBuilder, SearchFailure> {
+    let mut token = header::HeaderValue::from_str(key)
+        .map_err(|_| SearchFailure::new(DiagnosticStatus::InvalidKey, None))?;
     token.set_sensitive(true);
     let search_lang = if query
-        .0
         .chars()
         .any(|c| ('\u{3400}'..='\u{9fff}').contains(&c))
     {
@@ -723,12 +983,12 @@ async fn discover(
     } else {
         "en"
     };
-    let response = client
+    Ok(client
         .get(ENDPOINT)
         .header(header::ACCEPT, "application/json")
         .header("X-Subscription-Token", token)
         .query(&[
-            ("q", query.0.as_str()),
+            ("q", query),
             ("count", "10"),
             ("country", "ALL"),
             ("result_filter", "web"),
@@ -736,26 +996,110 @@ async fn discover(
             ("spellcheck", "false"),
             ("operators", "false"),
             ("search_lang", search_lang),
-        ])
+        ]))
+}
+
+async fn request_candidates(
+    client: &Client,
+    query: &str,
+    key: &str,
+) -> Result<(usize, Vec<Url>), SearchFailure> {
+    let response = brave_request(client, query, key)?
         .send()
         .await
-        .map_err(|_| "连接 Brave Search 失败")?;
+        .map_err(|error| {
+            let status = if error.is_timeout() {
+                DiagnosticStatus::Timeout
+            } else {
+                DiagnosticStatus::Connection
+            };
+            SearchFailure::new(status, None)
+        })?;
     if !response_is_public(&response) {
-        return Err("搜索服务的连接地址无法验证".into());
+        return Err(SearchFailure::new(DiagnosticStatus::Connection, None));
     }
-    match response.status() {
-        StatusCode::OK => {}
-        StatusCode::TOO_MANY_REQUESTS => return Err("搜索服务额度或速率受限，请稍后再试".into()),
-        StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-            return Err("搜索服务拒绝密钥，请检查设置".into())
+    decode_candidate_response(response).await
+}
+
+async fn decode_candidate_response(
+    response: reqwest::Response,
+) -> Result<(usize, Vec<Url>), SearchFailure> {
+    let status = response.status();
+    if status != StatusCode::OK {
+        let mut error = SearchFailure::from_http(status);
+        if status == StatusCode::UNPROCESSABLE_ENTITY && invalid_subscription(response).await {
+            error.status = DiagnosticStatus::Unauthorized;
         }
-        status => return Err(format!("搜索服务返回 HTTP {}", status.as_u16())),
+        return Err(error);
+    }
+    let invalid = || SearchFailure::new(DiagnosticStatus::InvalidResponse, Some(status));
+    if !identity_encoding(&response) {
+        return Err(invalid());
+    }
+    let bytes = limited_body(response, MAX_SEARCH_BYTES)
+        .await
+        .map_err(|error| {
+            let kind = match error {
+                BodyReadError::TooLarge => DiagnosticStatus::InvalidResponse,
+                BodyReadError::Timeout => DiagnosticStatus::Timeout,
+                BodyReadError::Interrupted => DiagnosticStatus::Connection,
+            };
+            SearchFailure::new(kind, Some(status))
+        })?;
+    parse_hits(&bytes).ok_or_else(invalid)
+}
+
+async fn invalid_subscription(response: reqwest::Response) -> bool {
+    #[derive(Deserialize)]
+    struct Envelope {
+        error: ErrorCode,
+    }
+    #[derive(Deserialize)]
+    struct ErrorCode {
+        code: String,
     }
     if !identity_encoding(&response) {
-        return Err("搜索服务返回了不支持的压缩格式".into());
+        return false;
     }
-    let (searched, urls) = parse_hits(&limited_body(response, MAX_SEARCH_BYTES).await?)?;
+    let Ok(bytes) = limited_body(response, MAX_SEARCH_ERROR_BYTES).await else {
+        return false;
+    };
+    serde_json::from_slice::<Envelope>(&bytes)
+        .is_ok_and(|payload| payload.error.code == "SUBSCRIPTION_TOKEN_INVALID")
+}
+
+async fn discover(
+    state: &AppState,
+    query: &PublicQuery,
+    cancel: &AtomicBool,
+) -> Result<(Client, usize, Vec<Url>), String> {
+    let key = crate::read_key(state, KEY_KIND, ENDPOINT, cancel)
+        .await
+        .map_err(|error| {
+            if error == crate::credentials::PENDING {
+                crate::credentials::PENDING
+            } else {
+                "无法读取 Brave Search 密钥，请检查钥匙串授权。"
+            }
+        })?
+        .ok_or("尚未配置 Brave Search API 密钥。")?;
+    validate_key(&key)?;
+    if !safe_to_dispatch(state, cancel) {
+        return Err("联网搜索已关闭或取消".into());
+    }
+    let client = public_client()?;
+    let (searched, urls) = request_candidates(&client, &query.0, &key)
+        .await
+        .map_err(|error| error.warning())?;
     Ok((client, searched, urls))
+}
+
+fn query_terms(query: &str) -> Vec<String> {
+    let mut terms = crate::db::query_terms(query);
+    terms.extend(query.split_whitespace().map(str::to_lowercase));
+    terms.sort();
+    terms.dedup();
+    terms
 }
 
 async fn find_pages(
@@ -768,14 +1112,19 @@ async fn find_pages(
         tokio::time::timeout_at(deadline, discover(state, &query, cancel))
             .await
             .map_err(|_| "联网搜索超时，本轮使用已取得的其他来源".to_string())??;
-    let mut terms = crate::db::query_terms(&query.0);
-    terms.extend(query.0.split_whitespace().map(str::to_lowercase));
-    terms.sort();
-    terms.dedup();
+    let terms = query_terms(&query.0);
     let mut tasks = stream::iter(urls.into_iter().enumerate())
         .map(|(rank, url)| {
-            let page = fetch_page(&client, url, &terms, state, cancel);
-            async move { (rank, page.await) }
+            let client = &client;
+            let terms = &terms;
+            async move {
+                let page = if safe_to_dispatch(state, cancel) {
+                    fetch_page(client, url, terms).await
+                } else {
+                    None
+                };
+                (rank, page)
+            }
         })
         .buffer_unordered(MAX_PAGES);
     let mut ready = vec![];
@@ -843,6 +1192,8 @@ mod tests {
         )
         .is_ok());
         assert!(safe_query("请查 Rust 1.90 发布说明", "rust 1.90 official").is_ok());
+        assert!(safe_query("Check Rust 1.90.0.", "rust 1.90.0 official").is_ok());
+        assert!(safe_query("Check Rust 1.90.0.", "rust 1.90 official").is_err());
         assert!(safe_query("请查最新版 Firefox", "Firefox 最新").is_ok());
         assert!(safe_query("请查 RustyTools", "Rust latest").is_err());
         assert!(safe_query("请找公开规范", "Acme latest").is_err());
@@ -859,9 +1210,14 @@ mod tests {
         for question in [
             "仅使用所选资料，核对 Python version",
             "不要访问互联网，核对 Python version",
+            "不要访问外部网站。请核对 Python version。",
+            "只根据选中的文件核对 Python version。",
+            "只根据这两份文档核对 Python version。",
             "Check Python version without internet access",
             "Check Python version, do not use the web",
             "Check Python version, DON’T  USE THE WEB",
+            "Do not access external websites. Check Python version.",
+            "Only use the selected documents to check Python version.",
         ] {
             assert!(explicitly_offline(question), "{question}");
             assert!(
@@ -872,6 +1228,23 @@ mod tests {
         let compare = "比较所选资料与 Python 官网最新 version";
         assert!(!explicitly_offline(compare));
         assert!(safe_query(compare, "Python version official").is_ok());
+        for official in [
+            "请只参考 Python 官网，核对 Python 3.14.0 的发布日期。",
+            "Only use Python's official website to verify Python 3.14.0.",
+        ] {
+            assert!(!explicitly_offline(official), "{official}");
+            assert!(
+                safe_query(official, "Python 3.14.0 release").is_ok(),
+                "{official}"
+            );
+        }
+    }
+
+    #[test]
+    fn explicit_client_work_is_never_a_public_query() {
+        assert!(safe_query("帮我梳理客户张三的星芒项目。", "张三 星芒项目").is_err());
+        assert!(safe_query("Summarize my client Acme's project", "Acme project").is_err());
+        assert!(safe_query("查最新版客户关系管理软件 Firefox", "Firefox latest").is_ok());
     }
 
     #[test]
@@ -939,8 +1312,125 @@ mod tests {
         assert_eq!(count, 5);
         assert_eq!(urls.len(), 2);
         assert_eq!(urls[0].as_str(), "https://rust-lang.org/news?id=1");
-        assert!(parse_hits(b"invalid").is_err());
+        assert!(parse_hits(b"invalid").is_none());
+        assert!(parse_hits(br#"{}"#).is_none());
+        assert!(parse_hits(br#"{"type":"error","message":"private"}"#).is_none());
+        assert!(parse_hits(br#"{"type":"search","web":{}}"#).is_none());
         assert_eq!(parse_hits(br#"{"type":"search"}"#).unwrap().0, 0);
+    }
+
+    #[tokio::test]
+    async fn diagnostic_response_classifies_http_failures_without_payload_details() {
+        for (http, kind) in [
+            (401, DiagnosticStatus::Unauthorized),
+            (403, DiagnosticStatus::Forbidden),
+            (429, DiagnosticStatus::RateLimited),
+            (503, DiagnosticStatus::ProviderError),
+            (302, DiagnosticStatus::UnexpectedStatus),
+        ] {
+            let response = tauri::http::Response::builder()
+                .status(http)
+                .body("error details the provider should not expose")
+                .unwrap();
+            let error = decode_candidate_response(response.into())
+                .await
+                .unwrap_err();
+            assert_eq!(error.status, kind);
+            assert_eq!(error.http_status.unwrap().as_u16(), http);
+            assert!(!error.warning().contains("error details"));
+        }
+    }
+
+    #[tokio::test]
+    async fn diagnostic_maps_only_the_known_422_subscription_error() {
+        let known = br#"{"error":{"code":"SUBSCRIPTION_TOKEN_INVALID","detail":"private"},"type":"ErrorResponse"}"#;
+        let mut oversized = known.to_vec();
+        oversized.resize(MAX_SEARCH_ERROR_BYTES + 1, b' ');
+        for (encoding, body, kind) in [
+            ("identity", known.to_vec(), DiagnosticStatus::Unauthorized),
+            (
+                "identity",
+                br#"{"error":{"code":"VALIDATION","detail":"SUBSCRIPTION_TOKEN_INVALID"}}"#
+                    .to_vec(),
+                DiagnosticStatus::UnexpectedStatus,
+            ),
+            ("gzip", known.to_vec(), DiagnosticStatus::UnexpectedStatus),
+            ("identity", oversized, DiagnosticStatus::UnexpectedStatus),
+        ] {
+            let response = tauri::http::Response::builder()
+                .status(422)
+                .header(header::CONTENT_ENCODING, encoding)
+                .body(body)
+                .unwrap();
+            let error = decode_candidate_response(response.into())
+                .await
+                .unwrap_err();
+            assert_eq!(error.status, kind);
+            assert_eq!(error.http_status, Some(StatusCode::UNPROCESSABLE_ENTITY));
+            assert!(!error.warning().contains("private"));
+        }
+    }
+
+    #[tokio::test]
+    async fn diagnostic_response_distinguishes_empty_malformed_and_oversized() {
+        let no_hits = tauri::http::Response::builder()
+            .body(r#"{"type":"search","web":{"results":[]}}"#)
+            .unwrap();
+        assert_eq!(
+            decode_candidate_response(no_hits.into()).await.unwrap(),
+            (0, vec![])
+        );
+        for (encoding, body) in [
+            ("identity", b"<html>bad gateway</html>".to_vec()),
+            ("gzip", br#"{"type":"search"}"#.to_vec()),
+            ("identity", vec![b'a'; MAX_SEARCH_BYTES + 1]),
+        ] {
+            let response = tauri::http::Response::builder()
+                .header(header::CONTENT_ENCODING, encoding)
+                .body(body)
+                .unwrap();
+            let error = decode_candidate_response(response.into())
+                .await
+                .unwrap_err();
+            assert_eq!(error.status, DiagnosticStatus::InvalidResponse);
+            assert_eq!(error.http_status, Some(StatusCode::OK));
+        }
+    }
+
+    #[tokio::test]
+    async fn diagnostic_invalid_key_stops_without_a_request_or_reported_secret() {
+        let report = run_diagnostic("fake\rkey").await;
+        assert_eq!(
+            serde_json::to_value(report).unwrap(),
+            serde_json::json!({
+                "status": "invalid_key",
+                "searchElapsedMs": null,
+                "pageElapsedMs": null,
+                "candidateCount": null,
+                "httpStatus": null
+            })
+        );
+    }
+
+    #[test]
+    fn diagnostic_search_request_uses_fixed_query_and_brave_only_sensitive_header() {
+        let client = public_client().unwrap();
+        let search = brave_request(&client, DIAGNOSTIC_QUERY, "fixture-key")
+            .unwrap()
+            .build()
+            .unwrap();
+        assert_eq!(search.url().host_str(), Some("api.search.brave.com"));
+        assert_eq!(search.url().path(), "/res/v1/web/search");
+        assert!(search.url().query_pairs().any(|(name, value)| {
+            name == "q" && value == "Rust programming language documentation"
+        }));
+        assert!(!search.url().as_str().contains("fixture-key"));
+        assert!(search.headers()["x-subscription-token"].is_sensitive());
+        let page = client
+            .get("https://www.rust-lang.org/learn")
+            .build()
+            .unwrap();
+        assert!(!page.headers().contains_key("x-subscription-token"));
     }
 
     #[test]

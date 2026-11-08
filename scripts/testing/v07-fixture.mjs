@@ -1,7 +1,10 @@
 /** DEV/QA ONLY. Injected into an isolated browser context by qa-v07-browser.mjs.
  * This emulates IPC for presentation checks. It is never imported by the app. */
-export function installV07Fixture() {
-  const key = "inkstone-v07-ui-qa-store",
+export function installV07Fixture({
+  clean = false,
+  companionPilot = false,
+} = {}) {
+  const key = `inkstone-v07-ui-qa-store-${clean ? "clean" : companionPilot ? "pilot" : "base"}`,
     clone = (x) => JSON.parse(JSON.stringify(x));
   const root = "/qa/inkstone-v07",
     now = () => new Date().toISOString(),
@@ -41,7 +44,7 @@ export function installV07Fixture() {
       "documents/doc-1/阅读活动方案.md": {
         content:
           "# 北岸阅读活动\n\n本页所有资料均为虚构，供UI验收使用。\n\n## 两种活动\n\n| 方案 | 时间 | 人数 |\n| --- | --- | --- |\n| 甲 | 周二 | 120 |\n| 乙 | 周四 | 80 |\n\n资料未提供满意度、费用或长期效果。",
-        hash: "qa-hash-reading",
+        hash: "1".repeat(64),
       },
       "documents/doc-2/复盘.md": {
         content: "# 复盘\n\n下一步补充满意度和成本指标。",
@@ -68,6 +71,19 @@ export function installV07Fixture() {
       eligible: null,
     },
   };
+  const templates = clone({ documents: base.documents, files: base.files });
+  if (clean) {
+    base.documents = [];
+    base.files = {};
+    base.companion.settings.enabled = false;
+  }
+  if (companionPilot) {
+    Object.assign(base.companion.settings, {
+      mode: "gentle",
+      reducedMotion: false,
+    });
+    base.companion.roles.motuan = { read: [0, 1], choices: {}, outfit: 1 };
+  }
   let store;
   try {
     store = JSON.parse(localStorage.getItem(key) || "null") || base;
@@ -117,8 +133,18 @@ export function installV07Fixture() {
     name: "北岸阅读计划（合成）",
     managedProjectId: "qa-space",
     files: [],
-    stats,
+    stats: currentStats(),
   });
+  const currentStats = () =>
+    clean && !store.documents.length
+      ? {
+          documents: 0,
+          chunks: 0,
+          vectors: 0,
+          vectorDocuments: 0,
+          embeddingReady: false,
+        }
+      : stats;
   const source = () => ({
     id: 1,
     path: store.documents[0].path,
@@ -132,6 +158,28 @@ export function installV07Fixture() {
     title: "阅读活动方案.md",
     documentId: "doc-1",
   });
+  const wiki = {
+    policy: {
+      revision: 0,
+      enabled: false,
+      paused: false,
+      automatic: false,
+      topic: "",
+      documentIds: [],
+    },
+    pages: [],
+    changes: [],
+    job: { status: "idle", message: "" },
+  };
+  const wikiSummary = {
+    id: "qa-wiki",
+    title: "北岸阅读活动",
+    summary: "两种活动的对照。",
+    revision: 1,
+    sourceCount: 1,
+    stale: false,
+  };
+  const wikiRef = () => ({ ...source(), quote: source().text });
   async function invoke(command, args = {}) {
     window.__INKSTONE_QA_CALLS__.push({ command, args: clone(args) });
     if (command === "plugin:event|listen") {
@@ -143,9 +191,46 @@ export function installV07Fixture() {
       listeners.delete(args.eventId);
       return;
     }
+    if (command === "plugin:dialog|open" && clean)
+      return ["/qa/fixtures/阅读活动方案.md"];
     if (command.startsWith("plugin:")) return null;
     if (command === "bootstrap") return { settings, lastWorkspace: null };
+    if (command === "web_search_settings")
+      return { provider: "brave", enabled: false, hasKey: false };
+    if (command === "test_web_search_connection")
+      return {
+        status: "page_unreadable",
+        searchElapsedMs: 115,
+        pageElapsedMs: 325,
+        candidateCount: 3,
+        httpStatus: 200,
+      };
     if (command === "open_library") return ws();
+    if (command === "library_import" && clean) {
+      const original = templates.documents[0];
+      const doc = {
+        ...original,
+        source: args.paths[0],
+        projectId: args.projectId,
+      };
+      store.documents.push(doc);
+      store.files[doc.path] = templates.files[doc.path];
+      persist();
+      return {
+        jobId: "qa-first-import",
+        projectId: args.projectId,
+        cancelled: false,
+        warnings: [],
+        items: [
+          {
+            source: doc.source,
+            status: "imported",
+            message: "已复制",
+            documentId: doc.id,
+          },
+        ],
+      };
+    }
     if (command === "library_list")
       return {
         projects: store.spaces,
@@ -222,7 +307,7 @@ export function installV07Fixture() {
         })),
       };
     if (command === "workspace_pins") return [];
-    if (command === "index_stats") return stats;
+    if (command === "index_stats") return currentStats();
     if (command === "list_files") return [];
     if (command === "read_file") {
       const f = store.files[args.path];
@@ -277,6 +362,49 @@ export function installV07Fixture() {
       persist();
       return clone(d);
     }
+    if (command === "wiki_status") return clone(wiki);
+    if (command === "wiki_set_policy") {
+      if (args.input.expectedRevision !== wiki.policy.revision)
+        throw Error("旧的 Wiki 范围");
+      const { expectedRevision, ...policy } = args.input;
+      wiki.policy = { ...policy, revision: expectedRevision + 1 };
+      return clone(wiki);
+    }
+    if (command === "wiki_compile") {
+      if (!wiki.policy.enabled || !wiki.policy.documentIds.includes("doc-1"))
+        throw Error("缺少 Wiki 授权资料");
+      wiki.changes = [
+        {
+          id: "qa-wiki-change",
+          pageId: wikiSummary.id,
+          title: wikiSummary.title,
+          status: "pending",
+          reason: "首次整理",
+          created: Date.now() / 1000,
+          canRestore: false,
+          sourceCount: 1,
+        },
+      ];
+      wiki.job = { status: "ready", message: "已整理" };
+      return clone(wiki);
+    }
+    if (command === "wiki_read") {
+      if (!args.changeId && !wiki.pages.length) throw Error("暂无生效版本");
+      return {
+        ...wikiSummary,
+        body: "### 阅读计划\n\n两种活动参加人数。",
+        refs: [wikiRef()],
+      };
+    }
+    if (command === "wiki_review") {
+      if (args.input.id !== "qa-wiki-change" || args.input.action !== "publish")
+        throw Error("非发布请求");
+      wiki.changes[0].status = "published";
+      wiki.pages = [wikiSummary];
+      return clone(wiki);
+    }
+    if (command === "wiki_source") return wikiRef();
+    if (command === "assistant_attachment_list") return [];
     if (command === "assistant_list")
       return clone(
         store.conversations
@@ -294,9 +422,11 @@ export function installV07Fixture() {
         id: crypto.randomUUID(),
         title: args.title || "新会话",
         scope: args.scope ?? null,
-        scopeLabel: args.scope
-          ? "当前文档 · " + args.scope.split("/").at(-1)
-          : "当前空间 · 北岸阅读计划（合成）",
+        scopeLabel: args.general
+          ? "通用问答"
+          : args.scope
+            ? "当前文档 · " + args.scope.split("/").at(-1)
+            : "当前空间 · 北岸阅读计划（合成）",
         archived: false,
         draft: "",
         revision: 0,
@@ -401,6 +531,7 @@ export function installV07Fixture() {
         c.revision++;
         persist();
         send("assistant-accepted", { requestId: args.requestId });
+        const selectedSource = store.documents.length ? source() : null;
         const insufficient = /满意|更好/.test(t.question),
           text = insufficient
             ? "## 资料不足以判断满意度\n\n当前资料只记录时间和人数，没有满意度指标。人数较多不等于更受欢迎。\n\n建议补充问卷样本与调查口径。"
@@ -412,7 +543,7 @@ export function installV07Fixture() {
         });
         send("chat-sources", {
           requestId: args.requestId,
-          sources: [source()],
+          sources: selectedSource ? [selectedSource] : [],
         });
         let partial = "";
         for (let i = 0; i < text.length; i += 12) {
@@ -433,7 +564,29 @@ export function installV07Fixture() {
               : insufficient
                 ? "no_evidence"
                 : "stop",
-          sources: [source()],
+          sources: !args.general && selectedSource ? [selectedSource] : [],
+          externalSources:
+            args.general && selectedSource && args.sources?.projectId
+              ? [
+                  {
+                    id: `doc-1:${selectedSource.startLine}-${selectedSource.endLine}`,
+                    kind: "document",
+                    label: selectedSource.title,
+                    citation: 1,
+                    excerpt: selectedSource.text,
+                    contentHash: selectedSource.hash,
+                    projectId: "qa-space",
+                    documentId: "doc-1",
+                  },
+                ]
+              : [],
+          trace: args.general
+            ? {
+                route: args.sources?.projectId ? "local" : "direct",
+                steps: [],
+                unread: [],
+              }
+            : undefined,
           warning: null,
           retrievalMode: "bm25",
           rerankStatus: "not-requested",
@@ -526,11 +679,12 @@ export function installV07Fixture() {
     },
   };
   localStorage.setItem("inkstone:workspaceMode", "library");
-  localStorage.setItem("inkstone:panel-open", "true");
-  localStorage.setItem(
-    "inkstone:session:" + root,
-    JSON.stringify({ path: store.documents[0].path, mode: "visual" }),
-  );
+  localStorage.setItem("inkstone:panel-open", clean ? "false" : "true");
+  if (store.documents[0] && !clean)
+    localStorage.setItem(
+      "inkstone:session:" + root,
+      JSON.stringify({ path: store.documents[0].path, mode: "visual" }),
+    );
   persist();
   window.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
     unregisterListener(_event, id) {

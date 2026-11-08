@@ -1,8 +1,34 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Conversation, ConversationSummary, StartQuestion } from "./types";
+import type {
+  AssistantDraftContext,
+  Conversation,
+  ConversationSummary,
+  StartQuestion,
+} from "./types";
 
-type Draft = { scope: string | null; text: string };
+type Draft = {
+  scope: string | null;
+  text: string;
+  context?: AssistantDraftContext;
+};
+
+function compactDraftContext(
+  context: AssistantDraftContext | undefined,
+): AssistantDraftContext {
+  const result: AssistantDraftContext = {};
+  const {
+    projectId,
+    documentIds = [],
+    attachments = [],
+  } = context?.sources ?? {};
+  if (projectId || documentIds.length || attachments.length)
+    result.sources = { projectId: projectId ?? null, documentIds, attachments };
+  if (context?.webAccess === "local-only") result.webAccess = "local-only";
+  if (context?.branch)
+    result.branch = { parentTurnId: context.branch.parentTurnId };
+  return result;
+}
 type RunningQuestion = {
   id: string;
   conversationId: string;
@@ -159,6 +185,7 @@ export function useAssistant(
       title?: string;
       archived?: boolean;
       draft?: string;
+      draftContext?: AssistantDraftContext;
       activeLeafId?: string;
     }) =>
       serial(async () => {
@@ -207,11 +234,16 @@ export function useAssistant(
           install(next);
         }
         const c = current.current!;
-        if (c.draft !== draft.text) {
+        const contextChanged =
+          draft.context !== undefined &&
+          JSON.stringify(draft.context) !==
+            JSON.stringify(compactDraftContext(c.draftContext));
+        if (c.draft !== draft.text || contextChanged) {
           const next = await request<Conversation>("assistant_update", {
             conversationId: c.id,
             expectedRevision: c.revision,
             draft: draft.text,
+            ...(contextChanged ? { draftContext: draft.context } : {}),
           });
           if (epoch !== generation.current) throw Error("空间已变化");
           install(next);
@@ -265,6 +297,9 @@ export function useAssistant(
           conversationId: run.conversationId,
           requestId: run.id,
           draft: draft.text,
+          ...(draft.context === undefined
+            ? {}
+            : { draftContext: draft.context }),
         });
       });
     run.writes = write;
@@ -288,8 +323,13 @@ export function useAssistant(
     }
   }, [flushDraft, request]);
   const saveDraft = useCallback(
-    (scope: string | null, text: string) => {
-      pendingDraft.current = { scope, text };
+    (scope: string | null, text: string, context?: AssistantDraftContext) => {
+      pendingDraft.current = {
+        scope,
+        text,
+        context:
+          context === undefined ? undefined : compactDraftContext(context),
+      };
       if (draftTimer.current) clearTimeout(draftTimer.current);
       draftTimer.current = setTimeout(() => {
         draftTimer.current = null;

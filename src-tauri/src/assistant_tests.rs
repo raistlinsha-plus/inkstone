@@ -66,6 +66,7 @@ fn spaces_are_authorized_and_scope_draft_identity_survive_reopen() {
         None,
         None,
         Some("not allowed".into()),
+        None,
         None
     )
     .is_err());
@@ -78,6 +79,7 @@ fn spaces_are_authorized_and_scope_draft_identity_survive_reopen() {
         Some("归档测试".into()),
         Some(true),
         Some("保留中文草稿".into()),
+        None,
         None,
     )
     .unwrap();
@@ -96,6 +98,7 @@ fn spaces_are_authorized_and_scope_draft_identity_survive_reopen() {
         None,
         None,
         Some("stale".into()),
+        None,
         None
     )
     .is_err());
@@ -107,19 +110,26 @@ fn running_draft_is_durable_and_cannot_follow_a_finished_or_foreign_request() {
     let conversation = make(path, "space-a");
     let id = &conversation.id;
     let request = "draft-running";
-    assert!(!save_running_draft(path, "space-a", id, request, "尚未接收").unwrap());
+    let context = DraftContext {
+        web_access: WebAccess::LocalOnly,
+        ..Default::default()
+    };
+    assert!(!save_running_draft(path, "space-a", id, request, "尚未接收", None).unwrap());
     let started = begin(path, "space-a", id, 0, "首问", None, None, request).unwrap();
-    assert!(!save_running_draft(path, "space-b", id, request, "越界").unwrap());
-    assert!(!save_running_draft(path, "space-a", id, "different", "错误请求").unwrap());
-    assert!(save_running_draft(path, "space-a", id, request, "下一问草稿").unwrap());
+    assert!(!save_running_draft(path, "space-b", id, request, "越界", None).unwrap());
+    assert!(!save_running_draft(path, "space-a", id, "different", "错误请求", None).unwrap());
+    assert!(
+        save_running_draft(path, "space-a", id, request, "下一问草稿", Some(&context)).unwrap()
+    );
     let running = get(path, "space-a", id).unwrap();
     assert_eq!(running.draft, "下一问草稿");
+    assert_eq!(running.draft_context, context);
     assert_eq!(running.revision, 2);
 
     let stopped = finish(path, "space-a", &started, Err("已停止"), true).unwrap();
     assert_eq!(stopped.draft, running.draft);
     assert_eq!(stopped.turns[0].candidates[0].status, "stopped");
-    assert!(!save_running_draft(path, "space-a", id, request, "晚到草稿").unwrap());
+    assert!(!save_running_draft(path, "space-a", id, request, "晚到草稿", None).unwrap());
     let retry = begin(
         path,
         "space-a",
@@ -131,10 +141,210 @@ fn running_draft_is_durable_and_cannot_follow_a_finished_or_foreign_request() {
         "retry-draft",
     )
     .unwrap();
-    assert_eq!(get(path, "space-a", id).unwrap().draft, running.draft);
-    assert!(save_running_draft(path, "space-a", id, "retry-draft", "").unwrap());
+    let regenerating = get(path, "space-a", id).unwrap();
+    assert_eq!(regenerating.draft, running.draft);
+    assert_eq!(regenerating.draft_context, context);
+    assert!(save_running_draft(
+        path,
+        "space-a",
+        id,
+        "retry-draft",
+        "",
+        Some(&DraftContext::default())
+    )
+    .unwrap());
     let completed = finish(path, "space-a", &retry, Ok(&response("完成")), false).unwrap();
     assert_eq!(completed.draft, "");
+    assert_eq!(completed.draft_context, DraftContext::default());
+}
+
+#[test]
+fn saved_draft_scope_and_local_only_policy_freeze_with_the_new_turn() {
+    let dir = tempfile::tempdir().unwrap();
+    let data = dir.path();
+    let doc = library::create_document(data, "inbox", "样例.md", "合成资料").unwrap();
+    let convo = make(data, GENERAL_OWNER);
+    let first = begin(
+        data,
+        GENERAL_OWNER,
+        &convo.id,
+        0,
+        "先问",
+        None,
+        None,
+        "first",
+    )
+    .unwrap();
+    let convo = finish(
+        data,
+        GENERAL_OWNER,
+        &first,
+        Ok(&response("先前回答")),
+        false,
+    )
+    .unwrap();
+    let selection = Selection {
+        project_id: Some("inbox".into()),
+        document_ids: vec![doc.id.clone()],
+        attachments: vec![],
+    };
+    let context = DraftContext {
+        sources: Some(selection.clone()),
+        web_access: WebAccess::LocalOnly,
+        branch: Some(DraftBranch {
+            parent_turn_id: None,
+        }),
+    };
+    let saved = update(
+        data,
+        GENERAL_OWNER,
+        &convo.id,
+        convo.revision,
+        None,
+        None,
+        Some("恢复这份资料草稿".into()),
+        None,
+        Some(context.clone()),
+    )
+    .unwrap();
+    assert_eq!(
+        get(data, GENERAL_OWNER, &convo.id).unwrap().draft_context,
+        context
+    );
+
+    let second = begin_with_sources(
+        data,
+        GENERAL_OWNER,
+        &convo.id,
+        saved.revision,
+        &saved.draft,
+        Some(&first.turn_id),
+        None,
+        "next",
+        "keyword",
+        Some(Selection::default()),
+        Some(WebAccess::Auto),
+    )
+    .unwrap();
+    assert_eq!(second.sources.as_ref(), Some(&selection));
+    assert_eq!(second.web_access, WebAccess::LocalOnly);
+    let saved = finish(
+        data,
+        GENERAL_OWNER,
+        &second,
+        Ok(&response("本轮回答")),
+        false,
+    )
+    .unwrap();
+    assert!(saved.draft.is_empty());
+    assert_eq!(saved.draft_context, DraftContext::default());
+    assert_eq!(saved.turns[1].parent_turn_id, None);
+    assert_eq!(saved.turns[1].web_access, WebAccess::LocalOnly);
+
+    let regenerated = begin_with_sources(
+        data,
+        GENERAL_OWNER,
+        &convo.id,
+        saved.revision,
+        "另一个问题",
+        None,
+        Some(&second.turn_id),
+        "retry",
+        "keyword",
+        None,
+        Some(WebAccess::Auto),
+    )
+    .unwrap();
+    assert_eq!(regenerated.sources, Some(selection));
+    assert_eq!(regenerated.web_access, WebAccess::LocalOnly);
+}
+
+#[test]
+fn missing_draft_document_rejects_send_and_preserves_the_draft() {
+    let dir = tempfile::tempdir().unwrap();
+    let data = dir.path();
+    let doc = library::create_document(data, "inbox", "样例.md", "合成资料").unwrap();
+    let convo = make(data, GENERAL_OWNER);
+    let context = DraftContext {
+        sources: Some(Selection {
+            project_id: Some("inbox".into()),
+            document_ids: vec![doc.id.clone()],
+            attachments: vec![],
+        }),
+        ..Default::default()
+    };
+    let saved = update(
+        data,
+        GENERAL_OWNER,
+        &convo.id,
+        convo.revision,
+        None,
+        None,
+        Some("待发送的问题".into()),
+        None,
+        Some(context.clone()),
+    )
+    .unwrap();
+    library::trash(data, &doc.id, false).unwrap();
+    let rejected = begin_with_sources(
+        data,
+        GENERAL_OWNER,
+        &convo.id,
+        saved.revision,
+        &saved.draft,
+        None,
+        None,
+        "do-not-dispatch",
+        "keyword",
+        None,
+        None,
+    )
+    .unwrap_err();
+    assert!(rejected.contains("请重新确认本轮资料范围"));
+    let reopened = get(data, GENERAL_OWNER, &convo.id).unwrap();
+    assert!(reopened.turns.is_empty());
+    assert_eq!(reopened.draft, saved.draft);
+    assert_eq!(reopened.draft_context, context);
+}
+
+#[test]
+fn schema_three_snapshot_remains_readable_and_migrates_legacy_text() {
+    let dir = tempfile::tempdir().unwrap();
+    let data = dir.path();
+    let convo = make(data, "space-a");
+    let first = begin(data, "space-a", &convo.id, 0, "历史问题", None, None, "old").unwrap();
+    let convo = finish(data, "space-a", &first, Ok(&response("历史回答")), false).unwrap();
+    update(
+        data,
+        "space-a",
+        &convo.id,
+        convo.revision,
+        None,
+        None,
+        Some("旧版本保留文字草稿".into()),
+        None,
+        None,
+    )
+    .unwrap();
+    let path = data.join("assistant.sqlite3");
+    let db = Connection::open(&path).unwrap();
+    db.execute_batch(
+        "ALTER TABLE conversations DROP COLUMN draft_context;
+         ALTER TABLE turns DROP COLUMN web_access;
+         PRAGMA user_version=3;",
+    )
+    .unwrap();
+    validate_snapshot(&path).unwrap();
+    let version: i64 = db
+        .pragma_query_value(None, "user_version", |r| r.get(0))
+        .unwrap();
+    assert_eq!(version, 3);
+    drop(db);
+    let reopened = get(data, "space-a", &convo.id).unwrap();
+    assert_eq!(reopened.draft, "旧版本保留文字草稿");
+    assert_eq!(reopened.draft_context, DraftContext::default());
+    assert_eq!(reopened.turns[0].web_access, WebAccess::Auto);
+    assert_eq!(reopened.turns[0].question, "历史问题");
 }
 
 #[test]
@@ -209,6 +419,7 @@ fn candidates_retry_and_draft_edit_are_independent() {
         None,
         None,
         Some("生成时编辑下一问".into()),
+        None,
         None,
     )
     .unwrap();
@@ -409,6 +620,7 @@ fn history_search_reaches_older_pages_and_respects_workspace_and_archive() {
         None,
         None,
         None,
+        None,
     )
     .unwrap();
     for _ in 0..201 {
@@ -440,6 +652,7 @@ fn history_search_reaches_older_pages_and_respects_workspace_and_archive() {
         1,
         None,
         Some(true),
+        None,
         None,
         None,
     )
@@ -546,7 +759,16 @@ fn answer_preferences_migrate_and_remain_independent_of_history() {
     let c = make(path, "space-a");
     let db = path.join("assistant.sqlite3");
     let conn = Connection::open(&db).unwrap();
-    conn.execute_batch("DROP TABLE answer_preferences; DROP TABLE handled_answer_preferences; PRAGMA user_version=1").unwrap();
+    conn.execute_batch(
+        "DROP TABLE answer_preferences;
+         DROP TABLE handled_answer_preferences;
+         DROP TABLE assistant_attachments;
+         DROP TABLE turn_sources;
+         ALTER TABLE conversations DROP COLUMN draft_context;
+         ALTER TABLE turns DROP COLUMN web_access;
+         PRAGMA user_version=1",
+    )
+    .unwrap();
     drop(conn);
     snapshot::validate_snapshot(&db).unwrap();
     assert_eq!(get(path, "space-a", &c.id).unwrap().title, c.title);
