@@ -65,12 +65,14 @@ export function FirstUseGuide({
     },
     {
       label: "提问、核对与保存",
-      detail: "打开回答的来源，核对后将回答保存到文档。",
+      detail:
+        "打开问答并输入第一个问题。展开「本轮资料依据」可核对原文，再把有用的回答保存到文档。",
       action: "打开问答",
       onClick: onAsk,
       unavailable: !hasWorkspace,
     },
   ];
+  const next = steps.find((step) => !step.ready);
   return (
     <section className="welcome-first-use" aria-label="开始使用">
       <details open={!managed || !hasDocuments || !indexed || !modelReady}>
@@ -79,7 +81,10 @@ export function FirstUseGuide({
         </summary>
         <ol>
           {steps.map((step) => (
-            <li key={step.label}>
+            <li
+              key={step.label}
+              aria-current={step === next ? "step" : undefined}
+            >
               <div>
                 <strong>{step.label}</strong>
                 {step.ready && (
@@ -87,6 +92,7 @@ export function FirstUseGuide({
                     {step.action === "打开模型设置" ? "已启用" : "已就绪"}
                   </span>
                 )}
+                {step === next && <span className="status-pill">下一步</span>}
                 <p>{step.detail}</p>
               </div>
               <button

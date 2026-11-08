@@ -30,7 +30,10 @@ export default function QuestionSources({
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
+  const [browsingId, setBrowsingId] = useState("");
+  const [documentQuery, setDocumentQuery] = useState("");
   const project = view.projects.find((item) => item.id === selected.projectId);
+  const browsing = view.projects.find((item) => item.id === browsingId);
   const documentIds = selected.documentIds ?? [];
   const attachedIds = selected.attachments ?? [];
   const docs = view.documents.filter(
@@ -47,6 +50,14 @@ export default function QuestionSources({
     (!!selected.projectId && !project) ||
     availableDocuments.length < documentIds.length;
   const staleAttachments = availableAttachments.length < attachedIds.length;
+  const browsingDocs = view.documents.filter(
+    (doc) => doc.projectId === browsing?.id && doc.status === "ready",
+  );
+  const browsingSelection = browsingId === project?.id ? documentIds : [];
+  const filter = documentQuery.trim().toLocaleLowerCase();
+  const visibleDocs = browsingDocs.filter((doc) =>
+    doc.title.toLocaleLowerCase().includes(filter),
+  );
 
   useEffect(() => {
     let active = true;
@@ -148,16 +159,29 @@ export default function QuestionSources({
         <button
           type="button"
           aria-expanded={adding}
-          onClick={() => setAdding(!adding)}
+          onClick={() => {
+            if (!adding) {
+              setBrowsingId(project?.id ?? "");
+              setDocumentQuery("");
+            }
+            setAdding(!adding);
+          }}
           disabled={disabled || working}
         >
           <Plus size={14} />
-          添加资料
+          {adding ? "完成选择" : "添加资料"}
         </button>
         {project && (
           <button
             type="button"
             className="question-source-chip"
+            aria-description="移除当前知识空间范围"
+            title={
+              docs
+                .filter((doc) => documentIds.includes(doc.id))
+                .map((doc) => doc.title)
+                .join("、") || "移除整个空间"
+            }
             disabled={disabled || working}
             onClick={() =>
               onChange({ ...selected, projectId: null, documentIds: [] })
@@ -168,6 +192,7 @@ export default function QuestionSources({
             <X size={12} />
           </button>
         )}
+        {!project && !attachedIds.length && <small>未添加资料</small>}
         {files
           .filter((file) => attachedIds.includes(file.id))
           .map((file) => (
@@ -207,7 +232,11 @@ export default function QuestionSources({
         </div>
       )}
       {adding && (
-        <div className="question-source-picker">
+        <div
+          className="question-source-picker"
+          role="group"
+          aria-label="选择本轮资料"
+        >
           <button
             type="button"
             disabled={disabled || working}
@@ -219,13 +248,15 @@ export default function QuestionSources({
             <button
               type="button"
               disabled={disabled || working}
-              onClick={() =>
+              onClick={() => {
+                setBrowsingId(currentDocument.projectId);
+                setDocumentQuery("");
                 onChange({
                   ...selected,
                   projectId: currentDocument.projectId,
                   documentIds: [currentDocument.id],
-                })
-              }
+                });
+              }}
             >
               添加当前文档
             </button>
@@ -234,17 +265,14 @@ export default function QuestionSources({
             <label>
               知识空间
               <select
-                value={selected.projectId ?? ""}
+                value={browsing ? browsingId : ""}
                 disabled={disabled || working}
                 onChange={(e) => {
-                  onChange({
-                    ...selected,
-                    projectId: e.target.value || null,
-                    documentIds: [],
-                  });
+                  setBrowsingId(e.target.value);
+                  setDocumentQuery("");
                 }}
               >
-                <option value="">不选择知识空间</option>
+                <option value="">选择要浏览的空间</option>
                 {view.projects.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.title}
@@ -253,29 +281,65 @@ export default function QuestionSources({
               </select>
             </label>
           )}
-          {project && !!docs.length && (
+          {browsing && (
             <div className="question-source-documents">
               <small>
-                可使用整个已选空间，或指定最多 5
-                篇文档。取消最后一篇会移除该空间。
+                {browsingId === project?.id
+                  ? browsingSelection.length
+                    ? `本轮已选 ${browsingSelection.length} 篇，最多 5 篇。`
+                    : "本轮使用整个空间。勾选文档可缩小范围。"
+                  : "选择文档或整个空间后才会加入本轮。"}
               </small>
-              {docs.map((doc) => (
+              <button
+                type="button"
+                disabled={
+                  disabled ||
+                  working ||
+                  !browsingDocs.length ||
+                  (browsingId === project?.id && !documentIds.length)
+                }
+                onClick={() =>
+                  onChange({
+                    ...selected,
+                    projectId: browsing.id,
+                    documentIds: [],
+                  })
+                }
+              >
+                使用整个空间
+              </button>
+              {browsingDocs.length > 5 && (
+                <input
+                  type="search"
+                  aria-label="筛选空间文档"
+                  placeholder="筛选文档标题…"
+                  value={documentQuery}
+                  onChange={(e) => setDocumentQuery(e.target.value)}
+                />
+              )}
+              {!visibleDocs.length && (
+                <small>
+                  {filter ? "没有匹配的文档。" : "空间中还没有可用文档。"}
+                </small>
+              )}
+              {visibleDocs.map((doc) => (
                 <label key={doc.id}>
                   <input
                     type="checkbox"
-                    checked={documentIds.includes(doc.id)}
+                    checked={browsingSelection.includes(doc.id)}
                     disabled={
                       disabled ||
                       working ||
-                      (documentIds.length >= 5 && !documentIds.includes(doc.id))
+                      (browsingSelection.length >= 5 &&
+                        !browsingSelection.includes(doc.id))
                     }
                     onChange={(e) => {
                       const next = e.target.checked
-                        ? [...documentIds, doc.id]
-                        : documentIds.filter((id) => id !== doc.id);
+                        ? [...browsingSelection, doc.id]
+                        : browsingSelection.filter((id) => id !== doc.id);
                       onChange({
                         ...selected,
-                        projectId: next.length ? project.id : null,
+                        projectId: next.length ? browsing.id : null,
                         documentIds: next,
                       });
                     }}

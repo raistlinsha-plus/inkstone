@@ -98,6 +98,7 @@ export function ConversationTimeline({
   root,
   mode,
   busy,
+  progress,
   live,
   onOpen,
   onOpenExternal,
@@ -114,6 +115,7 @@ export function ConversationTimeline({
   root: string;
   mode: "keyword" | "hybrid" | "rerank";
   busy: boolean;
+  progress?: string;
   live: AnswerRecord | null;
   onOpen: (source: SearchResult) => void;
   onOpenExternal?: (source: ExternalSource) => void;
@@ -169,14 +171,7 @@ export function ConversationTimeline({
           onError={(message) => onError(message)}
         />
       )}{" "}
-      {!record.text && active && (
-        <div className="thinking">正在准备资料并组织回答…</div>
-      )}{" "}
-      {record.warning && (
-        <div className="panel-warning" role={active ? "status" : "alert"}>
-          {record.warning}
-        </div>
-      )}
+      {record.warning && <div className="panel-warning">{record.warning}</div>}
       {record.chartWarnings.map((w, i) => (
         <div className="panel-warning" key={i}>
           {w}
@@ -220,28 +215,33 @@ export function ConversationTimeline({
             本轮资料依据 ·{" "}
             {record.sources.length + (record.externalSources?.length ?? 0)}
           </summary>
-          {record.sources.map((source, i) => (
-            <button key={`${source.id}-${i}`} onClick={() => onOpen(source)}>
-              <strong>
-                S{i + 1} · {source.title || source.path.split("/").at(-1)}
-              </strong>
-              <small>
-                第{source.startLine}–{source.endLine}行 · 本轮版本快照
-              </small>
-            </button>
-          ))}
-          {record.externalSources?.map((source) => (
-            <button
-              type="button"
-              key={source.id}
-              onClick={() => onOpenExternal?.(source)}
-            >
-              <strong>
-                S{source.citation} · {sourceKind(source)} · {source.label}
-              </strong>
-              {source.capturedAt && <small>采集于 {source.capturedAt}</small>}
-            </button>
-          ))}
+          <p>选择一条来源，核对本轮使用的原文。</p>
+          <ul className="assistant-citation-list">
+            {record.sources.map((source, i) => (
+              <li key={`${source.id}-${i}`}>
+                <button type="button" onClick={() => onOpen(source)}>
+                  <strong>
+                    S{i + 1} · {source.title || source.path.split("/").at(-1)}
+                  </strong>
+                  <small>
+                    第 {source.startLine}–{source.endLine} 行 · 本轮版本快照
+                  </small>
+                </button>
+              </li>
+            ))}
+            {record.externalSources?.map((source) => (
+              <li key={source.id}>
+                <button type="button" onClick={() => onOpenExternal?.(source)}>
+                  <strong>
+                    S{source.citation} · {sourceKind(source)} · {source.label}
+                  </strong>
+                  {source.capturedAt && (
+                    <small>采集于 {source.capturedAt}</small>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
         </details>
       )}
     </>
@@ -378,6 +378,13 @@ export function ConversationTimeline({
             <span>你</span>
             <p>{live.question}</p>
           </div>
+          <p
+            className="assistant-run-progress"
+            role="status"
+            aria-atomic="true"
+          >
+            {progress || "正在准备本轮资料…"}
+          </p>
           {renderAnswer(live, live.snapshot?.id || "live", busy)}
         </section>
       )}

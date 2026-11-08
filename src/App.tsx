@@ -240,11 +240,14 @@ export default function App() {
   const [, redrawCalendar] = useState(0);
   const [question, setQuestion] = useState("");
   const questionRef = useRef(question);
+  const questionInput = useRef<HTMLTextAreaElement>(null);
+  const [focusQuestion, setFocusQuestion] = useState(false);
   questionRef.current = question;
   const [asked, setAsked] = useState("");
   const [answer, setAnswer] = useState("");
   const [answerSources, setAnswerSources] = useState<SearchResult[]>([]);
   const [chatBusy, setChatBusy] = useState(false);
+  const [chatStopping, setChatStopping] = useState(false);
   const [answerSnapshot, setAnswerSnapshot] = useState<AnswerSnapshot | null>(
     null,
   );
@@ -288,7 +291,12 @@ export default function App() {
   const [assistantScopeChanged, setAssistantScopeChanged] = useState(false);
   const assistantScopeResolver = useRef(currentAssistantScope);
   assistantScopeResolver.current = currentAssistantScope;
-  const [assistantRunError, setAssistantRunError] = useState("");
+  const [assistantRunError, setAssistantRunError] = useState<{
+    message: string;
+    requestId: string;
+    retry?: Turn;
+    retryDraft?: string;
+  }>();
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [skipPreferences, setSkipPreferences] = useState(false);
   const [historyBackground, setHistoryBackground] = useState<HistoryPreview>();
@@ -301,7 +309,7 @@ export default function App() {
     setQuestion("");
     restoreDraftContext();
     setAssistantScopeChanged(false);
-    setAssistantRunError("");
+    setAssistantRunError(undefined);
     setEvidencePreview(null);
     setExternalPreview(null);
   }, [assistant.workspaceKey]);
@@ -321,6 +329,13 @@ export default function App() {
       setAssistantScopeChanged(false);
     }
   }, [assistant.conversation?.id]);
+
+  useEffect(() => {
+    if (focusQuestion && panelOpen && panel === "ask" && !assistant.loading) {
+      questionInput.current?.focus();
+      setFocusQuestion(false);
+    }
+  }, [focusQuestion, panelOpen, panel, assistant.loading]);
 
   const [answerExpanded, setAnswerExpanded] = useState(false);
   const [answerTransfer, setAnswerTransfer] = useState<null | {
@@ -1977,7 +1992,7 @@ export default function App() {
     setAssistantScopeChanged(false);
     questionRef.current = next.draft;
     setQuestion(next.draft);
-    setAssistantRunError("");
+    setAssistantRunError(undefined);
   }
   async function newConversation() {
     if (chatBusy) return;
@@ -1991,7 +2006,7 @@ export default function App() {
       setAsked("");
       setAnswer("");
       setAssistantScopeChanged(true);
-      setAssistantRunError("");
+      setAssistantRunError(undefined);
     } catch (e) {
       fail(e);
     }
@@ -2034,7 +2049,7 @@ export default function App() {
     return true;
   }
   function openAsk() {
-    openKnowledgePanel("ask");
+    openKnowledgePanel("ask", true);
   }
   function openGeneralAsk() {
     void switchGeneral(true).then((ready) => {
@@ -2048,10 +2063,11 @@ export default function App() {
     if (generalAsk) void leaveGeneralForDocument();
     else setPanelOpen(false);
   }
-  function openKnowledgePanel(next: "ask" | "search") {
+  function openKnowledgePanel(next: "ask" | "search", focusComposer = false) {
     const openPanel = () => {
       setPanel(next);
       setPanelOpen(true);
+      if (focusComposer) setFocusQuestion(true);
     };
     if (!generalAsk) openPanel();
     else
@@ -2114,7 +2130,8 @@ export default function App() {
       cleared: false,
       retry: !!options?.retry,
     };
-    setAssistantRunError("");
+    setAssistantRunError(undefined);
+    setChatStopping(false);
     const snapshot: AnswerSnapshot = {
       id,
       workspaceRoot: workspace?.root ?? "",
@@ -2204,7 +2221,18 @@ export default function App() {
       if (requestRef.current === id && epoch === workspaceEpoch.current) {
         const message = displayError(e);
         if (message.includes("历史问题已")) setHistoryBackground(undefined);
-        setAssistantRunError(message);
+        if (stoppedRequest.current === id && message.includes("已停止"))
+          notify(message);
+        else
+          setAssistantRunError({
+            message,
+            requestId: id,
+            ...(submittedQuestion.current?.cleared
+              ? {}
+              : options
+                ? { retry: options.retry }
+                : { retryDraft: prompt }),
+          });
         setAnswerWarning(message);
         setAnswerSnapshot({ ...snapshot, finishReason: "error" });
         setChatStage("");
@@ -2215,10 +2243,27 @@ export default function App() {
         requestRef.current = "";
         chatInFlight.current = false;
         setChatBusy(false);
+        setChatStopping(false);
         submittedQuestion.current = null;
         if (questionRef.current.trim())
           saveAssistantDraft(frozenScope, questionRef.current);
       }
+    }
+  }
+
+  async function stopChat() {
+    const requestId = requestRef.current;
+    if (!requestId || stoppedRequest.current === requestId) return;
+    stoppedRequest.current = requestId;
+    streamBuffer.current?.clear();
+    setChatStopping(true);
+    try {
+      await invoke("cancel_chat", { requestId });
+    } catch (error) {
+      if (requestRef.current !== requestId) return;
+      stoppedRequest.current = "";
+      setChatStopping(false);
+      fail(error);
     }
   }
 
@@ -2404,6 +2449,14 @@ export default function App() {
   );
   const activeAssistantCandidate =
     activeAssistantTurn && selectedCandidate(activeAssistantTurn);
+  const canRetryUnsent =
+    assistantRunError &&
+    (assistantRunError.retry || assistantRunError.retryDraft === question) &&
+    !assistant.conversation?.turns.some((turn) =>
+      turn.candidates.some(
+        (candidate) => candidate.requestId === assistantRunError.requestId,
+      ),
+    );
   const assistantActivity = chatBusy
     ? "working"
     : assistantRunError ||
@@ -2419,7 +2472,9 @@ export default function App() {
           ? "ready"
           : "idle";
   const assistantActivityText = chatBusy
-    ? chatStage || "正在组织回答…"
+    ? chatStopping
+      ? "正在停止生成…"
+      : chatStage || "正在组织回答…"
     : assistantActivity === "blocked"
       ? "问答暂未完成，请查看原因"
       : activeAssistantCandidate?.status === "stopped"
@@ -3357,13 +3412,22 @@ export default function App() {
                 />
                 {assistantRunError && (
                   <div className="panel-warning" role="alert">
-                    {assistantRunError}
-                    <button
-                      disabled={chatBusy || !question.trim()}
-                      onClick={() => void ask()}
-                    >
-                      重试发送
-                    </button>
+                    {assistantRunError.message}
+                    {canRetryUnsent && (
+                      <button
+                        type="button"
+                        disabled={chatBusy}
+                        onClick={() =>
+                          void ask(
+                            assistantRunError.retry
+                              ? { retry: assistantRunError.retry }
+                              : undefined,
+                          )
+                        }
+                      >
+                        {assistantRunError.retry ? "重试原问题" : "重试发送"}
+                      </button>
+                    )}
                   </div>
                 )}
                 {branchParent !== undefined && (
@@ -3385,6 +3449,7 @@ export default function App() {
                     root={workspace?.root ?? ""}
                     mode={retrievalMode}
                     busy={chatBusy}
+                    progress={chatStopping ? "正在停止生成…" : chatStage}
                     live={
                       chatBusy
                         ? {
@@ -3395,7 +3460,7 @@ export default function App() {
                             complete: false,
                             rejectedCharts,
                             chartWarnings: answerChartWarnings,
-                            warning: chatStage || answerWarning,
+                            warning: answerWarning,
                           }
                         : null
                     }
@@ -3600,6 +3665,7 @@ export default function App() {
                     本轮停用回答偏好
                   </label>
                   <textarea
+                    ref={questionInput}
                     aria-label={generalAsk ? "向 AI 提问" : "向当前空间提问"}
                     value={question}
                     maxLength={1500}
@@ -3640,16 +3706,10 @@ export default function App() {
                       <button
                         type="button"
                         className="send-button"
-                        title="停止生成"
-                        aria-label="停止生成"
-                        onClick={() => {
-                          stoppedRequest.current = requestRef.current;
-                          streamBuffer.current?.clear();
-                          setChatStage("正在停止生成…");
-                          void invoke("cancel_chat", {
-                            requestId: requestRef.current,
-                          }).catch(fail);
-                        }}
+                        title={chatStopping ? "正在停止生成" : "停止生成"}
+                        aria-label={chatStopping ? "正在停止生成" : "停止生成"}
+                        aria-disabled={chatStopping}
+                        onClick={() => void stopChat()}
                       >
                         <Square size={13} fill="currentColor" />
                       </button>
@@ -3748,6 +3808,10 @@ export default function App() {
           view={libraryView}
           workspaceRoot={workspace.root}
           onClose={() => setWikiOpen(false)}
+          onImport={() => {
+            setWikiOpen(false);
+            showImport();
+          }}
           onOpenSource={(source) => {
             setWikiOpen(false);
             void leaveGeneralForDocument().then((ready) => {
