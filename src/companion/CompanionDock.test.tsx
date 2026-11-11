@@ -340,3 +340,55 @@ test("other roles retain static artwork and their own story album", async () => 
   fireEvent.click(screen.getByRole("button", { name: "相册" }));
   expect(screen.queryByRole("button", { name: /纸签下的午后/ })).toBe(null);
 });
+
+test("the workspace keeps desktop pet opt-in independent of stories and restores the reading position", async () => {
+  localStorage.clear();
+  current.eligible = 1;
+  const surface = {
+    open: true,
+    showPet: true,
+    onOpen: vi.fn(),
+    onClose: vi.fn(),
+  };
+  const props = {
+    workspace,
+    documentPath: "note.md",
+    documentHash: "hash",
+    saved: true,
+  };
+  const ui = render(<CompanionDock {...props} surface={surface} />);
+  fireEvent.click(await screen.findByRole("button", { name: "显示桌宠" }));
+  ui.rerender(
+    <CompanionDock {...props} surface={{ ...surface, open: false }} />,
+  );
+  const pet = await screen.findByRole("button", { name: "墨团桌宠" });
+  pet.focus();
+  fireEvent.click(pet);
+  const pat = screen.getByRole("button", { name: "摸摸" });
+  expect(
+    pet.compareDocumentPosition(pat) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  pat.focus();
+  fireEvent.keyDown(pat, { key: "Escape" });
+  expect(document.activeElement).toBe(pet);
+  expect(screen.queryByRole("button", { name: "摸摸" })).toBeNull();
+  fireEvent.click(pet);
+  fireEvent.click(screen.getByRole("button", { name: "收起桌宠" }));
+  expect(screen.queryByRole("button", { name: "墨团桌宠" })).toBeNull();
+
+  ui.rerender(<CompanionDock {...props} surface={surface} />);
+  fireEvent.click(await screen.findByRole("button", { name: "故事" }));
+  fireEvent.click(screen.getByRole("button", { name: "阅读章节" }));
+  expect(document.activeElement?.getAttribute("aria-label")).toBe(
+    "捡到一枚书签",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "继续" }));
+  expect(screen.getByText("旁白 · 2 / 5")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "返回章节" }));
+  fireEvent.click(screen.getByRole("button", { name: "继续阅读" }));
+  expect(screen.getByText("旁白 · 2 / 5")).toBeTruthy();
+  expect(
+    mocked.invoke.mock.calls.some(([name]) => name === "companion_story"),
+  ).toBe(false);
+  localStorage.clear();
+});

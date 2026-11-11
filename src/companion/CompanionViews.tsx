@@ -126,12 +126,17 @@ export function AlbumCards({
             disabled={!read.includes(n)}
             onClick={() => onOpen(n)}
           >
-            <img
-              src={cgArt(role, n)}
-              alt={`${characters[role].name} ${stages[n]}CG预览`}
-              loading="lazy"
-              className={!read.includes(n) ? "locked" : ""}
-            />
+            {read.includes(n) ? (
+              <img
+                src={cgArt(role, n)}
+                alt={`${characters[role].name} ${stages[n]}CG`}
+                loading="lazy"
+              />
+            ) : (
+              <span className="motuan-bonus-placeholder" aria-hidden="true">
+                <LockKeyhole size={24} />
+              </span>
+            )}
             <strong>{episodes[n].title}</strong>
             <small>
               {read.includes(n) ? "已解锁 · 点击查看" : "处理相应章节后解锁"}

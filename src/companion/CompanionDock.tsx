@@ -1,5 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { createPortal } from "react-dom";
 import {
   BookOpen,
   Leaf,
@@ -10,6 +17,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import ModalDialog from "../ModalDialog";
+import { isImeEvent } from "../platform/ime";
 import type { LibraryView } from "../library";
 import type { Workspace } from "../types";
 import stories from "./stories.json";
@@ -30,6 +38,8 @@ import "./companion.css";
 
 import ExperienceJournal from "./ExperienceJournal";
 import MotuanSprite from "./MotuanSprite";
+import CompanionPet from "./CompanionPet";
+import StoryReader, { storyBookmark } from "./StoryReader";
 import {
   CharacterPicker,
   GrowthOverview,
@@ -40,6 +50,7 @@ import {
 } from "./CompanionViews";
 
 type View =
+  | "pet"
   | "choose"
   | "growth"
   | "journal"
@@ -52,6 +63,59 @@ type View =
   | "motuan-bonus"
   | "reset";
 const storyData = stories.characters as StoryCharacter[];
+const petStorageKey = "inkstone:companion:pet-generation";
+const viewTitles: Partial<Record<View, string>> = {
+  pet: "桌宠",
+  choose: "选择书房同伴",
+  growth: "成长",
+  journal: "经历",
+  stories: "故事",
+  album: "相册",
+  settings: "偏好与数据",
+  preview: "记录本次完成",
+  reset: "清空同伴数据？",
+  "motuan-bonus": motuanBonusTitle,
+};
+
+function CompanionPage({
+  label,
+  onClose,
+  busy,
+  className,
+  children,
+}: {
+  label: string;
+  onClose: () => void;
+  busy: boolean;
+  className: string;
+  children: ReactNode;
+}) {
+  const page = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const container = page.current;
+    container?.focus();
+    const content = container?.querySelector(".companion-dialog-content");
+    if (content) content.scrollTop = 0;
+  }, [label]);
+  return (
+    <section
+      ref={page}
+      className={`companion-workspace-page ${className}`}
+      aria-label={label}
+      aria-busy={busy || undefined}
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape" || busy || isImeEvent(event.nativeEvent))
+          return;
+        event.stopPropagation();
+        onClose();
+      }}
+    >
+      {children}
+    </section>
+  );
+}
+
 export default function CompanionDock({
   workspace,
   documentPath,
@@ -62,6 +126,7 @@ export default function CompanionDock({
   activityText,
   libraryRevision,
   onOpenSource,
+  surface,
 }: {
   workspace: Workspace | null;
   documentPath: string | null;
@@ -72,6 +137,13 @@ export default function CompanionDock({
   activityText?: string;
   libraryRevision?: LibraryView;
   onOpenSource?: (path: string) => Promise<boolean>;
+  surface?: {
+    open: boolean;
+    showPet: boolean;
+    navigationHost?: HTMLElement | null;
+    onOpen: () => void;
+    onClose: () => void;
+  };
 }) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null),
     [view, setView] = useState<View | null>(null),
@@ -79,6 +151,26 @@ export default function CompanionDock({
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState("");
   const [milestone, setMilestone] = useState(false);
+  const [petGeneration, setPetGeneration] = useState(() => {
+    try {
+      return localStorage.getItem(petStorageKey);
+    } catch {
+      return null;
+    }
+  });
+  const inWorkspace = surface?.open === true;
+  const managed = surface !== undefined;
+  const requestedPage = useRef<View>("pet");
+  const setPet = (visible: boolean) => {
+    const generation = visible ? (snapshot?.generation ?? null) : null;
+    setPetGeneration(generation);
+    try {
+      if (generation) localStorage.setItem(petStorageKey, generation);
+      else localStorage.removeItem(petStorageKey);
+    } catch {
+      /* Visibility can still change for this session. */
+    }
+  };
   const [selected, setSelected] = useState<CharacterId>("motuan"),
     [stage, setStage] = useState(0),
     [choice, setChoice] = useState<string | null>(null),
@@ -116,6 +208,11 @@ export default function CompanionDock({
     setMilestone(false);
     void refresh();
   }, [root, refresh]);
+  useEffect(() => {
+    if (!managed) return;
+    setView(inWorkspace ? requestedPage.current : null);
+    requestedPage.current = "pet";
+  }, [inWorkspace, managed, root]);
   useEffect(() => {
     void refresh();
   }, [documentHash, saveSerial, refresh]);
@@ -155,7 +252,10 @@ export default function CompanionDock({
   ]);
   const readRecall =
     !!workspace?.managedProjectId &&
-    (view === "journal" || (settings?.enabled && snapshot?.recallEnabled));
+    ((view === "journal" && (!managed || inWorkspace)) ||
+      ((!managed || (inWorkspace && view === "pet")) &&
+        settings?.enabled &&
+        snapshot?.recallEnabled));
   const recall =
     readRecall &&
     recallResult?.key === recallKey &&
@@ -277,7 +377,7 @@ export default function CompanionDock({
         }),
       (result) => {
         setSnapshot(result.snapshot);
-        setView(null);
+        setView(inWorkspace ? "pet" : null);
         setPreview(null);
         if (
           role === "motuan" &&
@@ -355,21 +455,23 @@ export default function CompanionDock({
         setNotice("同伴数据已导出；不包含API密钥或工作正文。");
       },
     );
-  const episode = storyData.find((s) => s.id === role)?.episodes[stage];
+  const episodes = storyData.find((s) => s.id === role)?.episodes ?? [];
+  const episode = episodes[stage];
+  const canRead = (stageNumber: number) =>
+    progress?.read.includes(stageNumber) === true ||
+    (!!settings?.enabled && snapshot?.eligible === stageNumber);
+  const petEnabled =
+    !!snapshot && !!settings?.enabled && petGeneration === snapshot.generation;
+  const closeView = () => {
+    setNotice("");
+    setView(null);
+    surface?.onClose();
+  };
+  const ViewContainer = inWorkspace ? CompanionPage : ModalDialog;
   const title =
-    view === "choose"
-      ? "选择书房同伴"
-      : view === "preview"
-        ? "记录本次完成"
-        : view === "story"
-          ? (episode?.title ?? "角色故事")
-          : view === "cg"
-            ? (episode?.title ?? "相册")
-            : view === "motuan-bonus"
-              ? motuanBonusTitle
-              : view === "reset"
-                ? "清空同伴数据？"
-                : "书房手札";
+    view === "story" || view === "cg"
+      ? (episode?.title ?? "角色故事")
+      : (view && viewTitles[view]) || "书房手札";
   const pending = snapshot?.pending ?? [];
   const activityLabel = pending.length
     ? "工作已保存，经历待保存"
@@ -382,184 +484,290 @@ export default function CompanionDock({
           : activity === "ready"
             ? activityText || "回答已完成，可核对依据"
             : "";
+  const navigation = (
+    <nav aria-label={inWorkspace ? "同伴功能" : "同伴手札"}>
+      {inWorkspace && surface?.navigationHost && <h2>书房同伴</h2>}
+      {inWorkspace && (
+        <button
+          type="button"
+          disabled={busy}
+          aria-current={view === "pet" ? "page" : undefined}
+          onClick={() => setView("pet")}
+        >
+          桌宠
+        </button>
+      )}
+      <button
+        disabled={busy}
+        aria-current={view === "growth" ? "page" : undefined}
+        onClick={() => setView("growth")}
+      >
+        成长
+      </button>
+      <button
+        disabled={busy}
+        aria-current={view === "journal" ? "page" : undefined}
+        onClick={() => setView("journal")}
+      >
+        经历
+      </button>
+      <button
+        disabled={busy}
+        aria-current={
+          view === "stories" || (inWorkspace && view === "story")
+            ? "page"
+            : undefined
+        }
+        onClick={() => setView("stories")}
+      >
+        故事
+      </button>
+      <button
+        disabled={busy}
+        aria-current={
+          view === "album" ||
+          (inWorkspace && (view === "cg" || view === "motuan-bonus"))
+            ? "page"
+            : undefined
+        }
+        onClick={() => setView("album")}
+      >
+        相册
+      </button>
+      <button
+        disabled={busy}
+        aria-current={view === "settings" ? "page" : undefined}
+        onClick={() => setView("settings")}
+      >
+        偏好与数据
+      </button>
+      {inWorkspace &&
+        surface?.navigationHost &&
+        (view === "stories" || view === "story") && (
+          <section className="companion-season-nav" aria-label="第一季">
+            <p>{r.name} · 第一季</p>
+            {episodes.map((ep) => (
+              <button
+                key={ep.id}
+                type="button"
+                disabled={busy || !canRead(ep.stage)}
+                aria-current={
+                  view === "story" && stage === ep.stage ? "page" : undefined
+                }
+                onClick={() => openStory(ep.stage)}
+              >
+                {ep.stage + 1}. {ep.title}
+              </button>
+            ))}
+          </section>
+        )}
+    </nav>
+  );
+  if (surface && !inWorkspace) {
+    if (!surface.showPet || !petEnabled || !settings) return null;
+    return (
+      <CompanionPet
+        role={role}
+        outfit={outfit}
+        moving={settings.mode === "gentle" && !settings.reducedMotion}
+        quiet={settings.mode === "focus"}
+        milestone={milestone}
+        working={activity === "working"}
+        busy={busy}
+        onQuiet={() =>
+          updateSettings({
+            mode: settings.mode === "focus" ? "gentle" : "focus",
+          })
+        }
+        onHide={() => setPet(false)}
+        onStories={() => {
+          requestedPage.current = "stories";
+          surface.onOpen();
+        }}
+      />
+    );
+  }
   return (
     <section
-      className="companion-dock"
-      aria-label="书房同伴"
+      className={inWorkspace ? "companion-workspace" : "companion-dock"}
+      aria-label={inWorkspace ? "书房同伴工作区" : "书房同伴"}
       data-activity={pending.length ? "needs_input" : activity}
     >
-      {!settings?.enabled ? (
-        <div className="companion-invitation">
-          <Leaf size={16} />
-          <span>书房同伴</span>
-          <button
-            type="button"
-            onClick={() => {
-              setSelected(role);
-              setView("choose");
-            }}
-          >
-            认识同伴
-          </button>
-          {snapshot && (
+      {!inWorkspace &&
+        (!settings?.enabled ? (
+          <div className="companion-invitation">
+            <Leaf size={16} />
+            <span>书房同伴</span>
             <button
               type="button"
-              aria-label="同伴数据设置"
-              onClick={() => setView("settings")}
+              onClick={() => {
+                setSelected(role);
+                setView("choose");
+              }}
             >
-              <Settings2 size={15} />
+              认识同伴
             </button>
-          )}
-        </div>
-      ) : (
-        <>
-          <div
-            className={
-              settings.compact ? "companion-mini" : "companion-summary"
-            }
-          >
-            {role === "motuan" ? (
-              <MotuanSprite
-                mood={
-                  milestone
-                    ? "milestone"
-                    : activity === "working"
-                      ? "reading"
-                      : "idle"
-                }
-                outfit={outfit}
-                animate={settings.mode === "gentle" && !settings.reducedMotion}
-              />
-            ) : (
-              <img
-                src={characterArt(role, outfit)}
-                alt={`${r.name} ${stages[outfit]}阶段预览插画`}
-              />
+            {snapshot && (
+              <button
+                type="button"
+                aria-label="同伴数据设置"
+                onClick={() => setView("settings")}
+              >
+                <Settings2 size={15} />
+              </button>
             )}
-            <div>
-              <strong>
-                {r.name}
-                <span className="companion-stage">{stages[level]}</span>
-              </strong>
-              <p>
-                {activityLabel ||
-                  (settings.mode === "gentle"
-                    ? r.quote
-                    : "专注陪读 · 固定故事离线可用")}
-              </p>
-            </div>
-            <button
-              type="button"
-              aria-label={settings.compact ? "展开同伴" : "收起同伴"}
-              title={settings.compact ? "展开同伴" : "收起同伴"}
-              onClick={() => updateSettings({ compact: !settings.compact })}
-            >
-              <ChevronDown size={16} />
-            </button>
-            <button
-              type="button"
-              aria-label="同伴设置"
-              onClick={() => setView("settings")}
-            >
-              <Settings2 size={16} />
-            </button>
           </div>
-          {recall?.recent && settings.enabled && snapshot?.recallEnabled && (
-            <button
-              type="button"
-              className="companion-recent"
-              title="在手札中查看"
-              onClick={() => setView("journal")}
+        ) : (
+          <>
+            <div
+              className={
+                settings.compact ? "companion-mini" : "companion-summary"
+              }
             >
-              <BookOpen size={14} />
-              <span>
-                <small>最近一起完成 · {recall.recent.day}</small>
-                <strong>{recall.recent.text}</strong>
-              </span>
-            </button>
-          )}
-          {settings.compact && (
-            <div className="companion-compact-actions">
-              <button type="button" onClick={() => setView("journal")}>
-                <BookOpen size={13} />
-                手札
-              </button>
-              <button
-                type="button"
-                disabled={
-                  busy ||
-                  !saved ||
-                  !documentPath ||
-                  !workspace?.managedProjectId
-                }
-                onClick={startPreview}
-              >
-                本次完成
-              </button>
-            </div>
-          )}
-          {!settings.compact && (
-            <div className="companion-links">
-              <button type="button" onClick={() => setView("growth")}>
-                <BookOpen size={13} />
-                手札
-              </button>
-              <button type="button" onClick={() => setView("stories")}>
-                故事
-              </button>
-              <button type="button" onClick={() => setView("album")}>
-                <ImageIcon size={13} />
-                相册
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setNotice(
-                    settings.mode === "gentle"
+              {role === "motuan" ? (
+                <MotuanSprite
+                  mood={
+                    milestone
+                      ? "milestone"
+                      : activity === "working"
+                        ? "reading"
+                        : "idle"
+                  }
+                  outfit={outfit}
+                  animate={
+                    settings.mode === "gentle" && !settings.reducedMotion
+                  }
+                />
+              ) : (
+                <img
+                  src={characterArt(role, outfit)}
+                  alt={`${r.name} ${stages[outfit]}阶段预览插画`}
+                />
+              )}
+              <div>
+                <strong>
+                  {r.name}
+                  <span className="companion-stage">{stages[level]}</span>
+                </strong>
+                <p>
+                  {activityLabel ||
+                    (settings.mode === "gentle"
                       ? r.quote
-                      : "同伴安静陪读。轻互动不会计入成长。",
-                  )
-                }
+                      : "专注陪读 · 固定故事离线可用")}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label={settings.compact ? "展开同伴" : "收起同伴"}
+                title={settings.compact ? "展开同伴" : "收起同伴"}
+                onClick={() => updateSettings({ compact: !settings.compact })}
               >
-                <Heart size={13} />
-                纸签
+                <ChevronDown size={16} />
               </button>
               <button
                 type="button"
-                disabled={
-                  busy ||
-                  !saved ||
-                  !documentPath ||
-                  !workspace?.managedProjectId
-                }
-                onClick={startPreview}
+                aria-label="同伴设置"
+                onClick={() => setView("settings")}
               >
-                本次完成
+                <Settings2 size={16} />
               </button>
             </div>
-          )}
-          {snapshot?.eligible != null && (
-            <div className="companion-ready">
-              <span>{stages[snapshot.eligible]}章节可阅读</span>
+            {recall?.recent && settings.enabled && snapshot?.recallEnabled && (
               <button
                 type="button"
-                onClick={() => openStory(snapshot.eligible!)}
+                className="companion-recent"
+                title="在手札中查看"
+                onClick={() => setView("journal")}
               >
-                打开新章
+                <BookOpen size={14} />
+                <span>
+                  <small>最近一起完成 · {recall.recent.day}</small>
+                  <strong>{recall.recent.text}</strong>
+                </span>
               </button>
-            </div>
-          )}
-          {pending.length > 0 && (
-            <div className="companion-pending">
-              {pending.length}条经历待保存
-              <button type="button" onClick={() => setView("journal")}>
-                查看与重试
-              </button>
-            </div>
-          )}
-        </>
-      )}
-      {notice && (
+            )}
+            {settings.compact && (
+              <div className="companion-compact-actions">
+                <button type="button" onClick={() => setView("journal")}>
+                  <BookOpen size={13} />
+                  手札
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    busy ||
+                    !saved ||
+                    !documentPath ||
+                    !workspace?.managedProjectId
+                  }
+                  onClick={startPreview}
+                >
+                  本次完成
+                </button>
+              </div>
+            )}
+            {!settings.compact && (
+              <div className="companion-links">
+                <button type="button" onClick={() => setView("growth")}>
+                  <BookOpen size={13} />
+                  手札
+                </button>
+                <button type="button" onClick={() => setView("stories")}>
+                  故事
+                </button>
+                <button type="button" onClick={() => setView("album")}>
+                  <ImageIcon size={13} />
+                  相册
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNotice(
+                      settings.mode === "gentle"
+                        ? r.quote
+                        : "同伴安静陪读。轻互动不会计入成长。",
+                    )
+                  }
+                >
+                  <Heart size={13} />
+                  纸签
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    busy ||
+                    !saved ||
+                    !documentPath ||
+                    !workspace?.managedProjectId
+                  }
+                  onClick={startPreview}
+                >
+                  本次完成
+                </button>
+              </div>
+            )}
+            {snapshot?.eligible != null && (
+              <div className="companion-ready">
+                <span>{stages[snapshot.eligible]}章节可阅读</span>
+                <button
+                  type="button"
+                  onClick={() => openStory(snapshot.eligible!)}
+                >
+                  打开新章
+                </button>
+              </div>
+            )}
+            {pending.length > 0 && (
+              <div className="companion-pending">
+                {pending.length}条经历待保存
+                <button type="button" onClick={() => setView("journal")}>
+                  查看与重试
+                </button>
+              </div>
+            )}
+          </>
+        ))}
+      {!inWorkspace && notice && (
         <div className="companion-notice" role="status">
           {notice}
           <button
@@ -571,7 +779,7 @@ export default function CompanionDock({
           </button>
         </div>
       )}
-      {error && !view && (
+      {!inWorkspace && error && !view && (
         <p className="companion-error" role="status">
           {error}
           <button type="button" onClick={() => void refresh()}>
@@ -580,9 +788,9 @@ export default function CompanionDock({
         </p>
       )}
       {view && (
-        <ModalDialog
+        <ViewContainer
           label={title}
-          onClose={() => setView(null)}
+          onClose={closeView}
           busy={busy}
           className="companion-dialog"
         >
@@ -592,60 +800,45 @@ export default function CompanionDock({
               <p>
                 {view === "choose"
                   ? "所有用户自由选择，知识与工具能力相同。"
-                  : "经历、剧情和偏好保存在本机，不作为文档问答证据。"}
+                  : inWorkspace
+                    ? "书房同伴 · 本机进度"
+                    : "经历、剧情和偏好保存在本机，不作为文档问答证据。"}
               </p>
             </div>
             <button
               type="button"
-              aria-label="关闭同伴面板"
+              aria-label={inWorkspace ? "返回工作区" : "关闭同伴面板"}
               disabled={busy}
-              onClick={() => setView(null)}
+              onClick={closeView}
             >
               <X size={18} />
             </button>
           </header>
-          {![
-            "choose",
-            "preview",
-            "story",
-            "cg",
-            "motuan-bonus",
-            "reset",
-          ].includes(view) && (
-            <nav aria-label="同伴手札">
-              <button
-                aria-current={view === "growth" ? "page" : undefined}
-                onClick={() => setView("growth")}
-              >
-                成长
-              </button>
-              <button
-                aria-current={view === "journal" ? "page" : undefined}
-                onClick={() => setView("journal")}
-              >
-                经历
-              </button>
-              <button
-                aria-current={view === "stories" ? "page" : undefined}
-                onClick={() => setView("stories")}
-              >
-                故事
-              </button>
-              <button
-                aria-current={view === "album" ? "page" : undefined}
-                onClick={() => setView("album")}
-              >
-                相册
-              </button>
-              <button
-                aria-current={view === "settings" ? "page" : undefined}
-                onClick={() => setView("settings")}
-              >
-                偏好与数据
-              </button>
-            </nav>
-          )}
+          {(inWorkspace ||
+            ![
+              "choose",
+              "preview",
+              "story",
+              "cg",
+              "motuan-bonus",
+              "reset",
+            ].includes(view)) &&
+            (inWorkspace && surface?.navigationHost
+              ? createPortal(navigation, surface.navigationHost)
+              : navigation)}
           <div className="companion-dialog-content">
+            {inWorkspace && notice && (
+              <div className="companion-notice" role="status">
+                {notice}
+                <button
+                  type="button"
+                  aria-label="关闭同伴提示"
+                  onClick={() => setNotice("")}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            )}
             {error && (
               <p role="alert" className="companion-error">
                 {error}
@@ -659,6 +852,97 @@ export default function CompanionDock({
             )}
             {view === "choose" && snapshot && (
               <CharacterPicker selected={selected} onSelect={setSelected} />
+            )}
+            {view === "pet" && snapshot && (
+              <div className="companion-pet-overview">
+                <div className="companion-profile">
+                  {role === "motuan" ? (
+                    <MotuanSprite
+                      mood={milestone ? "milestone" : "idle"}
+                      outfit={outfit}
+                      animate={
+                        milestone &&
+                        settings?.mode === "gentle" &&
+                        !settings.reducedMotion
+                      }
+                    />
+                  ) : (
+                    <img src={characterArt(role, outfit)} alt={r.name} />
+                  )}
+                  <div>
+                    <h3>
+                      {r.name} · {stages[level]}
+                    </h3>
+                    <p>{r.description}</p>
+                    {settings?.enabled && (
+                      <p>
+                        {petEnabled ? "桌宠在文档工作区可见" : "桌宠已收起"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="companion-workspace-actions">
+                  {!settings?.enabled ? (
+                    <button
+                      type="button"
+                      className="primary"
+                      onClick={() => {
+                        setSelected(role);
+                        setView("choose");
+                      }}
+                    >
+                      认识同伴
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="primary"
+                        onClick={() => setPet(!petEnabled)}
+                      >
+                        {petEnabled ? "收起桌宠" : "显示桌宠"}
+                      </button>
+                      <button type="button" onClick={() => setView("stories")}>
+                        阅读故事
+                      </button>
+                      <button
+                        type="button"
+                        disabled={
+                          busy ||
+                          !saved ||
+                          !documentPath ||
+                          !workspace?.managedProjectId
+                        }
+                        onClick={startPreview}
+                      >
+                        本次完成
+                      </button>
+                    </>
+                  )}
+                </div>
+                {recall?.recent && (
+                  <button
+                    className="companion-recent"
+                    type="button"
+                    onClick={() => setView("journal")}
+                  >
+                    <BookOpen size={15} />
+                    <span>
+                      <small>最近一起完成 · {recall.recent.day}</small>
+                      <strong>{recall.recent.text}</strong>
+                    </span>
+                  </button>
+                )}
+                {pending.length > 0 && (
+                  <button
+                    className="companion-pending"
+                    type="button"
+                    onClick={() => setView("journal")}
+                  >
+                    {pending.length} 条经历待保存 · 查看与重试
+                  </button>
+                )}
+              </div>
             )}
             {view === "growth" && snapshot && (
               <GrowthOverview
@@ -697,34 +981,47 @@ export default function CompanionDock({
             )}
             {view === "stories" && (
               <div className="companion-story-list">
-                {storyData
-                  .find((x) => x.id === role)
-                  ?.episodes.map((ep) => (
-                    <article key={ep.id}>
-                      <span>{stages[ep.stage]}</span>
-                      <h3>{ep.title}</h3>
-                      <p>{ep.paragraphs[0].slice(0, 54)}…</p>
-                      <button
-                        disabled={
-                          busy ||
-                          (!progress?.read.includes(ep.stage) &&
-                            snapshot?.eligible !== ep.stage)
-                        }
-                        onClick={() => openStory(ep.stage)}
-                      >
-                        {progress?.read.includes(ep.stage)
-                          ? "重看故事"
-                          : "阅读章节"}
-                      </button>
-                    </article>
-                  ))}
+                {inWorkspace && (
+                  <p className="companion-season">
+                    {r.name} · 第一季 · 书房来客
+                  </p>
+                )}
+                {episodes.map((ep) => (
+                  <article key={ep.id}>
+                    <span>{stages[ep.stage]}</span>
+                    <h3>{ep.title}</h3>
+                    <p>{ep.paragraphs[0].slice(0, 54)}…</p>
+                    <button
+                      disabled={
+                        busy ||
+                        (!progress?.read.includes(ep.stage) &&
+                          (!settings?.enabled ||
+                            snapshot?.eligible !== ep.stage))
+                      }
+                      onClick={() => openStory(ep.stage)}
+                    >
+                      {progress?.read.includes(ep.stage)
+                        ? "重看故事"
+                        : !settings?.enabled || snapshot?.eligible !== ep.stage
+                          ? "尚未解锁"
+                          : inWorkspace &&
+                              snapshot &&
+                              (storyBookmark(
+                                snapshot.generation,
+                                ep.id,
+                              ).read() ?? 0) > 0
+                            ? "继续阅读"
+                            : "阅读章节"}
+                    </button>
+                  </article>
+                ))}
               </div>
             )}
             {view === "album" && (
               <AlbumCards
                 role={role}
                 read={progress?.read ?? []}
-                episodes={storyData.find((s) => s.id === role)!.episodes}
+                episodes={episodes}
                 onOpen={(n) => {
                   setStage(n);
                   setView("cg");
@@ -732,17 +1029,40 @@ export default function CompanionDock({
                 onOpenMotuanBonus={() => setView("motuan-bonus")}
               />
             )}
-            {view === "story" && episode && (
-              <StoryContent
-                role={role}
-                episode={episode}
-                stage={stage}
-                busy={busy}
-                choice={choice}
-                lockedChoice={!!progress?.choices.c1}
-                onChoice={setChoice}
-              />
-            )}
+            {view === "story" &&
+              episode &&
+              snapshot &&
+              (inWorkspace ? (
+                <StoryReader
+                  key={episode.id}
+                  generation={snapshot.generation}
+                  role={role}
+                  episode={episode}
+                  read={progress?.read.includes(stage) === true}
+                  choice={choice}
+                  lockedChoice={!!progress?.choices.c1}
+                  busy={busy}
+                  canFinish={!!settings?.enabled}
+                  onChoice={setChoice}
+                  onFinish={() =>
+                    progress?.read.includes(stage) &&
+                    (!choice || !!progress.choices.c1)
+                      ? setView("stories")
+                      : finishStory(false)
+                  }
+                  onSkip={() => finishStory(true)}
+                />
+              ) : (
+                <StoryContent
+                  role={role}
+                  episode={episode}
+                  stage={stage}
+                  busy={busy}
+                  choice={choice}
+                  lockedChoice={!!progress?.choices.c1}
+                  onChoice={setChoice}
+                />
+              ))}
             {view === "cg" && (
               <figure className="companion-full-cg">
                 <img
@@ -939,7 +1259,10 @@ export default function CompanionDock({
             </span>
             {view === "choose" ? (
               <>
-                <button disabled={busy} onClick={() => setView(null)}>
+                <button
+                  disabled={busy}
+                  onClick={() => setView(inWorkspace ? "pet" : null)}
+                >
                   稍后
                 </button>
                 <button
@@ -981,7 +1304,10 @@ export default function CompanionDock({
               </>
             ) : view === "preview" && preview ? (
               <>
-                <button disabled={busy} onClick={() => setView(null)}>
+                <button
+                  disabled={busy}
+                  onClick={() => setView(inWorkspace ? "pet" : null)}
+                >
                   暂不记录
                 </button>
                 <button
@@ -992,7 +1318,7 @@ export default function CompanionDock({
                   确认并记录
                 </button>
               </>
-            ) : view === "story" ? (
+            ) : view === "story" && !inWorkspace ? (
               <>
                 <button disabled={busy} onClick={() => finishStory(true)}>
                   明确跳过本章
@@ -1023,7 +1349,8 @@ export default function CompanionDock({
                         (s) => {
                           setSnapshot(s);
                           setMilestone(false);
-                          setView(null);
+                          setPet(false);
+                          setView(inWorkspace ? "pet" : null);
                           setNotice("同伴资料已清空，工作文档和知识会话保留。");
                         },
                       );
@@ -1032,15 +1359,23 @@ export default function CompanionDock({
                   确认清空同伴数据
                 </button>
               </>
-            ) : view === "motuan-bonus" ? (
+            ) : view === "motuan-bonus" || (view === "cg" && inWorkspace) ? (
               <button onClick={() => setView("album")}>返回相册</button>
-            ) : (
+            ) : view === "story" ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setView("stories")}
+              >
+                返回章节
+              </button>
+            ) : inWorkspace ? null : (
               <button disabled={busy} onClick={() => setView(null)}>
                 回到工作
               </button>
             )}
           </footer>
-        </ModalDialog>
+        </ViewContainer>
       )}
     </section>
   );

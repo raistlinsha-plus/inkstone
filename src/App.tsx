@@ -276,6 +276,10 @@ export default function App() {
   const citationBack = useRef<HTMLButtonElement>(null);
   const [webSettingsOpen, setWebSettingsOpen] = useState(false);
   const [wikiOpen, setWikiOpen] = useState(false);
+  const [companionOpen, setCompanionOpen] = useState(false);
+  const [companionNavigation, setCompanionNavigation] =
+    useState<HTMLElement | null>(null);
+  const companionTrigger = useRef<HTMLElement | null>(null);
   const assistant = useAssistant(workspace?.root, generalAsk);
   const assistantRef = useRef(assistant);
   assistantRef.current = assistant;
@@ -1118,6 +1122,7 @@ export default function App() {
       setStats(ws.stats);
       setDocument(null);
       docRef.current = null;
+      setCompanionOpen(false);
       localStorage.setItem("inkstone:workspaceMode", "library");
       setWelcome(!path);
       setError("");
@@ -1162,6 +1167,7 @@ export default function App() {
     )
       return;
     rememberPosition();
+    setCompanionOpen(false);
     ++calendarLoadSequence.current;
     setCalendarBusy(false);
     setCalendarOpen(false);
@@ -1416,6 +1422,7 @@ export default function App() {
         } catch {}
       setWelcome(false);
       setCalendarOpen(false);
+      setCompanionOpen(false);
       if (
         ["json", "mermaid"].includes(documentKind(path)) ||
         restore?.mode === "split" ||
@@ -2103,11 +2110,13 @@ export default function App() {
   }
   function openGeneralAsk() {
     if (citationReturn) {
+      setCompanionOpen(false);
       returnToCitation();
       return;
     }
     void switchGeneral(true).then((ready) => {
       if (ready) {
+        setCompanionOpen(false);
         setPanel("ask");
         setPanelOpen(true);
       }
@@ -2119,8 +2128,24 @@ export default function App() {
     if (generalAsk) void leaveGeneralForDocument();
     else setPanelOpen(false);
   }
+  function openCompanion() {
+    if (citationOpenInFlight.current || companionOpen) return;
+    syncEditor();
+    const focused = globalThis.document.activeElement;
+    companionTrigger.current = focused instanceof HTMLElement ? focused : null;
+    setCompanionOpen(true);
+  }
+  function closeCompanion() {
+    setCompanionOpen(false);
+    requestAnimationFrame(() => {
+      const trigger = companionTrigger.current;
+      if (trigger?.isConnected && !trigger.closest("[hidden]")) trigger.focus();
+      else globalThis.document.getElementById("companion-entry")?.focus();
+    });
+  }
   function openKnowledgePanel(next: "ask" | "search", focusComposer = false) {
     const openPanel = () => {
+      setCompanionOpen(false);
       setPanel(next);
       setPanelOpen(true);
       if (focusComposer) setFocusQuestion(true);
@@ -2900,13 +2925,13 @@ export default function App() {
           </div>
         )}
       <div
-        className={`main-layout ${focusedKnowledge ? "assistant-expanded" : ""} ${standaloneAskOpen ? "ask-workbench" : ""}`}
+        className={`main-layout ${focusedKnowledge && !companionOpen ? "assistant-expanded" : ""} ${standaloneAskOpen && !companionOpen ? "ask-workbench" : ""}`}
       >
         <div className="workspace-rail">
           <button
             className="icon-button workspace-rail-toggle"
             type="button"
-            aria-label={`${sidebarClosed ? "展开" : "收起"}${standaloneAskOpen ? "会话" : "文档"}列表`}
+            aria-label={`${sidebarClosed ? "展开" : "收起"}${companionOpen ? "同伴" : standaloneAskOpen ? "会话" : "文档"}列表`}
             aria-expanded={!sidebarClosed}
             onClick={() => setSidebarClosed(!sidebarClosed)}
           >
@@ -2920,35 +2945,47 @@ export default function App() {
             disabled={busy || booting || citationOpening}
             generalDisabled={generalBusy || citationOpening || !settings}
             calendarOpen={
-              calendarOpen && !wikiOpen && !(panelOpen && panel === "search")
+              !companionOpen && calendarOpen && !wikiOpen && !(panelOpen && panel === "search")
             }
-            generalOpen={standaloneAskOpen && !wikiOpen}
+            generalOpen={!companionOpen && standaloneAskOpen && !wikiOpen}
             homeOpen={
+              !companionOpen &&
               !standaloneAskOpen &&
               !wikiOpen &&
               !calendarOpen &&
               !(panelOpen && panel === "search")
             }
             wikiOpen={wikiOpen}
-            searchOpen={panelOpen && panel === "search" && !wikiOpen}
+            searchOpen={!companionOpen && panelOpen && panel === "search" && !wikiOpen}
             canIndex={!!workspace && !busy && !citationOpening}
             indexDirty={indexDirty}
-            onHome={() =>
+            onHome={() => {
               void leaveGeneralForDocument().then((ready) => {
                 if (!ready) return;
+                setCompanionOpen(false);
                 if (standaloneAskOpen && docRef.current) setCalendarOpen(false);
                 else void showLibraryHome();
-              })
-            }
+              });
+            }}
             onCalendar={() =>
               void leaveGeneralForDocument().then((ready) => {
-                if (ready) void loadCalendar();
+                if (ready) {
+                  setCompanionOpen(false);
+                  void loadCalendar();
+                }
               })
             }
             onGeneralAsk={enableGeneralAsk ? openGeneralAsk : undefined}
             onWiki={
-              workspace?.managedProjectId ? () => setWikiOpen(true) : undefined
+              workspace?.managedProjectId
+                ? () => {
+                    setCompanionOpen(false);
+                    setWikiOpen(true);
+                  }
+                : undefined
             }
+            companionOpen={companionOpen}
+            onCompanion={native ? openCompanion : undefined}
             onSearch={() => openKnowledgePanel("search")}
             onIndex={() => setIndexOpen(true)}
           />
@@ -2964,13 +3001,17 @@ export default function App() {
         </div>
         <aside
           className="sidebar sidebar-compact"
-          aria-label={standaloneAskOpen ? "会话导航" : "文档空间导航"}
+          aria-label={companionOpen ? "同伴导航" : standaloneAskOpen ? "会话导航" : "文档空间导航"}
           hidden={sidebarClosed}
         >
-          <div className="space-sidebar-heading">
-            <strong>{standaloneAskOpen ? "问答" : "文档"}</strong>
-          </div>
-          {standaloneAskOpen ? (
+          {!companionOpen && (
+            <div className="space-sidebar-heading">
+              <strong>{standaloneAskOpen ? "问答" : "文档"}</strong>
+            </div>
+          )}
+          {companionOpen ? (
+            <div className="companion-navigation-slot" ref={setCompanionNavigation} />
+          ) : standaloneAskOpen ? (
             <ConversationSidebar
               conversations={assistant.summaries}
               activeId={assistant.conversation?.id}
@@ -3087,7 +3128,7 @@ export default function App() {
             className="sidebar-resizer"
             role="separator"
             aria-label={
-              standaloneAskOpen ? "调整会话列表宽度" : "调整文档列表宽度"
+              companionOpen ? "调整同伴列表宽度" : standaloneAskOpen ? "调整会话列表宽度" : "调整文档列表宽度"
             }
             aria-orientation="vertical"
             aria-valuemin={240}
@@ -3129,7 +3170,10 @@ export default function App() {
             }}
           />
         )}
-        <main className="main-content" aria-busy={booting}>
+        <main
+          className={`main-content${companionOpen ? " companion-main-active" : ""}`}
+          aria-busy={booting}
+        >
           {error && (
             <div className="error-banner">
               <span>{error}</span>
@@ -3440,10 +3484,36 @@ export default function App() {
               </footer>
             </>
           )}
+          {native && !booting && !startupError && (
+            <CompanionDock
+              workspace={workspace}
+              documentPath={document?.path ?? null}
+              documentHash={document?.hash ?? null}
+              libraryRevision={libraryView}
+              onOpenSource={openPath}
+              saved={!dirty}
+              activity={
+                panelOpen && panel === "ask" ? assistantActivity : "idle"
+              }
+              activityText={assistantActivityText}
+              surface={{
+                open: companionOpen,
+                navigationHost: sidebarClosed ? null : companionNavigation,
+                showPet:
+                  !!document &&
+                  !welcome &&
+                  !calendarOpen &&
+                  !wikiOpen &&
+                  !focusedKnowledge,
+                onOpen: openCompanion,
+                onClose: closeCompanion,
+              }}
+            />
+          )}
         </main>
         {(panelOpen || citationReturn) && (
           <aside
-            hidden={!panelOpen}
+            hidden={!panelOpen || companionOpen}
             className={`knowledge-panel ${panel === "ask" ? "ask-panel" : ""}`}
             style={{ "--knowledge-width": `${panelWidth}px` } as CSSProperties}
           >
@@ -3676,16 +3746,6 @@ export default function App() {
                     onClose={() => setPreferencesOpen(false)}
                   />
                 )}
-                <CompanionDock
-                  workspace={workspace}
-                  documentPath={document?.path ?? null}
-                  documentHash={document?.hash ?? null}
-                  libraryRevision={libraryView}
-                  onOpenSource={openPath}
-                  saved={!dirty}
-                  activity={assistantActivity}
-                  activityText={assistantActivityText}
-                />
                 {assistantRunError && (
                   <div className="panel-warning" role="alert">
                     {assistantRunError.message}
@@ -4028,7 +4088,7 @@ export default function App() {
             )}
           </aside>
         )}
-        {inlineCitation && citationContent}
+        {!companionOpen && inlineCitation && citationContent}
       </div>
       {toast && (
         <div className="toast">
@@ -4036,7 +4096,7 @@ export default function App() {
           {toast}
         </div>
       )}
-      {!inlineCitation && citationContent}
+      {!companionOpen && !inlineCitation && citationContent}
       {wikiOpen && workspace?.managedProjectId && (
         <WikiPanel
           key={workspace.managedProjectId}

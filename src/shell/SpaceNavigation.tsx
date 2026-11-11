@@ -3,6 +3,7 @@ import {
   CalendarDays,
   Database,
   Folder,
+  PawPrint,
   Search,
   Sparkles,
 } from "lucide-react";
@@ -22,6 +23,8 @@ export default function SpaceNavigation({
   onCalendar,
   onSearch,
   onIndex,
+  companionOpen = false,
+  onCompanion,
 }: {
   disabled: boolean;
   generalDisabled?: boolean;
@@ -38,6 +41,8 @@ export default function SpaceNavigation({
   onCalendar: () => void;
   onSearch: () => void;
   onIndex: () => void;
+  companionOpen?: boolean;
+  onCompanion?: () => void;
 }) {
   return (
     <nav className="main-nav" aria-label="空间功能">
@@ -87,6 +92,21 @@ export default function SpaceNavigation({
         >
           <BookOpen size={17} />
           <span>Wiki</span>
+        </button>
+      )}
+      {onCompanion && (
+        <button
+          id="companion-entry"
+          type="button"
+          title="书房同伴"
+          aria-label="书房同伴"
+          className={companionOpen ? "active" : ""}
+          aria-current={companionOpen ? "page" : undefined}
+          disabled={disabled}
+          onClick={onCompanion}
+        >
+          <PawPrint size={17} />
+          <span>同伴</span>
         </button>
       )}
       <button
