@@ -27,6 +27,7 @@ export function ConversationHeader({
   onError,
   onUseHistory,
   onPreferences,
+  showNew = true,
   scope = null,
 }: {
   controller: AssistantController;
@@ -37,6 +38,7 @@ export function ConversationHeader({
   onActivate: (c: Conversation) => void;
   onError: (e: unknown) => void;
   onPreferences?: () => void;
+  showNew?: boolean;
   onUseHistory?: (preview: HistoryPreview) => void;
   scope?: string | null;
 }) {
@@ -165,15 +167,17 @@ export function ConversationHeader({
             <History size={15} />
             <span>会话</span>
           </button>
-          <button
-            disabled={disabled}
-            onClick={onNew}
-            aria-label="新建"
-            title="新建会话"
-          >
-            <MessageSquarePlus size={15} />
-            <span>新建</span>
-          </button>
+          {showNew && (
+            <button
+              disabled={disabled}
+              onClick={onNew}
+              aria-label="新建"
+              title="新建会话"
+            >
+              <MessageSquarePlus size={15} />
+              <span>新建</span>
+            </button>
+          )}
           <button
             onClick={onExpand}
             aria-pressed={expanded}

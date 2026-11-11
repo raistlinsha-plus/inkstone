@@ -18,7 +18,7 @@ export default function Answer({
   sources: SearchResult[];
   externalSources?: ExternalSource[];
   citationChecks?: CitationCheck[];
-  onOpen: (source: SearchResult) => void;
+  onOpen: (source: SearchResult, trigger?: HTMLButtonElement) => void;
   pending?: boolean;
   rejectedCharts?: number[];
   viewKey?: string;

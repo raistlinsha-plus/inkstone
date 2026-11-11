@@ -4,6 +4,7 @@ import "./styles.css";
 import "./polish.css";
 import "./space.css";
 import "./assistant/assistant.css";
+import "./assistant/workbench.css";
 
 if (
   import.meta.env.DEV &&

@@ -359,8 +359,13 @@ test("startup failure is not an empty library and retry can recover without crea
 test("pane visibility is restored and deliberate toggles persist for the next launch", async () => {
   localStorage.setItem("inkstone:sidebar-closed", "true");
   localStorage.setItem("inkstone:panel-open", "true");
-  await boot();
-  fireEvent.click(screen.getByRole("button", { name: "展开文档列表" }));
+  render(<App />);
+  const sidebar = screen.getByRole("button", { name: "展开文档列表" });
+  expect(
+    screen.queryByRole("complementary", { name: "文档空间导航" }),
+  ).toBeNull();
+  fireEvent.click(sidebar);
+  await screen.findByRole("button", { name: "打开 a.md" });
   fireEvent.click(screen.getByRole("button", { name: "切换知识侧栏" }));
   expect(localStorage.getItem("inkstone:sidebar-closed")).toBe("false");
   expect(localStorage.getItem("inkstone:panel-open")).toBe("false");
@@ -595,6 +600,8 @@ beforeEach(() => {
                 createdAt: new Date().toISOString(),
                 selectedCandidateId: candidate.id,
                 candidates: [candidate],
+                sources: args.sources,
+                webAccess: args.webAccess,
               };
               mockConversation = {
                 ...c,
@@ -1114,7 +1121,9 @@ test.skipIf(appVersion === "0.7.2")(
       screen.getByText("公开网页", { selector: ".assistant-evidence small" }),
     ).toBeTruthy();
     fireEvent.click(screen.getByTitle("查看来源 1：示例网页"));
-    const preview = await screen.findByRole("dialog", { name: "查看来源" });
+    const preview = await screen.findByRole("complementary", {
+      name: "查看来源",
+    });
     expect(within(preview).getByText("example.org")).toBeTruthy();
     fireEvent.click(within(preview).getByRole("button", { name: "打开网页" }));
     expect(calls("open_external")[0][1]).toEqual({
@@ -1359,6 +1368,10 @@ test("reopening a standalone draft restores its documents and no-web choice", as
   await boot();
   fireEvent.click(screen.getByRole("button", { name: "AI 问答" }));
   const composer = await readyComposer("向 AI 提问");
+  const sidebar = screen.getByRole("region", { name: "最近会话" });
+  expect(
+    screen.queryByRole("complementary", { name: "文档空间导航" }),
+  ).toBeNull();
   const newConversation = screen.getByTitle("新建会话") as HTMLButtonElement;
   await waitFor(() => expect(newConversation.disabled).toBe(false));
   fireEvent.click(screen.getByRole("button", { name: "添加资料" }));
@@ -1396,8 +1409,9 @@ test("reopening a standalone draft restores its documents and no-web choice", as
     draft,
     draftContext: { sources, webAccess: "local-only" },
   });
-  fireEvent.click(screen.getByTitle("会话历史"));
-  fireEvent.click(await screen.findByRole("button", { name: /新会话.*0轮/ }));
+  fireEvent.click(
+    await within(sidebar).findByRole("button", { name: "新会话" }),
+  );
   await screen.findByRole("button", { name: "p1 · 2 篇" });
   expect((composer as HTMLTextAreaElement).value).toBe(draft);
   expect(
@@ -1415,6 +1429,67 @@ test("reopening a standalone draft restores its documents and no-web choice", as
     webAccess: "local-only",
   });
   expect(screen.queryByRole("button", { name: "p1 · 2 篇" })).toBeNull();
+  const pastTurn = within(screen.getByLabelText("本轮资料与网页状态"));
+  expect(pastTurn.getByText(/指定 2 篇文档/)).toBeTruthy();
+  expect(pastTurn.getByText("本轮禁止搜索网页")).toBeTruthy();
+});
+
+test("switching between a document and general chat restores the selected older conversation", async () => {
+  enableTestChat();
+  const old = {
+    id: "old-conversation",
+    title: "之前的会话",
+    scope: null,
+    scopeLabel: "通用问答",
+    archived: false,
+    draft: "上次留下的草稿",
+    revision: 1,
+    createdAt: "2026-11-01T00:00:00Z",
+    updatedAt: "2026-11-01T00:00:00Z",
+    activeLeafId: null,
+    turns: [],
+  };
+  const latest = {
+    ...old,
+    id: "latest-conversation",
+    title: "最近的会话",
+    draft: "",
+  };
+  overrides.set("assistant_list", (args) =>
+    args.general
+      ? [
+          { ...latest, turnCount: 0 },
+          { ...old, turnCount: 0 },
+        ]
+      : [],
+  );
+  overrides.set("assistant_get", (args) =>
+    args.conversationId === old.id ? old : latest,
+  );
+  await boot();
+  await openDocument("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "AI 问答" }));
+  const previous = await screen.findByRole("button", { name: old.title });
+  await waitFor(() =>
+    expect((previous as HTMLButtonElement).disabled).toBe(false),
+  );
+  fireEvent.click(previous);
+  await waitFor(() =>
+    expect(
+      (screen.getByLabelText("向 AI 提问") as HTMLTextAreaElement).value,
+    ).toBe(old.draft),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "我的文档" }));
+  await screen.findByRole("complementary", { name: "文档空间导航" });
+  expect(screen.getByTestId("opened-path").textContent).toContain("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "AI 问答" }));
+  const reopened = await readyComposer("向 AI 提问");
+  await waitFor(() => expect(reopened.value).toBe(old.draft));
+  expect(
+    screen
+      .getByRole("button", { name: old.title })
+      .getAttribute("aria-current"),
+  ).toBe("true");
 });
 
 test.each([false, true])(
@@ -1450,7 +1525,9 @@ test.each([false, true])(
     fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
     await screen.findByRole("heading", { name: "有引用的回答" });
     fireEvent.click(screen.getByTitle("查看来源 1：c.md · 第 2 行"));
-    const preview = await screen.findByRole("dialog", { name: "查看来源" });
+    const preview = await screen.findByRole("complementary", {
+      name: "查看来源",
+    });
     fireEvent.click(within(preview).getByRole("button", { name: "打开文档" }));
     const opened = await screen.findByTestId("opened-path");
     expect(opened.textContent?.trim()).toBe(changed ? "c.md:" : "c.md:2");
@@ -1461,6 +1538,29 @@ test.each([false, true])(
       ([, options]) => options?.title === "引用版本不匹配",
     );
     expect(!!warning).toBe(changed);
+    expect(
+      screen.queryByRole("complementary", { name: "查看来源" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("complementary", { name: "文档空间导航" }),
+    ).toBeTruthy();
+    const requestsBeforeReturn = calls("assistant_get").length;
+    fireEvent.click(screen.getByRole("button", { name: "返回本轮问答" }));
+    const returned = await screen.findByRole("complementary", {
+      name: "查看来源",
+    });
+    expect(screen.getByRole("heading", { name: "有引用的回答" })).toBeTruthy();
+    fireEvent.keyDown(
+      within(returned).getByRole("button", { name: "收起引用侧栏" }),
+      { key: "Escape" },
+    );
+    expect(
+      screen.queryByRole("complementary", { name: "查看来源" }),
+    ).toBeNull();
+    expect(document.activeElement).toBe(
+      screen.getByTitle("查看来源 1：c.md · 第 2 行"),
+    );
+    expect(calls("assistant_get")).toHaveLength(requestsBeforeReturn);
   },
 );
 
@@ -1490,7 +1590,7 @@ test("an answer keeps its request scope and explicit retrieval mode when control
   });
   expect(
     within(document.querySelector(".assistant-turn")!).getByText(
-      /当前文档 · a.md/,
+      /当前文档 · a.md.*段本地证据/,
     ),
   ).toBeTruthy();
 });

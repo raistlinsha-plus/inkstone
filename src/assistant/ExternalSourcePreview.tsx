@@ -1,19 +1,19 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useState } from "react";
-import { X } from "lucide-react";
-import ModalDialog from "../ModalDialog";
 import { publicCitationUrl, sourceKind } from "./sourceDisplay";
 import type { ExternalSource } from "./types";
 
 export default function ExternalSourcePreview({
   source,
   conversationId,
+  busy,
   onClose,
   onOpenDocument,
   onError,
 }: {
   source: ExternalSource;
   conversationId?: string;
+  busy: boolean;
   onClose: () => void;
   onOpenDocument?: () => void;
   onError: (error: unknown) => void;
@@ -38,23 +38,7 @@ export default function ExternalSourcePreview({
     }
   }
   return (
-    <ModalDialog
-      label="查看来源"
-      className="source-dialog"
-      backdropClassName="assistant-source-backdrop"
-      onClose={onClose}
-    >
-      <div className="modal-heading">
-        <h2>{source.label}</h2>
-        <button
-          type="button"
-          className="icon-button"
-          aria-label="关闭来源预览"
-          onClick={onClose}
-        >
-          <X size={18} />
-        </button>
-      </div>
+    <>
       <p>
         S{source.citation} · {sourceKind(source)}
         {source.capturedAt ? ` · ${source.capturedAt}` : ""}
@@ -105,14 +89,19 @@ export default function ExternalSourcePreview({
             </button>
           )}
         {onOpenDocument && (
-          <button type="button" className="primary" onClick={onOpenDocument}>
+          <button
+            type="button"
+            className="primary"
+            disabled={busy}
+            onClick={onOpenDocument}
+          >
             打开文档
           </button>
         )}
-        <button type="button" onClick={onClose}>
+        <button type="button" disabled={busy} onClick={onClose}>
           关闭
         </button>
       </div>
-    </ModalDialog>
+    </>
   );
 }

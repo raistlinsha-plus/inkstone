@@ -53,7 +53,9 @@ export function useAssistant(
     [error, setError] = useState(""),
     [draftError, setDraftError] = useState(""),
     [loading, setLoading] = useState(false);
+  const [loadedRoot, setLoadedRoot] = useState(root);
   const current = useRef<Conversation | null>(null),
+    lastGeneralConversation = useRef<string | null | undefined>(undefined),
     generation = useRef(0),
     rootRef = useRef(root),
     queue = useRef<Promise<unknown>>(Promise.resolve());
@@ -63,6 +65,8 @@ export function useAssistant(
   const runningQuestion = useRef<RunningQuestion | null>(null);
   const install = useCallback((next: Conversation | null) => {
     current.current = next;
+    if (next && rootRef.current === "general:")
+      lastGeneralConversation.current = next.id;
     setConversation(next);
   }, []);
   const list = useCallback(
@@ -93,6 +97,7 @@ export function useAssistant(
   );
   useEffect(() => {
     ++generation.current;
+    setLoadedRoot(root);
     install(null);
     setSummaries([]);
     setError("");
@@ -112,12 +117,29 @@ export function useAssistant(
         const first = Array.isArray(rows)
           ? rows.find((x) => !x.archived)
           : undefined;
-        if (first && !current.current) {
-          const next = await request<Conversation>("assistant_get", {
-            conversationId: first.id,
-          });
-          if (active && !current.current) install(next);
+        const remembered = general
+          ? lastGeneralConversation.current
+          : undefined;
+        if (remembered === null || current.current) return;
+        if (remembered && remembered !== first?.id) {
+          try {
+            const next = await request<Conversation>("assistant_get", {
+              conversationId: remembered,
+            });
+            if (!active || current.current) return;
+            if (next?.id === remembered) {
+              install(next);
+              return;
+            }
+          } catch {
+            if (!active || current.current) return;
+          }
         }
+        if (!first) return;
+        const next = await request<Conversation>("assistant_get", {
+          conversationId: first.id,
+        });
+        if (active && !current.current) install(next);
       })()
         .catch((e) => {
           if (active) setError(String(e));
@@ -131,7 +153,7 @@ export function useAssistant(
       ++generation.current;
       if (draftTimer.current) clearTimeout(draftTimer.current);
     };
-  }, [root, install, list, request]);
+  }, [root, general, install, list, request]);
   const serial = useCallback(<T>(fn: () => Promise<T>) => {
     const epoch = generation.current;
     const job = queue.current
@@ -432,26 +454,30 @@ export function useAssistant(
           conversationId: c.id,
           expectedRevision: c.revision,
         });
-        if (epoch === generation.current) install(null);
+        if (epoch === generation.current) {
+          if (general) lastGeneralConversation.current = null;
+          install(null);
+        }
         await list();
       }),
-    [serial, install, list, request],
+    [general, serial, install, list, request],
   );
   const clear = useCallback(() => {
     if (draftTimer.current) clearTimeout(draftTimer.current);
     pendingDraft.current = null;
+    if (general) lastGeneralConversation.current = null;
     install(null);
     setError("");
     setDraftError("");
-  }, [install]);
+  }, [general, install]);
   return {
     workspaceKey: root,
     general,
-    conversation,
-    summaries,
-    error: draftError || error,
-    draftFailed: !!draftError,
-    loading,
+    conversation: loadedRoot === root ? conversation : null,
+    summaries: loadedRoot === root ? summaries : [],
+    error: loadedRoot === root ? draftError || error : "",
+    draftFailed: loadedRoot === root && !!draftError,
+    loading: loadedRoot !== root || loading,
     list,
     search,
     create,

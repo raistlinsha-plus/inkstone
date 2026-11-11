@@ -1,0 +1,323 @@
+/* Keep the active document or conversation beside a fixed workspace rail. */
+.workspace-shell .workspace-rail {
+  width: 52px;
+  min-width: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: auto;
+  gap: 9px;
+  padding: 9px 0;
+  border-right: 1px solid var(--ui-line, var(--border));
+  background: var(--ui-surface, #f0f0eb);
+}
+.workspace-shell .workspace-rail .main-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0;
+}
+.workspace-shell .workspace-rail :is(.main-nav button, .icon-button) {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  position: relative;
+  place-items: center;
+  padding: 0;
+  border-radius: 7px;
+  color: var(--ui-muted, #62695e);
+}
+.workspace-shell
+  .workspace-rail
+  :is(.main-nav button:hover, .icon-button:hover):not(:disabled) {
+  background: var(--ui-hover, #e7e9e1);
+  color: var(--ui-text, #32382f);
+}
+.workspace-shell .workspace-rail .main-nav button.active {
+  background: var(--ui-selected, #e0e9de);
+  color: var(--ui-accent, #2c5943);
+}
+.workspace-shell .workspace-rail .main-nav span {
+  display: none;
+}
+.workspace-shell .workspace-rail .pending-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+.workspace-shell .workspace-rail-settings {
+  margin-top: auto;
+}
+.workspace-shell .sidebar.sidebar-compact {
+  background: var(--ui-surface, #f7f7f3);
+}
+.workspace-shell .sidebar[hidden],
+.workspace-shell .knowledge-panel[hidden] {
+  display: none;
+}
+.workspace-shell .space-sidebar-heading strong {
+  color: var(--ui-text, #32382f);
+}
+.workspace-shell .sidebar-resizer {
+  margin-left: 0;
+}
+.workbench-history {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 4px 10px 12px;
+  color: var(--ui-text, #282d25);
+}
+.workbench-history h2 {
+  flex: none;
+  margin: 17px 8px 6px;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--ui-muted, #62695e);
+}
+.workbench-history p {
+  margin: 3px 8px;
+  font-size: 12px;
+  color: var(--ui-muted, #62695e);
+  line-height: 1.6;
+}
+.workbench-history ul {
+  overflow: auto;
+  padding: 0 1px 2px;
+  list-style: none;
+  margin: 0;
+}
+.workbench-history button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 5px 8px;
+  text-align: left;
+  border-radius: 6px;
+}
+.workbench-history svg {
+  flex: none;
+  color: var(--ui-muted, #62695e);
+}
+.workbench-history button:hover:not(:disabled),
+.workbench-history button[aria-current] {
+  background: var(--ui-selected, #e0e9de);
+  color: var(--ui-accent, #2c5943);
+}
+.workbench-history li button span {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  font-size: 13px;
+}
+.workbench-history .workbench-new-chat {
+  border: 1px solid var(--ui-control-line, #dce0d7);
+  background: var(--ui-field, #fffefa);
+  flex: none;
+  font-weight: 600;
+}
+
+.main-layout.ask-workbench {
+  --ask-gutter: 24px;
+  --ask-width: 752px;
+}
+.main-layout.ask-workbench > .knowledge-panel {
+  background: var(--ui-paper, #fdfcf9);
+}
+.main-layout.ask-workbench .assistant-toolbar {
+  background: var(--ui-surface, #f7f7f3);
+  border-color: var(--ui-line, #e2e4dc);
+  padding: 7px 16px;
+}
+.main-layout.ask-workbench .assistant-conversation-title small {
+  color: var(--ui-muted, #62695e);
+}
+.main-layout.ask-workbench .assistant-toolbar-actions > button {
+  border-color: transparent;
+  background: transparent;
+}
+.main-layout.ask-workbench
+  .assistant-toolbar-actions
+  > button:hover:not(:disabled) {
+  background: var(--ui-hover, #e7e9e1);
+}
+.main-layout.ask-workbench .assistant-toolbar-actions > button > span {
+  display: none;
+}
+.main-layout.ask-workbench .workbench-timeline {
+  padding: 24px var(--ask-gutter) 16px;
+  scrollbar-gutter: stable both-edges;
+}
+.workbench-timeline
+  > :is(.assistant-path, .assistant-turn, .assistant-branch-list) {
+  max-width: var(--ask-width);
+  margin-inline: auto;
+}
+.workbench-timeline .assistant-question {
+  margin: 0 0 3px auto;
+  max-width: min(84%, 650px);
+  width: fit-content;
+  border: 0;
+  border-radius: 12px;
+  background: var(--ui-selected, #e5ede4);
+  color: var(--ui-text, #282d25);
+  font-size: 14px;
+  padding: 9px 13px;
+}
+.workbench-timeline .assistant-question p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.workbench-timeline .assistant-question-heading,
+.workbench-timeline .assistant-question-heading button {
+  color: var(--ui-muted, #62695e);
+}
+.workbench-timeline .assistant-question-heading {
+  flex-wrap: wrap;
+}
+.workbench-timeline .assistant-turn-context {
+  margin: 5px 0 16px;
+  justify-content: flex-end;
+  gap: 4px 10px;
+  text-align: right;
+}
+.workbench-timeline .assistant-turn-context span {
+  color: var(--ui-muted, #62695e);
+}
+.workbench-timeline .assistant-turn-actions button,
+.workbench-timeline .assistant-branches button {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ui-muted, #62695e);
+}
+.workbench-timeline .assistant-turn-actions button:hover:not(:disabled),
+.workbench-timeline .assistant-branches button:hover:not(:disabled) {
+  background: var(--ui-hover, #e7e9e1);
+  color: var(--ui-text, #32382f);
+}
+.workbench-timeline .assistant-branches > span:empty {
+  display: none;
+}
+.main-layout.ask-workbench .ask-form {
+  width: min(var(--ask-width), calc(100% - 2 * var(--ask-gutter)));
+  padding: 10px 12px !important;
+  margin: 6px auto 16px;
+  background: var(--ui-field, #fffefa);
+  border-color: var(--ui-control-line, #dce0d7);
+  border-radius: 12px;
+}
+.main-layout.ask-workbench .ask-form textarea {
+  min-height: 46px;
+  color: var(--ui-text, #282d25);
+  font-size: 14px;
+}
+.main-layout.ask-workbench .ask-form textarea::placeholder,
+.main-layout.ask-workbench .ask-form > div > span {
+  color: var(--ui-muted, #62695e);
+}
+.main-layout.ask-workbench .send-button {
+  background: var(--ui-action, #2c5943);
+  color: var(--ui-on-action, #fff);
+  min-height: 34px;
+  min-width: 34px;
+}
+.main-layout.ask-workbench .send-button:hover:not(:disabled) {
+  background: var(--ui-action-hover, #214836);
+}
+.workbench-citation-pane {
+  flex: 0 0 300px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--ui-line, #e2e4dc);
+  background: var(--ui-surface, #f7f7f3);
+}
+.workbench-citation-pane header {
+  display: flex;
+  min-height: 47px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 6px 14px;
+  border-bottom: 1px solid var(--ui-line, #e2e4dc);
+}
+.workbench-citation-pane .icon-button {
+  min-height: 32px;
+  min-width: 32px;
+}
+.workbench-citation-content {
+  padding: 12px 14px 16px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+.workbench-citation-content .modal-heading h2 {
+  margin: 4px 0;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.workbench-citation-content .modal-heading,
+.workbench-citation-content p {
+  margin: 0 0 8px;
+}
+.workbench-citation-content pre {
+  padding: 9px;
+}
+.workbench-citation-content blockquote {
+  margin: 10px 0;
+  padding: 9px 10px;
+  border-left: 2px solid var(--ui-accent, #809a84);
+  background: var(--ui-selected, #e5ede4);
+}
+.workbench-citation-content .modal-actions {
+  flex-wrap: wrap;
+}
+.workbench-citation-switch {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 13px;
+  font-size: 12px;
+  color: var(--ui-muted, #62695e);
+}
+.workbench-citation-switch select {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--ui-control-line, #dce0d7);
+  border-radius: 6px;
+  background: var(--ui-field, #fffefa);
+  color: var(--ui-text, #282d25);
+  padding: 4px 6px;
+}
+.workbench-return-citation {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  margin-right: 4px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  color: var(--ui-accent, #2c5943);
+  white-space: nowrap;
+  font-size: 12px;
+}
+.workbench-return-citation:hover {
+  background: var(--ui-selected, #e0e9de);
+}
+@media (max-width: 1180px) {
+  .workbench-citation-pane {
+    flex-basis: 270px;
+  }
+}
+@media (max-width: 800px) {
+  .workspace-shell .sidebar.sidebar-compact {
+    width: min(var(--sidebar-width, 272px), 33vw);
+    min-width: 0;
+    flex-basis: min(var(--sidebar-width, 272px), 33vw);
+  }
+  .main-layout.ask-workbench {
+    --ask-gutter: 12px;
+  }
+}

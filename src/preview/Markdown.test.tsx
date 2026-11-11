@@ -95,7 +95,7 @@ test("citation buttons are limited to prose and do not replace JSON or inline-co
   const buttons = container.querySelectorAll("button.citation");
   expect(buttons).toHaveLength(1);
   fireEvent.click(buttons[0]);
-  expect(open).toHaveBeenCalledWith(citation);
+  expect(open).toHaveBeenCalledWith(citation, buttons[0]);
   expect(container.querySelector("p code")?.textContent).toBe("arr[1]");
   expect(container.textContent).toContain("[2026]");
   expect(container.textContent).toContain("[1]");

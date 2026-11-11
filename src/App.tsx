@@ -2,8 +2,10 @@ import { imeBoundary, isImeEvent } from "./platform/ime";
 import { isTauri } from "@tauri-apps/api/core";
 import { appVersion } from "./version";
 import QuestionSources from "./assistant/QuestionSources";
+import ConversationSidebar from "./assistant/ConversationSidebar";
 import ExternalSourcePreview from "./assistant/ExternalSourcePreview";
-import { documentCitation } from "./assistant/sourceDisplay";
+import SourcePreviewFrame from "./assistant/SourcePreviewFrame";
+import { answerCitations, documentCitation } from "./assistant/sourceDisplay";
 import WebSearchSettings from "./assistant/WebSearchSettings";
 import WikiPanel from "./knowledge/WikiPanel";
 import { listen } from "@tauri-apps/api/event";
@@ -12,6 +14,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { confirm, open } from "@tauri-apps/plugin-dialog";
 import {
   ArrowDownToLine,
+  ArrowLeft,
   ArrowUp,
   Check,
   ChevronRight,
@@ -102,6 +105,11 @@ import type {
 } from "./types";
 
 type OpeningSource = SearchResult & { requireVersion?: true };
+type CitationPreview = {
+  source: SearchResult;
+  choices: SearchResult[];
+  trigger?: HTMLButtonElement;
+};
 
 interface PendingMutation {
   epoch: number;
@@ -261,9 +269,11 @@ export default function App() {
   const branchParent = draftContext.branch?.parentTurnId;
   const [sourceBusy, setSourceBusy] = useState(false);
   const sourceBusyRef = useRef(false);
-  const [externalPreview, setExternalPreview] = useState<ExternalSource | null>(
-    null,
-  );
+  const [citationPreview, setCitationPreview] = useState<CitationPreview>();
+  const [citationReturn, setCitationReturn] = useState(false);
+  const [citationOpening, setCitationOpening] = useState(false);
+  const citationOpenInFlight = useRef(false);
+  const citationBack = useRef<HTMLButtonElement>(null);
   const [webSettingsOpen, setWebSettingsOpen] = useState(false);
   const [wikiOpen, setWikiOpen] = useState(false);
   const assistant = useAssistant(workspace?.root, generalAsk);
@@ -287,9 +297,7 @@ export default function App() {
   const focusedKnowledge =
     panelOpen &&
     (compactWindow || ((assistantExpanded || generalAsk) && panel === "ask"));
-  const [evidencePreview, setEvidencePreview] = useState<SearchResult | null>(
-    null,
-  );
+  const standaloneAskOpen = generalAsk && panelOpen && panel === "ask";
   const [assistantScopeChanged, setAssistantScopeChanged] = useState(false);
   const assistantScopeResolver = useRef(currentAssistantScope);
   assistantScopeResolver.current = currentAssistantScope;
@@ -312,8 +320,8 @@ export default function App() {
     restoreDraftContext();
     setAssistantScopeChanged(false);
     setAssistantRunError(undefined);
-    setEvidencePreview(null);
-    setExternalPreview(null);
+    setCitationPreview(undefined);
+    setCitationReturn(false);
   }, [assistant.workspaceKey]);
 
   useEffect(() => {
@@ -1162,8 +1170,10 @@ export default function App() {
   async function openLibraryDocument(
     doc: LibraryDocument,
     target?: SearchResult,
+    keepConversation = false,
   ) {
-    if (generalAsk && !(await leaveGeneralForDocument())) return false;
+    if (generalAsk && !keepConversation && !(await leaveGeneralForDocument()))
+      return false;
     if (doc.projectId === workspaceRef.current?.managedProjectId) {
       if (!(await openPath(doc.path, target))) return false;
       await refreshLibrary();
@@ -1989,6 +1999,7 @@ export default function App() {
     }
   }
   function activateConversation(next: Conversation) {
+    setCitationPreview(undefined);
     restoreDraftContext(next.draftContext);
     clearMemorySelection();
     setScope(next.scope ? "current" : "workspace");
@@ -1997,13 +2008,40 @@ export default function App() {
     setQuestion(next.draft);
     setAssistantRunError(undefined);
   }
+  async function selectRecentConversation(id: string) {
+    if (
+      assistant.loading ||
+      citationOpenInFlight.current ||
+      navigationBlocked() ||
+      assistant.conversation?.id === id
+    )
+      return;
+    newConversationInFlight.current = true;
+    setOpeningConversation(true);
+    try {
+      await assistant.flushDraft();
+      const next = await assistant.load(id);
+      if (next) activateConversation(next);
+    } catch (error) {
+      fail(error);
+    } finally {
+      newConversationInFlight.current = false;
+      setOpeningConversation(false);
+    }
+  }
   async function newConversation() {
-    if (assistant.loading || navigationBlocked()) return;
+    if (
+      assistant.loading ||
+      citationOpenInFlight.current ||
+      navigationBlocked()
+    )
+      return;
     newConversationInFlight.current = true;
     setOpeningConversation(true);
     try {
       await assistant.flushDraft();
       assistant.clear();
+      setCitationPreview(undefined);
       restoreDraftContext();
       clearMemorySelection();
       questionRef.current = "";
@@ -2036,7 +2074,8 @@ export default function App() {
   useEffect(() => setPreferencesOpen(false), [workspace?.root, generalAsk]);
   useEffect(() => setWikiOpen(false), [workspace?.root]);
   async function switchGeneral(next: boolean) {
-    if (next && !enableGeneralAsk) return false;
+    if (citationOpenInFlight.current || (next && !enableGeneralAsk))
+      return false;
     if (generalAsk === next) return true;
     if (navigationBlocked()) return false;
     try {
@@ -2044,6 +2083,8 @@ export default function App() {
       if (navigationBlocked()) return false;
       restoreDraftContext();
       clearMemorySelection();
+      setCitationPreview(undefined);
+      setCitationReturn(false);
       setGeneralAsk(next);
       return true;
     } catch (error) {
@@ -2061,6 +2102,10 @@ export default function App() {
     openKnowledgePanel("ask", true);
   }
   function openGeneralAsk() {
+    if (citationReturn) {
+      returnToCitation();
+      return;
+    }
     void switchGeneral(true).then((ready) => {
       if (ready) {
         setPanel("ask");
@@ -2069,6 +2114,8 @@ export default function App() {
     });
   }
   function closeKnowledge() {
+    if (citationOpenInFlight.current) return;
+    setCitationPreview(undefined);
     if (generalAsk) void leaveGeneralForDocument();
     else setPanelOpen(false);
   }
@@ -2088,6 +2135,7 @@ export default function App() {
     const prompt = options?.retry.question ?? question;
     if (
       (!workspace && !generalAsk) ||
+      citationOpenInFlight.current ||
       (options?.retry && assistant.conversation?.archived) ||
       assistant.loading ||
       navigationBlocked() ||
@@ -2127,6 +2175,7 @@ export default function App() {
         ? (assistant.conversation?.scope ?? null)
         : currentAssistantScope();
     const frozenDraftContext = draftContextRef.current;
+    setCitationPreview(undefined);
     streamBuffer.current?.clear();
     requestRef.current = id;
     stoppedRequest.current = "";
@@ -2495,7 +2544,10 @@ export default function App() {
           : assistantActivity === "needs_input"
             ? "回答尚未完成，可重新生成"
             : assistantActivity === "ready"
-              ? "回答已就绪，可查看来源"
+              ? activeAssistantCandidate?.response?.sources.length ||
+                activeAssistantCandidate?.response?.externalSources?.length
+                ? "回答已就绪，可查看来源"
+                : "回答已就绪"
               : "安静陪读";
 
   const retrievalScopePath =
@@ -2631,7 +2683,8 @@ export default function App() {
       onAsk={openAsk}
     />
   );
-  const composerLocked = assistant.loading || openingConversation;
+  const composerLocked =
+    assistant.loading || openingConversation || citationOpening;
   const turnControls = (
     <>
       <label
@@ -2668,30 +2721,162 @@ export default function App() {
       </details>
     </>
   );
+  const citedSource = citationPreview?.source;
+  const externalCitation = citedSource?.external;
   const citedDocument =
-    externalPreview?.kind === "document"
+    externalCitation?.kind === "document"
       ? libraryView.documents.find(
           (doc) =>
-            doc.id === externalPreview.documentId &&
-            doc.projectId === externalPreview.projectId &&
+            doc.id === externalCitation.documentId &&
+            doc.projectId === externalCitation.projectId &&
             doc.status === "ready",
         )
       : undefined;
   const citedTarget =
-    citedDocument && externalPreview
-      ? documentCitation(externalPreview, citedDocument.path)
+    citedDocument && externalCitation
+      ? documentCitation(externalCitation, citedDocument.path)
       : undefined;
-
+  const inlineCitation = standaloneAskOpen && !compactWindow;
+  const citationSelection = citationPreview
+    ? citationPreview.choices.indexOf(citationPreview.source)
+    : -1;
+  const citationControls = citationPreview &&
+    citationPreview.choices.length > 1 && (
+      <label className="workbench-citation-switch">
+        本轮引用
+        <select
+          value={Math.max(0, citationSelection)}
+          disabled={citationOpening}
+          onChange={(event) => {
+            const source = citationPreview.choices[Number(event.target.value)];
+            if (source) setCitationPreview({ ...citationPreview, source });
+          }}
+        >
+          {citationPreview.choices.map((choice, index) => (
+            <option key={index} value={index}>
+              S{choice.external?.citation ?? index + 1} ·{" "}
+              {choice.title || basename(choice.path)}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  function closeCitation() {
+    if (citationOpenInFlight.current) return;
+    setCitationPreview(undefined);
+    if (inlineCitation)
+      citationPreview?.trigger?.focus({ preventScroll: true });
+  }
+  function returnToCitation() {
+    setCitationReturn(false);
+    setPanel("ask");
+    setPanelOpen(true);
+    requestAnimationFrame(() => {
+      if (compactWindow) return;
+      window.document
+        .querySelector<HTMLButtonElement>(
+          ".workbench-citation-pane header button",
+        )
+        ?.focus({ preventScroll: true });
+    });
+  }
+  useEffect(() => {
+    if (citationReturn && !panelOpen) citationBack.current?.focus();
+  }, [citationReturn, panelOpen]);
+  async function showCitedDocument() {
+    if (!citedSource || citationOpenInFlight.current || navigationBlocked())
+      return;
+    citationOpenInFlight.current = true;
+    setCitationOpening(true);
+    try {
+      const opened = externalCitation
+        ? citedDocument &&
+          citedTarget &&
+          (await openLibraryDocument(
+            citedDocument,
+            citedTarget,
+            standaloneAskOpen,
+          ))
+        : await openPath(
+            citedSource.path,
+            standaloneAskOpen
+              ? { ...citedSource, requireVersion: true }
+              : citedSource,
+          );
+      if (!opened) return;
+      if (standaloneAskOpen) {
+        setCitationReturn(true);
+        setPanelOpen(false);
+      } else setCitationPreview(undefined);
+    } finally {
+      citationOpenInFlight.current = false;
+      setCitationOpening(false);
+    }
+  }
+  const citationContent = !citationReturn && citedSource && (
+    <SourcePreviewFrame
+      label={externalCitation ? "查看来源" : "本轮来源预览"}
+      title={
+        externalCitation?.label ||
+        citedSource.title ||
+        basename(citedSource.path)
+      }
+      className={
+        externalCitation ? "source-dialog" : "assistant-evidence-dialog"
+      }
+      inline={inlineCitation}
+      busy={citationOpening}
+      controls={citationControls}
+      onClose={closeCitation}
+    >
+      {externalCitation ? (
+        <ExternalSourcePreview
+          key={externalCitation.id}
+          source={externalCitation}
+          conversationId={assistant.conversation?.id}
+          busy={citationOpening}
+          onClose={closeCitation}
+          onError={fail}
+          onOpenDocument={
+            citedDocument && citedTarget
+              ? () => void showCitedDocument().catch(fail)
+              : undefined
+          }
+        />
+      ) : (
+        <EvidencePreview
+          source={citedSource}
+          busy={chatBusy || citationOpening}
+          unavailable={Boolean(
+            citedSource.documentId &&
+            workspace?.managedProjectId &&
+            !libraryView.documents.some(
+              (doc) =>
+                doc.id === citedSource.documentId &&
+                doc.projectId === workspace.managedProjectId &&
+                doc.status === "ready",
+            ),
+          )}
+          onClose={closeCitation}
+          onOpen={() => void showCitedDocument().catch(fail)}
+        />
+      )}
+    </SourcePreviewFrame>
+  );
   return (
     <div
       {...imeBoundary}
-      className={`app-shell v06-shell ${sidebarClosed ? "sidebar-closed" : ""}`}
+      className={`app-shell v06-shell workspace-shell ${sidebarClosed ? "sidebar-closed" : ""}`}
       style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}
     >
       <Titlebar
         workspaceName={workspace?.name}
         panelOpen={panelOpen}
-        onToggle={() => setPanelOpen(!panelOpen)}
+        onToggle={() => {
+          if (citationReturn) returnToCitation();
+          else if (panelOpen) closeKnowledge();
+          else setPanelOpen(true);
+        }}
       />
       {!recoveryHidden &&
         (recoveryError ||
@@ -2714,34 +2899,44 @@ export default function App() {
           </div>
         )}
       <div
-        className={`main-layout ${focusedKnowledge ? "assistant-expanded" : ""}`}
+        className={`main-layout ${focusedKnowledge ? "assistant-expanded" : ""} ${standaloneAskOpen ? "ask-workbench" : ""}`}
       >
-        <aside className="sidebar sidebar-compact" aria-label="文档空间导航">
-          <div className="space-sidebar-heading">
-            <strong>Inkstone</strong>
-            <button
-              className="icon-button"
-              aria-label={sidebarClosed ? "展开文档列表" : "收起文档列表"}
-              title={sidebarClosed ? "展开文档列表" : "收起文档列表"}
-              onClick={() => setSidebarClosed(!sidebarClosed)}
-            >
-              {sidebarClosed ? (
-                <PanelLeftOpen size={17} />
-              ) : (
-                <PanelLeftClose size={17} />
-              )}
-            </button>
-          </div>
+        <div className="workspace-rail">
+          <button
+            className="icon-button workspace-rail-toggle"
+            type="button"
+            aria-label={`${sidebarClosed ? "展开" : "收起"}${standaloneAskOpen ? "会话" : "文档"}列表`}
+            aria-expanded={!sidebarClosed}
+            onClick={() => setSidebarClosed(!sidebarClosed)}
+          >
+            {sidebarClosed ? (
+              <PanelLeftOpen size={17} />
+            ) : (
+              <PanelLeftClose size={17} />
+            )}
+          </button>
           <SpaceNavigation
-            disabled={busy || booting}
-            generalDisabled={generalBusy || !settings}
-            calendarOpen={calendarOpen}
-            generalOpen={generalAsk && panelOpen && panel === "ask"}
-            canIndex={!!workspace && !busy}
+            disabled={busy || booting || citationOpening}
+            generalDisabled={generalBusy || citationOpening || !settings}
+            calendarOpen={
+              calendarOpen && !wikiOpen && !(panelOpen && panel === "search")
+            }
+            generalOpen={standaloneAskOpen && !wikiOpen}
+            homeOpen={
+              !standaloneAskOpen &&
+              !wikiOpen &&
+              !calendarOpen &&
+              !(panelOpen && panel === "search")
+            }
+            wikiOpen={wikiOpen}
+            searchOpen={panelOpen && panel === "search" && !wikiOpen}
+            canIndex={!!workspace && !busy && !citationOpening}
             indexDirty={indexDirty}
             onHome={() =>
               void leaveGeneralForDocument().then((ready) => {
-                if (ready) void showLibraryHome();
+                if (!ready) return;
+                if (standaloneAskOpen && docRef.current) setCalendarOpen(false);
+                else void showLibraryHome();
               })
             }
             onCalendar={() =>
@@ -2756,125 +2951,143 @@ export default function App() {
             onSearch={() => openKnowledgePanel("search")}
             onIndex={() => setIndexOpen(true)}
           />
-          <div className="file-tree">
-            {booting || startupError ? (
-              <div className="tree-empty">
-                <p>{booting ? "正在读取文档列表…" : "资料暂不可读取"}</p>
-              </div>
-            ) : workspace?.managedProjectId ? (
-              <LibraryBrowser {...libraryProps} compact />
-            ) : workspace ? (
-              <>
-                <div className="external-mode-note">
-                  外部目录 · 直接编辑原件
-                </div>
-                <Tree
-                  files={workspace.files}
-                  selected={document?.path}
-                  onOpen={(path) =>
-                    void leaveGeneralForDocument().then((ready) => {
-                      if (ready) void openPath(path);
-                    })
-                  }
-                />
-                <button
-                  className="button"
-                  disabled={busy}
-                  onClick={() => nameAction("new")}
-                >
-                  新建文件
-                </button>
-              </>
-            ) : (
-              <div className="tree-empty">
-                <p>创建空间，汇集不同位置的文档。</p>
-                <button
-                  disabled={busy || booting}
-                  onClick={() => void useLibrary()}
-                >
-                  进入我的文档
-                </button>
-              </div>
-            )}
+          <button
+            className="icon-button workspace-rail-settings"
+            title="模型与设置"
+            aria-label="模型与设置"
+            disabled={!settings || generalBusy || citationOpening}
+            onClick={() => setSettingsOpen(true)}
+          >
+            <Settings2 size={17} />
+          </button>
+        </div>
+        <aside
+          className="sidebar sidebar-compact"
+          aria-label={standaloneAskOpen ? "会话导航" : "文档空间导航"}
+          hidden={sidebarClosed}
+        >
+          <div className="space-sidebar-heading">
+            <strong>{standaloneAskOpen ? "问答" : "文档"}</strong>
           </div>
-          <div className="sidebar-bottom space-footer">
-            <details className="space-advanced">
-              <summary>空间与文件</summary>
-              <div>
-                <button
-                  disabled={busy || booting}
-                  onClick={() => void showLibraryHome()}
-                >
-                  文档空间首页
-                </button>
-                <button disabled={busy || booting} onClick={() => showImport()}>
-                  导入本地资料
-                </button>
-                <button
-                  disabled={busy || booting}
-                  onClick={() => setBackupOpen(true)}
-                >
-                  备份与恢复预演
-                </button>
-                <button
-                  disabled={busy || booting}
-                  onClick={() => setRecoveryOpen(true)}
-                >
-                  恢复与诊断
-                </button>
-                <button
-                  disabled={busy || booting}
-                  onClick={() => void chooseWorkspace()}
-                >
-                  打开本地目录（编辑原件）
-                </button>
-                {workspace?.managedProjectId && (
+          {standaloneAskOpen ? (
+            <ConversationSidebar
+              conversations={assistant.summaries}
+              activeId={assistant.conversation?.id}
+              loading={assistant.loading}
+              disabled={chatBusy || composerLocked || sourceBusy}
+              onNew={() => void newConversation()}
+              onSelect={(id) => void selectRecentConversation(id)}
+            />
+          ) : (
+            <>
+              <div className="file-tree">
+                {booting || startupError ? (
+                  <div className="tree-empty">
+                    <p>{booting ? "正在读取文档列表…" : "资料暂不可读取"}</p>
+                  </div>
+                ) : workspace?.managedProjectId ? (
+                  <LibraryBrowser {...libraryProps} compact />
+                ) : workspace ? (
                   <>
-                    <button
-                      onClick={() =>
-                        void invoke("library_reveal", {
-                          projectId: workspace.managedProjectId!,
-                        }).catch(fail)
+                    <div className="external-mode-note">
+                      外部目录 · 直接编辑原件
+                    </div>
+                    <Tree
+                      files={workspace.files}
+                      selected={document?.path}
+                      onOpen={(path) =>
+                        void leaveGeneralForDocument().then((ready) => {
+                          if (ready) void openPath(path);
+                        })
                       }
-                    >
-                      在访达中显示空间
-                    </button>
+                    />
                     <button
-                      onClick={() => {
-                        setPanelOpen(true);
-                        setPanel("search");
-                      }}
+                      className="button"
+                      disabled={busy}
+                      onClick={() => nameAction("new")}
                     >
-                      搜索空间资料
+                      新建文件
                     </button>
                   </>
+                ) : (
+                  <div className="tree-empty">
+                    <p>创建空间，汇集不同位置的文档。</p>
+                    <button
+                      disabled={busy || booting}
+                      onClick={() => void useLibrary()}
+                    >
+                      进入我的文档
+                    </button>
+                  </div>
                 )}
               </div>
-            </details>
-            <button
-              className="settings-button"
-              title="模型与设置"
-              aria-label="模型与设置"
-              disabled={!settings || generalBusy}
-              onClick={() => setSettingsOpen(true)}
-            >
-              <Settings2 size={17} />
-              <span>模型与设置</span>
-              <span
-                className={`status-dot ${settings?.embedding.enabled || settings?.chat.enabled ? "online" : ""}`}
-              />
-            </button>
-            <span className="local-note">
-              <ShieldCheck size={12} />
-              文档保存在本机
-            </span>
-          </div>
+              <div className="sidebar-bottom space-footer">
+                <details className="space-advanced">
+                  <summary>空间与文件</summary>
+                  <div>
+                    <button
+                      disabled={busy || booting}
+                      onClick={() => void showLibraryHome()}
+                    >
+                      文档空间首页
+                    </button>
+                    <button
+                      disabled={busy || booting}
+                      onClick={() => showImport()}
+                    >
+                      导入本地资料
+                    </button>
+                    <button
+                      disabled={busy || booting}
+                      onClick={() => setBackupOpen(true)}
+                    >
+                      备份与恢复预演
+                    </button>
+                    <button
+                      disabled={busy || booting}
+                      onClick={() => setRecoveryOpen(true)}
+                    >
+                      恢复与诊断
+                    </button>
+                    <button
+                      disabled={busy || booting}
+                      onClick={() => void chooseWorkspace()}
+                    >
+                      打开本地目录（编辑原件）
+                    </button>
+                    {workspace?.managedProjectId && (
+                      <>
+                        <button
+                          onClick={() =>
+                            void invoke("library_reveal", {
+                              projectId: workspace.managedProjectId!,
+                            }).catch(fail)
+                          }
+                        >
+                          在访达中显示空间
+                        </button>
+                        <button onClick={() => openKnowledgePanel("search")}>
+                          搜索空间资料
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </details>
+                <span className="local-note">
+                  <ShieldCheck size={12} />
+                  文档保存在本机
+                </span>
+              </div>
+            </>
+          )}
         </aside>
         {!sidebarClosed && (
           <div
             className="sidebar-resizer"
             role="separator"
-            aria-label="调整文档列表宽度"
+            aria-label={
+              standaloneAskOpen ? "调整会话列表宽度" : "调整文档列表宽度"
+            }
             aria-orientation="vertical"
             aria-valuemin={240}
             aria-valuemax={420}
@@ -3026,6 +3239,16 @@ export default function App() {
           ) : (
             <>
               <div className="editor-toolbar">
+                {citationReturn && (
+                  <button
+                    ref={citationBack}
+                    type="button"
+                    className="workbench-return-citation"
+                    onClick={returnToCitation}
+                  >
+                    <ArrowLeft size={15} /> 返回本轮问答
+                  </button>
+                )}
                 <div className="document-title">
                   <FileText size={16} />
                   <span className="document-project" title={workspace?.name}>
@@ -3217,8 +3440,9 @@ export default function App() {
             </>
           )}
         </main>
-        {panelOpen && (
+        {(panelOpen || citationReturn) && (
           <aside
+            hidden={!panelOpen}
             className={`knowledge-panel ${panel === "ask" ? "ask-panel" : ""}`}
             style={{ "--knowledge-width": `${panelWidth}px` } as CSSProperties}
           >
@@ -3262,48 +3486,50 @@ export default function App() {
                 window.addEventListener("pointercancel", end);
               }}
             />
-            <div className="panel-tabs">
-              <button
-                className={panel === "search" ? "active" : ""}
-                onClick={() => openKnowledgePanel("search")}
-              >
-                <Search size={15} />
-                检索
-              </button>
-              <button
-                className={panel === "ask" ? "active" : ""}
-                aria-label={generalAsk ? "通用问答当前页" : undefined}
-                onClick={() => setPanel("ask")}
-              >
-                <Sparkles size={15} />
-                {generalAsk ? "AI 问答" : "问答"}
-              </button>
-              {enableGeneralAsk && !generalAsk && (
+            {!standaloneAskOpen && (
+              <div className="panel-tabs">
                 <button
-                  type="button"
-                  onClick={openGeneralAsk}
-                  disabled={chatBusy}
+                  className={panel === "search" ? "active" : ""}
+                  onClick={() => openKnowledgePanel("search")}
                 >
-                  通用问答
+                  <Search size={15} />
+                  检索
                 </button>
-              )}
-              {compactWindow && panel === "search" && (
                 <button
-                  className="return-to-editor"
-                  onClick={() => setPanelOpen(false)}
+                  className={panel === "ask" ? "active" : ""}
+                  aria-label={generalAsk ? "通用问答当前页" : undefined}
+                  onClick={() => setPanel("ask")}
                 >
-                  <PenLine size={15} />
-                  返回编辑
+                  <Sparkles size={15} />
+                  {generalAsk ? "AI 问答" : "问答"}
                 </button>
-              )}
-              <button
-                className="icon-button"
-                aria-label="收起知识侧栏"
-                onClick={closeKnowledge}
-              >
-                <PanelRightClose size={15} />
-              </button>
-            </div>
+                {enableGeneralAsk && !generalAsk && (
+                  <button
+                    type="button"
+                    onClick={openGeneralAsk}
+                    disabled={chatBusy}
+                  >
+                    通用问答
+                  </button>
+                )}
+                {compactWindow && panel === "search" && (
+                  <button
+                    className="return-to-editor"
+                    onClick={() => setPanelOpen(false)}
+                  >
+                    <PenLine size={15} />
+                    返回编辑
+                  </button>
+                )}
+                <button
+                  className="icon-button"
+                  aria-label="收起知识侧栏"
+                  onClick={closeKnowledge}
+                >
+                  <PanelRightClose size={15} />
+                </button>
+              </div>
+            )}
             {generalAsk && panel === "ask" ? null : panel === "ask" ? (
               <details className="assistant-configuration">
                 <summary>
@@ -3429,6 +3655,7 @@ export default function App() {
                       : setAssistantExpanded(!assistantExpanded)
                   }
                   onNew={() => void newConversation()}
+                  showNew={!standaloneAskOpen || sidebarClosed}
                   onActivate={activateConversation}
                   onError={fail}
                   onUseHistory={
@@ -3514,8 +3741,21 @@ export default function App() {
                           }
                         : null
                     }
-                    onOpen={setEvidencePreview}
-                    onOpenExternal={setExternalPreview}
+                    workbench={standaloneAskOpen}
+                    onOpen={(source, choices, trigger) => {
+                      if (citationOpenInFlight.current) return;
+                      const selected =
+                        choices.find((choice) =>
+                          source.external
+                            ? choice.external === source.external
+                            : choice === source,
+                        ) ?? source;
+                      setCitationPreview({
+                        source: selected,
+                        choices,
+                        trigger,
+                      });
+                    }}
                     allowInsert={!generalAsk}
                     onCopy={(record) => void copyAnswer(record)}
                     onTransfer={prepareAnswerTransfer}
@@ -3542,14 +3782,16 @@ export default function App() {
                         turn.question,
                       );
                     }}
-                    onSelect={(turn, candidate) =>
-                      void assistant.select(turn.id, candidate.id).catch(fail)
-                    }
-                    onBranch={(turn) =>
+                    onSelect={(turn, candidate) => {
+                      setCitationPreview(undefined);
+                      void assistant.select(turn.id, candidate.id).catch(fail);
+                    }}
+                    onBranch={(turn) => {
+                      setCitationPreview(undefined);
                       void assistant
                         .update({ activeLeafId: turn.id })
-                        .catch(fail)
-                    }
+                        .catch(fail);
+                    }}
                     onError={fail}
                   />
                 ) : (
@@ -3763,26 +4005,29 @@ export default function App() {
                 </form>
               </>
             )}
-            <div className="panel-bottom">
-              <span
-                className={`status-dot ${stats.documents ? "online" : ""}`}
-              />
-              <span>
-                {stats.documents
-                  ? `${stats.documents} 篇文档 · ${stats.chunks} 个片段`
-                  : "还没有加入资料索引的资料"}
-              </span>
-              <button
-                title="管理资料索引"
-                disabled={!workspace}
-                aria-label="管理资料索引"
-                onClick={() => setIndexOpen(true)}
-              >
-                <Database size={13} />
-              </button>
-            </div>
+            {!standaloneAskOpen && (
+              <div className="panel-bottom">
+                <span
+                  className={`status-dot ${stats.documents ? "online" : ""}`}
+                />
+                <span>
+                  {stats.documents
+                    ? `${stats.documents} 篇文档 · ${stats.chunks} 个片段`
+                    : "还没有加入资料索引的资料"}
+                </span>
+                <button
+                  title="管理资料索引"
+                  disabled={!workspace}
+                  aria-label="管理资料索引"
+                  onClick={() => setIndexOpen(true)}
+                >
+                  <Database size={13} />
+                </button>
+              </div>
+            )}
           </aside>
         )}
+        {inlineCitation && citationContent}
       </div>
       {toast && (
         <div className="toast">
@@ -3790,48 +4035,7 @@ export default function App() {
           {toast}
         </div>
       )}
-      {evidencePreview && (
-        <EvidencePreview
-          source={evidencePreview}
-          busy={chatBusy}
-          unavailable={Boolean(
-            evidencePreview.documentId &&
-            workspace?.managedProjectId &&
-            !libraryView.documents.some(
-              (d) =>
-                d.id === evidencePreview.documentId &&
-                d.projectId === workspace.managedProjectId &&
-                d.status === "ready",
-            ),
-          )}
-          onClose={() => setEvidencePreview(null)}
-          onOpen={() => {
-            const source = evidencePreview;
-            setEvidencePreview(null);
-            void openPath(source.path, source);
-          }}
-        />
-      )}
-      {externalPreview && (
-        <ExternalSourcePreview
-          key={externalPreview.id}
-          source={externalPreview}
-          conversationId={assistant.conversation?.id}
-          onClose={() => setExternalPreview(null)}
-          onError={fail}
-          onOpenDocument={
-            citedDocument && citedTarget
-              ? () => {
-                  void openLibraryDocument(citedDocument, citedTarget)
-                    .then((opened) => {
-                      if (opened) setExternalPreview(null);
-                    })
-                    .catch(fail);
-                }
-              : undefined
-          }
-        />
-      )}
+      {!inlineCitation && citationContent}
       {wikiOpen && workspace?.managedProjectId && (
         <WikiPanel
           key={workspace.managedProjectId}
@@ -4119,10 +4323,15 @@ export default function App() {
             rejectedCharts={rejectedCharts}
             viewKey={`answer:${answerSnapshot?.id}:expanded`}
             onError={notify}
-            onOpen={(source) => {
+            onOpen={(source, trigger) => {
               setAnswerExpanded(false);
-              if (source.external) setExternalPreview(source.external);
-              else void openPath(source.path, source);
+              if (source.external) {
+                const choices = answerCitations(
+                  answerSources,
+                  answerExternalSources,
+                ).filter((item): item is SearchResult => Boolean(item));
+                setCitationPreview({ source, choices, trigger });
+              } else void openPath(source.path, source);
             }}
           />
           {answerWarning && <p className="panel-warning">{answerWarning}</p>}

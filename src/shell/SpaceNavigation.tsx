@@ -11,6 +11,9 @@ export default function SpaceNavigation({
   generalDisabled = disabled,
   calendarOpen,
   generalOpen,
+  homeOpen,
+  wikiOpen,
+  searchOpen,
   canIndex,
   indexDirty,
   onHome,
@@ -24,6 +27,9 @@ export default function SpaceNavigation({
   generalDisabled?: boolean;
   calendarOpen: boolean;
   generalOpen: boolean;
+  homeOpen?: boolean;
+  wikiOpen?: boolean;
+  searchOpen?: boolean;
   canIndex: boolean;
   indexDirty: boolean;
   onHome: () => void;
@@ -38,6 +44,8 @@ export default function SpaceNavigation({
       <button
         title="我的文档"
         aria-label="我的文档"
+        className={homeOpen ? "active" : ""}
+        aria-current={homeOpen ? "page" : undefined}
         disabled={disabled}
         onClick={onHome}
       >
@@ -72,6 +80,8 @@ export default function SpaceNavigation({
         <button
           title="知识 Wiki"
           aria-label="知识 Wiki"
+          className={wikiOpen ? "active" : ""}
+          aria-current={wikiOpen ? "page" : undefined}
           disabled={disabled}
           onClick={onWiki}
         >
@@ -79,7 +89,13 @@ export default function SpaceNavigation({
           <span>Wiki</span>
         </button>
       )}
-      <button title="搜索资料" aria-label="搜索资料" onClick={onSearch}>
+      <button
+        title="搜索资料"
+        aria-label="搜索资料"
+        className={searchOpen ? "active" : ""}
+        aria-current={searchOpen ? "page" : undefined}
+        onClick={onSearch}
+      >
         <Search size={17} />
         <span>搜索</span>
       </button>
