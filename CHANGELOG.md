@@ -2,6 +2,11 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v0.8.1 · 问答工作台
+
+- 左侧导航随工作区切换会话列表与空间文档。
+- 区分当轮资料、网页搜索设置和实际引用。支持在问答与原文之间往返，并恢复原会话。[交付说明](docs/DELIVERY-v0.8.1.md)
+
 ## v0.8.0 · 问答与 Wiki 发布收口
 
 - 统一版本号与升级说明。独立问答在缺证时引导补充资料或检查索引，网页禁用提示区分公开搜索和模型服务。
