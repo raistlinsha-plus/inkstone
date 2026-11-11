@@ -669,6 +669,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   api.realLibrary = false;
   api.invoke.mockReset();
   api.confirm.mockReset();
@@ -1492,9 +1493,20 @@ test("switching between a document and general chat restores the selected older 
   ).toBe("true");
 });
 
-test.each([false, true])(
-  "a historical standalone citation checks the document version (changed: %s)",
-  async (changed) => {
+test.each([
+  { changed: false, compact: false },
+  { changed: true, compact: false },
+  { changed: false, compact: true },
+])(
+  "a historical standalone citation preserves the original version and return focus (changed: $changed, compact: $compact)",
+  async ({ changed, compact }) => {
+    if (compact)
+      vi.stubGlobal("matchMedia", () => ({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+    const previewRole = compact ? "dialog" : "complementary";
     enableTestChat();
     const hash = "a".repeat(64);
     disk.set("c.md", {
@@ -1525,9 +1537,7 @@ test.each([false, true])(
     fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
     await screen.findByRole("heading", { name: "有引用的回答" });
     fireEvent.click(screen.getByTitle("查看来源 1：c.md · 第 2 行"));
-    const preview = await screen.findByRole("complementary", {
-      name: "查看来源",
-    });
+    const preview = await screen.findByRole(previewRole, { name: "查看来源" });
     fireEvent.click(within(preview).getByRole("button", { name: "打开文档" }));
     const opened = await screen.findByTestId("opened-path");
     expect(opened.textContent?.trim()).toBe(changed ? "c.md:" : "c.md:2");
@@ -1538,25 +1548,25 @@ test.each([false, true])(
       ([, options]) => options?.title === "引用版本不匹配",
     );
     expect(!!warning).toBe(changed);
-    expect(
-      screen.queryByRole("complementary", { name: "查看来源" }),
-    ).toBeNull();
+    expect(screen.queryByRole(previewRole, { name: "查看来源" })).toBeNull();
     expect(
       screen.getByRole("complementary", { name: "文档空间导航" }),
     ).toBeTruthy();
     const requestsBeforeReturn = calls("assistant_get").length;
-    fireEvent.click(screen.getByRole("button", { name: "返回本轮问答" }));
-    const returned = await screen.findByRole("complementary", {
-      name: "查看来源",
-    });
-    expect(screen.getByRole("heading", { name: "有引用的回答" })).toBeTruthy();
+    const back = screen.getByRole("button", { name: "返回本轮问答" });
+    back.focus();
+    fireEvent.click(back);
+    const returned = await screen.findByRole(previewRole, { name: "查看来源" });
+    expect(
+      screen.getByRole("heading", { name: "有引用的回答", hidden: compact }),
+    ).toBeTruthy();
     fireEvent.keyDown(
-      within(returned).getByRole("button", { name: "收起引用侧栏" }),
+      within(returned).getByRole("button", {
+        name: compact ? "关闭来源预览" : "收起引用侧栏",
+      }),
       { key: "Escape" },
     );
-    expect(
-      screen.queryByRole("complementary", { name: "查看来源" }),
-    ).toBeNull();
+    expect(screen.queryByRole(previewRole, { name: "查看来源" })).toBeNull();
     expect(document.activeElement).toBe(
       screen.getByTitle("查看来源 1：c.md · 第 2 行"),
     );

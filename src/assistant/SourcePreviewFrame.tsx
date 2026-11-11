@@ -11,6 +11,7 @@ export default function SourcePreviewFrame({
   inline,
   busy,
   controls,
+  returnFocus,
   onClose,
 }: {
   children: ReactNode;
@@ -20,6 +21,7 @@ export default function SourcePreviewFrame({
   inline: boolean;
   busy: boolean;
   controls: ReactNode;
+  returnFocus?: HTMLElement;
   onClose: () => void;
 }) {
   const close = useRef<HTMLButtonElement>(null);
@@ -54,6 +56,7 @@ export default function SourcePreviewFrame({
         className={className}
         backdropClassName="assistant-source-backdrop"
         busy={busy}
+        returnFocus={returnFocus}
         onClose={onClose}
       >
         {content}

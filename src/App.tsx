@@ -2827,6 +2827,7 @@ export default function App() {
       inline={inlineCitation}
       busy={citationOpening}
       controls={citationControls}
+      returnFocus={citationPreview?.trigger}
       onClose={closeCitation}
     >
       {externalCitation ? (
