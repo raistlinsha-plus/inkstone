@@ -63,6 +63,7 @@ const currentDocuments = [
   "docs/DELIVERY-INDEX-v0.7.8.md",
   "docs/DELIVERY-v0.8.0-rc1.md",
   "docs/DELIVERY-v0.8.0-rc2.md",
+  "docs/DELIVERY-v0.8.0.md",
   "docs/REVIEW-v0.7-rc4.md",
   "docs/launch/v0.7/README.md",
   "docs/launch/v0.7/RELEASE-NOTES.md",
