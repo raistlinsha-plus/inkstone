@@ -5,6 +5,17 @@ import { characterArt } from "./art";
 import { characters, type CharacterId } from "./types";
 
 type Point = { right: number; bottom: number };
+type PetBounds = { width: number; height: number; top: number; bottom: number };
+
+function constrain(point: Point, bounds: PetBounds): Point {
+  return {
+    right: Math.max(8, Math.min(point.right, bounds.width - 76)),
+    bottom: Math.max(
+      bounds.bottom + 8,
+      Math.min(point.bottom, bounds.height - bounds.top - 76),
+    ),
+  };
+}
 
 export default function CompanionPet({
   role,
@@ -39,9 +50,11 @@ export default function CompanionPet({
       false,
   );
   const animate = moving && !reduceMotion;
-  const [bounds, setBounds] = useState<Point>({
-    right: Infinity,
-    bottom: Infinity,
+  const [bounds, setBounds] = useState<PetBounds>({
+    width: Infinity,
+    height: Infinity,
+    top: 0,
+    bottom: 0,
   });
   const avatar = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState<Point>({ right: 14, bottom: 42 });
@@ -64,18 +77,26 @@ export default function CompanionPet({
   useEffect(() => {
     const parent = anchor.current?.parentElement;
     if (!parent || typeof ResizeObserver === "undefined") return;
+    const editor =
+      parent.querySelector(".editor-panes") ??
+      parent.querySelector(".editor-container") ??
+      parent;
     const updateBounds = () => {
-      const right = parent.clientWidth;
-      const bottom = parent.clientHeight;
-      setBounds({ right, bottom });
-      setPosition((point) => ({
-        right: Math.min(point.right, Math.max(8, right - 84)),
-        bottom: Math.min(point.bottom, Math.max(8, bottom - 84)),
-      }));
+      const surface = parent.getBoundingClientRect();
+      const content = editor.getBoundingClientRect();
+      const next = {
+        width: parent.clientWidth,
+        height: parent.clientHeight,
+        top: Math.max(0, content.top - surface.top),
+        bottom: Math.max(0, surface.bottom - content.bottom),
+      };
+      setBounds(next);
+      setPosition((point) => constrain(point, next));
     };
     updateBounds();
     const observer = new ResizeObserver(updateBounds);
     observer.observe(parent);
+    if (editor !== parent) observer.observe(editor);
     return () => observer.disconnect();
   }, []);
 
@@ -101,8 +122,8 @@ export default function CompanionPet({
   }
 
   const placement = [
-    position.bottom + 68 + 142 > bounds.bottom ? "below" : "",
-    position.right + 222 > bounds.right ? "align-left" : "",
+    position.bottom + 68 + 142 > bounds.height - bounds.top ? "below" : "",
+    position.right + 222 > bounds.width ? "align-left" : "",
   ].join(" ");
 
   return (
@@ -141,16 +162,12 @@ export default function CompanionPet({
           wasDragged.current = true;
           setHeld(true);
           setOpen(false);
-          setPosition({
-            right: Math.max(
-              8,
-              Math.min(start.from.right - dx, parent.clientWidth - 76),
+          setPosition(
+            constrain(
+              { right: start.from.right - dx, bottom: start.from.bottom - dy },
+              bounds,
             ),
-            bottom: Math.max(
-              8,
-              Math.min(start.from.bottom - dy, parent.clientHeight - 76),
-            ),
-          });
+          );
         }}
         onPointerUp={finishDrag}
         onPointerCancel={() => {
