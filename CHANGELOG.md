@@ -2,6 +2,11 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v0.8.3 · 书房同伴
+
+- 新增书房同伴工作区，整合桌宠、第一季故事、相册和既有经历。
+- 墨团支持工作区内低频互动，故事逐句续读并解锁或回看 CG。[交付说明](docs/DELIVERY-v0.8.3.md)
+
 ## v0.8.2 · 文档与 Wiki
 
 - 调整编辑器工具栏、结构块间距与工作台外观。
