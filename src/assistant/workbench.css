@@ -321,3 +321,240 @@
     --ask-gutter: 12px;
   }
 }
+
+:root[data-theme="dark"] .workspace-shell :is(.titlebar, .sidebar),
+:root[data-theme="dark"] .ask-workbench > .knowledge-panel,
+:root[data-theme="dark"] .workbench-citation-pane,
+:root[data-theme="dark"] .assistant-source-backdrop > .modal {
+  color-scheme: dark;
+  color: var(--ui-text);
+  border-color: var(--ui-line);
+}
+:root[data-theme="dark"] .workspace-shell .titlebar {
+  background: var(--ui-surface);
+}
+:root[data-theme="dark"]
+  .workspace-shell
+  .titlebar
+  :is(.titlebar-name, .titlebar-center, .app-version, .icon-button) {
+  color: var(--ui-muted);
+  border-color: var(--ui-control-line);
+}
+:root[data-theme="dark"]
+  .workspace-shell
+  :is(.sidebar-resizer, .sidebar .space-footer) {
+  border-color: var(--ui-line);
+  background: var(--ui-surface);
+}
+:root[data-theme="dark"]
+  .workspace-shell
+  .sidebar-resizer:is(:hover, :focus-visible) {
+  background: var(--ui-focus);
+}
+:root[data-theme="dark"]
+  .workspace-shell
+  .sidebar
+  :is(
+    .local-note,
+    .space-advanced summary,
+    .library-list-meta,
+    .library-open small,
+    .library-pin-heading,
+    .icon-button
+  ) {
+  color: var(--ui-muted);
+}
+:root[data-theme="dark"]
+  .workspace-shell
+  .sidebar
+  :is(.library-open, .library-tabs button, .library-doc-menu button) {
+  color: var(--ui-text);
+}
+:root[data-theme="dark"]
+  .workspace-shell
+  .sidebar
+  :is(.library-document:hover, .library-tabs button:hover) {
+  background: var(--ui-hover);
+}
+:root[data-theme="dark"]
+  .workspace-shell
+  .sidebar
+  :is(.library-document.selected, .library-tabs button.active) {
+  color: var(--ui-accent);
+  background: var(--ui-selected);
+}
+:root[data-theme="dark"]
+  .workspace-shell
+  .sidebar
+  :is(
+    .library-shortcuts button,
+    input:not([type="checkbox"]),
+    select,
+    .space-advanced > div,
+    .library-doc-menu > div
+  ) {
+  color: var(--ui-text);
+  background: var(--ui-field);
+  border-color: var(--ui-control-line);
+}
+:root[data-theme="dark"] .workspace-shell .editor-toolbar .document-project {
+  color: var(--ui-muted);
+}
+
+:root[data-theme="dark"]
+  .ask-workbench
+  :is(.answer-text, .assistant-conversation-title strong) {
+  color: var(--ui-text);
+}
+:root[data-theme="dark"]
+  .ask-workbench
+  :is(
+    .assistant-toolbar-actions > button,
+    .assistant-manage summary,
+    .assistant-technical,
+    .assistant-branches,
+    .assistant-path,
+    .question-source-chips small,
+    .assistant-skip-preference,
+    .assistant-composer-options summary
+  ) {
+  color: var(--ui-muted);
+  border-color: var(--ui-line);
+}
+:root[data-theme="dark"]
+  .ask-workbench
+  :is(
+    .assistant-branches select,
+    .question-source-picker,
+    .assistant-composer-options > div,
+    .assistant-manage[open] > div,
+    .assistant-manage[open] > div button,
+    .question-source-picker select,
+    .question-source-picker input:not([type="checkbox"])
+  ) {
+  color: var(--ui-text);
+  background: var(--ui-field);
+  border-color: var(--ui-control-line);
+  box-shadow: none;
+}
+:root[data-theme="dark"]
+  .ask-workbench
+  :is(
+    .question-source-chip,
+    .assistant-run-progress,
+    .assistant-latest,
+    .answer-text .citation:not([data-review])
+  ) {
+  color: var(--ui-accent);
+  background: var(--ui-selected);
+  border-color: var(--ui-control-line);
+}
+:root[data-theme="dark"]
+  .ask-workbench
+  :is(.panel-warning, .assistant-citation-checks) {
+  color: var(--ui-warning-text);
+  background: var(--ui-warning-surface);
+  border-color: var(--ui-warning-line);
+}
+:root[data-theme="dark"]
+  .ask-workbench
+  .answer-text
+  :is(pre, code, .block-label, .graph-actions, .preview-table thead tr) {
+  color: var(--ui-text);
+  background: var(--ui-surface);
+  border-color: var(--ui-line);
+}
+:root[data-theme="dark"] .ask-workbench .answer-text :is(a, blockquote) {
+  color: var(--ui-accent);
+  border-color: var(--ui-control-line);
+}
+:root[data-theme="dark"] .ask-workbench .companion-dock {
+  color: var(--ui-text);
+  background: var(--ui-surface);
+  border-color: var(--ui-line);
+}
+:root[data-theme="dark"]
+  .ask-workbench
+  .companion-dock
+  :is(p, .companion-stage, .companion-ready, .companion-pending) {
+  color: var(--ui-muted);
+  border-color: var(--ui-line);
+}
+:root[data-theme="dark"]
+  .ask-workbench
+  .companion-dock
+  :is(.companion-compact-actions, .companion-links, .companion-invitation)
+  button {
+  color: var(--ui-text);
+  background: var(--ui-field);
+  border-color: var(--ui-line);
+}
+
+:root[data-theme="dark"] .assistant-source-backdrop > .modal {
+  background: var(--ui-paper);
+}
+:root[data-theme="dark"]
+  :is(.workbench-citation-pane, .assistant-source-backdrop .modal)
+  :is(
+    .modal-heading h2,
+    .modal-actions button,
+    .assistant-source-excerpt,
+    .assistant-evidence-text
+  ) {
+  color: var(--ui-text);
+  border-color: var(--ui-control-line);
+}
+:root[data-theme="dark"]
+  :is(.workbench-citation-pane, .assistant-source-backdrop .modal)
+  :is(.assistant-source-excerpt, .assistant-evidence-text) {
+  background: var(--ui-selected);
+}
+:root[data-theme="dark"]
+  :is(.workbench-citation-pane, .assistant-source-backdrop .modal)
+  :is(.muted, .icon-button) {
+  color: var(--ui-muted);
+}
+:root[data-theme="dark"]
+  :is(.workbench-citation-pane, .assistant-source-backdrop .modal)
+  .modal-actions {
+  border-color: var(--ui-line);
+}
+:root[data-theme="dark"]
+  :is(.workbench-citation-pane, .assistant-source-backdrop .modal)
+  .modal-actions
+  button:not(.primary) {
+  background: var(--ui-field);
+}
+:root[data-theme="dark"]
+  :is(.workbench-citation-pane, .assistant-source-backdrop .modal)
+  .modal-actions
+  button.primary {
+  color: var(--ui-on-action);
+  background: var(--ui-action);
+  border-color: var(--ui-action);
+}
+:root[data-theme="dark"]
+  :is(
+    .workspace-rail,
+    .workspace-shell .sidebar,
+    .ask-workbench > .knowledge-panel,
+    .workbench-citation-pane,
+    .assistant-source-backdrop .modal
+  )
+  :is(button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
+}
+:root[data-theme="dark"] .workbench-citation-content .modal-actions button {
+  min-height: 32px;
+  padding: 5px 9px;
+  border: 1px solid var(--ui-control-line);
+  border-radius: 6px;
+}
+:root[data-theme="dark"]
+  :is(.workbench-citation-pane, .assistant-source-backdrop .modal)
+  .modal-actions
+  button.primary:hover:not(:disabled) {
+  background: var(--ui-action-hover);
+  border-color: var(--ui-action-hover);
+}
