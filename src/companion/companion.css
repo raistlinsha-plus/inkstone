@@ -800,6 +800,11 @@
 .companion-reader-controls .primary {
   margin-left: auto;
 }
+@media (max-height: 700px) {
+  .companion-workspace-page:has(> nav) .companion-reader-scene img {
+    max-height: min(42dvh, max(120px, calc(100dvh - 445px)));
+  }
+}
 .companion-pet-anchor {
   position: absolute;
   z-index: 3;
