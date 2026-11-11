@@ -1,10 +1,16 @@
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { initializeAppearance } from "./platform/appearance";
 import "./styles.css";
 import "./polish.css";
 import "./space.css";
 import "./assistant/assistant.css";
+import "./workbench-theme.css";
 import "./assistant/workbench.css";
+import "./editor-workbench.css";
+import "./knowledge/wiki.css";
+
+initializeAppearance();
 
 if (
   import.meta.env.DEV &&

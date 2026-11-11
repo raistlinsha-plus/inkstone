@@ -4048,12 +4048,14 @@ export default function App() {
             setWikiOpen(false);
             showImport();
           }}
-          onOpenSource={(source) => {
-            setWikiOpen(false);
-            void leaveGeneralForDocument().then((ready) => {
-              if (ready)
-                void openPath(source.path, { ...source, requireVersion: true });
-            });
+          onOpenSource={async (source) => {
+            if (!(await leaveGeneralForDocument())) return;
+            if (
+              await openPath(source.path, { ...source, requireVersion: true })
+            ) {
+              setWikiOpen(false);
+              setPanelOpen(false);
+            }
           }}
         />
       )}

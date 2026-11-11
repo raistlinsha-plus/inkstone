@@ -1,0 +1,354 @@
+.document-editor {
+  --editor-control-size: 32px;
+  --editor-control-gap: 4px;
+  --editor-group-gap: 8px;
+  color: var(--ui-text);
+  background: var(--ui-paper);
+}
+
+.document-editor .editor-tools {
+  gap: 8px;
+  padding: 6px 14px;
+  min-height: 44px;
+  border-color: var(--ui-line);
+  background: var(--ui-surface);
+}
+.document-editor .history-tools {
+  gap: 2px;
+  padding-inline-end: 8px;
+  border-color: var(--ui-line);
+}
+.document-editor .editor-tools button {
+  color: var(--ui-text);
+}
+.document-editor .editor-tools button:hover:not(:disabled) {
+  background: var(--ui-hover);
+}
+.document-editor .editor-tools > button.selected,
+.document-editor .formatting-host .milkdown-top-bar .top-bar-item.active {
+  color: var(--ui-accent);
+  border-color: var(--ui-control-line);
+  background: var(--ui-selected);
+}
+.document-editor .formatting-host .milkdown-top-bar .top-bar-inner {
+  gap: var(--editor-control-gap);
+}
+.document-editor .formatting-host .milkdown-top-bar .top-bar-heading-selector {
+  flex-basis: 96px;
+  width: 96px;
+}
+.document-editor .formatting-host .milkdown-top-bar .top-bar-heading-button {
+  width: 94px;
+  justify-content: space-between;
+  background: transparent;
+  border-color: var(--ui-line);
+}
+.document-editor .formatting-host .milkdown-top-bar .top-bar-heading-label {
+  min-width: 0;
+  text-align: start;
+}
+.document-editor .formatting-host .milkdown-top-bar .top-bar-item,
+.document-editor .formatting-host .format-overflow-button {
+  width: var(--editor-control-size);
+  height: var(--editor-control-size);
+  flex-basis: var(--editor-control-size);
+}
+.document-editor .formatting-host .milkdown-top-bar .top-bar-item {
+  position: relative;
+  background: transparent;
+}
+.document-editor
+  .formatting-host
+  .milkdown-top-bar
+  .top-bar-item:hover:not(.active),
+.document-editor
+  .formatting-host
+  .milkdown-top-bar
+  .top-bar-item:focus-visible:not(.active) {
+  background: var(--ui-hover);
+}
+.document-editor
+  .formatting-host
+  .milkdown-top-bar
+  .top-bar-item[data-group-start="true"] {
+  margin-inline-start: var(--editor-group-gap);
+}
+.document-editor
+  .formatting-host
+  .milkdown-top-bar
+  .top-bar-item[data-group-start="true"]::before {
+  content: "";
+  position: absolute;
+  inset: 6px auto 6px -8px;
+  border-inline-start: 1px solid var(--ui-line);
+  pointer-events: none;
+}
+.document-editor .formatting-host .milkdown-top-bar button svg {
+  width: 16px;
+  height: 16px;
+  color: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.75;
+}
+.document-editor .formatting-host .format-overflow-button {
+  background: transparent;
+  border-color: var(--ui-line);
+}
+.document-editor .insert-control > button {
+  color: var(--ui-accent);
+  background: var(--ui-field);
+  border-color: var(--ui-control-line);
+}
+.document-editor :is(.insert-menu, .format-overflow-menu, .block-menu > div) {
+  background: var(--ui-paper);
+  border-color: var(--ui-line);
+  box-shadow: 0 8px 26px var(--ui-shadow);
+}
+.document-editor .insert-menu > span {
+  color: var(--ui-muted);
+  border-color: var(--ui-line);
+}
+.document-editor[data-compact-tools="true"] .editor-tools {
+  gap: 4px 6px;
+  padding-inline: 8px;
+}
+.document-editor[data-compact-tools="true"]
+  .editor-tools
+  > .formatting-host:not([hidden]) {
+  padding-top: 4px;
+  border-top: 1px solid var(--ui-line);
+}
+
+.document-editor .milkdown {
+  --crepe-color-background: var(--ui-paper);
+  --crepe-color-on-background: var(--ui-text);
+  --crepe-color-surface: var(--ui-surface);
+  --crepe-color-on-surface: var(--ui-muted);
+  --crepe-color-surface-low: var(--ui-paper);
+  --crepe-color-on-surface-low: var(--ui-text);
+  --crepe-color-primary: var(--ui-accent);
+  --crepe-color-secondary: var(--ui-selected);
+  --crepe-color-on-secondary: var(--ui-accent);
+  --crepe-color-outline: var(--ui-control-line);
+  --crepe-color-hover: var(--ui-hover);
+  --crepe-color-selected: var(--ui-selected);
+}
+.document-editor .milkdown .ProseMirror {
+  background: var(--ui-paper);
+  color: var(--ui-text);
+}
+.document-editor :is(.ProseMirror, .markdown-reading, .markdown-preview) a {
+  color: var(--ui-accent);
+}
+.document-editor
+  :is(.ProseMirror, .markdown-reading, .markdown-preview)
+  blockquote {
+  color: var(--ui-muted);
+  border-color: var(--ui-control-line);
+}
+.document-editor .milkdown .milkdown-list-item-block li .label-wrapper svg {
+  color: var(--ui-muted);
+}
+.document-editor
+  :is(.editor-preview-pane, .inline-content-block, .graph-preview) {
+  background: var(--ui-paper);
+  border-color: var(--ui-line);
+}
+.document-editor
+  :is(
+    .split-divider,
+    .document-outline,
+    .inline-block-bar,
+    .graph-actions,
+    .block-label
+  ) {
+  background: var(--ui-surface);
+  border-color: var(--ui-line);
+}
+.document-editor
+  :is(
+    .document-outline button,
+    .block-label,
+    .block-actions button,
+    .block-menu summary,
+    .block-menu button
+  ) {
+  color: var(--ui-text);
+}
+.document-editor
+  :is(
+    .document-outline button,
+    .block-actions button,
+    .block-menu summary,
+    .block-menu button
+  ):hover {
+  background: var(--ui-hover);
+}
+.document-editor .inline-content-block .inline-block-bar,
+.document-editor .inline-content-block footer,
+.document-editor :is(.inline-code-editor, .inline-code-reading, .graph-actions),
+.document-editor
+  .data-chart
+  :is(
+    .chart-tabs,
+    .chart-summary,
+    .chart-source-note,
+    .chart-description,
+    .chart-fields,
+    .chart-save-actions,
+    .chart-data-actions
+  ),
+.document-editor .code-preview-block .block-label {
+  padding-inline: var(--ui-block-inset);
+}
+.document-editor :is(.inline-content-block, .code-preview-block) {
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+}
+.document-editor .inline-content-block .block-actions {
+  opacity: 1;
+}
+.document-editor
+  :is(
+    .inline-content-block footer,
+    .data-chart .chart-source-note,
+    .data-chart .chart-tabs,
+    .json-row,
+    .preview-table td,
+    .preview-table th,
+    .chart-table td,
+    .chart-table th
+  ) {
+  border-color: var(--ui-line);
+}
+.document-editor
+  :is(
+    .block-title,
+    .structure-form label,
+    .mind-editor label,
+    .json-label strong,
+    .data-chart,
+    .inline-code-editor
+  ) {
+  color: var(--ui-text);
+}
+.document-editor
+  :is(
+    .inline-content-block footer,
+    .chart-summary,
+    .chart-source-note,
+    .chart-description summary,
+    .chart-missing,
+    .json-label span
+  ) {
+  color: var(--ui-muted);
+}
+.document-editor .inline-content-block footer button {
+  color: var(--ui-accent);
+}
+.document-editor .structure-form {
+  background: var(--ui-surface);
+  border-color: var(--ui-line);
+  margin-inline: var(--ui-block-inset);
+}
+.document-editor .data-chart .chart-table-wrap {
+  margin-inline: var(--ui-block-inset);
+}
+.document-editor
+  :is(
+    .structure-form,
+    .mind-editor,
+    .data-chart,
+    .inline-code-editor,
+    .graph-actions
+  )
+  :is(input, select, textarea),
+.document-editor
+  :is(
+    .graph-actions button,
+    .structure-form button,
+    .node-actions button,
+    .json-row > button
+  ) {
+  background: var(--ui-field);
+  border-color: var(--ui-control-line);
+  color: var(--ui-text);
+}
+.document-editor .data-chart .chart-tabs button {
+  color: var(--ui-text);
+  background: transparent;
+}
+.document-editor .data-chart .chart-tabs button[aria-pressed="true"] {
+  color: var(--ui-accent);
+  border-color: var(--ui-control-line);
+  background: var(--ui-selected);
+}
+.document-editor .data-chart .chart-tabs .chart-edit-button {
+  border-color: var(--ui-control-line);
+}
+.document-editor
+  :is(
+    .chart-table thead th,
+    .preview-table thead tr,
+    .data-chart pre,
+    .markdown-reading code,
+    .markdown-preview code,
+    .markdown-reading pre,
+    .markdown-preview pre
+  ) {
+  background: var(--ui-surface);
+  color: var(--ui-text);
+}
+.document-editor :is(.markdown-reading, .markdown-preview) pre code {
+  background: transparent;
+}
+.document-editor .milkdown .ProseMirror .inline-code-reading pre {
+  color: var(--ui-text);
+  background: var(--ui-surface);
+}
+.document-editor :is(.preview-help, .preview-status) {
+  background: var(--ui-surface);
+  color: var(--ui-muted);
+}
+.document-editor .preview-error {
+  color: var(--ui-warning-text);
+  background: var(--ui-warning-surface);
+  border-color: var(--ui-warning-line);
+}
+:root[data-theme="dark"] .document-editor .cm-content span {
+  color: inherit;
+}
+
+.editor-toolbar,
+.editor-status {
+  background: var(--ui-paper);
+  color: var(--ui-muted);
+  border-color: var(--ui-line);
+}
+.editor-toolbar .document-title {
+  color: var(--ui-text);
+}
+.editor-toolbar .mode-switch {
+  background: var(--ui-surface);
+  border-color: var(--ui-line);
+}
+.editor-toolbar .mode-switch button {
+  min-height: 30px;
+  color: var(--ui-muted);
+}
+.editor-toolbar .mode-switch button.active {
+  background: var(--ui-selected);
+  color: var(--ui-accent);
+}
+.editor-toolbar :is(.file-actions .icon-button, .dropdown button) {
+  color: var(--ui-text);
+}
+.editor-toolbar
+  :is(.file-actions .icon-button, .dropdown button):hover:not(:disabled) {
+  background: var(--ui-hover);
+}
+.editor-toolbar .dropdown {
+  background: var(--ui-paper);
+  border-color: var(--ui-line);
+  box-shadow: 0 8px 26px var(--ui-shadow);
+}

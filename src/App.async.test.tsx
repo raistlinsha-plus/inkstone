@@ -1332,7 +1332,7 @@ test("first Wiki setup guides explicitly scoped compilation, review, publication
     "待审阅 1 项",
   );
   fireEvent.click(await panel.findByText("原文位置 · 1"));
-  fireEvent.click(panel.getByRole("button", { name: "a.md · 第 1–1 行" }));
+  fireEvent.click(panel.getByRole("button", { name: /a\.md.*第 1 行/ }));
   await waitFor(() =>
     expect(screen.getByTestId("opened-path").textContent?.trim()).toBe(
       "a.md:1",

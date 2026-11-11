@@ -299,22 +299,30 @@ export default function TextEditor({
               }
             }),
             EditorView.theme({
-              "&": { height: "100%", fontSize: "14px" },
+              "&": {
+                height: "100%",
+                fontSize: "14px",
+                background: "var(--ui-paper)",
+                color: "var(--ui-text)",
+              },
               ".cm-scroller": {
                 fontFamily: '"SFMono-Regular", Menlo, monospace',
                 lineHeight: "1.9",
               },
               ".cm-content": { padding: "30px 24px" },
               ".cm-gutters": {
-                background: "#faf9f6",
+                background: "var(--ui-surface)",
                 border: "none",
-                color: "#b3b0a8",
+                color: "var(--ui-muted)",
                 paddingRight: "10px",
               },
-              ".cm-activeLine": { background: "#eeece550" },
+              ".cm-activeLine": { background: "var(--ui-hover)" },
               ".cm-activeLineGutter": { background: "transparent" },
               "&.cm-focused": { outline: "none" },
-              ".cm-cursor": { borderLeftColor: "#396c57" },
+              ".cm-cursor": { borderLeftColor: "var(--ui-focus)" },
+              "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
+                background: "var(--ui-selected)",
+              },
             }),
           ],
         }),

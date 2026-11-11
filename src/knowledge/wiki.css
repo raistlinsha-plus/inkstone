@@ -1,0 +1,396 @@
+.wiki-dialog.modal {
+  --wiki-padding: clamp(16px, 3vw, 28px);
+  width: min(68rem, 100%);
+  max-width: 100%;
+  max-height: min(90vh, 52rem);
+  padding: var(--wiki-padding);
+  color: var(--ui-text);
+  background: var(--ui-paper);
+  border-color: var(--ui-line);
+  box-shadow: 0 20px 70px var(--ui-shadow);
+}
+.wiki-dialog .modal-heading {
+  margin-block-end: 16px;
+  align-items: center;
+}
+.wiki-dialog .modal-heading h2 {
+  font: inherit;
+  font-size: 22px;
+  font-weight: 680;
+  margin: 0;
+  color: var(--ui-text);
+}
+.wiki-dialog .wiki-space-name {
+  margin: 4px 0 0;
+  color: var(--ui-muted);
+  overflow-wrap: anywhere;
+}
+.wiki-dialog .wiki-nav {
+  align-items: center;
+  gap: 4px 8px;
+  padding-bottom: 8px;
+  border-color: var(--ui-line);
+}
+.wiki-toolbar-divider {
+  flex: 1;
+}
+.wiki-dialog .wiki-nav button,
+.wiki-dialog .modal-actions button,
+.wiki-dialog .wiki-next-step button {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--ui-text);
+  min-height: 34px;
+  padding: 5px 10px;
+}
+.wiki-dialog .modal-actions button,
+.wiki-dialog .wiki-next-step button,
+.wiki-dialog .wiki-nav .wiki-organize {
+  border-color: var(--ui-control-line);
+  background: var(--ui-field);
+}
+.wiki-dialog button:hover:not(:disabled) {
+  background: var(--ui-hover);
+}
+.wiki-dialog button.primary {
+  border-color: var(--ui-action);
+  background: var(--ui-action);
+  color: var(--ui-on-action);
+}
+.wiki-dialog button.primary:hover:not(:disabled) {
+  border-color: var(--ui-action-hover);
+  background: var(--ui-action-hover);
+}
+.wiki-dialog .wiki-nav button[aria-pressed="true"],
+.wiki-dialog .wiki-list button[aria-pressed="true"] {
+  border-color: transparent;
+  background: var(--ui-selected);
+  color: var(--ui-accent);
+}
+.wiki-dialog .icon-button {
+  color: var(--ui-muted);
+}
+.wiki-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-block: 12px;
+  color: var(--ui-muted);
+  line-height: 1.5;
+}
+.wiki-overview strong {
+  color: var(--ui-text);
+}
+.wiki-dialog :is(.wiki-job-details, .wiki-coverage, .wiki-baseline) {
+  margin: 0 0 12px;
+  padding: 6px 12px;
+  border: 1px solid var(--ui-line);
+  border-radius: 7px;
+  color: var(--ui-muted);
+}
+.wiki-dialog details > summary {
+  padding-block: 5px;
+  cursor: pointer;
+  color: var(--ui-text);
+}
+.wiki-job-details summary span {
+  margin-inline-start: 10px;
+  color: var(--ui-muted);
+}
+.wiki-job-details p {
+  margin: 3px 0 8px;
+}
+.wiki-dialog .wiki-next-step {
+  display: flex;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--ui-line);
+  border-radius: 7px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: var(--ui-surface);
+}
+.wiki-dialog .wiki-next-step p {
+  margin: 0;
+  line-height: 1.6;
+}
+.wiki-review-notice {
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: var(--ui-selected);
+  color: var(--ui-accent);
+}
+.wiki-coverage ul {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+.wiki-coverage li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  overflow-wrap: anywhere;
+}
+.wiki-dialog .wiki-coverage li[data-status="omitted"],
+.wiki-dialog .wiki-coverage li[data-status="partial"],
+.wiki-dialog .wiki-coverage li[data-status="retry"] {
+  color: var(--ui-warning-text);
+}
+.wiki-dialog .wiki-columns {
+  display: grid;
+  grid-template-columns: minmax(11rem, 2fr) minmax(0, 5fr);
+  gap: 18px;
+}
+.wiki-dialog .wiki-list {
+  display: grid;
+  align-content: start;
+  border-inline-end: 1px solid var(--ui-line);
+  padding-inline-end: 14px;
+  gap: 5px;
+}
+.wiki-change-list {
+  display: grid;
+  gap: 5px;
+}
+.wiki-change-list + .wiki-change-list {
+  margin-top: 12px;
+}
+.wiki-change-list h3 {
+  margin: 4px 6px;
+  color: var(--ui-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.wiki-dialog .wiki-list button {
+  min-height: 40px;
+  padding: 8px;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  overflow-wrap: anywhere;
+}
+.wiki-dialog .wiki-list button small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--ui-muted);
+}
+.wiki-dialog .wiki-list p {
+  margin: 8px 6px;
+  color: var(--ui-muted);
+  line-height: 1.6;
+}
+.wiki-dialog :is(.wiki-list, .wiki-policy) label {
+  display: grid;
+  gap: 6px;
+}
+.wiki-dialog
+  :is(.wiki-list, .wiki-policy)
+  :is(input:not([type="checkbox"]), select) {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--ui-control-line);
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: var(--ui-field);
+  color: var(--ui-text);
+}
+.wiki-dialog .wiki-policy {
+  gap: 14px;
+  width: min(100%, 44rem);
+  margin: 12px auto 0;
+}
+.wiki-dialog .wiki-policy > label:first-child,
+.wiki-dialog .wiki-document-list label {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 4px;
+  overflow-wrap: anywhere;
+}
+.wiki-dialog input[type="checkbox"] {
+  margin: 2px 0 0;
+  accent-color: var(--ui-action);
+  flex: 0 0 auto;
+}
+.wiki-dialog .wiki-document-list {
+  max-height: 15rem;
+  border: 1px solid var(--ui-line);
+  border-radius: 7px;
+  padding: 8px;
+}
+.wiki-dialog .muted {
+  margin: 0;
+  color: var(--ui-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.wiki-reader-placeholder {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  min-height: 9rem;
+  padding: 16px;
+  text-align: center;
+  color: var(--ui-muted);
+}
+.wiki-review-detail {
+  min-width: 0;
+}
+.wiki-review-context {
+  display: flex;
+  gap: 4px 12px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+  color: var(--ui-muted);
+}
+.wiki-review-context strong {
+  color: var(--ui-text);
+}
+.wiki-dialog :is(.panel-warning, .wiki-summary-warning) {
+  color: var(--ui-warning-text);
+  background: var(--ui-warning-surface);
+  border-color: var(--ui-warning-line);
+}
+.wiki-summary-warning {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--ui-warning-line);
+  border-radius: 8px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.wiki-summary-warning h3,
+.wiki-summary-warning p {
+  margin: 0;
+}
+.wiki-summary-warning ul {
+  padding-inline-start: 1.25rem;
+  margin: 6px 0;
+}
+.wiki-summary-warning li + li {
+  margin-top: 4px;
+}
+.wiki-page,
+.wiki-page-body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.wiki-dialog .wiki-page-body > h3 {
+  margin: 0 0 14px;
+  font-size: 19px;
+  line-height: 1.4;
+}
+.wiki-dialog .markdown-reading {
+  color: var(--ui-text);
+}
+.wiki-dialog .wiki-page-body > .markdown-reading {
+  padding: 0;
+}
+.wiki-dialog
+  .wiki-page-body
+  > .markdown-reading
+  > div:first-child
+  > :first-child {
+  margin-top: 0;
+}
+.wiki-dialog .markdown-reading a {
+  color: var(--ui-accent);
+}
+.wiki-dialog .markdown-reading :is(blockquote, code, pre) {
+  color: var(--ui-text);
+  border-color: var(--ui-line);
+  background: var(--ui-surface);
+}
+.wiki-dialog .markdown-reading pre code {
+  background: transparent;
+}
+.wiki-evidence {
+  min-width: 0;
+  margin-top: 12px;
+  border-top: 1px solid var(--ui-line);
+}
+.wiki-citation-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+.wiki-citation-list li {
+  border: 1px solid var(--ui-line);
+  border-radius: 7px;
+}
+.wiki-citation-list button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  text-align: left;
+  border-radius: 6px;
+}
+.wiki-citation-list button svg {
+  flex-shrink: 0;
+  color: var(--ui-accent);
+}
+.wiki-citation-list small {
+  display: block;
+  margin-top: 3px;
+  color: var(--ui-muted);
+}
+.wiki-citation-list blockquote {
+  margin: 0;
+  border-top: 1px solid var(--ui-line);
+  padding: 10px;
+  color: var(--ui-muted);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+.wiki-dialog .wiki-review-actions {
+  position: sticky;
+  z-index: 2;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--ui-line);
+  bottom: calc(-1 * var(--wiki-padding));
+  padding: 10px var(--wiki-padding) 12px;
+  margin: 16px calc(-1 * var(--wiki-padding)) calc(-1 * var(--wiki-padding));
+  background: var(--ui-paper);
+}
+@media (min-width: 860px) {
+  .wiki-dialog .wiki-page-review {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(12rem, 2fr);
+    gap: 14px;
+  }
+  .wiki-page-review .wiki-evidence {
+    margin-top: 0;
+    padding-inline-start: 12px;
+    border-top: 0;
+    border-inline-start: 1px solid var(--ui-line);
+  }
+}
+@media (max-width: 720px) {
+  .wiki-dialog .wiki-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wiki-dialog .wiki-list {
+    max-height: 12rem;
+    overflow: auto;
+    padding: 0 4px 10px;
+    border-inline-end: 0;
+    border-bottom: 1px solid var(--ui-line);
+  }
+  .wiki-dialog .wiki-toolbar-divider {
+    display: none;
+  }
+}

@@ -1,4 +1,5 @@
 import { isImeEvent } from "./platform/ime";
+import { getAppearance, setAppearance } from "./platform/appearance";
 import { useState, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Check, KeyRound, LoaderCircle, Server, X } from "lucide-react";
@@ -54,6 +55,7 @@ export default function SettingsModal({
   });
   const [tab, setTab] = useState<Tab>("embedding");
   const [busy, setBusy] = useState("");
+  const [appearance, setAppearanceChoice] = useState(getAppearance);
   const testGeneration = useRef(0);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -188,16 +190,36 @@ export default function SettingsModal({
       <p className="muted">
         文件与索引保存在本机。按需要连接自己的 API，也可以使用本地服务。
       </p>
-      {onWebSearch && (
-        <button
-          type="button"
-          className="button small"
-          disabled={!!busy}
-          onClick={onWebSearch}
-        >
-          自动联网设置
-        </button>
-      )}
+      <div className="settings-utilities">
+        {onWebSearch && (
+          <button
+            type="button"
+            className="button small"
+            disabled={!!busy}
+            onClick={onWebSearch}
+          >
+            自动联网设置
+          </button>
+        )}
+        <label>
+          工作台外观
+          <select
+            value={appearance}
+            onChange={(event) => {
+              const next = event.target.value;
+              if (next !== "system" && next !== "light" && next !== "dark")
+                return;
+              setAppearanceChoice(next);
+              setAppearance(next);
+            }}
+          >
+            <option value="system">跟随系统</option>
+            <option value="light">浅色</option>
+            <option value="dark">深色</option>
+          </select>
+        </label>
+        <small>即时生效</small>
+      </div>
       <div
         className="settings-tabs"
         role="tablist"
