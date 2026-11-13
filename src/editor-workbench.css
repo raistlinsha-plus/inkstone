@@ -100,7 +100,7 @@
   border-color: var(--ui-control-line);
 }
 .document-editor :is(.insert-menu, .format-overflow-menu, .block-menu > div) {
-  background: var(--ui-paper);
+  background: var(--ui-overlay);
   border-color: var(--ui-line);
   box-shadow: 0 8px 26px var(--ui-shadow);
 }
@@ -315,10 +315,6 @@
   background: var(--ui-warning-surface);
   border-color: var(--ui-warning-line);
 }
-:root[data-theme="dark"] .document-editor .cm-content span {
-  color: inherit;
-}
-
 .editor-toolbar,
 .editor-status {
   background: var(--ui-paper);
@@ -348,7 +344,7 @@
   background: var(--ui-hover);
 }
 .editor-toolbar .dropdown {
-  background: var(--ui-paper);
+  background: var(--ui-overlay);
   border-color: var(--ui-line);
   box-shadow: 0 8px 26px var(--ui-shadow);
 }

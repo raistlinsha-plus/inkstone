@@ -22,6 +22,9 @@ test("sandbox verifies parent, data and revision before drawing or exporting", a
       dispose: vi.fn(),
       setOption: vi.fn(),
       resize: vi.fn(),
+      getWidth: () => 800,
+      getHeight: () => 400,
+      getOption: () => ({ legend: [{ selected: { 收入: false } }] }),
       renderToSVGString: vi.fn(() => "<svg><text>2</text></svg>"),
     };
     mock.instances.push(instance);
@@ -52,7 +55,33 @@ test("sandbox verifies parent, data and revision before drawing or exporting", a
     format: "png",
   });
   expect(mock.instances[0].renderToSVGString).not.toHaveBeenCalled();
+  expect(mock.init).toHaveBeenCalledTimes(1);
+  send({
+    type: "render",
+    kind: "chart",
+    source: chartTemplate,
+    theme: "dark",
+    preserveView: true,
+  });
+  expect(mock.init).toHaveBeenCalledTimes(1);
+  expect(mock.instances[0].setOption).toHaveBeenLastCalledWith(
+    expect.objectContaining({ backgroundColor: "#1e2220" }),
+    { notMerge: false },
+  );
   send({ type: "command", action: "export", format: "png" });
+  expect(mock.init).toHaveBeenLastCalledWith(null, undefined, {
+    renderer: "svg",
+    ssr: true,
+    width: 800,
+    height: 400,
+  });
+  expect(mock.instances[1].setOption).toHaveBeenCalledWith(
+    expect.objectContaining({
+      backgroundColor: "#fffefa",
+      legend: expect.objectContaining({ selected: { 收入: false } }),
+    }),
+  );
+  expect(mock.instances[1].dispose).toHaveBeenCalledOnce();
   expect(posted.mock.calls.at(-1)?.[0]).toMatchObject({
     type: "export",
     format: "png",
@@ -74,8 +103,8 @@ test("sandbox verifies parent, data and revision before drawing or exporting", a
     requestId: "bad",
     revision: 3,
   });
-  expect(mock.init).toHaveBeenCalledTimes(2);
-  expect(mock.instances[1].dispose).toHaveBeenCalledOnce();
+  expect(mock.init).toHaveBeenCalledTimes(3);
+  expect(mock.instances[2].dispose).toHaveBeenCalledOnce();
   expect(posted.mock.calls.at(-1)?.[0]).toMatchObject({
     type: "error",
     requestId: "bad",

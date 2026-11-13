@@ -126,7 +126,9 @@ try {
     .locator("summary")
     .filter({ hasText: /原文位置/ })
     .click();
-  await wiki.getByRole("button", { name: /阅读活动方案\.md · 第/ }).click();
+  await wiki
+    .getByRole("button", { name: /阅读活动方案\.md\s*第/ })
+    .click();
   await wiki.waitFor({ state: "hidden" });
   assert(
     await page.evaluate(() =>
@@ -145,7 +147,9 @@ try {
     { width: 1280, height: 800 },
   );
   await companion.emulateMedia({ reducedMotion: "no-preference" });
-  await companion.getByRole("button", { name: "问答", exact: true }).click();
+  await companion.getByRole("button", { name: "书房同伴", exact: true }).click();
+  await companion.getByRole("button", { name: "显示桌宠", exact: true }).click();
+  await companion.getByRole("button", { name: "返回工作区", exact: true }).click();
   const sprite = companion.locator("[data-companion-sprite='motuan']");
   await sprite.waitFor();
   assert.equal(await sprite.getAttribute("data-state"), "idle");
@@ -157,10 +161,14 @@ try {
   assert(await sprite.evaluate(hasAnimation));
   await companion.emulateMedia({ reducedMotion: "reduce" });
   assert.equal(await sprite.evaluate(hasAnimation), false);
-  await companion.getByRole("button", { name: "展开同伴" }).click();
-  await companion.getByRole("button", { name: "相册", exact: true }).click();
+  await companion.getByRole("button", { name: "书房同伴", exact: true }).click();
+  await companion
+    .getByRole("navigation", { name: "同伴功能" })
+    .getByRole("button", { name: "相册", exact: true })
+    .click();
   await companion.getByRole("button", { name: /纸签下的午后/ }).click();
-  await companion.getByRole("dialog", { name: /纸签下的午后/ }).waitFor();
+  await companion.getByRole("heading", { name: /纸签下的午后/ }).waitFor();
+  await companion.getByAltText(/圆窗旁打盹/).waitFor();
   checks.push(
     "Motuan motion respects OS reduced motion, and the seeded chapter unlocks its pilot CG",
   );

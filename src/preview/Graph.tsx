@@ -12,6 +12,8 @@ import DOMPurify from "dompurify";
 import type { MindNode } from "../content/mindmap";
 import { graphViewport, loadViewport, saveViewport } from "./viewport";
 import { parseChart } from "../content/chart";
+import { lightGraphExport, previewTheme } from "./theme";
+import "./graph.css";
 interface Props {
   kind: "mermaid" | "mindmap" | "chart";
   source: string;
@@ -98,7 +100,7 @@ async function exportSvg(svg: string, format: "svg" | "png" = "svg") {
         };
         image.src = imageUrl;
       });
-      context.fillStyle = "#fffefa";
+      context.fillStyle = lightGraphExport;
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
       png = canvas.toDataURL("image/png");
@@ -173,10 +175,29 @@ export default function Graph({
     return null;
   }, [kind, source]);
   const [debounced, setDebounced] = useState({ source, tree });
+  const [theme, setTheme] = useState(() =>
+    previewTheme(document.documentElement.dataset.theme),
+  );
+  useEffect(() => {
+    const root = document.documentElement;
+    const readTheme = () => setTheme(previewTheme(root.dataset.theme));
+    const observer = new MutationObserver(readTheme);
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    readTheme();
+    return () => observer.disconnect();
+  }, []);
   const callbacks = useRef({ onNode, onError, onLocate, startLine, source });
   callbacks.current = { onNode, onError, onLocate, startLine, source };
   const stale = source !== debounced.source;
   const active = useRef({ id: "", revision: 0 });
+  const lastRender = useRef<{
+    content: typeof debounced;
+    kind: Props["kind"];
+    frame: HTMLIFrameElement;
+  }>(null);
   useEffect(() => {
     const t = setTimeout(() => setDebounced({ source, tree }), 350);
     return () => clearTimeout(t);
@@ -204,6 +225,12 @@ export default function Graph({
     const render = () => {
       if (sent || !frame.current) return;
       sent = true;
+      const previous = lastRender.current;
+      const preserveView =
+        previous?.content === debounced &&
+        previous.kind === kind &&
+        previous.frame === frame.current;
+      lastRender.current = { content: debounced, kind, frame: frame.current };
       clearTimeout(timer);
       started = performance.now();
       setElapsed(null);
@@ -213,6 +240,8 @@ export default function Graph({
         source: debounced.source,
         tree: debounced.tree,
         viewport: viewport.current,
+        theme,
+        preserveView,
       });
       timer = setTimeout(() => {
         setStatus("预览超时。可继续编辑源码，精简内容后重试。");
@@ -260,6 +289,8 @@ export default function Graph({
         if (line) setErrorLine(Number(line[1]));
       } else if (data.type === "locate")
         callbacks.current.onLocate?.(callbacks.current.startLine);
+      else if (data.type === "export-error")
+        callbacks.current.onError?.(String(data.message));
       else if (
         data.type === "node" &&
         callbacks.current.source === debounced.source
@@ -290,7 +321,7 @@ export default function Graph({
       renderWhenLoaded.current = () => {};
       window.removeEventListener("message", handler);
     };
-  }, [debounced, kind, token, attempt, problem]);
+  }, [debounced, kind, token, attempt, problem, theme]);
   return (
     <div
       className="graph-preview"

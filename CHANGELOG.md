@@ -2,6 +2,12 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v0.8.4 · 浅色和深色配色
+
+- 调整工作区背景、正文、侧栏和浮层，统一问答、搜索、设置、导入及文档菜单的主题。恢复资料范围按钮、菜单项和必要提示的可读性。
+- 调整日历日期、工具栏和书房同伴的文字对比度，补齐键盘焦点、悬停、选中和错误状态。
+- 源码语法、脑图、Mermaid 和 ECharts 预览跟随应用主题。图表预览用线型、点型和纹理辅助识别，SVG/PNG 沿用浅色导出。[交付说明](docs/DELIVERY-v0.8.4.md)
+
 ## v0.8.3 · 书房同伴
 
 - 新增书房同伴工作区，整合桌宠、第一季故事、相册和既有经历。

@@ -11,6 +11,7 @@ import Graph from "./Graph";
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  delete document.documentElement.dataset.theme;
 });
 test("load and ready handshakes send one render and ignore stale revisions", async () => {
   vi.useFakeTimers();
@@ -124,4 +125,40 @@ test("graph sizes are bounded, revision-owned and expandable without changing so
   expect(container.style.getPropertyValue("--graph-height")).toBe("560px");
   fireEvent.click(screen.getByRole("button", { name: "收起画布" }));
   expect(container.style.getPropertyValue("--graph-height")).toBe("440px");
+});
+
+test("switching appearance rerenders the same sandbox and passes through the saved viewport", async () => {
+  render(<Graph kind="mindmap" source="- 原始" />);
+  const iframe = screen.getByTitle("Markdown 脑图") as HTMLIFrameElement;
+  const posted = vi.spyOn(iframe.contentWindow!, "postMessage");
+  fireEvent.load(iframe);
+  const initial = posted.mock.calls[0][0];
+  expect(initial).toMatchObject({ theme: "light", preserveView: false });
+  act(() =>
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        source: iframe.contentWindow!,
+        data: {
+          ...initial,
+          type: "viewport",
+          x: 80,
+          y: 50,
+          scale: 1.5,
+          remember: true,
+        },
+      }),
+    ),
+  );
+  await act(async () => {
+    document.documentElement.dataset.theme = "dark";
+  });
+  expect(screen.getByTitle("Markdown 脑图")).toBe(iframe);
+  expect(posted.mock.calls.at(-1)?.[0]).toMatchObject({
+    type: "render",
+    theme: "dark",
+    source: initial.source,
+    revision: initial.revision + 1,
+    preserveView: true,
+    viewport: { x: 80, y: 50, scale: 1.5 },
+  });
 });

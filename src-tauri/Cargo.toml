@@ -1,6 +1,6 @@
 [package]
 name = "inkstone"
-version = "0.8.3"
+version = "0.8.4"
 description = "Local Markdown editor and personal knowledge base"
 edition = "2021"
 license = "Apache-2.0"

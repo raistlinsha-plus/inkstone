@@ -1,52 +1,67 @@
 :root {
-  --ui-paper: #fdfdfa;
-  --ui-surface: #f6f7f3;
+  color-scheme: light;
+  --ui-paper: #fbfaf7;
+  --ui-surface: #f3f2ef;
   --ui-field: #ffffff;
-  --ui-text: #252b26;
-  --ui-muted: #535e55;
-  --ui-line: #dce1db;
-  --ui-control-line: #7a887c;
-  --ui-hover: #edf0eb;
-  --ui-selected: #e4eee6;
-  --ui-accent: #315c48;
-  --ui-action: #365d49;
+  --ui-overlay: #ffffff;
+  --ui-text: #222724;
+  --ui-muted: #57605b;
+  --ui-placeholder: #626e66;
+  --ui-line: #d7dbd6;
+  --ui-control-line: #748079;
+  --ui-hover: #eaece8;
+  --ui-selected: #dfeae2;
+  --ui-accent: #2e5b47;
+  --ui-action: #2e5b47;
   --ui-action-hover: #284936;
   --ui-on-action: #ffffff;
-  --ui-focus: #30634e;
+  --ui-focus: #285f49;
   --ui-warning-surface: #faf1e1;
   --ui-warning-text: #674b22;
   --ui-warning-line: #d8bd90;
+  --ui-danger: #922f34;
+  --ui-danger-surface: #f8e8e6;
+  --ui-code-keyword: #6a3a79;
+  --ui-code-string: #3b6442;
+  --ui-code-value: #854b2c;
+  --ui-code-link: #235e77;
+  --ui-code-invalid: #922f34;
   --ui-shadow: #17251d24;
   --ui-block-inset: clamp(12px, 2vw, 20px);
 }
 
 :root[data-theme="dark"] {
-  --ui-paper: #1e2421;
-  --ui-surface: #252d28;
-  --ui-field: #181e1a;
-  --ui-text: #edf1ed;
-  --ui-muted: #bcc9bf;
-  --ui-line: #424e46;
-  --ui-control-line: #74877a;
-  --ui-hover: #303b34;
-  --ui-selected: #354a3b;
-  --ui-accent: #b4d9bf;
-  --ui-action: #acd2b7;
-  --ui-action-hover: #c2e4cb;
-  --ui-on-action: #182c21;
-  --ui-focus: #a8dbb8;
+  color-scheme: dark;
+  --ui-paper: #1e2220;
+  --ui-surface: #272d29;
+  --ui-field: #171b19;
+  --ui-overlay: #303632;
+  --ui-text: #eef1ee;
+  --ui-muted: #b9c3bc;
+  --ui-placeholder: #aab5ae;
+  --ui-line: #48534b;
+  --ui-control-line: #86978c;
+  --ui-hover: #333d36;
+  --ui-selected: #34473b;
+  --ui-accent: #a8d0b7;
+  --ui-action: #a8d0b7;
+  --ui-action-hover: #c0e3cc;
+  --ui-on-action: #17281f;
+  --ui-focus: #a8d0b7;
   --ui-warning-surface: #382f22;
   --ui-warning-text: #f3d79f;
   --ui-warning-line: #8c7047;
+  --ui-danger: #ffc0bd;
+  --ui-danger-surface: #4a2f2f;
+  --ui-code-keyword: #e1bcef;
+  --ui-code-string: #acd8ad;
+  --ui-code-value: #f3c093;
+  --ui-code-link: #a4d2e6;
+  --ui-code-invalid: #ffc0bd;
   --ui-shadow: #00000050;
 }
 
-:root[data-theme="dark"] :is(.document-editor, .wiki-dialog) {
-  color-scheme: dark;
-}
-
-:is(.document-editor, .wiki-dialog)
-  :is(button, input, textarea, select, summary):focus-visible {
+:root :where(button, input, textarea, select, summary, a):focus-visible {
   outline: 2px solid var(--ui-focus);
   outline-offset: 2px;
 }
@@ -61,11 +76,11 @@
 .settings-utilities select {
   min-height: 32px;
   padding: 4px 8px;
-  border: 1px solid #7a887c;
+  border: 1px solid var(--ui-control-line);
   border-radius: 6px;
-  background: #fff;
-  color: #252b26;
+  background: var(--ui-field);
+  color: var(--ui-text);
 }
 .settings-utilities small {
-  color: #535e55;
+  color: var(--ui-muted);
 }

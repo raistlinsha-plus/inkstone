@@ -31,9 +31,10 @@ import { json } from "@codemirror/lang-json";
 import {
   foldGutter,
   bracketMatching,
+  HighlightStyle,
   syntaxHighlighting,
-  defaultHighlightStyle,
 } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
 import { linter } from "@codemirror/lint";
 import { jsonParseLinter } from "@codemirror/lang-json";
 import type { DocumentSession } from "./session";
@@ -74,6 +75,25 @@ import {
 } from "./rich/blocks";
 import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame.css";
+
+const sourceHighlight = HighlightStyle.define([
+  { tag: tags.heading, color: "var(--ui-accent)", fontWeight: "700" },
+  { tag: tags.strong, fontWeight: "700" },
+  { tag: tags.emphasis, fontStyle: "italic" },
+  { tag: tags.strikethrough, textDecoration: "line-through" },
+  { tag: [tags.keyword, tags.propertyName], color: "var(--ui-code-keyword)" },
+  {
+    tag: [tags.string, tags.regexp, tags.monospace],
+    color: "var(--ui-code-string)",
+  },
+  {
+    tag: [tags.number, tags.bool, tags.null, tags.atom],
+    color: "var(--ui-code-value)",
+  },
+  { tag: [tags.link, tags.url], color: "var(--ui-code-link)" },
+  { tag: [tags.comment, tags.quote, tags.meta], color: "var(--ui-muted)" },
+  { tag: tags.invalid, color: "var(--ui-code-invalid)" },
+]);
 
 export interface EditorHandle {
   getContent: () => string;
@@ -277,7 +297,7 @@ export default function TextEditor({
             ]),
             foldGutter(),
             bracketMatching(),
-            syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+            syntaxHighlighting(sourceHighlight),
             ...(/\.json$/i.test(path)
               ? [json(), linter(jsonParseLinter())]
               : /\.(txt|mmd)$/i.test(path)
@@ -320,6 +340,22 @@ export default function TextEditor({
               ".cm-activeLineGutter": { background: "transparent" },
               "&.cm-focused": { outline: "none" },
               ".cm-cursor": { borderLeftColor: "var(--ui-focus)" },
+              ".cm-panels": {
+                background: "var(--ui-surface)",
+                color: "var(--ui-text)",
+              },
+              ".cm-textfield, .cm-button": {
+                background: "var(--ui-field)",
+                borderColor: "var(--ui-control-line)",
+                color: "var(--ui-text)",
+              },
+              ".cm-searchMatch, .cm-selectionMatch": {
+                backgroundColor: "var(--ui-warning-surface)",
+                outline: "1px solid var(--ui-warning-line)",
+              },
+              ".cm-searchMatch.cm-searchMatch-selected": {
+                outline: "2px solid var(--ui-focus)",
+              },
               "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
                 background: "var(--ui-selected)",
               },

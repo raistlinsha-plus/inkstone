@@ -5,7 +5,7 @@
   max-height: min(90vh, 52rem);
   padding: var(--wiki-padding);
   color: var(--ui-text);
-  background: var(--ui-paper);
+  background: var(--ui-overlay);
   border-color: var(--ui-line);
   box-shadow: 0 20px 70px var(--ui-shadow);
 }
@@ -63,7 +63,7 @@
 }
 .wiki-dialog .wiki-nav button[aria-pressed="true"],
 .wiki-dialog .wiki-list button[aria-pressed="true"] {
-  border-color: transparent;
+  border-color: var(--ui-control-line);
   background: var(--ui-selected);
   color: var(--ui-accent);
 }

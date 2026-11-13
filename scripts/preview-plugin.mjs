@@ -6,7 +6,7 @@ async function frameHtml(bundle) {
   // Opaque, network-disabled frames carry only a hashed local bundle. Data charts
   // load their own renderer, so ordinary Mermaid/mindmap previews do not load ECharts.
   const policy = `default-src 'none'; script-src 'sha256-${digest}'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'`;
-  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><style>html,body{margin:0;background:#fffefa;color:#303c32;font:14px system-ui}#graph{height:calc(100vh - 4px);overflow:auto;cursor:grab}svg{display:block}svg text{font-family:system-ui,sans-serif}body{overscroll-behavior:none}</style></head><body><div id="graph"></div><script>${runtime}</script></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><style>html,body{margin:0;background:var(--preview-background,transparent);color:var(--preview-text,inherit);font:14px system-ui}#graph{height:calc(100vh - 4px);overflow:auto;cursor:grab}svg{display:block}svg text{font-family:system-ui,sans-serif}body{overscroll-behavior:none}</style></head><body><div id="graph"></div><script>${runtime}</script></body></html>`;
 }
 export function previewPlugin() {
   const entries = new Map([

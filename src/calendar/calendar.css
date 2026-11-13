@@ -1,23 +1,46 @@
 .inkstone-calendar {
-  color: #344a3d;
+  color: var(--ui-text);
   font:
     13px/1.6 -apple-system,
     BlinkMacSystemFont,
     "PingFang SC",
     sans-serif;
   min-width: 0;
-  --fc-monarch-primary: #3c6753;
-  --fc-monarch-primary-over: #2d5543;
-  --fc-monarch-primary-down: #254936;
-  --fc-monarch-primary-foreground: #ffffff;
-  --fc-monarch-background: #fffefa;
-  --fc-monarch-foreground: #344a3d;
-  --fc-monarch-event: #e2ece3;
-  --fc-monarch-event-contrast: #2d4c39;
-  --fc-monarch-muted-foreground: #63715f;
-  --fc-monarch-faint-foreground: #697664;
-  --fc-monarch-border: #dce3d7;
-  --fc-monarch-strong: #cbd6c7;
+  --fc-monarch-primary: var(--ui-action);
+  --fc-monarch-primary-over: var(--ui-action-hover);
+  --fc-monarch-primary-down: var(--ui-action-hover);
+  --fc-monarch-primary-foreground: var(--ui-on-action);
+  --fc-monarch-secondary: var(--ui-selected);
+  --fc-monarch-secondary-foreground: var(--ui-accent);
+  --fc-monarch-secondary-over: var(--ui-hover);
+  --fc-monarch-secondary-down: var(--ui-hover);
+  --fc-monarch-tertiary: var(--ui-surface);
+  --fc-monarch-tertiary-foreground: var(--ui-text);
+  --fc-monarch-tertiary-over: var(--ui-hover);
+  --fc-monarch-tertiary-down: var(--ui-hover);
+  --fc-monarch-event: var(--ui-selected);
+  --fc-monarch-event-contrast: var(--ui-accent);
+  --fc-monarch-highlight: var(--ui-selected);
+  --fc-monarch-now: var(--ui-danger);
+  --fc-monarch-selected: var(--ui-selected);
+  --fc-monarch-selected-foreground: var(--ui-accent);
+  --fc-monarch-selected-over: var(--ui-hover);
+  --fc-monarch-selected-down: var(--ui-hover);
+  --fc-monarch-outline: var(--ui-focus);
+  --fc-monarch-popover: var(--ui-surface);
+  --fc-monarch-popover-foreground: var(--ui-text);
+  --fc-monarch-background: var(--ui-paper);
+  --fc-monarch-faint: var(--ui-surface);
+  --fc-monarch-muted: var(--ui-hover);
+  --fc-monarch-strong: var(--ui-selected);
+  --fc-monarch-stronger: var(--ui-selected);
+  --fc-monarch-strongest: var(--ui-selected);
+  --fc-monarch-foreground: var(--ui-text);
+  --fc-monarch-faint-foreground: var(--ui-muted);
+  --fc-monarch-muted-foreground: var(--ui-muted);
+  --fc-monarch-strong-foreground: var(--ui-accent);
+  --fc-monarch-border: var(--ui-line);
+  --fc-monarch-strong-border: var(--ui-control-line);
 }
 .inkstone-calendar button,
 .inkstone-calendar input,
@@ -28,29 +51,29 @@
 .inkstone-calendar button {
   min-height: 31px;
   padding: 5px 11px;
-  border: 1px solid #ccd7c9;
+  border: 1px solid var(--ui-control-line);
   border-radius: 6px;
-  color: #3b5743;
-  background: #fffefa;
+  color: var(--ui-text);
+  background: var(--ui-field);
 }
 .inkstone-calendar button:hover:not(:disabled) {
-  background: #edf3e9;
+  background: var(--ui-hover);
 }
 .inkstone-calendar button:focus-visible,
 .inkstone-calendar input:focus-visible,
 .inkstone-calendar select:focus-visible,
 .inkstone-calendar textarea:focus-visible {
-  outline: 2px solid #527961;
+  outline: 2px solid var(--ui-focus);
   outline-offset: 2px;
 }
 .inkstone-calendar .calendar-primary {
-  background: #3c6753;
-  border-color: #3c6753;
-  color: white;
+  background: var(--ui-action);
+  border-color: var(--ui-action);
+  color: var(--ui-on-action);
   font-weight: 600;
 }
 .inkstone-calendar .calendar-primary:hover:not(:disabled) {
-  background: #2d5543;
+  background: var(--ui-action-hover);
 }
 .calendar-toolbar,
 .calendar-date-nav,
@@ -70,7 +93,7 @@
 .calendar-view-tabs {
   display: flex;
   gap: 3px;
-  background: #edf2e8;
+  background: var(--ui-surface);
   padding: 3px;
   border-radius: 7px;
 }
@@ -79,9 +102,10 @@
   background: transparent;
 }
 .calendar-view-tabs button.active {
-  background: #fffefa;
-  border-color: #ccd7c9;
-  box-shadow: 0 1px 2px #3144300d;
+  color: var(--ui-accent);
+  background: var(--ui-selected);
+  border-color: var(--ui-control-line);
+  box-shadow: 0 1px 2px var(--ui-shadow);
   font-weight: 600;
 }
 .calendar-date-nav {
@@ -96,18 +120,21 @@
   display: flex;
   gap: 8px;
   align-items: center;
-  color: #5e6f5b;
+  color: var(--ui-muted);
   font-size: 12px;
+}
+.inkstone-calendar :is(input, textarea)::placeholder {
+  color: var(--ui-placeholder, var(--ui-muted));
 }
 .inkstone-calendar input:not([type="checkbox"]),
 .inkstone-calendar select,
 .inkstone-calendar textarea {
   padding: 7px 9px;
   min-height: 33px;
-  border: 1px solid #c8d4c5;
+  border: 1px solid var(--ui-control-line);
   border-radius: 5px;
-  color: #344a3d;
-  background: #fffefa;
+  color: var(--ui-text);
+  background: var(--ui-field);
   min-width: 0;
 }
 .calendar-range-description {
@@ -116,13 +143,13 @@
   flex-wrap: wrap;
   justify-content: space-between;
   padding: 4px 13px 12px;
-  color: #5e6f5b;
+  color: var(--ui-muted);
   font-size: 12px;
 }
 .calendar-empty {
   padding: 32px 18px;
   margin: 0;
-  color: #5c6f59;
+  color: var(--ui-muted);
   text-align: center;
 }
 .calendar-empty h3 {
@@ -134,7 +161,8 @@
 }
 .calendar-invalid {
   padding: 18px;
-  background: #fbf2e9;
+  color: var(--ui-warning-text);
+  background: var(--ui-warning-surface);
 }
 .calendar-invalid p {
   margin: 8px 0 0;
@@ -160,8 +188,8 @@
   text-decoration: line-through;
 }
 .inkstone-month .calendar-status-done {
-  --fc-monarch-event: #edf1e8;
-  --fc-monarch-event-contrast: #4d6148;
+  --fc-monarch-event: var(--ui-surface);
+  --fc-monarch-event-contrast: var(--ui-muted);
 }
 .calendar-agenda {
   list-style: none;
@@ -171,9 +199,9 @@
 .calendar-agenda-row {
   padding: 0;
   margin: 0 0 8px;
-  border: 1px solid #d7e0d2;
+  border: 1px solid var(--ui-line);
   border-radius: 7px;
-  background: #fffefa;
+  background: var(--ui-field);
   overflow: hidden;
 }
 .inkstone-calendar button.calendar-event-open {
@@ -189,15 +217,15 @@
 }
 .calendar-event-open strong {
   font-size: 14px;
-  color: #314d39;
+  color: var(--ui-text);
 }
 .calendar-event-time {
   font-size: 12px;
-  color: #4e6b52;
+  color: var(--ui-accent);
 }
 .calendar-event-meta {
   font-size: 11px;
-  color: #61715c;
+  color: var(--ui-muted);
 }
 .calendar-event-notes {
   white-space: pre-wrap;
@@ -207,7 +235,7 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   font-size: 12px;
-  color: #53684e;
+  color: var(--ui-muted);
 }
 .calendar-status-cancelled .calendar-event-open strong {
   text-decoration: line-through;
@@ -216,7 +244,7 @@
   padding: 3px 13px 9px;
   border: 0;
   font-size: 11px;
-  color: #426447;
+  color: var(--ui-accent);
   text-decoration: underline;
   text-align: left;
   min-height: 27px;
@@ -224,8 +252,8 @@
 .calendar-event-editor {
   padding: 16px;
   margin: 0 12px 14px;
-  background: #f4f7ee;
-  border: 1px solid #bdcfb5;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
   border-radius: 7px;
 }
 .calendar-form-heading {
@@ -241,7 +269,7 @@
   flex-direction: column;
   gap: 5px;
   margin: 0 0 12px;
-  color: #3f5a42;
+  color: var(--ui-text);
   font-size: 12px;
 }
 .calendar-event-editor input:not([type="checkbox"]),
@@ -255,7 +283,7 @@
   align-items: center;
 }
 .calendar-event-editor .calendar-checkbox input {
-  accent-color: #3c6753;
+  accent-color: var(--ui-action);
   margin: 0;
   width: 15px;
   height: 15px;
@@ -267,15 +295,16 @@
 }
 .calendar-error {
   margin: 8px 12px 12px;
-  color: #8c3f2d;
-  background: #fff2e9;
+  color: var(--ui-danger);
+  background: var(--ui-danger-surface);
   border-radius: 5px;
   padding: 10px 12px;
   overflow-wrap: anywhere;
 }
 .inkstone-calendar button.calendar-danger {
-  color: #963e30;
-  border-color: #ddc9bf;
+  color: var(--ui-danger);
+  background: var(--ui-danger-surface);
+  border-color: var(--ui-control-line);
 }
 .calendar-form-actions {
   padding-top: 4px;
@@ -285,20 +314,20 @@
 }
 .calendar-delete-confirm {
   margin-top: 12px;
-  border-top: 1px solid #d9c7ba;
+  border-top: 1px solid var(--ui-line);
   padding-top: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  color: #87422d;
+  color: var(--ui-danger);
 }
 .project-calendar {
   padding: 34px 38px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  background: #fffefa;
+  background: var(--ui-paper);
 }
 .project-calendar-heading {
   display: flex;
@@ -309,7 +338,7 @@
   margin-bottom: 22px;
 }
 .calendar-eyebrow {
-  color: #64755f;
+  color: var(--ui-muted);
   font-size: 11px;
   letter-spacing: 2px;
 }
@@ -324,7 +353,7 @@
 }
 .project-calendar-heading p {
   margin: 0;
-  color: #60735b;
+  color: var(--ui-muted);
 }
 .calendar-heading-actions button {
   display: flex;
@@ -344,13 +373,13 @@
   flex-wrap: wrap;
   gap: 12px;
   padding: 12px 0;
-  border-top: 1px solid #e0e7dc;
+  border-top: 1px solid var(--ui-line);
 }
 .project-calendar-filters label {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #4a654c;
+  color: var(--ui-text);
   font-size: 12px;
 }
 .project-calendar-filters .calendar-query {
@@ -377,7 +406,7 @@
   align-items: center;
   gap: 10px;
   margin: 3px 0 12px;
-  color: #526b50;
+  color: var(--ui-text);
   font-size: 12px;
 }
 .calendar-target-select select {
@@ -386,9 +415,9 @@
 .project-calendar-editor {
   margin: 4px 0 18px;
   padding: 12px 0 1px;
-  border: 1px solid #cedcc7;
+  border: 1px solid var(--ui-line);
   border-radius: 8px;
-  background: #f7f9f2;
+  background: var(--ui-surface);
 }
 .calendar-editor-source {
   display: flex;
@@ -396,7 +425,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 13px 12px;
-  color: #55704e;
+  color: var(--ui-muted);
   font-size: 12px;
 }
 .project-calendar-editor .calendar-event-editor {
@@ -404,8 +433,8 @@
 }
 .calendar-warnings {
   margin-top: 16px;
-  color: #805a36;
-  background: #fbf4e8;
+  color: var(--ui-warning-text);
+  background: var(--ui-warning-surface);
   padding: 10px 12px;
   border-radius: 5px;
   font-size: 12px;
@@ -423,4 +452,37 @@
   .calendar-form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* Theme the space controls outside the nested calendar component as well. */
+.workspace-shell .project-calendar-container {
+  color: var(--ui-text);
+  background: var(--ui-paper);
+}
+.workspace-shell .calendar-project-picker {
+  color: var(--ui-muted);
+}
+.workspace-shell .calendar-project-picker label {
+  color: var(--ui-text);
+}
+.workspace-shell .calendar-project-picker select {
+  color: var(--ui-text);
+  background: var(--ui-field);
+  border-color: var(--ui-control-line);
+}
+.workspace-shell
+  .project-calendar-container
+  :is(.panel-warning, .calendar-warnings) {
+  color: var(--ui-warning-text);
+  background: var(--ui-warning-surface);
+  border-color: var(--ui-warning-line);
+}
+.workspace-shell
+  .project-calendar-container
+  :is(select, summary):focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
+}
+:root[data-theme="dark"] :is(.inkstone-calendar, .project-calendar-container) {
+  color-scheme: dark;
 }
