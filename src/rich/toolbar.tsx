@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 
 const svg = (Icon: typeof Bold) =>
-  renderToStaticMarkup(<Icon size={18} strokeWidth={1.8} aria-hidden="true" />);
+  renderToStaticMarkup(
+    <Icon size={16} strokeWidth={1.75} aria-hidden="true" />,
+  );
 // Crepe's supported icon configuration keeps the editor's own commands and state.
 export const formattingIcons = {
   boldIcon: svg(Bold),
@@ -64,8 +66,15 @@ export function enhanceFormattingToolbar(
   const position = () => {
     const box = trigger.getBoundingClientRect();
     menu.style.left = `${Math.max(8, Math.min(box.right - 200, window.innerWidth - 208))}px`;
-    menu.style.top = `${box.bottom + 6}px`;
-    menu.style.maxHeight = `${Math.max(120, window.innerHeight - box.bottom - 20)}px`;
+    const below = window.innerHeight - box.bottom - 14;
+    const above = box.top - 14;
+    const placeAbove =
+      below < Math.min(menu.scrollHeight, 220) && above > below;
+    menu.style.top = placeAbove ? "auto" : `${box.bottom + 6}px`;
+    menu.style.bottom = placeAbove
+      ? `${window.innerHeight - box.top + 6}px`
+      : "auto";
+    menu.style.maxHeight = `${Math.max(0, placeAbove ? above : below)}px`;
   };
   const setOpen = (next: boolean, focus = false) => {
     open = next && hiddenItems.length > 0;
@@ -161,10 +170,18 @@ export function enhanceFormattingToolbar(
       bar
         .querySelector<HTMLElement>(".top-bar-heading-selector")
         ?.getBoundingClientRect().width || 116;
-    const cost = (i: number) => 36 + (i === 4 || i === 7 ? 8 : 0);
+    const style = getComputedStyle(bar);
+    const buttonWidth =
+      Number.parseFloat(style.getPropertyValue("--editor-control-size")) || 32;
+    const gap =
+      Number.parseFloat(style.getPropertyValue("--editor-control-gap")) || 4;
+    const groupGap =
+      Number.parseFloat(style.getPropertyValue("--editor-group-gap")) || 8;
+    const cost = (i: number) =>
+      buttonWidth + gap + (i === 4 || i === 7 ? groupGap : 0);
     const total = buttons.reduce((n, _, i) => n + cost(i), headingWidth);
     const overflow = width > 0 && total > width;
-    let remaining = width - headingWidth - 36;
+    let remaining = width - headingWidth - buttonWidth - gap;
     let fits = true;
     hiddenItems = [];
     buttons.forEach((button, i) => {
@@ -206,7 +223,7 @@ export function enhanceFormattingToolbar(
       if (event.key === "Escape") event.preventDefault();
       event.stopPropagation();
       setOpen(false);
-      if (event.key === "Escape") trigger.focus();
+      trigger.focus();
     } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
       event.preventDefault();
       event.stopPropagation();

@@ -1,6 +1,6 @@
 # 本机应用、版本与资料管理
 
-本机交付线为 **v0.7.8**，继续使用 `/Applications/Inkstone.app` 和原 Bundle ID。升级、资料同步和本轮功能入口见 [v0.7.8 交付导航](DELIVERY-INDEX-v0.7.8.md)。下文为 rc.4 合并及历史清理记录。
+本机交付线为 **v0.8.4**，继续使用 `/Applications/Inkstone.app` 和原 Bundle ID。见 [v0.8.4 交付与验收](DELIVERY-v0.8.4.md)。下文为 rc.4 合并及历史清理记录。
 
 2026-11-07；当前统一使用 **v0.7.0-rc.4**。这是本机部署整理，不改变应用功能版本，也不代表正式 v0.7.0 或 GitHub 发行完成。
 

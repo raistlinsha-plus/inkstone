@@ -2,6 +2,7 @@ import { isImeEvent } from "./platform/ime";
 import {
   useEffect,
   useImperativeHandle,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -78,6 +79,8 @@ export default function Editor({
   const [outline, setOutline] = useState(false);
   const [ratio, setRatio] = useState(50);
   const [insertOpen, setInsertOpen] = useState(false);
+  const insertMenuId = useId();
+  const pendingInsertFocus = useRef<"first" | "last">(null);
   const insertButton = useRef<HTMLButtonElement>(null);
   const insertRoot = useRef<HTMLDivElement>(null);
   const formattingHost = useRef<HTMLDivElement>(null);
@@ -104,6 +107,16 @@ export default function Editor({
   }, []);
   useEffect(() => {
     if (!insertOpen) return;
+    if (pendingInsertFocus.current) {
+      const items = insertRoot.current?.querySelectorAll<HTMLButtonElement>(
+        '[role="menuitem"]:not(:disabled)',
+      );
+      if (items?.length)
+        items[
+          pendingInsertFocus.current === "first" ? 0 : items.length - 1
+        ].focus();
+      pendingInsertFocus.current = null;
+    }
     const outside = (event: PointerEvent) => {
       if (!insertRoot.current?.contains(event.target as Node))
         setInsertOpen(false);
@@ -247,7 +260,7 @@ export default function Editor({
             title="撤销 · ⌘Z"
             aria-label="撤销"
           >
-            <Undo2 size={18} strokeWidth={1.8} />
+            <Undo2 size={17} strokeWidth={1.75} aria-hidden="true" />
           </button>
           <button
             onClick={redo}
@@ -255,7 +268,7 @@ export default function Editor({
             title="重做 · ⇧⌘Z"
             aria-label="重做"
           >
-            <Redo2 size={18} strokeWidth={1.8} />
+            <Redo2 size={17} strokeWidth={1.75} aria-hidden="true" />
           </button>
         </div>
         <div
@@ -274,7 +287,7 @@ export default function Editor({
               aria-pressed={outline}
               title="文档大纲"
             >
-              <ListTree size={18} strokeWidth={1.8} />
+              <ListTree size={17} strokeWidth={1.75} aria-hidden="true" />
               <span className="toolbar-label">大纲</span>
             </button>
             {!actualVisual && <span className="tools-spacer" />}
@@ -288,9 +301,24 @@ export default function Editor({
             >
               <button
                 ref={insertButton}
+                type="button"
                 aria-haspopup="menu"
                 aria-expanded={insertOpen}
+                aria-controls={insertOpen ? insertMenuId : undefined}
                 onMouseDown={(e) => e.preventDefault()}
+                onKeyDown={(event) => {
+                  if (
+                    insertOpen ||
+                    isImeEvent(event.nativeEvent) ||
+                    !["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)
+                  )
+                    return;
+                  event.preventDefault();
+                  pendingInsertFocus.current =
+                    event.key === "ArrowUp" ? "last" : "first";
+                  inner.current?.closeMenus();
+                  setInsertOpen(true);
+                }}
                 onClick={() => {
                   inner.current?.closeMenus();
                   setInsertOpen(!insertOpen);
@@ -301,10 +329,16 @@ export default function Editor({
                 <ChevronDown size={14} strokeWidth={1.8} />
               </button>
               {insertOpen && (
-                <div className="insert-menu" role="menu" aria-label="插入内容">
+                <div
+                  className="insert-menu"
+                  id={insertMenuId}
+                  role="menu"
+                  aria-label="插入内容"
+                >
                   {insertCommands.map((command) => (
                     <button
                       key={command.id}
+                      type="button"
                       role="menuitem"
                       disabled={!actualVisual && command.id === "clear"}
                       onMouseDown={(e) => e.preventDefault()}

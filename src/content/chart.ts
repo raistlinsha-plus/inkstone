@@ -1,4 +1,9 @@
 import { inspectJson, type JsonNode } from "./json";
+import {
+  lightGraphExport,
+  previewColors,
+  type PreviewTheme,
+} from "../preview/theme";
 
 export interface ChartData {
   schemaVersion: 1;
@@ -189,17 +194,78 @@ export function chartText(data: ChartData): string {
     ),
   ].join("\n");
 }
+const seriesPalette = {
+  light: [
+    "#3e775e",
+    "#8254a1",
+    "#ad5d31",
+    "#346b9a",
+    "#917019",
+    "#ad4977",
+    "#326f75",
+    "#6d6260",
+  ],
+  dark: [
+    "#86c6a4",
+    "#c7a4eb",
+    "#f1ac85",
+    "#8ebbed",
+    "#e7c66c",
+    "#e99ebc",
+    "#78c7cc",
+    "#bbafaa",
+  ],
+};
+const lineSymbols = [
+  "circle",
+  "rect",
+  "triangle",
+  "diamond",
+  "pin",
+  "roundRect",
+  "arrow",
+  "circle",
+];
+const lineStyles = [
+  "solid",
+  "dashed",
+  "dotted",
+  "solid",
+  "dashed",
+  "dotted",
+  "solid",
+  "dotted",
+];
+
 // Compile only the documented data schema. No user-controlled ECharts options,
 // callbacks, HTML, resource URLs, toolbox or transforms are ever forwarded.
-export function chartOption(data: ChartData) {
+export function chartOption(
+  data: ChartData,
+  theme: PreviewTheme | "export" = "light",
+) {
+  const colors = previewColors[theme === "dark" ? "dark" : "light"];
+  const palette = seriesPalette[theme === "dark" ? "dark" : "light"];
+  const canvas = theme === "export" ? lightGraphExport : colors.canvas;
+  const axisStyle = {
+    axisLine: { show: true, lineStyle: { color: colors.axis } },
+    axisTick: { lineStyle: { color: colors.axis } },
+    nameTextStyle: { color: colors.muted },
+  };
   const horizontal = data.orientation === "horizontal";
   const category = {
+    ...axisStyle,
     type: "category",
     name: data.x.label,
     data: data.x.values,
-    axisLabel: { hideOverlap: true, width: 130, overflow: "truncate" },
+    axisLabel: {
+      color: colors.muted,
+      hideOverlap: true,
+      width: 130,
+      overflow: "truncate",
+    },
   };
   const numeric = {
+    ...axisStyle,
     type: "value",
     name: [
       ...new Set(
@@ -208,37 +274,40 @@ export function chartOption(data: ChartData) {
           .filter(Boolean),
       ),
     ].join(" / "),
-    splitLine: { lineStyle: { color: "#e1e6db" } },
+    axisLabel: { color: colors.muted },
+    splitLine: { lineStyle: { color: colors.grid } },
   };
   return {
     animation: false,
-    backgroundColor: "#fffefa",
-    color: [
-      "#54785f",
-      "#809b5a",
-      "#c7a567",
-      "#688e9a",
-      "#a78398",
-      "#9d795e",
-      "#6c78a2",
-      "#b9a671",
-    ],
+    backgroundColor: canvas,
+    color: palette,
     textStyle: {
       fontFamily: "system-ui, sans-serif",
-      color: "#334431",
+      color: colors.text,
       fontSize: 13,
     },
     title: {
       text: data.title,
       left: "center",
       top: 10,
-      textStyle: { fontSize: 17, fontWeight: "normal" },
+      textStyle: { color: colors.text, fontSize: 17, fontWeight: "normal" },
     },
-    legend: { top: 44, type: "scroll", textStyle: { color: "#42513c" } },
+    legend: {
+      top: 44,
+      type: "scroll",
+      textStyle: { color: colors.text },
+      inactiveColor: colors.muted,
+      pageIconColor: colors.text,
+      pageIconInactiveColor: colors.muted,
+      pageTextStyle: { color: colors.muted },
+    },
     tooltip: {
       trigger: data.type === "pie" ? "item" : "axis",
       renderMode: "richText",
       confine: true,
+      backgroundColor: colors.surface,
+      borderColor: colors.axis,
+      textStyle: { color: colors.text },
     },
     ...(data.type === "pie"
       ? {}
@@ -262,21 +331,38 @@ export function chartOption(data: ChartData) {
               radius: data.donut ? ["38%", "65%"] : "65%",
               center: ["50%", "59%"],
               avoidLabelOverlap: true,
-              label: { color: "#42513c", overflow: "truncate", width: 140 },
+              label: { color: colors.text, overflow: "truncate", width: 140 },
+              itemStyle: { borderColor: canvas, borderWidth: 2 },
               data: data.x.values.flatMap((name, i) =>
                 data.series[0].values[i] === null
                   ? []
-                  : [{ name, value: data.series[0].values[i] }],
+                  : [
+                      {
+                        name,
+                        value: data.series[0].values[i],
+                        itemStyle: { color: palette[i % palette.length] },
+                      },
+                    ],
               ),
             },
           ]
-        : data.series.map((s) => ({
+        : data.series.map((s, index) => ({
             type: data.type,
             name: s.name,
             data: s.values,
-            connectNulls: false,
-            barMaxWidth: 60,
-            symbolSize: 6,
+            itemStyle: { color: palette[index] },
+            ...(data.type === "line"
+              ? {
+                  connectNulls: false,
+                  lineStyle: {
+                    color: palette[index],
+                    width: 2,
+                    type: lineStyles[index],
+                  },
+                  symbol: lineSymbols[index],
+                  symbolSize: 7,
+                }
+              : { barMaxWidth: 60 }),
           })),
   };
 }

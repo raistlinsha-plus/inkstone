@@ -187,7 +187,7 @@ pub async fn web(
         WebRoute::Blocked => {
             return WebTurn {
                 expected: true,
-                warning: Some("本轮按你的范围限制没有联网，公开信息未核验。".into()),
+                warning: Some("本轮未搜索公开网页，公开信息未核验。".into()),
                 ..Default::default()
             }
         }
@@ -635,7 +635,7 @@ pub async fn general(
     let unavailable = (grounded && external.is_empty()) || (selected_scope && !has_local);
     if unavailable {
         let text = if selected_scope {
-            notices.push("所选范围未找到足够证据。请检查资料、索引或联网设置。".into());
+            notices.push("所选资料未提供足够证据。可以补充资料或检查文档索引。".into());
             "未能从本轮指定资料核实请求。"
         } else {
             "本轮未取得足够的网页证据，暂时无法核实请求。"

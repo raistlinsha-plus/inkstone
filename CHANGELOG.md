@@ -2,6 +2,32 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v0.8.4 · 浅色和深色配色
+
+- 调整工作区背景、正文、侧栏和浮层，统一问答、搜索、设置、导入及文档菜单的主题。恢复资料范围按钮、菜单项和必要提示的可读性。
+- 调整日历日期、工具栏和书房同伴的文字对比度，补齐键盘焦点、悬停、选中和错误状态。
+- 源码语法、脑图、Mermaid 和 ECharts 预览跟随应用主题。图表预览用线型、点型和纹理辅助识别，SVG/PNG 沿用浅色导出。[交付说明](docs/DELIVERY-v0.8.4.md)
+
+## v0.8.3 · 书房同伴
+
+- 新增书房同伴工作区，整合桌宠、第一季故事、相册和既有经历。
+- 墨团支持工作区内低频互动，故事逐句续读并解锁或回看 CG。[交付说明](docs/DELIVERY-v0.8.3.md)
+
+## v0.8.2 · 文档与 Wiki
+
+- 调整编辑器工具栏、结构块间距与工作台外观。
+- Wiki 增加资料筛选、审阅与发布状态，并修复窄窗原文跳转。[交付说明](docs/DELIVERY-v0.8.2.md)
+
+## v0.8.1 · 问答工作台
+
+- 左侧导航随工作区切换会话列表与空间文档。
+- 区分当轮资料、网页搜索设置和实际引用。支持在问答与原文之间往返，并恢复原会话。[交付说明](docs/DELIVERY-v0.8.1.md)
+
+## v0.8.0 · 问答与 Wiki 发布收口
+
+- 统一版本号与升级说明。独立问答在缺证时引导补充资料或检查索引，网页禁用提示区分公开搜索和模型服务。
+- 整理正式发布前的真实服务、独立评测、原生无障碍、升级回退和安装包验收条件。[交付说明](docs/DELIVERY-v0.8.0.md)
+
 ## v0.8.0-rc.2 · 问答漏证与 Wiki 审阅
 
 - 改进本地问答的原文证据选择。开发回归继续分别记录必需文档命中、片段覆盖与无答案题误入证。

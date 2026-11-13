@@ -1,6 +1,13 @@
 # Inkstone roadmap
 
-The current development candidate is **v0.8.0-rc.2**. Its scope covers source coverage in grounded answers and claim checks in Wiki review. [Candidate delivery](DELIVERY-v0.8.0-rc2.md) · [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
+The current source preview is **v0.8.4**. [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
+
+- [v0.8.0 release preparation](DELIVERY-v0.8.0.md) records verification and remaining distribution gates.
+- [v0.8.1 question workbench](DELIVERY-v0.8.1.md) introduces contextual navigation and citation-to-document return.
+- [v0.8.2 documents and Wiki](DELIVERY-v0.8.2.md) refines editing, appearance and source review.
+- [v0.8.3 companion workspace](DELIVERY-v0.8.3.md) adds Motuan’s in-app pet, season reader and album.
+
+- [v0.8.4 appearance and contrast](DELIVERY-v0.8.4.md) improves light and dark appearance across the app and rich previews.
 
 ## Ready to try in the source preview
 

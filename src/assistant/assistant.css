@@ -715,8 +715,7 @@
   margin-left: 8px;
   font-size: 11px;
 }
-.welcome-first-use li[aria-current="step"]::marker,
-.wiki-next-step li[aria-current="step"] {
+.welcome-first-use li[aria-current="step"]::marker {
   color: var(--green-dark);
   font-weight: 700;
 }
@@ -909,179 +908,19 @@
   justify-content: flex-end;
   flex-wrap: wrap;
 }
-.assistant-source-backdrop .modal-actions button,
-.wiki-review-actions button,
-.wiki-nav button {
+.assistant-source-backdrop .modal-actions button {
   min-height: 32px;
   padding: 5px 9px;
   border-radius: 6px;
-  border: 1px solid transparent;
+  border: 1px solid #cad5c4;
 }
-.assistant-source-backdrop .modal-actions button,
-.wiki-review-actions button {
-  border-color: #cad5c4;
-}
-.assistant-source-backdrop button.primary,
-.wiki-dialog button.primary {
+.assistant-source-backdrop button.primary {
   color: #fffefa;
   background: #40634c;
   border-color: #40634c;
 }
-.assistant-source-backdrop button.primary:hover:not(:disabled),
-.wiki-dialog button.primary:hover:not(:disabled) {
+.assistant-source-backdrop button.primary:hover:not(:disabled) {
   background: #34563f;
-}
-.wiki-dialog {
-  width: min(58rem, calc(100vw - 2rem));
-}
-.wiki-nav {
-  gap: 8px;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 12px;
-}
-.wiki-toolbar-divider {
-  flex: 1;
-}
-.wiki-pending-count {
-  font-weight: 600;
-}
-.wiki-last-job {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 10px;
-  overflow-wrap: anywhere;
-}
-.wiki-last-job span {
-  min-width: 0;
-}
-.wiki-summary-warning {
-  margin-bottom: 14px;
-  padding: 10px 12px;
-  border: 1px solid #dbcca8;
-  border-radius: 8px;
-  background: #fbf6e9;
-  color: #634714;
-  line-height: 1.55;
-  overflow-wrap: anywhere;
-}
-.wiki-summary-warning h3,
-.wiki-summary-warning p {
-  margin: 0;
-}
-.wiki-summary-warning ul {
-  padding-inline-start: 1.25rem;
-  margin: 6px 0;
-}
-.wiki-summary-warning li + li {
-  margin-top: 4px;
-}
-.wiki-coverage {
-  margin-bottom: 14px;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-}
-.wiki-coverage summary {
-  padding-block: 3px;
-  cursor: pointer;
-}
-.wiki-coverage ul {
-  list-style: none;
-  display: grid;
-  gap: 6px;
-  padding: 0;
-  margin: 8px 0;
-}
-.wiki-coverage li {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 4px 12px;
-  overflow-wrap: anywhere;
-}
-.wiki-coverage li[data-status="omitted"],
-.wiki-coverage li[data-status="partial"],
-.wiki-coverage li[data-status="retry"] {
-  color: #634714;
-}
-.wiki-review-actions {
-  position: sticky;
-  z-index: 2;
-  bottom: -28px;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  margin: 14px -28px -28px;
-  padding: 10px 28px 14px;
-  border-top: 1px solid var(--line);
-  background: #fffefa;
-  box-shadow: 0 -4px 12px #fffefa;
-}
-.wiki-next-step {
-  padding: 10px 12px;
-  margin-bottom: 12px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: #f6f7f1;
-}
-.wiki-next-step ol {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 28px;
-  row-gap: 4px;
-  margin: 0;
-  padding-left: 20px;
-}
-.wiki-next-step p {
-  margin: 6px 0;
-}
-.wiki-columns {
-  display: grid;
-  grid-template-columns: minmax(12rem, 1fr) minmax(0, 2fr);
-  gap: 16px;
-}
-.wiki-list {
-  display: grid;
-  align-content: start;
-  gap: 6px;
-}
-.wiki-list button {
-  text-align: left;
-  padding: 8px;
-}
-.wiki-list button small {
-  display: block;
-  overflow-wrap: anywhere;
-}
-.wiki-list button[aria-pressed="true"],
-.wiki-toolbar button[aria-pressed="true"] {
-  background: #e6eddf;
-  border-color: #b7c8af;
-  color: #344d35;
-}
-.wiki-page {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.wiki-page-body {
-  min-width: 0;
-}
-@media (min-width: 920px) {
-  .wiki-page-review {
-    display: grid;
-    grid-template-columns: minmax(0, 3fr) minmax(10rem, 2fr);
-    gap: 14px;
-    align-items: start;
-  }
-  .wiki-page-review > .assistant-evidence {
-    padding: 8px 0 8px 12px;
-    border-top: 0;
-    border-inline-start: 1px solid var(--line);
-  }
-}
-@media (max-width: 720px) {
-  .wiki-columns {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .v06-shell:not(.sidebar-closed) .sidebar-compact .main-nav {

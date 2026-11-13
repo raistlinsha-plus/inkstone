@@ -115,7 +115,7 @@ export default function Markdown({
   readOnly?: boolean;
   citations?: (SearchResult | undefined)[];
   citationChecks?: import("../assistant/types").CitationCheck[];
-  onCitation?: (source: SearchResult) => void;
+  onCitation?: (source: SearchResult, trigger?: HTMLButtonElement) => void;
   label?: string;
   pending?: boolean;
   rejectedCharts?: number[];
@@ -178,7 +178,7 @@ export default function Markdown({
             hasConflict ? "conflict" : note ? "unverified" : undefined
           }
           title={`查看来源 ${index + 1}：${citation.title || citation.path}${note ? ` · ${note}` : ""}`}
-          onClick={() => onCitation(citation)}
+          onClick={(event) => onCitation(citation, event.currentTarget)}
         >
           {index + 1}
           {note && <span aria-hidden="true">!</span>}

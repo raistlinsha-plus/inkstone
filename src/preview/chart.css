@@ -1,35 +1,35 @@
 .data-chart {
   min-width: 0;
-  color: #334431;
+  color: var(--ui-text);
 }
 .chart-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   padding: 8px 12px;
-  border-bottom: 1px solid #e0e5d9;
+  border-bottom: 1px solid var(--ui-line);
 }
 .chart-tabs button {
   border: 1px solid transparent;
   background: transparent;
   padding: 5px 10px;
   border-radius: 5px;
-  color: #4b5d43;
+  color: var(--ui-muted);
   cursor: pointer;
 }
 .chart-tabs button[aria-pressed="true"] {
-  background: #e9eee1;
-  border-color: #d1dbc6;
-  color: #2f4739;
+  background: var(--ui-selected);
+  border-color: var(--ui-control-line);
+  color: var(--ui-accent);
 }
 .chart-tabs .chart-edit-button {
   margin-left: auto;
-  border-color: #ced8c7;
+  border-color: var(--ui-control-line);
 }
 .chart-summary,
 .chart-source-note {
   font-size: 12px;
-  color: #5b684f;
+  color: var(--ui-muted);
   margin: 8px 12px;
   line-height: 1.6;
 }
@@ -49,9 +49,9 @@
 .data-chart select,
 .data-chart textarea {
   font: inherit;
-  color: #334431;
-  background: #fffefa;
-  border: 1px solid #c6d0bb;
+  color: var(--ui-text);
+  background: var(--ui-field);
+  border: 1px solid var(--ui-control-line);
   border-radius: 5px;
   padding: 6px;
   max-width: 100%;
@@ -60,7 +60,7 @@
 .data-chart input:focus,
 .data-chart textarea:focus,
 .data-chart button:focus-visible {
-  outline: 2px solid #78967d;
+  outline: 2px solid var(--ui-focus);
   outline-offset: 2px;
 }
 .data-chart textarea {
@@ -86,13 +86,13 @@
 }
 .chart-table th,
 .chart-table td {
-  border: 1px solid #d8dfcf;
+  border: 1px solid var(--ui-line);
   padding: 8px;
   text-align: left;
   min-width: 100px;
 }
 .chart-table thead th {
-  background: #f0f3e9;
+  background: var(--ui-surface);
   font-weight: 600;
 }
 .chart-table input {
@@ -105,7 +105,7 @@
   font-weight: 400;
 }
 .chart-missing {
-  color: #75806c;
+  color: var(--ui-muted);
   font-style: italic;
 }
 .chart-data-actions,
@@ -120,7 +120,11 @@
 }
 .chart-description summary {
   cursor: pointer;
-  color: #526d4b;
+  color: var(--ui-accent);
+}
+.data-chart .chart-description summary:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
 }
 .chart-description pre,
 .data-chart > pre {
@@ -129,7 +133,8 @@
   padding: 12px;
   max-height: 350px;
   overflow: auto;
-  background: #f7f8f2;
+  color: var(--ui-text);
+  background: var(--ui-surface);
   font:
     12px/1.7 SFMono-Regular,
     Menlo,
@@ -145,16 +150,25 @@
 .data-chart .preview-error {
   margin: 8px 12px;
 }
+.data-chart .preview-help {
+  color: var(--ui-muted);
+  background: var(--ui-surface);
+}
+.data-chart .preview-error {
+  color: var(--ui-warning-text);
+  background: var(--ui-warning-surface);
+  border-color: var(--ui-warning-line);
+}
 .chart-save-actions button:last-child {
-  background: #466b54;
-  color: #fff;
+  background: var(--ui-action);
+  color: var(--ui-on-action);
 }
 .data-chart button:disabled {
   opacity: 0.5;
   cursor: default;
 }
 .data-chart .chart-source-note {
-  border-top: 1px solid #e4e8de;
+  border-top: 1px solid var(--ui-line);
   padding-top: 8px;
 }
 .data-chart .chart-description pre {

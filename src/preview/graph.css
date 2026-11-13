@@ -1,0 +1,40 @@
+.graph-preview {
+  color: var(--ui-text);
+  background: var(--ui-paper);
+}
+
+.graph-preview .graph-actions {
+  color: var(--ui-text);
+  background: var(--ui-surface);
+  border-color: var(--ui-line);
+}
+
+.graph-preview .graph-actions :is(.graph-kind, output) {
+  color: var(--ui-muted);
+}
+
+.graph-preview .graph-actions button {
+  color: var(--ui-text);
+  background: var(--ui-field);
+  border-color: var(--ui-control-line);
+}
+
+.graph-preview .graph-actions button:hover:not(:disabled) {
+  background: var(--ui-hover);
+}
+
+.graph-preview .graph-actions button:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
+}
+
+.graph-preview :is(.preview-status, .preview-help) {
+  color: var(--ui-muted);
+  background: var(--ui-surface);
+}
+
+.graph-preview .preview-error {
+  color: var(--ui-warning-text);
+  background: var(--ui-warning-surface);
+  border-color: var(--ui-warning-line);
+}

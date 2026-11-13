@@ -122,3 +122,26 @@ test("undo and redo expose real history availability", () => {
       .disabled,
   ).toBe(false);
 });
+
+test("keyboard opens the insert menu and Escape returns to the toolbar", () => {
+  render(
+    <Editor
+      content="正文"
+      mode="source"
+      path="test.md"
+      onChange={vi.fn()}
+      onError={vi.fn()}
+    />,
+  );
+  const trigger = screen.getByRole("button", { name: "插入" });
+  trigger.focus();
+  fireEvent.keyDown(trigger, { key: "Enter" });
+  const menu = screen.getByRole("menu", { name: "插入内容" });
+  expect(trigger.getAttribute("aria-controls")).toBe(menu.id);
+  expect(document.activeElement).toBe(
+    screen.getByRole("menuitem", { name: "正文" }),
+  );
+  fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+  expect(document.activeElement).toBe(trigger);
+  expect(screen.queryByRole("menu")).toBeNull();
+});

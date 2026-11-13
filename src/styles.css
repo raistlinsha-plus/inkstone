@@ -3472,3 +3472,170 @@ a {
   }
 }
 /* Narrow knowledge-pane layout is owned by polish.css. */
+
+/* Model and document import dialogs use the same surfaces as the workbench. */
+.modal-backdrop:has(
+  > :is(.settings-modal, .import-modal, .assistant-history-dialog)
+),
+.assistant-source-backdrop {
+  background: var(--ui-shadow);
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog),
+.assistant-source-backdrop > .modal {
+  color: var(--ui-text);
+  background: var(--ui-overlay);
+  border-color: var(--ui-line);
+  box-shadow: 0 20px 65px var(--ui-shadow);
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog) h2 {
+  color: var(--ui-text);
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog)
+  :is(.muted, .eyebrow, .modal-heading > button, .modal-heading p, small) {
+  color: var(--ui-muted);
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog)
+  .modal-heading
+  > button:hover:not(:disabled) {
+  color: var(--ui-text);
+  background: var(--ui-hover);
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog)
+  .modal-actions {
+  border-color: var(--ui-line);
+}
+.settings-modal :is(.modal-heading, .modal-actions) {
+  background: var(--ui-overlay);
+}
+.settings-modal
+  :is(.form-grid label, .form-grid .reuse-key-option, .clear-key, .enable-row) {
+  color: var(--ui-text);
+}
+.settings-modal .enable-row {
+  border-color: var(--ui-line);
+}
+.settings-modal .key-saved {
+  color: var(--ui-accent);
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog)
+  :is(
+    input:not([type="checkbox"]),
+    select,
+    textarea,
+    .button:not(.primary, .ghost),
+    .settings-tabs button,
+    .assistant-history-list button,
+    .modal-actions > button:not(.primary, .ghost, .danger)
+  ) {
+  color: var(--ui-text);
+  background: var(--ui-field);
+  border-color: var(--ui-control-line);
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog)
+  :is(input, textarea)::placeholder {
+  color: var(--ui-placeholder);
+  opacity: 1;
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog)
+  :is(input[type="checkbox"], progress) {
+  accent-color: var(--ui-action);
+}
+.settings-modal .settings-tabs button span,
+.assistant-history-dialog .assistant-history-list small {
+  color: var(--ui-muted);
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog)
+  :is(
+    .button:not(.primary),
+    .settings-tabs button,
+    .assistant-history-list button,
+    .modal-actions > button:not(.primary, .danger)
+  ):hover:not(:disabled) {
+  background: var(--ui-hover);
+}
+.settings-modal .settings-tabs button.active,
+.assistant-history-dialog .assistant-history-list button[aria-current] {
+  color: var(--ui-accent);
+  background: var(--ui-selected);
+  border-color: var(--ui-accent);
+}
+.settings-modal .button.ghost {
+  color: var(--ui-muted);
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog)
+  .modal-actions
+  > button {
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid var(--ui-control-line);
+  border-radius: 6px;
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog)
+  .modal-actions
+  > button.ghost {
+  border-color: transparent;
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog)
+  .modal-actions
+  > button.primary {
+  color: var(--ui-on-action);
+  background: var(--ui-action);
+  border-color: var(--ui-action);
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog)
+  .modal-actions
+  > button.primary:hover:not(:disabled) {
+  background: var(--ui-action-hover);
+  border-color: var(--ui-action-hover);
+}
+.settings-modal
+  :is(
+    .privacy-note,
+    .inline-message.success,
+    .web-search-diagnostic,
+    .web-search-diagnostic [role="status"]
+  ) {
+  color: var(--ui-accent);
+  background: var(--ui-selected);
+  border-color: var(--ui-line);
+}
+.settings-modal :is(.web-search-diagnostic-details, .privacy-note) {
+  color: var(--ui-muted);
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog)
+  :is(.inline-message.error, .preview-error, button.danger) {
+  color: var(--ui-danger);
+  background: var(--ui-danger-surface);
+  border-color: var(--ui-danger);
+}
+.import-modal :is(.import-pick, .import-results, .import-item) {
+  color: var(--ui-text);
+  border-color: var(--ui-control-line);
+}
+.import-modal .import-pick {
+  background: var(--ui-surface);
+}
+.import-modal .import-item {
+  border-color: var(--ui-line);
+}
+.import-modal .preview-help {
+  color: var(--ui-muted);
+  background: var(--ui-surface);
+  border-color: var(--ui-line);
+}
+.import-modal .panel-warning {
+  color: var(--ui-warning-text);
+  background: var(--ui-warning-surface);
+  border-color: var(--ui-warning-line);
+}
+.import-modal .import-item button {
+  color: var(--ui-accent);
+}
+.import-modal .import-item.failed small {
+  color: var(--ui-danger);
+}
+.modal:is(.settings-modal, .import-modal, .assistant-history-dialog)
+  :is(button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
+}

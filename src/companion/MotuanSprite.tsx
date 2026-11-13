@@ -1,4 +1,5 @@
-export type MotuanMood = "idle" | "reading" | "milestone";
+export type MotuanMood =
+  "idle" | "reading" | "milestone" | "happy" | "held" | "landing" | "resting";
 
 export default function MotuanSprite({
   mood,
@@ -44,11 +45,25 @@ export default function MotuanSprite({
           d="M10 12h3v2h3v2h13v-2h3v-3h4v10h2v7h-2v3h-3v2H14v-2h-4v-4H8v-6h2Z"
         />
         <path fill="#586b56" d="M12 16h2v3h-2zm21-1h2v4h-2zM11 26h3v3h-3z" />
-        {mood === "idle" && (
-          <path fill="#f2d895" d="M15 22h3v3h-3zm13 0h3v3h-3z" />
+        {(mood === "idle" || mood === "landing" || mood === "held") && (
+          <path
+            className="motuan-open-eyes"
+            fill="#f2d895"
+            d="M15 22h3v3h-3zm13 0h3v3h-3z"
+          />
         )}
-        {mood === "reading" && (
+        {(mood === "reading" || mood === "resting" || mood === "happy") && (
           <path fill="#f2d895" d="M14 23h5v2h-5zm13 0h5v2h-5z" />
+        )}
+        {mood === "idle" && (
+          <path
+            className="motuan-closed-eyes"
+            fill="#f2d895"
+            d="M14 23h5v2h-5zm13 0h5v2h-5z"
+          />
+        )}
+        {mood === "happy" && (
+          <path fill="#cc9b81" d="M12 26h4v2h-4zm19 0h4v2h-4z" />
         )}
         {mood === "milestone" && (
           <>

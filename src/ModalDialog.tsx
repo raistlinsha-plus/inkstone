@@ -59,6 +59,7 @@ export default function ModalDialog({
   busy = false,
   className = "",
   backdropClassName = "",
+  returnFocus,
   children,
 }: {
   label: string;
@@ -66,6 +67,7 @@ export default function ModalDialog({
   busy?: boolean;
   className?: string;
   backdropClassName?: string;
+  returnFocus?: HTMLElement;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLElement>(null);
@@ -78,6 +80,7 @@ export default function ModalDialog({
     const boundary = {
       dialog,
       previous:
+        (returnFocus?.isConnected ? returnFocus : null) ??
         entryFocus.current ??
         (document.activeElement instanceof HTMLElement &&
         !dialog.contains(document.activeElement)
@@ -132,7 +135,7 @@ export default function ModalDialog({
       const remaining = stack.at(-1)?.dialog;
       if (
         previous?.isConnected &&
-        !previous.closest("[inert]") &&
+        !previous.closest("[inert],[hidden]") &&
         (!remaining || remaining.contains(previous))
       )
         previous.focus();

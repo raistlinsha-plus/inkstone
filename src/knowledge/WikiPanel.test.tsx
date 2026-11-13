@@ -6,6 +6,7 @@ import {
   render,
   screen,
   within,
+  waitFor,
 } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import type { LibraryView } from "../library";
@@ -88,7 +89,7 @@ afterEach(() => {
   api.listen.mockReset();
 });
 
-function openPanel() {
+function openPanel(onOpenSource = vi.fn()) {
   render(
     <WikiPanel
       projectId="space"
@@ -96,7 +97,7 @@ function openPanel() {
       view={view}
       onClose={vi.fn()}
       onImport={vi.fn()}
-      onOpenSource={vi.fn()}
+      onOpenSource={onOpenSource}
     />,
   );
   return within(screen.getByRole("dialog", { name: "知识 Wiki" }));
@@ -152,6 +153,7 @@ test("a flagged summary can only publish excerpts and updates the pending count 
   act(() => eventListener?.({ payload: root }));
   fireEvent.click(actions.getByRole("button", { name: "仅发布原文摘录" }));
   expect(await panel.findByText("当前待审阅 0 项")).toBeTruthy();
+  expect(panel.getByText("已发布核验过的原文摘录。")).toBeTruthy();
   expect(api.invoke).toHaveBeenCalledWith("wiki_review", {
     input: { id: "change", action: "publish-excerpts" },
   });
@@ -198,4 +200,44 @@ test("a historical restore with unsupported summary only offers restoring excerp
   expect(api.invoke).toHaveBeenCalledWith("wiki_review", {
     input: { id: "change", action: "restore-excerpts" },
   });
+});
+
+test("opening a Wiki reference uses the selected candidate and only navigates after revalidation", async () => {
+  api.listen.mockResolvedValue(vi.fn());
+  const open = vi.fn();
+  let valid = false;
+  api.invoke.mockImplementation(async (command, args) => {
+    if (command === "wiki_status") return status;
+    if (command === "wiki_read" && args.changeId) return page;
+    if (command === "wiki_source") {
+      if (!valid) throw Error("原文已更新");
+      return page.refs[0];
+    }
+    throw Error(command);
+  });
+  const panel = openPanel(open);
+  fireEvent.click(await panel.findByRole("button", { name: "查看待审阅改动" }));
+  const original = await panel.findByRole("button", {
+    name: /手册.md.*第 2 行/,
+  });
+  fireEvent.click(original);
+  expect((await panel.findByRole("alert")).textContent).toContain("原文已更新");
+  expect(open).not.toHaveBeenCalled();
+  valid = true;
+  fireEvent.click(original);
+  await waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+  expect(api.invoke).toHaveBeenCalledWith("wiki_source", {
+    input: {
+      pageId: "pass",
+      revision: 1,
+      changeId: "change",
+      documentId: "manual",
+      startLine: 2,
+      endLine: 2,
+      hash: "fixture-hash",
+    },
+  });
+  expect(open).toHaveBeenCalledWith(
+    expect.objectContaining({ path: "手册.md", startLine: 2 }),
+  );
 });

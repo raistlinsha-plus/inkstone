@@ -347,3 +347,21 @@ test.each([
     );
   },
 );
+
+test("workbench appearance applies immediately and persists independently of model settings", () => {
+  const ui = render(
+    <SettingsModal value={settings} onClose={vi.fn()} onSave={vi.fn()} />,
+  );
+  try {
+    fireEvent.change(ui.getByRole("combobox", { name: "工作台外观" }), {
+      target: { value: "dark" },
+    });
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(localStorage.getItem("inkstone:appearance")).toBe("dark");
+    expect(invoke).not.toHaveBeenCalled();
+  } finally {
+    delete document.documentElement.dataset.theme;
+    delete document.documentElement.dataset.appearance;
+    localStorage.removeItem("inkstone:appearance");
+  }
+});
