@@ -6,7 +6,7 @@ Inkstone 将 Markdown 写作、文档空间、Wiki 与独立 AI 问答放在一�
 
 [English](../README.md) · [源码快速开始](QUICKSTART.md) · [后续计划](ROADMAP.md) · [公开版本](https://github.com/raistlinsha-plus/inkstone/releases)
 
-**当前开发版本为 v0.8.4**，面向 macOS 13+ Apple Silicon。本版统一浅深配色，覆盖问答、文档、Wiki、设置、日历、同伴与图形预览。已公开的源码预览为 v0.8.0-rc.2。 [交付说明](DELIVERY-v0.8.4.md) · [公开版本](https://github.com/raistlinsha-plus/inkstone/releases)
+**v0.8.4 源码预览**，面向 macOS 13+ Apple Silicon。本版统一浅深配色，覆盖问答、文档、Wiki、设置、日历、同伴与图形预览。 [交付说明](DELIVERY-v0.8.4.md) · [公开版本](https://github.com/raistlinsha-plus/inkstone/releases)
 
 ![带引用的问答，使用虚构阅读活动资料](assets/launch-v0.7/02-conversation.png)
 

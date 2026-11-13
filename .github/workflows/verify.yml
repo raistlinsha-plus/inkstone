@@ -82,6 +82,8 @@ jobs:
             src-tauri/target/release/build
             src-tauri/target/release/deps
           key: cargo-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.native.outputs.key }}-${{ hashFiles('toolchain.json', 'src-tauri/Cargo.lock', 'src-tauri/Cargo.toml', 'src-tauri/tauri.conf.json', '.github/workflows/verify.yml') }}
+          restore-keys: |
+            cargo-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.native.outputs.key }}-
       - run: npm ci --registry=https://registry.npmjs.org
         if: steps.scope.outputs.docs_only != 'true'
       - name: Full offline-model gates
@@ -89,7 +91,10 @@ jobs:
         run: npm run verify
       - name: macOS application bundle (local ad-hoc signature)
         if: steps.scope.outputs.docs_only != 'true'
-        run: npm run bundle -- --target aarch64-apple-darwin
+        run: |
+          # The preceding full gate already builds dist from this checkout.
+          test -s dist/index.html
+          npm run bundle -- --target aarch64-apple-darwin --config '{"build":{"beforeBuildCommand":""}}'
       - name: Verify local signature
         if: steps.scope.outputs.docs_only != 'true'
         run: codesign --verify --deep --strict src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Inkstone.app

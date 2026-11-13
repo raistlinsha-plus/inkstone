@@ -1,6 +1,6 @@
 # Inkstone roadmap
 
-The development branch implements **v0.8.4**. The published source candidate remains **v0.8.0-rc.2**. [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
+The current source preview is **v0.8.4**. [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
 
 - [v0.8.0 release preparation](DELIVERY-v0.8.0.md) records verification and remaining distribution gates.
 - [v0.8.1 question workbench](DELIVERY-v0.8.1.md) introduces contextual navigation and citation-to-document return.
