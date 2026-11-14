@@ -2564,6 +2564,7 @@ pub fn run() {
             library_commands::library_create_project,
             library_commands::library_rename_project,
             library_commands::library_create_document,
+            library_commands::library_prepare_local_example,
             library_commands::library_rename,
             library_commands::library_trash,
             library_commands::library_import,

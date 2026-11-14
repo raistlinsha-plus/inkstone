@@ -76,6 +76,11 @@ import {
 } from "./content/calendar";
 import Editor, { type EditorMode, type InsertionTarget } from "./Editor";
 import ImportDialog from "./ImportDialog";
+import {
+  readEditorSession,
+  saveEditorSession,
+  type EditorPosition,
+} from "./document/editorSession";
 import { useDocumentPersistence } from "./document/useDocumentPersistence";
 import IndexStatusPanel from "./IndexStatusPanel";
 import { requestChunks } from "./knowledge/parserClient";
@@ -170,11 +175,14 @@ export default function App() {
   const [line, setLine] = useState<number>();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsFromFirstUse, setSettingsFromFirstUse] = useState(false);
   const [panelOpen, setPanelOpen] = useState(() =>
     readPanePreference("panel-open"),
   );
   const [panel, setPanel] = useState<"search" | "ask">("search");
   const [query, setQuery] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
+  const [examplePath, setExamplePath] = useState("");
   const [scope, setScope] = useState<"workspace" | "current">("workspace");
   const [retrievalMode, setRetrievalMode] = useState<
     "keyword" | "hybrid" | "rerank"
@@ -433,10 +441,7 @@ export default function App() {
   const [indexDirty, setIndexDirty] = useState(false);
   const [toast, setToast] = useState("");
   const [error, setError] = useState("");
-  const [position, setPosition] = useState<{
-    selection: number;
-    scroll: number;
-  }>();
+  const [position, setPosition] = useState<EditorPosition>();
   const workspaceEpoch = useRef(0);
   const openSequence = useRef(0);
   const libraryRefreshSequence = useRef(0);
@@ -476,21 +481,7 @@ export default function App() {
     const ws = workspaceRef.current,
       current = docRef.current;
     if (!ws || !current) return;
-    const key = `inkstone:session:${ws.root}`;
-    try {
-      const old = JSON.parse(localStorage.getItem(key) || "{}");
-      localStorage.setItem(
-        key,
-        JSON.stringify({
-          path: current.path,
-          mode,
-          selection: selection ?? old.selection ?? 0,
-          scroll: scroll ?? old.scroll ?? 0,
-        }),
-      );
-    } catch {
-      /* Session metadata is optional. */
-    }
+    saveEditorSession(ws.root, current.path, mode, { selection, scroll });
   }
   const [nameDialog, setNameDialog] = useState<
     "new" | "rename" | "copy" | null
@@ -837,14 +828,8 @@ export default function App() {
           workspaceRef.current = ws;
           setStats(ws.stats);
           if (ws.warning) notify(ws.warning);
-          try {
-            const saved = JSON.parse(
-              localStorage.getItem(`inkstone:session:${ws.root}`) || "null",
-            );
-            if (saved?.path) await openPath(saved.path, undefined, true, saved);
-          } catch {
-            /* Optional session metadata must not prevent opening the library. */
-          }
+          const saved = readEditorSession(ws.root);
+          if (saved) await openPath(saved.path, undefined, true, saved);
         }
       })
       .catch((e) => {
@@ -999,6 +984,7 @@ export default function App() {
       if (e.key === "Escape") {
         setFileMenu(false);
         if (!busy) {
+          setSettingsFromFirstUse(false);
           setSettingsOpen(false);
           setIndexOpen(false);
           setNameDialog(null);
@@ -1203,6 +1189,56 @@ export default function App() {
     setImportPaths([]);
     setImportOpen(true);
   }
+  async function openLocalExample() {
+    const projectId = workspaceRef.current?.managedProjectId;
+    if (!projectId || navigationBlocked()) return;
+    let finish!: () => void;
+    const operation: PendingMutation = {
+      epoch: workspaceEpoch.current,
+      done: new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+      finish: () => finish(),
+    };
+    nameMutation.current = operation;
+    setNameBusy(true);
+    const navigation = ++openSequence.current;
+    const current = () =>
+      !closingRef.current &&
+      operation.epoch === workspaceEpoch.current &&
+      workspaceRef.current?.managedProjectId === projectId;
+    try {
+      if (!(await mayLeave()) || !current()) return;
+      rememberPosition();
+      const sample = await invoke("library_prepare_local_example", {
+        projectId,
+      });
+      if (!current() || navigation !== openSequence.current) return;
+      await refreshFiles();
+      void refreshStats();
+      if (!current() || navigation !== openSequence.current) return;
+      if (!(await openPath(sample.path, undefined, true)) || !current()) return;
+      cancelSearch();
+      setResults([]);
+      setSearched(false);
+      setQueryWarning("");
+      setRetrievalStatus("");
+      setScope("current");
+      setRetrievalMode("keyword");
+      setQuery("阅读活动");
+      setExamplePath(sample.path);
+      openKnowledgePanel("search");
+      requestAnimationFrame(() => searchInput.current?.focus());
+    } catch (e) {
+      if (current()) fail(e);
+    } finally {
+      if (nameMutation.current === operation) {
+        nameMutation.current = null;
+        setNameBusy(false);
+      }
+      operation.finish();
+    }
+  }
   async function trashLibraryDocument(doc: LibraryDocument, restore: boolean) {
     if (navigationBlocked()) return;
     const epoch = workspaceEpoch.current;
@@ -1303,7 +1339,7 @@ export default function App() {
     path: string,
     target?: OpeningSource,
     skipLeave = false,
-    restore?: { selection: number; scroll: number; mode: EditorMode },
+    restore?: EditorPosition & { mode?: EditorMode },
   ): Promise<boolean> {
     if (
       calendarWrite.current ||
@@ -1398,28 +1434,12 @@ export default function App() {
       };
       setDraftError("");
       setSaveWarning("");
-      setPosition(
-        restore
-          ? { selection: restore.selection ?? 0, scroll: restore.scroll ?? 0 }
-          : undefined,
-      );
+      const restoredPosition = restore
+        ? { selection: restore.selection, scroll: restore.scroll }
+        : undefined;
+      setPosition(restoredPosition);
       setDocument(next);
       docRef.current = next;
-      const ws = workspaceRef.current;
-      if (ws)
-        try {
-          localStorage.setItem(
-            `inkstone:session:${ws.root}`,
-            JSON.stringify({
-              path,
-              mode:
-                restore?.mode ??
-                (documentKind(path) === "markdown" ? "visual" : "split"),
-              selection: restore?.selection ?? 0,
-              scroll: restore?.scroll ?? 0,
-            }),
-          );
-        } catch {}
       setWelcome(false);
       setCalendarOpen(false);
       setCompanionOpen(false);
@@ -1430,27 +1450,38 @@ export default function App() {
       )
         setPanelOpen(false);
       setLine(target?.startLine);
+      let nextMode: EditorMode;
       if (target) {
         const citedLine = target.startLine;
-        setMode(
+        nextMode =
           documentKind(path) === "markdown" &&
-            target.hash === file.hash &&
-            codeBlocks(content).some(
-              (b) => b.line - 1 <= citedLine && b.endLine + 1 >= citedLine,
-            )
+          target.hash === file.hash &&
+          codeBlocks(content).some(
+            (b) => b.line - 1 <= citedLine && b.endLine + 1 >= citedLine,
+          )
             ? "visual"
-            : "source",
-        );
+            : "source";
         if (target.hash !== file.hash)
           notify("来源已更新，行号仅供参考，请核对当前原文");
       } else
-        setMode(
+        nextMode =
           restore?.mode ??
-            (documentKind(path) === "json" || documentKind(path) === "mermaid"
-              ? "split"
-              : documentKind(path) === "text" || content.length > 300000
-                ? "source"
-                : "visual"),
+          (documentKind(path) === "json" || documentKind(path) === "mermaid"
+            ? "split"
+            : documentKind(path) === "text" || content.length > 300000
+              ? "source"
+              : "visual");
+      setMode(nextMode);
+      const ws = workspaceRef.current;
+      if (ws)
+        saveEditorSession(
+          ws.root,
+          path,
+          nextMode,
+          restoredPosition ?? {
+            selection: 0,
+            scroll: 0,
+          },
         );
     } catch (e) {
       if (current()) fail(e);
@@ -2698,16 +2729,24 @@ export default function App() {
       embeddingReady={stats.embeddingReady}
       rerankEnabled={!!settings?.rerank.enabled}
       disabled={busy || booting}
+      onExample={
+        workspace?.managedProjectId ? () => void openLocalExample() : undefined
+      }
       onPrepare={
         workspace?.managedProjectId
           ? () => showImport()
           : () => void chooseWorkspace()
       }
       onIndex={() => setIndexOpen(true)}
-      onSettings={() => setSettingsOpen(true)}
+      onSettings={openFirstUseModelSettings}
       onAsk={openAsk}
     />
   );
+  function openFirstUseModelSettings() {
+    setSettingsFromFirstUse(true);
+    setSettingsOpen(true);
+  }
+  const searchingExample = !!examplePath && document?.path === examplePath;
   const composerLocked =
     assistant.loading || openingConversation || citationOpening;
   const turnControls = (
@@ -2945,7 +2984,10 @@ export default function App() {
             disabled={busy || booting || citationOpening}
             generalDisabled={generalBusy || citationOpening || !settings}
             calendarOpen={
-              !companionOpen && calendarOpen && !wikiOpen && !(panelOpen && panel === "search")
+              !companionOpen &&
+              calendarOpen &&
+              !wikiOpen &&
+              !(panelOpen && panel === "search")
             }
             generalOpen={!companionOpen && standaloneAskOpen && !wikiOpen}
             homeOpen={
@@ -2956,7 +2998,9 @@ export default function App() {
               !(panelOpen && panel === "search")
             }
             wikiOpen={wikiOpen}
-            searchOpen={!companionOpen && panelOpen && panel === "search" && !wikiOpen}
+            searchOpen={
+              !companionOpen && panelOpen && panel === "search" && !wikiOpen
+            }
             canIndex={!!workspace && !busy && !citationOpening}
             indexDirty={indexDirty}
             onHome={() => {
@@ -3001,7 +3045,13 @@ export default function App() {
         </div>
         <aside
           className="sidebar sidebar-compact"
-          aria-label={companionOpen ? "同伴导航" : standaloneAskOpen ? "会话导航" : "文档空间导航"}
+          aria-label={
+            companionOpen
+              ? "同伴导航"
+              : standaloneAskOpen
+                ? "会话导航"
+                : "文档空间导航"
+          }
           hidden={sidebarClosed}
         >
           {!companionOpen && (
@@ -3010,7 +3060,10 @@ export default function App() {
             </div>
           )}
           {companionOpen ? (
-            <div className="companion-navigation-slot" ref={setCompanionNavigation} />
+            <div
+              className="companion-navigation-slot"
+              ref={setCompanionNavigation}
+            />
           ) : standaloneAskOpen ? (
             <ConversationSidebar
               conversations={assistant.summaries}
@@ -3128,7 +3181,11 @@ export default function App() {
             className="sidebar-resizer"
             role="separator"
             aria-label={
-              companionOpen ? "调整同伴列表宽度" : standaloneAskOpen ? "调整会话列表宽度" : "调整文档列表宽度"
+              companionOpen
+                ? "调整同伴列表宽度"
+                : standaloneAskOpen
+                  ? "调整会话列表宽度"
+                  : "调整文档列表宽度"
             }
             aria-orientation="vertical"
             aria-valuemin={240}
@@ -3630,6 +3687,7 @@ export default function App() {
                   <div>
                     <Search size={16} />
                     <input
+                      ref={searchInput}
                       aria-label="搜索资料"
                       placeholder="在你的资料里寻找…"
                       value={query}
@@ -3682,8 +3740,33 @@ export default function App() {
                         )}
                       <Sources
                         items={results}
-                        onOpen={(source) => void openPath(source.path, source)}
+                        onOpen={async (source) => {
+                          if (await openPath(source.path, source)) {
+                            if (compactWindow) setPanelOpen(false);
+                          }
+                        }}
                       />
+                      {searchingExample && results.length > 0 && (
+                        <div className="welcome-example">
+                          <button
+                            type="button"
+                            className="button small"
+                            disabled={busy}
+                            onClick={
+                              settings?.chat.enabled
+                                ? openAsk
+                                : openFirstUseModelSettings
+                            }
+                          >
+                            {settings?.chat.enabled
+                              ? "对样例提问"
+                              : "连接聊天模型"}
+                          </button>
+                          <p>
+                            查看原文后，可以继续向样例提问。回答由你配置的模型生成。
+                          </p>
+                        </div>
+                      )}
                       {!results.length && (
                         <div className="empty-results">
                           暂无匹配资料。试试更具体的关键词，或更新资料索引。
@@ -3899,11 +3982,13 @@ export default function App() {
                               "帮我把这段话改成一封邮件",
                               "给我三个不同的写作开头",
                             ]
-                          : [
-                              "比较资料中的两种方案，列出相同点与差异",
-                              "总结这些资料，并注明尚未确定的部分",
-                              "当前资料还缺少哪些信息？",
-                            ]
+                          : searchingExample
+                            ? ["社区读书会计划开展几场阅读活动？"]
+                            : [
+                                "比较资料中的两种方案，列出相同点与差异",
+                                "总结这些资料，并注明尚未确定的部分",
+                                "当前资料还缺少哪些信息？",
+                              ]
                         ).map((text) => (
                           <button
                             key={text}
@@ -4124,17 +4209,23 @@ export default function App() {
       )}
       {settingsOpen && settings && (
         <SettingsModal
+          initialTab={settingsFromFirstUse ? "chat" : undefined}
           onWebSearch={() => {
+            setSettingsFromFirstUse(false);
             setSettingsOpen(false);
             setWebSettingsOpen(true);
           }}
           value={settings}
-          onClose={() => setSettingsOpen(false)}
+          onClose={() => {
+            setSettingsFromFirstUse(false);
+            setSettingsOpen(false);
+          }}
           onSave={(next) => {
             const indexSettingsChanged =
               JSON.stringify(settings.embedding) !==
               JSON.stringify(next.embedding);
             setSettings(next);
+            setSettingsFromFirstUse(false);
             setSettingsOpen(false);
             if (indexSettingsChanged) setIndexDirty(true);
             notify("模型设置已保存");

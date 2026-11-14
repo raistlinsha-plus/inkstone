@@ -1,7 +1,7 @@
 //! Managed plain-text library. The catalogue is disposable metadata; content stays in files.
 use crate::files;
 use pulldown_cmark::{Event, Parser, Tag};
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -399,6 +399,16 @@ pub fn create_document(
     name: &str,
     content: &str,
 ) -> Result<Document, String> {
+    create_managed_document(data, project, name, content, None)
+}
+
+fn create_managed_document(
+    data: &Path,
+    project: &str,
+    name: &str,
+    content: &str,
+    remembered: Option<&str>,
+) -> Result<Document, String> {
     let mut name = title(name)?;
     if Path::new(&name).extension().is_none() {
         name.push_str(".md")
@@ -410,20 +420,65 @@ pub fn create_document(
         return Err("文档超过 2 MB".into());
     }
     let root = project_root(data, project)?;
-    let c = conn(data)?;
+    let mut c = conn(data)?;
+    let tx = c
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(err)?;
+    if let Some(key) = remembered {
+        let existing = tx.query_row(
+            &format!("SELECT {} FROM documents WHERE project=? AND id=(SELECT value FROM preferences WHERE key=?)", DOC_COLS),
+            params![project, key],
+            doc_row,
+        ).optional().map_err(err)?;
+        if let Some(existing) = existing {
+            return match existing.status.as_str() {
+                "ready" => Ok(existing),
+                "trashed" => Err("离线样例在回收站中，请先恢复该文档。".into()),
+                _ => Err("离线样例仍在保存或清理中，请稍后重试。".into()),
+            };
+        }
+    }
     let id = uuid::Uuid::new_v4().to_string();
-    let name = unique_title(&c, project, &name);
+    let name = unique_title(&tx, project, &name);
     let path = format!("documents/{id}/{name}");
-    c.execute("INSERT INTO documents(id,project,path,title,original_hash,source,updated,status) VALUES(?,?,?,?,?,'',?,'pending')",params![id,project,path,name,files::hash(content),now()]).map_err(err)?;
+    tx.execute("INSERT INTO documents(id,project,path,title,original_hash,source,updated,status) VALUES(?,?,?,?,?,'',?,'pending')",params![id,project,path,name,files::hash(content),now()]).map_err(err)?;
+    if let Some(key) = remembered {
+        tx.execute(
+            "INSERT OR REPLACE INTO preferences(key,value) VALUES(?,?)",
+            params![key, id],
+        )
+        .map_err(err)?;
+    }
+    tx.commit().map_err(err)?;
     let dest = root.join(&path);
-    fs::create_dir_all(dest.parent().unwrap()).map_err(err)?;
-    if let Err(e) = files::write_atomic(&dest, content.as_bytes()) {
+    if let Err(e) = fs::create_dir_all(dest.parent().unwrap())
+        .map_err(err)
+        .and_then(|_| files::write_atomic(&dest, content.as_bytes()))
+    {
         let _ = c.execute("DELETE FROM documents WHERE id=?", [&id]);
         return Err(e);
     }
     c.execute("UPDATE documents SET status='ready' WHERE id=?", [&id])
         .map_err(err)?;
     get(data, &id)
+}
+
+pub(crate) fn prepare_local_example(data: &Path, project: &str) -> Result<Document, String> {
+    let document = create_managed_document(
+        data,
+        project,
+        "离线体验：社区阅读活动.md",
+        include_str!("../../examples/v0.8.5/离线体验：社区阅读活动.md"),
+        Some(&format!("library.local-example.v1:{project}")),
+    )?;
+    let ws = crate::documents::library_workspace(data, project)?;
+    let path = files::resolve(&ws.root, &document.path, false)?;
+    crate::documents::with_write_lock(&path, || {
+        let current = files::read_text(&path)?;
+        crate::documents::refresh_local(&ws, data, &document.path, &current)
+    })
+    .map_err(|error| format!("样例已保存，本地关键词索引未完成。请重试：{error}"))?;
+    Ok(document)
 }
 pub fn touch(data: &Path, root: &Path, path: &str) {
     if let Some(project) = project_at_root(data, root) {
@@ -1270,6 +1325,70 @@ pub fn export_bundle(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn local_example_reuses_edited_and_renamed_document_and_refreshes_keyword_index() {
+        let data = tempfile::tempdir().unwrap();
+        let first = prepare_local_example(data.path(), "inbox").unwrap();
+        let workspace = crate::documents::library_workspace(data.path(), "inbox").unwrap();
+        let connection = crate::db::open(&workspace.db).unwrap();
+        assert!(!crate::db::lexical_scored(&connection, "阅读活动", Some(&first.path))
+            .unwrap()
+            .is_empty());
+        let path = workspace.root.join(&first.path);
+        let edited = "# 用户已改名的样例\n\n草地灯笼活动的主题是亲子朗读。\n";
+        files::write_atomic(&path, edited.as_bytes()).unwrap();
+        rename(data.path(), &first.id, "我的样例.md").unwrap();
+        let reused = prepare_local_example(data.path(), "inbox").unwrap();
+        assert_eq!(reused.id, first.id);
+        assert_eq!(reused.path, first.path);
+        assert_eq!(reused.title, "我的样例.md");
+        assert_eq!(files::read_text(&path).unwrap(), edited);
+        assert!(!crate::db::lexical_scored(&connection, "草地灯笼", Some(&first.path))
+            .unwrap()
+            .is_empty());
+        let live_hash = files::hash(edited);
+        assert!(crate::db::lexical_scored(&connection, "阅读活动", Some(&first.path))
+            .unwrap()
+            .iter()
+            .all(|hit| hit.hash.as_deref() == Some(live_hash.as_str())));
+        let other = create_project(data.path(), "其他空间").unwrap();
+        let own = prepare_local_example(data.path(), &other.id).unwrap();
+        assert_eq!(own.project_id, other.id);
+        assert_ne!(own.id, first.id);
+    }
+
+    #[test]
+    fn local_example_reserves_one_document_and_respects_recoverable_trash() {
+        let data = tempfile::tempdir().unwrap();
+        let connection = conn(data.path()).unwrap();
+        std::thread::scope(|threads| {
+            let pending: Vec<_> = (0..4)
+                .map(|_| threads.spawn(|| prepare_local_example(data.path(), "inbox")))
+                .collect();
+            for task in pending {
+                // Reopen during the short pending window may request a retry.
+                let _ = task.join().unwrap();
+            }
+        });
+        let view = list(data.path()).unwrap();
+        assert_eq!(view.documents.len(), 1);
+        let stored = &view.documents[0];
+        assert_eq!(prepare_local_example(data.path(), "inbox").unwrap().id, stored.id);
+        trash(data.path(), &stored.id, false).unwrap();
+        assert!(matches!(
+            prepare_local_example(data.path(), "inbox"),
+            Err(error) if error.contains("回收站")
+        ));
+        assert_eq!(list(data.path()).unwrap().documents.len(), 1);
+        trash(data.path(), &stored.id, true).unwrap();
+        assert_eq!(prepare_local_example(data.path(), "inbox").unwrap().id, stored.id);
+        // Registered identity refers to a catalogue entry, so permanent
+        // removal permits an explicit fresh sample without replaying old data.
+        connection.execute("DELETE FROM documents WHERE id=?", [&stored.id]).unwrap();
+        let fresh = prepare_local_example(data.path(), "inbox").unwrap();
+        assert_ne!(fresh.id, stored.id);
+        assert_eq!(list(data.path()).unwrap().documents.len(), 1);
+    }
     #[test]
     fn copied_documents_survive_original_removal_and_trash_is_recoverable() {
         let d = tempfile::tempdir().unwrap();

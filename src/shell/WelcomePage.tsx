@@ -20,6 +20,7 @@ export function FirstUseGuide({
   embeddingReady,
   rerankEnabled,
   disabled,
+  onExample,
   onPrepare,
   onIndex,
   onSettings,
@@ -33,6 +34,7 @@ export function FirstUseGuide({
   embeddingReady: boolean;
   rerankEnabled: boolean;
   disabled: boolean;
+  onExample?: () => void;
   onPrepare: () => void;
   onIndex: () => void;
   onSettings: () => void;
@@ -42,15 +44,15 @@ export function FirstUseGuide({
     {
       label: "准备一份资料",
       detail: managed
-        ? "复制导入到当前空间，原文件留在本机原位置。"
+        ? "可以打开内置样例，也可以复制导入自己的文档。"
         : "打开已有文档的本地目录。",
       ready: hasDocuments,
       action: managed ? "复制导入文档" : "打开本地目录",
       onClick: onPrepare,
     },
     {
-      label: "建立本地索引",
-      detail: "索引完成后即可使用离线关键词检索。",
+      label: "在本机查找原文",
+      detail: "样例自带关键词检索入口，也可管理自己的资料索引。",
       ready: indexed,
       action: "管理索引",
       onClick: onIndex,
@@ -79,6 +81,20 @@ export function FirstUseGuide({
         <summary>
           <Sparkles size={17} /> 从资料到第一条回答
         </summary>
+        {onExample && (
+          <div className="welcome-example">
+            <button
+              className="button primary small"
+              disabled={disabled}
+              onClick={onExample}
+            >
+              打开离线样例
+            </button>
+            <p>
+              将一份虚构的阅读活动文档加入当前空间，直接试用关键词搜索和原文定位。无需连接模型。
+            </p>
+          </div>
+        )}
         <ol>
           {steps.map((step) => (
             <li

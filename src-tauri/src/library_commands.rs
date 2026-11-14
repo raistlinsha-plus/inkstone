@@ -252,6 +252,20 @@ pub async fn library_create_document(
     Ok(doc)
 }
 #[tauri::command]
+pub async fn library_prepare_local_example(
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<library::Document, String> {
+    check_idle(&state)?;
+    let data = state.data_dir.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let _permit = crate::maintenance::mutation(&data)?;
+        library::prepare_local_example(&data, &project_id)
+    })
+    .await
+    .map_err(|_| "离线样例准备未完成，请重试。".to_string())?
+}
+#[tauri::command]
 pub async fn library_rename(
     state: State<'_, AppState>,
     id: String,

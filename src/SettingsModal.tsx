@@ -31,11 +31,13 @@ function serviceOrigin(address: string): string | null {
 
 export default function SettingsModal({
   value,
+  initialTab = "embedding",
   onClose,
   onSave,
   onWebSearch,
 }: {
   value: Settings;
+  initialTab?: Tab;
   onClose: () => void;
   onSave: (settings: Settings) => void;
   onWebSearch?: () => void;
@@ -53,7 +55,7 @@ export default function SettingsModal({
     chat: false,
     rerank: false,
   });
-  const [tab, setTab] = useState<Tab>("embedding");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [busy, setBusy] = useState("");
   const [appearance, setAppearanceChoice] = useState(getAppearance);
   const testGeneration = useRef(0);
