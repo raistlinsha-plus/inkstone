@@ -3,8 +3,10 @@
 export function installV07Fixture({
   clean = false,
   companionPilot = false,
+  onboardingSampleMarkdown = "",
 } = {}) {
-  const key = `inkstone-v07-ui-qa-store-${clean ? "clean" : companionPilot ? "pilot" : "base"}`,
+  const offlineOnboarding = !!onboardingSampleMarkdown;
+  const key = `inkstone-v07-ui-qa-store-${offlineOnboarding ? "offline-onboarding" : clean ? "clean" : companionPilot ? "pilot" : "base"}`,
     clone = (x) => JSON.parse(JSON.stringify(x));
   const root = "/qa/inkstone-v07",
     now = () => new Date().toISOString(),
@@ -71,8 +73,18 @@ export function installV07Fixture({
       eligible: null,
     },
   };
+  if (offlineOnboarding) {
+    const doc = base.documents[0];
+    delete base.files[doc.path];
+    doc.title = "离线体验：社区阅读活动.md";
+    doc.path = `documents/${doc.id}/${doc.title}`;
+    base.files[doc.path] = {
+      content: onboardingSampleMarkdown,
+      hash: "1".repeat(64),
+    };
+  }
   const templates = clone({ documents: base.documents, files: base.files });
-  if (clean) {
+  if (clean || offlineOnboarding) {
     base.documents = [];
     base.files = {};
     base.companion.settings.enabled = false;
@@ -110,9 +122,11 @@ export function installV07Fixture({
     batchSize: 8,
     contextChars: 16000,
   };
-  const settings = {
-    embedding: provider,
-    chat: provider,
+  let settings = store.settings ?? {
+    embedding: offlineOnboarding ? { ...provider, enabled: false } : provider,
+    chat: offlineOnboarding
+      ? { ...provider, enabled: false, baseUrl: "", model: "" }
+      : provider,
     rerank: {
       enabled: false,
       endpoint: "",
@@ -136,26 +150,36 @@ export function installV07Fixture({
     stats: currentStats(),
   });
   const currentStats = () =>
-    clean && !store.documents.length
+    offlineOnboarding
       ? {
-          documents: 0,
-          chunks: 0,
+          documents: Object.keys(store.indexed ?? {}).length,
+          chunks: Object.values(store.indexed ?? {}).flat().length,
           vectors: 0,
           vectorDocuments: 0,
           embeddingReady: false,
         }
-      : stats;
+      : clean && !store.documents.length
+        ? {
+            documents: 0,
+            chunks: 0,
+            vectors: 0,
+            vectorDocuments: 0,
+            embeddingReady: false,
+          }
+        : stats;
   const source = () => ({
     id: 1,
     path: store.documents[0].path,
-    text: "甲方案：周二，120人。乙方案：周四，80人。资料未提供满意度、费用或长期效果。",
-    heading: "两种活动",
+    text: offlineOnboarding
+      ? store.files[store.documents[0].path].content.split("\n")[6]
+      : "甲方案：周二，120人。乙方案：周四，80人。资料未提供满意度、费用或长期效果。",
+    heading: offlineOnboarding ? "活动安排" : "两种活动",
     startLine: 7,
-    endLine: 11,
+    endLine: offlineOnboarding ? 7 : 11,
     hash: store.files[store.documents[0].path].hash,
     score: 1,
     evidence: true,
-    title: "阅读活动方案.md",
+    title: store.documents[0].title,
     documentId: "doc-1",
   });
   const wiki = {
@@ -195,6 +219,22 @@ export function installV07Fixture({
       return ["/qa/fixtures/阅读活动方案.md"];
     if (command.startsWith("plugin:")) return null;
     if (command === "bootstrap") return { settings, lastWorkspace: null };
+    if (command === "test_provider" && offlineOnboarding) {
+      if (
+        args.kind !== "chat" ||
+        args.provider.baseUrl !== "http://127.0.0.1:9967/v1" ||
+        args.provider.model !== "inkstone-test" ||
+        args.key
+      )
+        throw Error("合成设置测试参数不匹配");
+      return "合成问答模型连接成功";
+    }
+    if (command === "save_settings" && offlineOnboarding) {
+      settings = { ...settings, ...args.value };
+      store.settings = settings;
+      persist();
+      return clone(settings);
+    }
     if (command === "web_search_settings")
       return { provider: "brave", enabled: false, hasKey: false };
     if (command === "test_web_search_connection")
@@ -206,6 +246,19 @@ export function installV07Fixture({
         httpStatus: 200,
       };
     if (command === "open_library") return ws();
+    if (command === "library_prepare_local_example" && offlineOnboarding) {
+      if (args.projectId !== "qa-space")
+        throw Error("合成样例只能进入验收空间");
+      const template = templates.documents[0];
+      if (!store.documents.some(({ id }) => id === template.id)) {
+        store.documents.push(template);
+        store.files[template.path] = templates.files[template.path];
+      }
+      store.indexed ??= {};
+      store.indexed[template.path] ??= [source()];
+      persist();
+      return clone(template);
+    }
     if (command === "library_import" && clean) {
       const original = templates.documents[0];
       const doc = {
@@ -301,11 +354,44 @@ export function installV07Fixture({
           documentId: d.id,
           included: true,
           sourceHash: store.files[d.path].hash,
-          indexedHash: store.files[d.path].hash,
-          keywordState: "ready",
-          vectorState: "ready",
+          indexedHash:
+            offlineOnboarding && !store.indexed?.[d.path]
+              ? null
+              : store.files[d.path].hash,
+          keywordState:
+            offlineOnboarding && !store.indexed?.[d.path] ? "missing" : "ready",
+          vectorState: offlineOnboarding ? "missing" : "ready",
         })),
       };
+    if (command === "search" && offlineOnboarding) {
+      if (args.retrievalMode !== "keyword")
+        throw Error("离线入门应使用本地关键词检索");
+      const results = store.documents
+        .filter(({ path }) => !args.scope || path === args.scope)
+        .flatMap(({ id, title, path }) =>
+          (store.indexed?.[path] ?? [])
+            .filter((chunk) => chunk.text.includes(args.query.trim()))
+            .map((chunk, index) => ({
+              ...chunk,
+              id: index + 1,
+              documentId: id,
+              title,
+              path,
+              hash: store.files[path].hash,
+              score: 1,
+              evidence: true,
+            })),
+        );
+      return {
+        results,
+        warning: null,
+        semantic: false,
+        evidenceCount: results.length,
+        candidateCount: results.length,
+        retrievalMode: "bm25",
+        rerankStatus: "disabled",
+      };
+    }
     if (command === "workspace_pins") return [];
     if (command === "index_stats") return currentStats();
     if (command === "list_files") return [];
@@ -533,9 +619,11 @@ export function installV07Fixture({
         send("assistant-accepted", { requestId: args.requestId });
         const selectedSource = store.documents.length ? source() : null;
         const insufficient = /满意|更好/.test(t.question),
-          text = insufficient
-            ? "## 资料不足以判断满意度\n\n当前资料只记录时间和人数，没有满意度指标。人数较多不等于更受欢迎。\n\n建议补充问卷样本与调查口径。"
-            : "## 甲方案参与人数较多\n\n甲方案为 **120人**，乙方案为 **80人**，相差 **40人**。[1]\n\n| 方案 | 时间 | 人数 |\n| --- | --- | --- |\n| 甲 | 周二 | 120 |\n| 乙 | 周四 | 80 |\n\n资料不足以判断满意度或方案优劣。";
+          text = offlineOnboarding
+            ? "## 计划开展四场活动\n\n3 场在社区阅览室举行，1 场在河畔公园举行。[1]"
+            : insufficient
+              ? "## 资料不足以判断满意度\n\n当前资料只记录时间和人数，没有满意度指标。人数较多不等于更受欢迎。\n\n建议补充问卷样本与调查口径。"
+              : "## 甲方案参与人数较多\n\n甲方案为 **120人**，乙方案为 **80人**，相差 **40人**。[1]\n\n| 方案 | 时间 | 人数 |\n| --- | --- | --- |\n| 甲 | 周二 | 120 |\n| 乙 | 周四 | 80 |\n\n资料不足以判断满意度或方案优劣。";
         send("chat-status", {
           requestId: args.requestId,
           stage: "retrieving",
@@ -679,7 +767,8 @@ export function installV07Fixture({
     },
   };
   localStorage.setItem("inkstone:workspaceMode", "library");
-  localStorage.setItem("inkstone:panel-open", clean ? "false" : "true");
+  if (!offlineOnboarding)
+    localStorage.setItem("inkstone:panel-open", clean ? "false" : "true");
   if (store.documents[0] && !clean)
     localStorage.setItem(
       "inkstone:session:" + root,

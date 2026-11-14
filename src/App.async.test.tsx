@@ -326,6 +326,144 @@ test("the managed workbench offers the first-question guide on startup", async (
   expect(document.activeElement).toBe(composer);
 });
 
+async function openSampleAndSearch() {
+  api.realLibrary = true;
+  const sample = libraryDoc("离线体验：社区阅读活动.md");
+  const saving = deferred<LibraryDocument>();
+  const saved = file(sample.path, "# 社区阅读活动\n\n计划开展 4 场阅读活动。");
+  disk.set(sample.path, saved);
+  let prepared = false;
+  overrides.set("library_list", () =>
+    prepared ? { ...view, documents: [...view.documents, sample] } : view,
+  );
+  overrides.set("library_prepare_local_example", () => saving.promise);
+  overrides.set("search", () => ({
+    results: [
+      {
+        id: 1,
+        path: sample.path,
+        title: sample.title,
+        hash: saved.hash,
+        startLine: 3,
+        endLine: 3,
+        heading: "活动安排",
+        text: "计划开展 4 场阅读活动。",
+        evidence: true,
+      },
+    ],
+    evidenceCount: 1,
+    candidateCount: 1,
+    warning: null,
+    semantic: false,
+    retrievalMode: "bm25",
+    rerankStatus: "disabled",
+  }));
+  render(<App />);
+  const start = await screen.findByRole("button", { name: "打开离线样例" });
+  expect(calls("library_prepare_local_example")).toHaveLength(0);
+  act(() => {
+    fireEvent.click(start);
+    fireEvent.click(start);
+  });
+  await waitFor(() =>
+    expect(calls("library_prepare_local_example")).toEqual([
+      ["library_prepare_local_example", { projectId: "p1" }],
+    ]),
+  );
+  prepared = true;
+  await act(async () => saving.resolve(sample));
+  const search = (await screen.findByRole("textbox", {
+    name: "搜索资料",
+  })) as HTMLInputElement;
+  expect(search.value).toBe("阅读活动");
+  const openSearch = screen.getByRole("button", { name: "执行搜索" });
+  fireEvent.click(openSearch);
+  const source = await screen.findByRole("button", {
+    name: /关键词命中.*计划开展 4 场阅读活动/,
+  });
+  expect(calls("search")).toEqual([
+    [
+      "search",
+      expect.objectContaining({
+        query: "阅读活动",
+        scope: sample.path,
+        semantic: false,
+        retrievalMode: "keyword",
+      }),
+    ],
+  ]);
+  expect(calls("assistant_ask")).toHaveLength(0);
+  fireEvent.click(source);
+  await waitFor(() =>
+    expect(screen.getByTestId("opened-path").textContent).toBe(
+      `${sample.path}:3`,
+    ),
+  );
+  return sample;
+}
+
+test("an offline example is explicit and opens the original from document-scoped keyword search", async () => {
+  await openSampleAndSearch();
+  fireEvent.click(screen.getByRole("button", { name: "连接聊天模型" }));
+  const modal = await screen.findByRole("dialog", { name: "模型设置" });
+  expect(
+    within(modal).getByRole("tab", { name: /问答模型/, selected: true }),
+  ).toBeTruthy();
+});
+
+test("asking about the example starts a new document-scoped draft without sharing the previous conversation", async () => {
+  enableTestChat();
+  overrides.set("ask_question", () => syntheticAnswer);
+  mockConversation = {
+    id: "old-space-chat",
+    title: "之前的问题",
+    scope: null,
+    scopeLabel: "整个空间",
+    archived: false,
+    draft: "应该保留的旧草稿",
+    revision: 1,
+    turns: [],
+  };
+  const sample = await openSampleAndSearch();
+  fireEvent.click(screen.getByRole("button", { name: "对样例提问" }));
+  const composer = await readyComposer("向当前空间提问");
+  expect(composer.value).toBe("");
+  expect(mockConversation.draft).toBe("应该保留的旧草稿");
+  expect(calls("assistant_create")).toHaveLength(0);
+  expect(calls("assistant_ask")).toHaveLength(0);
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: "本轮不搜索网页",
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  fireEvent.click(
+    screen.getByRole("button", { name: "社区读书会计划开展几场阅读活动？" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+  await waitFor(() => expect(calls("assistant_ask")).toHaveLength(1));
+  expect(calls("assistant_create")[0][1]).toMatchObject({ scope: sample.path });
+  expect(calls("assistant_ask")[0][1]).toMatchObject({
+    semantic: false,
+    retrievalMode: "keyword",
+    webAccess: "local-only",
+  });
+});
+
+test("the offline example action leaves the workspace available for retry after a local preparation error", async () => {
+  api.realLibrary = true;
+  overrides.set("library_prepare_local_example", () =>
+    Promise.reject("离线样例在回收站中，请先恢复该文档。"),
+  );
+  render(<App />);
+  const start = await screen.findByRole("button", { name: "打开离线样例" });
+  fireEvent.click(start);
+  await screen.findByText(/离线样例在回收站中/);
+  expect((start as HTMLButtonElement).disabled).toBe(false);
+  expect(calls("search")).toHaveLength(0);
+});
+
 test("startup remains loading until the space and its document list have both loaded", async () => {
   const opening = deferred<Workspace>();
   const listing = deferred<LibraryView>();

@@ -1,6 +1,6 @@
 # 本机应用、版本与资料管理
 
-本机交付线为 **v0.8.4**，继续使用 `/Applications/Inkstone.app` 和原 Bundle ID。见 [v0.8.4 交付与验收](DELIVERY-v0.8.4.md)。下文为 rc.4 合并及历史清理记录。
+本机升级工具从 **v0.8.5** 起复用同一套预检、备份与回退流程。日常使用 `/Applications/Inkstone.app`，Bundle ID 为 `local.inkstone.desktop`。
 
 2026-11-07；当前统一使用 **v0.7.0-rc.4**。这是本机部署整理，不改变应用功能版本，也不代表正式 v0.7.0 或 GitHub 发行完成。
 
@@ -16,7 +16,38 @@
 
 多个生产应用副本原先使用相同 bundle ID 和同一资料目录。此次合并的是程序副本和启动登记，资料无需重复导入或拼接；保留原空间和文档身份。高级目录模式中的外部原件未移动。
 
-## 本次整理记录
+## v0.8.5 起的本机升级流程
+
+从 Apple Silicon Mac 上的主仓库运行。候选包由干净且已提交的源码构建，预检核对该提交、发行清单、ZIP 校验和、应用版本和签名完整性。
+
+```sh
+npm run bundle
+node scripts/release-manifest.mjs
+release_dir=artifacts/v0.8.5-development
+ditto -c -k --sequesterRsrc --keepParent \
+  src-tauri/target/release/bundle/macos/Inkstone.app \
+  "$release_dir/Inkstone-v0.8.5-macos-arm64.zip"
+(cd "$release_dir" && shasum -a 256 Inkstone-v0.8.5-macos-arm64.zip > SHA256SUMS)
+python3 scripts/local-upgrade.py preflight --artifact-dir "$release_dir" --from-version 0.8.4
+```
+
+将预检输出的 `state` 路径保存到变量 `inkstone_upgrade_state`。预检会先展开候选应用，并预编译便携备份验收，因此此时可以继续使用旧版。保存文档并正常退出后，执行：
+
+```sh
+python3 scripts/local-upgrade.py apply --state "$inkstone_upgrade_state"
+```
+
+在同一事务内，原始快照保存应用资料、偏好和 WebKit 界面状态。便携备份从独立工作副本生成和验证。升级原位交换应用 Contents，保留应用根目录身份。安装验证失败时会尝试换回旧版。安装成功后新应用保持关闭，可先同步项目文档，再从原路径启动并验收。
+
+若命令中断，应用应保持退出状态，使用同一事务目录重试同一命令。快照后如有正常编辑，重新预检并建立新的事务。需要恢复旧应用和旧资料时，退出应用后执行：
+
+```sh
+python3 scripts/local-upgrade.py rollback --state "$inkstone_upgrade_state"
+```
+
+回退会把当前资料保留在私有事务的 `return-stage`，恢复后活跃资料回到升级前时点。系统偏好和 WebKit 界面状态仅随原始快照备查。该目录、原始快照和便携备份均位于本机 Git 忽略的 `artifacts` 下。API 密钥仍由 macOS 钥匙串管理。可用 `python3 scripts/local-upgrade.test.py` 在临时目录验证故障和回退。
+
+## 历史整理记录
 
 旧 v0.6.2 应用已通过正常退出请求执行自身草稿/保存流程，没有强制结束。关闭后重新建立快照，覆盖 **336 篇**现有文档，并在副本上生成及校验完整产品备份。不能沿用前次 309 篇时点的快照代替本轮备份。
 

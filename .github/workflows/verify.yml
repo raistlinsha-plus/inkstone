@@ -89,6 +89,9 @@ jobs:
       - name: Full offline-model gates
         if: steps.scope.outputs.docs_only != 'true'
         run: npm run verify
+      - name: Local upgrade and rollback fixtures
+        if: steps.scope.outputs.docs_only != 'true'
+        run: python3 scripts/local-upgrade.test.py
       - name: macOS application bundle (local ad-hoc signature)
         if: steps.scope.outputs.docs_only != 'true'
         run: |
