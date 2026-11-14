@@ -2067,13 +2067,13 @@ export default function App() {
       setOpeningConversation(false);
     }
   }
-  async function newConversation() {
+  async function newConversation(): Promise<boolean> {
     if (
       assistant.loading ||
       citationOpenInFlight.current ||
       navigationBlocked()
     )
-      return;
+      return false;
     newConversationInFlight.current = true;
     setOpeningConversation(true);
     try {
@@ -2089,8 +2089,10 @@ export default function App() {
       setAssistantScopeChanged(true);
       setAssistantRunError(undefined);
       setFocusQuestion(true);
+      return true;
     } catch (e) {
       fail(e);
+      return false;
     } finally {
       newConversationInFlight.current = false;
       setOpeningConversation(false);
@@ -2747,6 +2749,21 @@ export default function App() {
     setSettingsOpen(true);
   }
   const searchingExample = !!examplePath && document?.path === examplePath;
+  async function askAboutExample() {
+    const epoch = workspaceEpoch.current;
+    if (
+      !searchingExample ||
+      !(await newConversation()) ||
+      epoch !== workspaceEpoch.current ||
+      docRef.current?.path !== examplePath ||
+      closingRef.current
+    )
+      return;
+    setScope("current");
+    setRetrievalMode("keyword");
+    restoreDraftContext({ webAccess: "local-only" });
+    openAsk();
+  }
   const composerLocked =
     assistant.loading || openingConversation || citationOpening;
   const turnControls = (
@@ -3754,7 +3771,7 @@ export default function App() {
                             disabled={busy}
                             onClick={
                               settings?.chat.enabled
-                                ? openAsk
+                                ? () => void askAboutExample()
                                 : openFirstUseModelSettings
                             }
                           >

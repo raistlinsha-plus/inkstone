@@ -326,7 +326,7 @@ test("the managed workbench offers the first-question guide on startup", async (
   expect(document.activeElement).toBe(composer);
 });
 
-test("an offline example is explicit and opens the original from document-scoped keyword search", async () => {
+async function openSampleAndSearch() {
   api.realLibrary = true;
   const sample = libraryDoc("离线体验：社区阅读活动.md");
   const saving = deferred<LibraryDocument>();
@@ -399,11 +399,56 @@ test("an offline example is explicit and opens the original from document-scoped
       `${sample.path}:3`,
     ),
   );
+  return sample;
+}
+
+test("an offline example is explicit and opens the original from document-scoped keyword search", async () => {
+  await openSampleAndSearch();
   fireEvent.click(screen.getByRole("button", { name: "连接聊天模型" }));
   const modal = await screen.findByRole("dialog", { name: "模型设置" });
   expect(
     within(modal).getByRole("tab", { name: /问答模型/, selected: true }),
   ).toBeTruthy();
+});
+
+test("asking about the example starts a new document-scoped draft without sharing the previous conversation", async () => {
+  enableTestChat();
+  overrides.set("ask_question", () => syntheticAnswer);
+  mockConversation = {
+    id: "old-space-chat",
+    title: "之前的问题",
+    scope: null,
+    scopeLabel: "整个空间",
+    archived: false,
+    draft: "应该保留的旧草稿",
+    revision: 1,
+    turns: [],
+  };
+  const sample = await openSampleAndSearch();
+  fireEvent.click(screen.getByRole("button", { name: "对样例提问" }));
+  const composer = await readyComposer("向当前空间提问");
+  expect(composer.value).toBe("");
+  expect(mockConversation.draft).toBe("应该保留的旧草稿");
+  expect(calls("assistant_create")).toHaveLength(0);
+  expect(calls("assistant_ask")).toHaveLength(0);
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: "本轮不搜索网页",
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  fireEvent.click(
+    screen.getByRole("button", { name: "社区读书会计划开展几场阅读活动？" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+  await waitFor(() => expect(calls("assistant_ask")).toHaveLength(1));
+  expect(calls("assistant_create")[0][1]).toMatchObject({ scope: sample.path });
+  expect(calls("assistant_ask")[0][1]).toMatchObject({
+    semantic: false,
+    retrievalMode: "keyword",
+    webAccess: "local-only",
+  });
 });
 
 test("the offline example action leaves the workspace available for retry after a local preparation error", async () => {
