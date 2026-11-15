@@ -1,6 +1,11 @@
 import type { SearchResult } from "./types";
 import type { CitationCheck, ExternalSource } from "./assistant/types";
-import { publicCitationUrl, sourceKind } from "./assistant/sourceDisplay";
+import {
+  documentCitation,
+  publicCitationUrl,
+  sourceKind,
+} from "./assistant/sourceDisplay";
+import { answerSourceUrl } from "./content/answerSourceLink";
 import { parseMarkdown, type MarkdownNode } from "./content/blocks";
 
 export interface AnswerSnapshot {
@@ -23,6 +28,28 @@ export interface AnswerTransferOptions {
   externalSources?: ExternalSource[];
   citationChecks?: CitationCheck[];
 }
+function evidenceExcerpt(citation: number, text?: string | null) {
+  const characters = Array.from((text ?? "").replace(/\s+/gu, " ").trim());
+  if (!characters.length) return "";
+  const excerpt =
+    characters.slice(0, 420).join("") + (characters.length > 420 ? "…" : "");
+  const fence = "`".repeat(
+    Math.max(0, ...(excerpt.match(/`+/g) ?? []).map((run) => run.length)) + 1,
+  );
+  const indent = " ".repeat(String(citation).length + 2);
+  return `\n\n${indent}> 生成时摘录 ${fence} ${excerpt} ${fence}`;
+}
+
+function managedSourceLink(source: SearchResult) {
+  if (!source.documentId) return;
+  return answerSourceUrl({
+    documentId: source.documentId,
+    hash: source.hash,
+    startLine: source.startLine,
+    endLine: source.endLine,
+  });
+}
+
 function transferableBody(text: string, options: AnswerTransferOptions) {
   const edits: { from: number; to: number; value: string }[] = [];
   let chartIndex = 0,
@@ -98,28 +125,40 @@ export function answerMarkdown(
   const body = transferableBody(text, options);
   const depth = targetPath.split("/").length - 1;
   const prefix = "../".repeat(Math.max(0, depth));
-  const sourceLines = sources.map((s, i) => {
+  const sourceLines = sources.map((source, i) => {
     const href =
+      managedSourceLink(source) ??
       prefix +
-      s.path
-        .split("/")
-        .map((part) =>
-          encodeURIComponent(part).replace(
-            /[!'()*]/g,
-            (char) => "%" + char.charCodeAt(0).toString(16).toUpperCase(),
-          ),
-        )
-        .join("/");
-    return `${i + 1}. [${plain(s.title || s.heading || s.path.split("/").at(-1) || "资料")}](${href}) · 第 ${s.startLine}–${s.endLine} 行 · 版本 \`${s.hash}\`${s.documentId ? ` · 文档 \`${s.documentId}\`` : ""}`;
+        source.path
+          .split("/")
+          .map((part) =>
+            encodeURIComponent(part).replace(
+              /[!'()*]/g,
+              (char) => "%" + char.charCodeAt(0).toString(16).toUpperCase(),
+            ),
+          )
+          .join("/");
+    const label = plain(
+      source.title || source.heading || source.path.split("/").at(-1) || "资料",
+    );
+    return `${i + 1}. [${label}](${href}) · 第 ${source.startLine}–${source.endLine} 行 · 版本 \`${source.hash}\`${source.documentId ? ` · 文档 \`${source.documentId}\`` : ""}${evidenceExcerpt(i + 1, source.text)}`;
   });
   for (const source of options.externalSources ?? []) {
     const label = plain(source.label);
-    const url = publicCitationUrl(source.url);
+    const document = documentCitation(source, "");
+    const url = document
+      ? managedSourceLink(document)
+      : source.kind === "web"
+        ? publicCitationUrl(source.url)
+        : undefined;
     const title = url
       ? `[${label}](${url.replace(/[()]/g, (c) => (c === "(" ? "%28" : "%29"))})`
       : label;
+    const position = document
+      ? ` · 第 ${document.startLine}–${document.endLine} 行 · 版本 \`${document.hash}\``
+      : "";
     sourceLines.push(
-      `${source.citation}. ${sourceKind(source)} · ${title}${source.capturedAt ? ` · ${plain(source.capturedAt)}` : ""}`,
+      `${source.citation}. ${sourceKind(source)} · ${title}${position}${source.capturedAt ? ` · ${plain(source.capturedAt)}` : ""}${evidenceExcerpt(source.citation, source.excerpt)}`,
     );
   }
   return [
@@ -141,8 +180,10 @@ export function answerMarkdown(
     !["stop", "no_evidence"].includes(snapshot.finishReason)
       ? "\n> 此回答可能未完整生成，结构内容请核对后使用。"
       : "",
-    "\n引用编号对应生成时的资料版本；原文更新后请重新核对。",
-    sourceLines.length ? "\n" + sourceLines.join("\n") : "\n本轮没有引用资料。",
+    "\n引用编号对应生成时的资料版本。链接可在砚台打开原文，摘录供核对。正文模式下按住 ⌘ 点击打开链接。",
+    sourceLines.length
+      ? "\n" + sourceLines.join("\n\n")
+      : "\n本轮没有引用资料。",
     options.citationChecks?.length
       ? "\n### 待核对结论\n\n" +
         options.citationChecks

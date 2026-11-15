@@ -44,6 +44,7 @@ vi.mock("./Chart", () => ({
 
 import { fireEvent, waitFor } from "@testing-library/react";
 import type { SearchResult } from "../types";
+import { answerSourceUrl } from "../content/answerSourceLink";
 import { calendarTemplate } from "../content/calendar";
 import { safeImageUrl } from "./Markdown";
 const citation = {
@@ -102,6 +103,36 @@ test("citation buttons are limited to prose and do not replace JSON or inline-co
   expect(container.textContent).not.toContain("引用待核实");
   expect(screen.queryByRole("button", { name: "修改 values" })).toBeNull();
   expect(screen.queryByRole("button", { name: "格式化" })).toBeNull();
+});
+
+test("saved answer source links route only through the catalog callback", () => {
+  const onOpenAnswerSource = vi.fn();
+  const onOpenDoc = vi.fn();
+  const onError = vi.fn();
+  const source = {
+    documentId: "93ecb94d-5701-4f61-a6e4-683fea2f3d43",
+    hash: "a".repeat(64),
+    startLine: 12,
+    endLine: 14,
+  };
+  const url = answerSourceUrl(source);
+  expect(url).toBeDefined();
+  render(
+    <Markdown
+      path="documents/saved.md"
+      source={`[核对原文][source]\n\n[伪造目标](inkstone-source:v1/../outside.md)\n\n[source]: ${url}`}
+      onOpenAnswerSource={onOpenAnswerSource}
+      onOpenDoc={onOpenDoc}
+      onError={onError}
+    />,
+  );
+  const link = screen.getByRole("link", { name: "核对原文" });
+  expect(link.getAttribute("href")).toBe("#");
+  fireEvent.click(link);
+  fireEvent.click(screen.getByRole("link", { name: "伪造目标" }));
+  expect(onOpenAnswerSource).toHaveBeenCalledExactlyOnceWith(source);
+  expect(onOpenDoc).not.toHaveBeenCalled();
+  expect(onError).toHaveBeenCalledWith("此回答来源链接的格式无效。");
 });
 
 test("local image percent filenames cannot throw outside the error boundary", async () => {

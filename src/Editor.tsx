@@ -17,6 +17,7 @@ import Markdown from "./preview/Markdown";
 import Graph from "./preview/Graph";
 import Mindmap from "./preview/Mindmap";
 import { insertCommands } from "./rich/commands";
+import type { AnswerSourceLink } from "./content/answerSourceLink";
 import { ChevronDown, Plus, Undo2, Redo2, ListTree } from "lucide-react";
 export type EditorMode = "source" | "visual" | "split" | "mindmap";
 export interface InsertionTarget {
@@ -42,6 +43,7 @@ interface Props {
   onPosition?: (selection: number, scroll: number) => void;
   position?: { selection: number; scroll: number };
   onOpenDoc?: (path: string) => void;
+  onOpenAnswerSource?: (source: AnswerSourceLink) => void;
 }
 const diagramTemplates: Record<string, string> = {
   flowchart: "flowchart LR\n  A[开始] --> B[完成]\n",
@@ -65,6 +67,7 @@ export default function Editor({
   onPosition,
   position,
   onOpenDoc,
+  onOpenAnswerSource,
 }: Props) {
   const session = useRef<DocumentSession | null>(null);
   if (!session.current) {
@@ -418,6 +421,7 @@ export default function Editor({
             session={doc}
             onPosition={onPosition}
             onOpenDoc={onOpenDoc}
+            onOpenAnswerSource={onOpenAnswerSource}
             onChange={(value, structure) => {
               if (
                 doc.commit(
@@ -476,6 +480,7 @@ export default function Editor({
                   onLocate={locate}
                   onError={onError}
                   onOpenDoc={onOpenDoc}
+                  onOpenAnswerSource={onOpenAnswerSource}
                 />
               )}
             </div>

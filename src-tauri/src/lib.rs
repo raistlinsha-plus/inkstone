@@ -2438,9 +2438,7 @@ mod v05_io_tests {
             "data:image/png;base64,{}",
             base64::engine::general_purpose::STANDARD.encode(bytes)
         );
-        assert!(png_export_bytes(&oversized)
-            .unwrap_err()
-            .contains("尺寸"));
+        assert!(png_export_bytes(&oversized).unwrap_err().contains("尺寸"));
     }
     #[tokio::test]
     async fn keyword_mode_stays_local_with_ready_vectors_and_enabled_remote_reranker() {
@@ -2628,6 +2626,7 @@ pub fn run() {
             library_commands::library_create_project,
             library_commands::library_rename_project,
             library_commands::library_create_document,
+            library_commands::library_answer_source,
             library_commands::library_prepare_local_example,
             library_commands::library_rename,
             library_commands::library_trash,

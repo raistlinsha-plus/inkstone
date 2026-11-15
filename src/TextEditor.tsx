@@ -40,6 +40,7 @@ import { jsonParseLinter } from "@codemirror/lang-json";
 import type { DocumentSession } from "./session";
 import { Crepe } from "@milkdown/crepe";
 import { commandsCtx, editorViewCtx, parserCtx } from "@milkdown/kit/core";
+import { linkAttr } from "@milkdown/kit/preset/commonmark";
 import { invoke } from "@tauri-apps/api/core";
 import { safeInlineBreaks } from "./rich/breaks";
 import {
@@ -66,6 +67,11 @@ import {
   restoreBlockIdentity,
 } from "./rich/identity";
 import { decodeLocalImageUrl } from "./content/urls";
+import {
+  parseAnswerSourceUrl,
+  usesAnswerSourceProtocol,
+  type AnswerSourceLink,
+} from "./content/answerSourceLink";
 import { contentBlockPlugin, revealSourceEvent } from "./rich/plugin";
 import { revealAfterLayout } from "./rich/reveal";
 import {
@@ -119,6 +125,7 @@ interface Props {
   session?: DocumentSession;
   onPosition?: (selection: number, scroll: number) => void;
   onOpenDoc?: (path: string) => void;
+  onOpenAnswerSource?: (source: AnswerSourceLink) => void;
 }
 export default function TextEditor({
   content,
@@ -133,12 +140,25 @@ export default function TextEditor({
   session,
   onPosition,
   onOpenDoc,
+  onOpenAnswerSource,
 }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const visual = useRef<Crepe | null>(null);
   const [readyVersion, setReadyVersion] = useState(0);
-  const latest = useRef({ content, onPosition, onError, onOpenDoc });
-  latest.current = { content, onPosition, onError, onOpenDoc };
+  const latest = useRef({
+    content,
+    onPosition,
+    onError,
+    onOpenDoc,
+    onOpenAnswerSource,
+  });
+  latest.current = {
+    content,
+    onPosition,
+    onError,
+    onOpenDoc,
+    onOpenAnswerSource,
+  };
   const applying = useRef(false);
   const adapter = useRef(new RichMarkdownAdapter(content));
   const callback = useRef(onChange);
@@ -535,6 +555,19 @@ export default function TextEditor({
           strikethroughLabel: "删除线",
         },
       },
+    });
+    // Keep the browser href sanitized by Milkdown; the app handles this
+    // protocol only after a deliberate click inside the editor.
+    crepe.editor.config((ctx) => {
+      ctx.update(linkAttr.key, (previous) => (mark) => {
+        const href = String(mark.attrs.href ?? "");
+        return {
+          ...previous(mark),
+          ...(usesAnswerSourceProtocol(href) && href.length <= 140
+            ? { "data-answer-source": href }
+            : {}),
+        };
+      });
     });
     crepe.editor.use(safeInlineBreaks);
     crepe.editor.use($prose(() => identityPlugin(viewKey, content)));
@@ -979,11 +1012,21 @@ export default function TextEditor({
         const link = (event.target as HTMLElement).closest("a");
         if (link) {
           event.preventDefault();
+          const answerSource = link.getAttribute("data-answer-source");
           const url = link.getAttribute("href");
           // Ordinary clicks keep editing in the document; the link tooltip
           // supplies editing actions. Command/Ctrl-click explicitly opens it.
-          if (url && !url.startsWith("#") && !event.metaKey && !event.ctrlKey)
+          const explicitOpen = event.metaKey || event.ctrlKey;
+          if (answerSource !== null) {
+            if (!explicitOpen) return;
+            const source = parseAnswerSourceUrl(answerSource);
+            if (!source) latest.current.onError("此回答来源链接的格式无效。");
+            else if (latest.current.onOpenAnswerSource)
+              latest.current.onOpenAnswerSource(source);
+            else latest.current.onError("请在文档中打开回答来源链接。");
             return;
+          }
+          if (url && !url.startsWith("#") && !explicitOpen) return;
           if (url && /^https?:\/\//i.test(url))
             void invoke("open_external", { url }).catch((e) =>
               latest.current.onError(String(e)),

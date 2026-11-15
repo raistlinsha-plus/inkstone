@@ -4,6 +4,7 @@ import {
   answerMarkdown,
   type AnswerSnapshot,
 } from "./answerContent";
+import { answerSourceUrl } from "./content/answerSourceLink";
 import type { SearchResult } from "./types";
 const source: SearchResult = {
   id: 1,
@@ -53,4 +54,60 @@ test("file names cannot smuggle paths and interrupted answers remain labelled", 
       finishReason: "length",
     }),
   ).toContain("可能未完整生成");
+});
+
+test("saved scoped and independent answers keep stable document references and captured evidence", () => {
+  const target = {
+    documentId: "47f3590f-53f5-4d78-bdf3-2c52db06d6ab",
+    hash: "c".repeat(64),
+    startLine: 3,
+    endLine: 6,
+  };
+  const href = answerSourceUrl(target);
+  expect(href).toBeTruthy();
+  const scoped = answerMarkdown(
+    "结论。[1]",
+    "问题",
+    [{ ...source, ...target }],
+    snapshot,
+  );
+  expect(scoped).toContain(`](${href})`);
+  expect(scoped).toContain("生成时摘录 ` 120万元 `");
+  expect(scoped).not.toContain("季度 数据.md");
+  const general = answerMarkdown("结论。[1]", "问题", [], snapshot, "", true, {
+    externalSources: [
+      {
+        kind: "document",
+        id: `${target.documentId}:3-6`,
+        citation: 1,
+        label: "旧文件名.md",
+        documentId: target.documentId,
+        contentHash: target.hash,
+        excerpt: "`路径` [不执行](https://example.org)\n" + "原".repeat(500),
+      },
+      {
+        kind: "attachment",
+        id: "temporary",
+        citation: 2,
+        label: "附件",
+        excerpt: "当时附件",
+        url: "https://example.org/forbidden",
+      },
+      {
+        kind: "web",
+        id: "page",
+        citation: 3,
+        label: "网页",
+        url: "https://example.org/reference",
+      },
+    ],
+  });
+  expect(general).toContain(`1. 文档 · [旧文件名.md](${href}) · 第 3–6 行`);
+  expect(general).toContain(
+    "生成时摘录 `` `路径` [不执行](https://example.org)",
+  );
+  expect(general).not.toContain("原".repeat(500));
+  expect(general).toContain("2. 临时文件 · 附件");
+  expect(general).not.toContain("/forbidden");
+  expect(general).toContain("3. 网页 · [网页](https://example.org/reference)");
 });

@@ -53,6 +53,15 @@ interface WikiPage extends WikiSummary {
   refs: WikiRef[];
   related?: { id: string; title: string }[];
   summaryIssues?: SummaryIssue[];
+  reviewComparison?: WikiReviewComparison;
+}
+interface WikiReviewComparison {
+  baseRevision: number;
+  currentRevision: number;
+  baseAvailable: boolean;
+  summaryChanged: boolean;
+  outlineChanged: boolean;
+  sources: { title: string; status: "added" | "updated" | "removed" }[];
 }
 interface WikiStatus {
   policy: WikiPolicy;
@@ -96,6 +105,11 @@ const reviewMessages: Record<ReviewAction, string> = {
   restore: "历史版本已恢复，可在主题中查看。",
   "restore-excerpts": "已恢复核验过的原文摘录。",
 };
+const sourceChangeLabels = {
+  added: "新增引用",
+  updated: "更新引用",
+  removed: "移除引用",
+};
 
 export default function WikiPanel({
   projectId,
@@ -126,6 +140,8 @@ export default function WikiPanel({
   const [documentFilter, setDocumentFilter] = useState("");
   const latestPage = useRef(0);
   const latestStatus = useRef(0);
+  const requestedReviewFocus = useRef<string>(undefined);
+  const reviewContext = useRef<HTMLDivElement>(null);
   const dirty = useRef(false);
   const removingDocuments =
     !!policy &&
@@ -178,6 +194,13 @@ export default function WikiPanel({
       setBaseline(undefined);
     }
   }, [change, page, status]);
+
+  useEffect(() => {
+    if (page && change && change.id === requestedReviewFocus.current) {
+      requestedReviewFocus.current = undefined;
+      reviewContext.current?.focus();
+    }
+  }, [change, page]);
 
   useEffect(() => {
     active.current = true;
@@ -282,7 +305,14 @@ export default function WikiPanel({
       if (!active.current || request !== latestPage.current) return;
       setPage(data);
       setReadingId(undefined);
-      if (proposal?.status === "pending") {
+      const comparison = data.reviewComparison;
+      if (
+        proposal?.status === "pending" &&
+        (!comparison ||
+          (comparison.baseRevision > 0 &&
+            comparison.baseAvailable &&
+            comparison.baseRevision === comparison.currentRevision))
+      ) {
         const previous = await invoke<WikiPage>("wiki_read", { pageId }).catch(
           () => undefined,
         );
@@ -291,6 +321,7 @@ export default function WikiPanel({
       }
     } catch (reason) {
       if (active.current && request === latestPage.current) {
+        requestedReviewFocus.current = undefined;
         setReadingId(undefined);
         setError(String(reason));
       }
@@ -373,6 +404,7 @@ export default function WikiPanel({
   const pending =
     status?.changes.filter((item) => item.status === "pending") ?? [];
   const pendingCount = status?.currentPendingCount ?? pending.length;
+  const nextReview = pending.find((item) => item.id !== change?.id);
   const history =
     status?.changes.filter((item) => item.status !== "pending") ?? [];
   const selectedChange =
@@ -382,6 +414,14 @@ export default function WikiPanel({
     );
   const summaryIssues = selectedChange?.summaryIssues ?? [];
   const restoreIssues = selectedChange?.restoreSummaryIssues ?? [];
+  const comparison = page?.reviewComparison;
+  const currentRevision = Math.max(
+    status?.pages.find((item) => item.id === page?.id)?.revision ?? 0,
+    comparison?.currentRevision ?? 0,
+    baseline?.revision ?? 0,
+  );
+  const baseOutdated =
+    !!comparison && comparison.baseRevision !== currentRevision;
   const firstWiki = status && !status.pages.length;
   const scopeReady =
     status?.policy.enabled && !!status.policy.documentIds.length;
@@ -513,9 +553,23 @@ export default function WikiPanel({
         </p>
       )}
       {reviewNotice && (
-        <p className="wiki-review-notice" role="status">
-          {reviewNotice}
-        </p>
+        <div className="wiki-review-notice">
+          <p role="status">{reviewNotice}</p>
+          {nextReview && (
+            <button
+              type="button"
+              disabled={!!busy}
+              onClick={() => {
+                requestedReviewFocus.current = nextReview.id;
+                setReviewNotice("");
+                setTab("changes");
+                void inspect(nextReview.pageId, nextReview);
+              }}
+            >
+              审阅下一项
+            </button>
+          )}
+        </div>
       )}
       {error && (
         <p className="panel-warning" role="alert">
@@ -778,7 +832,13 @@ export default function WikiPanel({
           </div>
           {selectedChange && page ? (
             <div className="wiki-review-detail">
-              <div className="wiki-review-context">
+              <div
+                className="wiki-review-context"
+                ref={reviewContext}
+                tabIndex={-1}
+                role="group"
+                aria-label={`正在审阅 ${page.title}`}
+              >
                 <strong>
                   {changeLabels[selectedChange.status] ?? selectedChange.status}
                 </strong>
@@ -803,7 +863,13 @@ export default function WikiPanel({
                   guidance="该版本只能恢复已核验的原文摘录。"
                 />
               )}
-              {baseline && baseline.body !== page.body && (
+              {selectedChange.status === "pending" && comparison && (
+                <WikiReviewChanges
+                  comparison={comparison}
+                  outdated={baseOutdated}
+                />
+              )}
+              {!baseOutdated && baseline && baseline.body !== page.body && (
                 <details className="wiki-baseline">
                   <summary>对照当前生效版 · 版本 {baseline.revision}</summary>
                   <Markdown
@@ -866,7 +932,11 @@ export default function WikiPanel({
                   type="button"
                   className="primary"
                   disabled={
-                    !!busy || !status.policy.enabled || status.policy.paused
+                    !!busy ||
+                    !status.policy.enabled ||
+                    status.policy.paused ||
+                    baseOutdated ||
+                    comparison?.baseAvailable === false
                   }
                   onClick={() =>
                     void review(
@@ -896,6 +966,62 @@ export default function WikiPanel({
           </div>
         )}
     </ModalDialog>
+  );
+}
+
+function WikiReviewChanges({
+  comparison,
+  outdated,
+}: {
+  comparison: WikiReviewComparison;
+  outdated: boolean;
+}) {
+  const {
+    baseRevision,
+    baseAvailable,
+    summaryChanged,
+    outlineChanged,
+    sources,
+  } = comparison;
+  return (
+    <section className="wiki-review-changes" aria-label="改动对照">
+      <h3>改动对照</h3>
+      <p>{baseRevision ? `生成基准 · 版本 ${baseRevision}` : "新建主题"}</p>
+      {outdated && (
+        <p className="panel-warning">
+          生效版本已变化。可拒绝此项，再重新整理。
+        </p>
+      )}
+      {!baseAvailable ? (
+        <p className="panel-warning">
+          无法读取生成基准。可拒绝此项，再重新整理。
+        </p>
+      ) : (
+        <>
+          {(summaryChanged || outlineChanged) && (
+            <p>
+              {[
+                summaryChanged && "摘要有变化",
+                outlineChanged && "主题结构有变化",
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
+          {!!sources.length && (
+            <ul aria-label="引用资料变化">
+              {sources.map((source, index) => (
+                <li key={index}>
+                  <span>{sourceChangeLabels[source.status]}</span>
+                  <strong>{source.title}</strong>
+                </li>
+              ))}
+            </ul>
+          )}
+          {!sources.length && <p>引用资料无变化</p>}
+        </>
+      )}
+    </section>
   );
 }
 

@@ -117,10 +117,27 @@
   line-height: 1.6;
 }
 .wiki-review-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 12px;
   padding: 10px 12px;
   border-radius: 7px;
   background: var(--ui-selected);
   color: var(--ui-accent);
+}
+.wiki-review-notice p {
+  margin: 0;
+}
+.wiki-review-notice button {
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--ui-control-line);
+  border-radius: 6px;
+  background: var(--ui-field);
+  color: var(--ui-text);
 }
 .wiki-coverage ul {
   display: grid;
@@ -251,6 +268,45 @@
   color: var(--ui-muted);
 }
 .wiki-review-context strong {
+  color: var(--ui-text);
+}
+.wiki-review-context:focus-visible {
+  outline: 2px solid var(--ui-action);
+  outline-offset: 3px;
+}
+.wiki-review-changes {
+  display: grid;
+  gap: 6px;
+  margin-block-end: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--ui-line);
+  border-radius: 7px;
+  background: var(--ui-surface);
+  color: var(--ui-muted);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.wiki-review-changes h3,
+.wiki-review-changes p {
+  margin: 0;
+}
+.wiki-review-changes h3 {
+  font-size: 14px;
+  color: var(--ui-text);
+}
+.wiki-review-changes ul {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.wiki-review-changes li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+}
+.wiki-review-changes li strong {
   color: var(--ui-text);
 }
 .wiki-dialog :is(.panel-warning, .wiki-summary-warning) {

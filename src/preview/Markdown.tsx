@@ -20,6 +20,11 @@ import type { SearchResult } from "../types";
 import ContentBlock from "./ContentBlock";
 import "./content.css";
 import { decodeLocalImageUrl } from "../content/urls";
+import {
+  parseAnswerSourceUrl,
+  usesAnswerSourceProtocol,
+  type AnswerSourceLink,
+} from "../content/answerSourceLink";
 import { contentBlockIdentities } from "./blockIdentity";
 
 type ReadNode = MarkdownNode & {
@@ -96,6 +101,7 @@ export default function Markdown({
   onLocate,
   onError,
   onOpenDoc,
+  onOpenAnswerSource,
   viewKey = path,
   readOnly = false,
   citations,
@@ -111,6 +117,7 @@ export default function Markdown({
   onLocate?: (line: number) => void;
   onError?: (error: string) => void;
   onOpenDoc?: (path: string) => void;
+  onOpenAnswerSource?: (source: AnswerSourceLink) => void;
   viewKey?: string;
   readOnly?: boolean;
   citations?: (SearchResult | undefined)[];
@@ -189,6 +196,13 @@ export default function Markdown({
     });
   }
   function openLink(url: string) {
+    if (usesAnswerSourceProtocol(url)) {
+      const source = parseAnswerSourceUrl(url);
+      if (!source) onError?.("此回答来源链接的格式无效。");
+      else if (onOpenAnswerSource) onOpenAnswerSource(source);
+      else onError?.("请在文档中打开回答来源链接。");
+      return;
+    }
     if (url.startsWith("#")) {
       let target = url.slice(1);
       try {
