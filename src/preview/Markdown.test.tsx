@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import Markdown from "./Markdown";
 afterEach(cleanup);
@@ -189,9 +189,11 @@ test("calendar fences use the shared read-only calendar instead of raw JSON", as
       source={"```calendar\n" + calendarTemplate() + "\n```"}
     />,
   );
-  await waitFor(() =>
-    expect(screen.getByLabelText("正文日程日历")).toBeTruthy(),
-  );
+  // Wait for the real lazy import and flush its Suspense retry.
+  await act(async () => {
+    await vi.dynamicImportSettled();
+  });
+  expect(screen.getByLabelText("正文日程日历")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "＋ 新增事项" })).toBeNull();
   expect(screen.queryByRole("button", { name: "导出 ICS" })).toBeNull();
 });
