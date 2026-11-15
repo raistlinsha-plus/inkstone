@@ -1,6 +1,6 @@
 # Inkstone roadmap
 
-The current source preview is **v0.8.5**. [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
+The current source preview is **v0.8.6**. [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
 
 - [v0.8.0 release preparation](DELIVERY-v0.8.0.md) records verification and remaining distribution gates.
 - [v0.8.1 question workbench](DELIVERY-v0.8.1.md) introduces contextual navigation and citation-to-document return.
@@ -11,11 +11,13 @@ The current source preview is **v0.8.5**. [Published source previews and tags](h
 
 - [v0.8.5 first use and local upgrade](DELIVERY-v0.8.5.md) adds offline sample search and a reversible local upgrade workflow.
 
+- [v0.8.6 grounded answers](DELIVERY-v0.8.6.md) keeps a selected scope intact, labels the evidence at each turn, and adds a separate answer and citation evaluation.
+
 ## Ready to try in the source preview
 
 - Persistent scoped conversations and standalone chat. Select one space, a few managed documents or local text attachments for a turn.
 - Space Wikis built from explicitly selected documents, with source links, review and incremental maintenance. Local BM25, optional vectors and Wiki-guided recall can supply evidence.
-- Opt-in, model-routed Brave Search for readable public pages. Live provider validation is pending.
+- Opt-in, model-routed Brave Search for readable public pages. See the [v0.8.6 evaluation](../evals/v0.8.6/README.md) for live verification status.
 - Markdown documents containing JSON, Mermaid, mindmaps, calendars and constrained charts.
 - Stable document order, a separate Recent view, and explicitly confirmed permanent deletion with recovery bookkeeping.
 - Optional ink companions, fixed stories and locally stored growth records. Motuan has an opt-in pixel-and-ink motion pilot and an extra album reward for the second chapter.
@@ -30,8 +32,8 @@ The current source preview is **v0.8.5**. [Published source previews and tags](h
 ## Next usability and evaluation work
 
 - Observe first-time users completing import → question → source and Wiki scope → review → original source. Refine model setup and fallback explanations using those observations.
-- Use the 64-case development set to investigate context misses and incorrect admission. Run a separate, independently reviewed set for provider-generated answer and citation judgments. Keep source coverage, unsupported answers, unnecessary refusals, latency and model calls separate.
-- Verify actual Brave routing with an authorized provider account. Record search-worthiness, public-query blocks, useful webpage evidence and failure reasons before broadening the web path.
+- Extend the held-out answer evaluation with independently reviewed and less structured corpora. Keep source coverage, unsupported answers, unnecessary refusals, latency and model calls separate. Record search-worthiness, public-query blocks, useful webpage evidence and failure reasons before broadening the web path.
+- v0.8.7 will focus on incremental Wiki review and preserving provenance when saving an answer. v0.9 will focus on a notarized Mac beta and clean-machine install and rollback.
 - Improve asset sizes, startup/performance measurement and module boundaries without expanding the format surface at the same time.
 - Observe the Motuan pilot during ordinary work sessions over at least five natural usage days. Review motion, quiet settings and growth before adapting motion to the other companions.
 

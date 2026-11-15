@@ -98,6 +98,7 @@ pub struct Trace {
     pub unread: Vec<String>,
 }
 
+#[derive(Clone)]
 pub struct Evidence {
     pub metadata: ExternalSource,
     pub text: String,
@@ -105,12 +106,16 @@ pub struct Evidence {
 
 impl Evidence {
     pub fn as_prompt(&self) -> String {
+        self.as_prompt_with_citation(self.metadata.citation)
+    }
+
+    pub(crate) fn as_prompt_with_citation(&self, citation: usize) -> String {
         let e = &self.metadata;
         let title = serde_json::to_string(&e.label).unwrap_or_default();
         let date = e.published_at.as_deref().unwrap_or("未知");
         format!(
             "\n正文引用：[{}]；结构化来源ID：S{}；类型：{}；标题：{}；发布日期：{}\n{}\n",
-            e.citation, e.citation, e.kind, title, date, self.text
+            citation, citation, e.kind, title, date, self.text
         )
     }
 

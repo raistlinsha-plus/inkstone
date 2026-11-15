@@ -62,7 +62,7 @@ test("testing saved credentials is explicit, works while disabled, and never sav
   );
   const status = screen.getByRole("status");
   expect(status.textContent).toContain("搜索接口可用");
-  expect(status.textContent).toContain("无法读取正文");
+  expect(status.textContent).toContain("未能直连并读取候选网页的正文");
   expect(status.textContent).toContain("HTTP 200");
   expect(status.textContent).toContain("3 条可尝试的候选");
   expect(close).not.toHaveBeenCalled();

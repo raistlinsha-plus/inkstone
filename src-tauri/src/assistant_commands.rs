@@ -360,7 +360,7 @@ pub async fn assistant_ask(
         Ok(prepared) => match scope_label(&state, &ws, started.scope.as_deref()) {
             Ok(_) => {
                 crate::ask_pipeline(
-                    &app,
+                    Some(&app),
                     &state,
                     &prepared.retrieval_question,
                     &started.prompt_question,

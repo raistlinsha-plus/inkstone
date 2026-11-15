@@ -24,12 +24,47 @@ pub(crate) enum Status {
 struct Clause {
     text: String,
     citations: Vec<usize>,
+    first_reference: Option<String>,
 }
 
-fn prose(markdown: &str) -> String {
+fn markdown_clauses(markdown: &str) -> Vec<Clause> {
     let mut text = String::new();
+    let mut result = Vec::new();
     let mut hidden = 0_usize;
+    let mut table = false;
+    let mut headers = Vec::new();
+    let mut row = Vec::new();
+    let mut cell = String::new();
     for event in Parser::new_ext(markdown, Options::ENABLE_TABLES) {
+        if hidden == 0 {
+            match &event {
+                Event::Start(Tag::Table(_)) => {
+                    result.extend(clauses(&std::mem::take(&mut text)));
+                    table = true;
+                    continue;
+                }
+                Event::End(TagEnd::Table) => {
+                    headers.clear();
+                    table = false;
+                    continue;
+                }
+                Event::End(TagEnd::TableCell) => {
+                    row.push(std::mem::take(&mut cell));
+                    continue;
+                }
+                Event::End(TagEnd::TableHead) => {
+                    headers = std::mem::take(&mut row);
+                    continue;
+                }
+                Event::End(TagEnd::TableRow) => {
+                    result.extend(table_clauses(&headers, &row));
+                    row.clear();
+                    continue;
+                }
+                _ => {}
+            }
+        }
+        let text = if table { &mut cell } else { &mut text };
         match event {
             Event::Start(
                 Tag::CodeBlock(_) | Tag::Image { .. } | Tag::Link { .. } | Tag::Heading { .. },
@@ -43,9 +78,7 @@ fn prose(markdown: &str) -> String {
             }
             Event::Text(raw) if hidden == 0 => text.push_str(&raw),
             Event::Code(_) if hidden == 0 => text.push(' '),
-            Event::SoftBreak
-            | Event::HardBreak
-            | Event::End(TagEnd::Paragraph | TagEnd::Item | TagEnd::TableCell)
+            Event::SoftBreak | Event::HardBreak | Event::End(TagEnd::Paragraph | TagEnd::Item)
                 if hidden == 0 =>
             {
                 text.push('\n');
@@ -53,18 +86,20 @@ fn prose(markdown: &str) -> String {
             _ => {}
         }
     }
-    text
+    result.extend(clauses(&text));
+    result
 }
 
 fn take_citation(tail: &str) -> Option<(usize, usize)> {
     let body = tail.strip_prefix('[')?;
-    let end = body.bytes().take(6).position(|c| c == b']')?;
+    let end = body.bytes().take(20).position(|c| c == b']')?;
     let raw = &body[..end];
-    if raw.is_empty() || raw.len() > 5 || !raw.bytes().all(|b| b.is_ascii_digit()) {
+    let digits = raw.strip_prefix(['S', 's']).unwrap_or(raw);
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
         return None;
     }
     Some((
-        if raw.starts_with('0') {
+        if raw.len() != digits.len() || raw.starts_with('0') || raw.len() > 5 {
             0
         } else {
             raw.parse().ok()?
@@ -82,6 +117,9 @@ fn clauses(text: &str) -> Vec<Clause> {
         while let Some((at, c)) = chars.next() {
             if c == '[' {
                 if let Some((citation, len)) = take_citation(&line[at..]) {
+                    if current.first_reference.is_none() {
+                        current.first_reference = Some(line[at..at + len].to_string());
+                    }
                     if !current.citations.contains(&citation) {
                         current.citations.push(citation);
                     }
@@ -103,6 +141,83 @@ fn clauses(text: &str) -> Vec<Clause> {
             current.text.push(c);
         }
         result.push(current);
+    }
+    result
+}
+
+fn table_clauses(headers: &[String], row: &[String]) -> Vec<Clause> {
+    let reference_column = |index| {
+        headers.get(index).is_some_and(|header: &String| {
+            matches!(
+                normalize(header).as_str(),
+                "来源"
+                    | "出处"
+                    | "引用"
+                    | "引用来源"
+                    | "证据"
+                    | "参考"
+                    | "参考资料"
+                    | "source"
+                    | "sources"
+                    | "citation"
+                    | "citations"
+                    | "reference"
+                    | "references"
+                    | "evidence"
+            )
+        })
+    };
+    // A dedicated source column can describe this row only. A citation beside
+    // a value takes precedence over the row's general references.
+    let row_refs = row
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| reference_column(*i))
+        .flat_map(|(_, value)| clauses(value))
+        .filter(|claim| !claim.citations.is_empty())
+        .collect::<Vec<_>>();
+    let label = row.first().filter(|value| {
+        !reference_column(0)
+            && !value.trim().is_empty()
+            && words(value).is_none()
+            && number_spans(value, true).is_empty()
+            && clauses(value).iter().all(|c| c.citations.is_empty())
+    });
+    let mut result = row
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| !reference_column(*i) && (*i > 0 || label.is_none()))
+        .flat_map(|(i, value)| {
+            let header = headers.get(i).map(String::as_str).unwrap_or_default();
+            let field = match normalize(header).as_str() {
+                "数值" | "值" | "结果" | "value" | "result" if label.is_some() => "",
+                _ => header,
+            };
+            let mut claims = clauses(value);
+            claims.retain(|claim| !claim.text.trim().is_empty() || !claim.citations.is_empty());
+            for claim in &mut claims {
+                if claim.citations.is_empty() {
+                    for refs in &row_refs {
+                        claim.citations.extend(&refs.citations);
+                    }
+                    claim.citations.sort_unstable();
+                    claim.citations.dedup();
+                    claim.first_reference =
+                        row_refs.first().and_then(|c| c.first_reference.clone());
+                }
+                if !claim.text.trim().is_empty() {
+                    claim.text = format!(
+                        "{} {field} {}",
+                        label.map_or("", String::as_str),
+                        claim.text
+                    );
+                }
+            }
+            claims
+        })
+        .collect::<Vec<_>>();
+    if result.is_empty() {
+        result.extend(row_refs);
     }
     result
 }
@@ -174,6 +289,14 @@ fn unit(suffix: &str) -> Option<&'static str> {
         ("m", &["米", "meters", "meter"]),
         ("kg", &["千克", "公斤", "kg"]),
         ("g", &["克", "grams", "gram"]),
+        ("人次", &["人次"]),
+        ("人", &["人"]),
+        ("份", &["份"]),
+        ("条", &["条"]),
+        ("次", &["次"]),
+        ("页", &["页"]),
+        ("件", &["件"]),
+        ("个", &["个"]),
     ];
     let suffix = suffix.trim_start();
     groups.iter().find_map(|(name, spellings)| {
@@ -419,9 +542,9 @@ pub(crate) fn audit_citations(
     }
     let source_clauses = sources
         .iter()
-        .map(|source| clauses(&prose(&source.text)))
+        .map(|source| markdown_clauses(&source.text))
         .collect::<Vec<_>>();
-    clauses(&prose(answer))
+    markdown_clauses(answer)
         .into_iter()
         .filter_map(|clause| {
             let quantities = quantity_atoms(&clause.text, false);
@@ -437,7 +560,10 @@ pub(crate) fn audit_citations(
                 .filter_map(|number| source_clauses.get(number - 1))
                 .flat_map(|source| source.iter().map(|clause| clause.text.as_str()))
                 .collect::<Vec<_>>();
-            let status = if evidence.is_empty() || citations.len() < clause.citations.len() {
+            let status = if evidence.is_empty()
+                || citations.len() < clause.citations.len()
+                || clause.text.trim().is_empty()
+            {
                 (!quantities.is_empty() || polarity.is_some() || !clause.citations.is_empty())
                     .then_some(Status::Unverified)
             } else {
@@ -453,7 +579,11 @@ pub(crate) fn audit_citations(
                     )
                     .max_by_key(|status| *status == Status::Conflict)
             }?;
-            let excerpt = clause.text.trim().chars().take(180).collect::<String>();
+            let excerpt = if clause.text.trim().is_empty() {
+                clause.first_reference.unwrap_or_default()
+            } else {
+                clause.text.trim().chars().take(180).collect::<String>()
+            };
             if excerpt.is_empty() {
                 return None;
             }
@@ -661,6 +791,36 @@ mod tests {
             check("周末取件时限为72小时。", &["周末取件时限为72小时。"])[0].status,
             Status::Unverified
         );
+    }
+
+    #[test]
+    fn typed_and_orphaned_citation_markers_do_not_count_as_supported() {
+        for marker in ["[S1]", "[01]", "[999999]", "[2]"] {
+            let result = check(&format!("发布已完成{marker}。"), &["发布已完成。"]);
+            assert_eq!(result.len(), 1, "{marker}");
+            assert_eq!(result[0].status, Status::Unverified);
+            assert!(result[0].citations.is_empty());
+        }
+        assert_eq!(check("[1]", &["发布已完成。"])[0].excerpt, "[1]");
+        assert!(check("配置示例里的 `[S1]` 保持原样。", &["发布已完成。"]).is_empty());
+    }
+
+    #[test]
+    fn table_claims_keep_their_row_column_and_specific_reference() {
+        let source_table = "| 时段 | 取件时限 | 处理人数 |\n|---|---|---|\n| 周末 | 24小时 | 12人 |\n| 工作日 | 72小时 | 24人 |";
+        let valid = "| 时段 | 取件时限 | 处理人数 | 来源 |\n|---|---|---|---|\n| 周末 | 24小时 | 12人 | [1] |";
+        assert!(check(valid, &[source_table]).is_empty());
+        let invalid = "| 时段 | 取件时限 | 处理人数 | 来源 |\n|---|---|---|---|\n| 周末 | 72小时[1] | 24人[1] | [2] |";
+        let checks = check(
+            invalid,
+            &[source_table, "周末取件时限为72小时。周末处理人数为24人。"],
+        );
+        assert_eq!(checks.len(), 2);
+        assert!(checks
+            .iter()
+            .all(|c| c.status == Status::Conflict && c.citations == [1]));
+        let compact = "| 指标 | 数值 | 引用 |\n|---|---|---|\n| 周末取件时限 | 24小时 | [1] |";
+        assert!(check(compact, &["周末取件时限为24小时。"]).is_empty());
     }
 
     #[test]
