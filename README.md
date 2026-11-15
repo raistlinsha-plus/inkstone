@@ -6,7 +6,7 @@ A Markdown workspace for **macOS 13+ on Apple Silicon** with a source-linked Wik
 
 [中文](docs/README.zh-CN.md) · [Start from source](docs/QUICKSTART.md) · [Roadmap](docs/ROADMAP.md) · [Releases](https://github.com/raistlinsha-plus/inkstone/releases) · [Feedback](https://github.com/raistlinsha-plus/inkstone/issues)
 
-**v0.8.6 · Source preview.** Keep answers tied to the material you selected, see what evidence was supplied, and open the original passage when a claim needs checking. [Current delivery notes](docs/DELIVERY-v0.8.6.md) · [Published versions](https://github.com/raistlinsha-plus/inkstone/releases)
+**v0.8.7 · Source preview.** Review what changed in each Wiki proposal and verify managed document citations from saved answers. [Current delivery notes](docs/DELIVERY-v0.8.7.md) · [Published versions](https://github.com/raistlinsha-plus/inkstone/releases)
 
 ![Inkstone cited conversation using fictional reading-activity data](docs/assets/launch-v0.7/02-conversation.png)
 

@@ -66,6 +66,7 @@ import {
 } from "./answerContent";
 import BackupDialog from "./BackupDialog";
 import ProjectCalendar from "./calendar/ProjectCalendar";
+import type { AnswerSourceLink } from "./content/answerSourceLink";
 import { codeBlocks } from "./content/blocks";
 import {
   calendarTemplate,
@@ -363,6 +364,7 @@ export default function App() {
   const [answerTransfer, setAnswerTransfer] = useState<null | {
     kind: "save" | "insert";
     content: string;
+    citations: ReturnType<typeof answerCitations>;
     root: string;
     path?: string;
     target?: InsertionTarget;
@@ -1077,7 +1079,7 @@ export default function App() {
     projectId?: string,
     path?: string,
     committedReopen = false,
-    target?: SearchResult,
+    target?: OpeningSource,
   ): Promise<boolean> {
     if (!committedReopen && navigationBlocked()) return false;
     const request = ++openSequence.current,
@@ -1161,7 +1163,7 @@ export default function App() {
   }
   async function openLibraryDocument(
     doc: LibraryDocument,
-    target?: SearchResult,
+    target?: OpeningSource,
     keepConversation = false,
   ) {
     if (generalAsk && !keepConversation && !(await leaveGeneralForDocument()))
@@ -1172,6 +1174,42 @@ export default function App() {
       return true;
     }
     return useLibrary(doc.projectId, doc.path, false, target);
+  }
+  async function openAnswerSource(source: AnswerSourceLink) {
+    if (navigationBlocked()) return;
+    const request = ++openSequence.current;
+    const epoch = workspaceEpoch.current;
+    const current = () =>
+      request === openSequence.current &&
+      epoch === workspaceEpoch.current &&
+      !navigationBlocked();
+    const match = await invoke("library_answer_source", {
+      documentId: source.documentId,
+    });
+    if (!current()) return;
+    if (!match) {
+      notify("引用的原文已不可用，可核对文档里的生成时摘录");
+      return;
+    }
+    const { document, hash, lines } = match;
+    if (hash !== source.hash || lines < source.endLine) {
+      const openCurrent = await confirm(
+        "当前正文与引用快照无法匹配。打开当前文档时将跳过原引用行号。",
+        { title: "引用版本不匹配", kind: "warning" },
+      );
+      if (openCurrent && current()) await openLibraryDocument(document);
+      return;
+    }
+    await openLibraryDocument(document, {
+      ...source,
+      id: 0,
+      title: document.title,
+      path: document.path,
+      text: "",
+      heading: "",
+      score: 0,
+      requireVersion: true,
+    });
   }
   function showImport(task?: ImportTask) {
     const state = interaction.current;
@@ -2405,7 +2443,9 @@ export default function App() {
           {
             incomplete: !(record?.complete ?? answerComplete),
             rejectedCharts: record?.rejectedCharts ?? rejectedCharts,
-            externalSources: record?.externalSources ?? answerExternalSources,
+            externalSources: record
+              ? (record.externalSources ?? [])
+              : answerExternalSources,
             citationChecks: record?.citationChecks,
           },
         ),
@@ -2440,6 +2480,10 @@ export default function App() {
         kind === "insert"
           ? editorHandle.current?.captureInsertion()
           : undefined;
+      const sources = record?.sources ?? answerSources;
+      const external = record
+        ? (record.externalSources ?? [])
+        : answerExternalSources;
       if (kind === "insert" && (!live || !target))
         throw Error("请先选择正文中的插入位置。");
       const transfer = {
@@ -2448,10 +2492,11 @@ export default function App() {
         general: generalAsk,
         path: live?.path,
         target,
+        citations: answerCitations(sources, external),
         content: answerMarkdown(
           record?.text ?? answer,
           record?.question ?? asked,
-          record?.sources ?? answerSources,
+          sources,
           record?.snapshot ?? answerSnapshot,
           kind === "insert"
             ? live!.path
@@ -2462,7 +2507,7 @@ export default function App() {
           {
             incomplete: !(record?.complete ?? answerComplete),
             rejectedCharts: record?.rejectedCharts ?? rejectedCharts,
-            externalSources: record?.externalSources ?? answerExternalSources,
+            externalSources: external,
             citationChecks: record?.citationChecks,
           },
         ),
@@ -3512,6 +3557,9 @@ export default function App() {
                     rememberPosition(selection, scroll)
                   }
                   onOpenDoc={(path) => void openPath(path)}
+                  onOpenAnswerSource={(source) =>
+                    void openAnswerSource(source).catch(fail)
+                  }
                 />
               </div>
               <footer className="editor-status">
@@ -4576,8 +4624,7 @@ export default function App() {
               source={answerTransfer.content}
               path=""
               readOnly
-              citations={answerSources}
-              onCitation={() => {}}
+              citations={answerTransfer.citations}
               onError={setAnswerTransferError}
               label="回答转存预览"
             />

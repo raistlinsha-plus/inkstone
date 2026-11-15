@@ -2,6 +2,7 @@
 mod compile;
 #[cfg(test)]
 mod eval;
+mod review_compare;
 mod store;
 
 use crate::{
@@ -157,6 +158,8 @@ pub(crate) struct Page {
     related: Vec<RelatedPage>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     summary_issues: Vec<SummaryIssue>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    review_comparison: Option<review_compare::ReviewComparison>,
 }
 
 #[derive(Serialize)]
@@ -789,15 +792,24 @@ pub(crate) fn wiki_read(
     let (ws, space) = active(&state)?;
     let db = store::read(&state.data_dir)?;
     let policy = store::policy(&db, &space)?;
-    let (revision, content) = if let Some(change_id) = change_id.as_deref() {
+    let (revision, content, review_comparison) = if let Some(change_id) = change_id.as_deref() {
         let change = store::change(&db, &space, change_id)?;
         if change.page_id != page_id {
             return Err("改动与页面不匹配".into());
         }
-        (change.result.max(change.base), change.content)
+        let comparison = if change.status == "pending" {
+            Some(review_compare::read(&db, &space, &change, &policy)?)
+        } else {
+            None
+        };
+        (change.result.max(change.base), change.content, comparison)
     } else {
         let revision = store::current_revision(&db, &space, &page_id)?;
-        (revision, store::revision(&db, &space, &page_id, revision)?)
+        (
+            revision,
+            store::revision(&db, &space, &page_id, revision)?,
+            None,
+        )
     };
     let mut hashes = HashMap::new();
     let mut summary = describe(
@@ -879,6 +891,7 @@ pub(crate) fn wiki_read(
         refs,
         related,
         summary_issues,
+        review_comparison,
     })
 }
 

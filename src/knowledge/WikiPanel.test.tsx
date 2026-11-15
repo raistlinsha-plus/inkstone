@@ -241,3 +241,101 @@ test("opening a Wiki reference uses the selected candidate and only navigates af
     expect.objectContaining({ path: "手册.md", startLine: 2 }),
   );
 });
+
+test("shows generation-base deltas and continues to the next pending proposal only when requested", async () => {
+  const secondPage = { ...page, id: "other", title: "另一主题" };
+  const secondChange = {
+    ...change,
+    id: "next",
+    pageId: secondPage.id,
+    title: secondPage.title,
+  };
+  const candidate = {
+    ...page,
+    reviewComparison: {
+      baseRevision: 1,
+      currentRevision: 1,
+      baseAvailable: true,
+      summaryChanged: true,
+      outlineChanged: false,
+      sources: [
+        { title: "手册.md", status: "updated" },
+        { title: "旧指南.md", status: "removed" },
+      ],
+    },
+  };
+  const snapshot = {
+    ...status,
+    pages: [page],
+    changes: [change, secondChange],
+    currentPendingCount: 2,
+  };
+  api.listen.mockResolvedValue(vi.fn());
+  api.invoke.mockImplementation(async (command, args) => {
+    if (command === "wiki_status") return snapshot;
+    if (command === "wiki_read")
+      return args.changeId === secondChange.id
+        ? secondPage
+        : args.changeId
+          ? candidate
+          : page;
+    if (command === "wiki_review")
+      return { ...status, pages: [page], changes: [secondChange] };
+    throw Error(command);
+  });
+  const panel = openPanel();
+  fireEvent.click(await panel.findByRole("button", { name: "查看待审阅改动" }));
+  const delta = within(await panel.findByRole("region", { name: "改动对照" }));
+  expect(delta.getByText("生成基准 · 版本 1")).toBeTruthy();
+  expect(delta.getByText("摘要有变化")).toBeTruthy();
+  expect(delta.getByText("手册.md").closest("li")?.textContent).toContain(
+    "更新引用",
+  );
+  expect(delta.getByText("旧指南.md").closest("li")?.textContent).toContain(
+    "移除引用",
+  );
+  fireEvent.click(panel.getByRole("button", { name: "发布改动" }));
+  const next = await panel.findByRole("button", { name: "审阅下一项" });
+  expect(
+    api.invoke.mock.calls.some(
+      ([command, args]) => command === "wiki_read" && args.changeId === "next",
+    ),
+  ).toBe(false);
+  fireEvent.click(next);
+  const target = await panel.findByRole("group", { name: "正在审阅 另一主题" });
+  expect(document.activeElement).toBe(target);
+  expect(
+    api.invoke.mock.calls.filter(([command]) => command === "wiki_review"),
+  ).toHaveLength(1);
+});
+
+test("an obsolete generation base blocks publishing while the candidate can still be rejected", async () => {
+  api.listen.mockResolvedValue(vi.fn());
+  api.invoke.mockImplementation(async (command, args) => {
+    if (command === "wiki_status") return { ...status, pages: [page] };
+    if (command === "wiki_read" && args.changeId) {
+      return {
+        ...page,
+        reviewComparison: {
+          baseRevision: 1,
+          currentRevision: 2,
+          baseAvailable: true,
+          summaryChanged: false,
+          outlineChanged: false,
+          sources: [],
+        },
+      };
+    }
+    if (command === "wiki_read") return { ...page, revision: 2 };
+    throw Error(command);
+  });
+  const panel = openPanel();
+  fireEvent.click(await panel.findByRole("button", { name: "查看待审阅改动" }));
+  expect(await panel.findByText(/生效版本已变化/)).toBeTruthy();
+  expect(
+    panel.getByRole<HTMLButtonElement>("button", { name: "发布改动" }).disabled,
+  ).toBe(true);
+  expect(
+    panel.getByRole<HTMLButtonElement>("button", { name: "拒绝改动" }).disabled,
+  ).toBe(false);
+});

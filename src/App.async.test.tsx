@@ -12,6 +12,11 @@ import {
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { LibraryDocument, LibraryView } from "./library";
 import type { CalendarDocument } from "./content/calendar";
+import {
+  answerSourceUrl,
+  parseAnswerSourceUrl,
+  type AnswerSourceLink,
+} from "./content/answerSourceLink";
 import type { EditorHandle } from "./Editor";
 import type { ComponentProps, Ref } from "react";
 import type { FileData, Settings, Workspace } from "./types";
@@ -71,12 +76,14 @@ vi.mock("./Editor", () => ({
     onChange,
     path,
     line,
+    onOpenAnswerSource,
   }: {
     handleRef: Ref<EditorHandle>;
     content: string;
     onChange: (s: string) => void;
     path: string;
     line?: number;
+    onOpenAnswerSource?: (source: AnswerSourceLink) => void;
   }) => {
     useImperativeHandle(handleRef, () => ({
       getContent: () => content,
@@ -95,11 +102,18 @@ vi.mock("./Editor", () => ({
             content.slice(target.selection.head),
         ),
     }));
+    const href = content.match(/\]\((inkstone-source:[^)]+)\)/)?.[1];
+    const citation = href && parseAnswerSourceUrl(href);
     return (
       <>
         <output data-testid="opened-path">
           {path}:{line ?? ""}
         </output>
+        {citation && (
+          <button onClick={() => onOpenAnswerSource?.(citation)}>
+            测试打开回答来源
+          </button>
+        )}
         <textarea
           aria-label="测试正文"
           value={content}
@@ -1813,6 +1827,77 @@ test("a committed answer save is not repeated when refreshing the library fails"
   expect(screen.queryByRole("button", { name: "保存新文档" })).toBeNull();
   expect(calls("library_create_document")).toHaveLength(1);
 });
+
+test.each([
+  ["matching", true, false],
+  ["stale", false, false],
+  ["trashed", false, true],
+] as const)(
+  "saved-answer links resolve the current catalog path and check the captured version (%s)",
+  async (_, matching, trashed) => {
+    const source = {
+      documentId: "47f3590f-53f5-4d78-bdf3-2c52db06d6ab",
+      hash: "b".repeat(64),
+      startLine: 2,
+      endLine: 2,
+    };
+    const renamed = {
+      ...libraryDoc("改名后的原文.md", "p2"),
+      id: source.documentId,
+      status: trashed ? ("trashed" as const) : ("ready" as const),
+    };
+    overrides.set("library_list", () => ({
+      ...view,
+      documents: [...view.documents, renamed],
+    }));
+    overrides.set("library_answer_source", ({ documentId }) =>
+      documentId === source.documentId && !trashed
+        ? {
+            document: renamed,
+            hash: matching ? source.hash : "c".repeat(64),
+            lines: 2,
+          }
+        : null,
+    );
+    disk.set(
+      "a.md",
+      file("a.md", `保存的回答\n\n[原文](${answerSourceUrl(source)})`),
+    );
+    disk.set(renamed.path, {
+      ...file(renamed.path, "标题\n原文"),
+      hash: matching ? source.hash : "c".repeat(64),
+    });
+    api.confirm.mockResolvedValue(false);
+    await boot();
+    await openDocument("a.md");
+    fireEvent.click(screen.getByRole("button", { name: "测试打开回答来源" }));
+    if (trashed) {
+      await screen.findByText(/引用的原文已不可用/);
+      expect(calls("read_file")).not.toContainEqual([
+        "read_file",
+        { path: renamed.path },
+      ]);
+    } else if (matching) {
+      await waitFor(() =>
+        expect(screen.getByTestId("opened-path").textContent).toBe(
+          `${renamed.path}:2`,
+        ),
+      );
+    } else {
+      await waitFor(() =>
+        expect(api.confirm).toHaveBeenCalledWith(
+          expect.stringContaining("引用快照无法匹配"),
+          expect.objectContaining({ title: "引用版本不匹配" }),
+        ),
+      );
+      expect(screen.getByTestId("opened-path").textContent).toBe("a.md:");
+      expect(calls("open_library")).not.toContainEqual([
+        "open_library",
+        { projectId: "p2" },
+      ]);
+    }
+  },
+);
 
 test("no evidence reports no model call and unknown completion keeps structured content as source", async () => {
   await askSynthetic({

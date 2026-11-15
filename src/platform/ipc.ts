@@ -40,6 +40,10 @@ export interface Commands {
   library_recovery_report: Command<undefined, RecoveryReport>;
   workspace_set_pin: Command<{ id: string; pinned: boolean }, void>;
   library_list: Command<undefined, LibraryView>;
+  library_answer_source: Command<
+    { documentId: string },
+    { document: LibraryDocument; hash: string; lines: number } | null
+  >;
   library_get_view: Command<{ projectId: string }, ViewPreferences>;
   library_set_view: Command<
     { projectId: string; preferences: ViewPreferences },

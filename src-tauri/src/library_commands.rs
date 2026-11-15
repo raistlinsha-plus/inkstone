@@ -95,6 +95,46 @@ pub async fn library_set_view(
 pub async fn library_list(state: State<'_, AppState>) -> Result<library::LibraryView, String> {
     library::list(&state.data_dir)
 }
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnswerSourceVersion {
+    document: library::Document,
+    hash: String,
+    lines: usize,
+}
+
+#[tauri::command]
+pub async fn library_answer_source(
+    state: State<'_, AppState>,
+    document_id: String,
+) -> Result<Option<AnswerSourceVersion>, String> {
+    let data = state.data_dir.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if document_id.len() != 36 || uuid::Uuid::parse_str(&document_id).is_err() {
+            return Ok(None);
+        }
+        let Ok(document) = library::get(&data, &document_id) else {
+            return Ok(None);
+        };
+        if document.status != "ready" {
+            return Ok(None);
+        }
+        let root = library::project_root(&data, &document.project_id)?;
+        let Ok(content) = crate::files::resolve(&root, &document.path, false)
+            .and_then(|path| crate::files::read_text(&path))
+        else {
+            return Ok(None);
+        };
+        Ok(Some(AnswerSourceVersion {
+            document,
+            hash: crate::files::hash(&content),
+            lines: content.split('\n').count(),
+        }))
+    })
+    .await
+    .map_err(|_| "引用版本检查未完成".to_string())?
+}
+
 #[tauri::command]
 pub async fn open_library(
     state: State<'_, AppState>,
@@ -402,8 +442,14 @@ pub async fn library_export(
         )
     } else {
         let path = Path::new(&document.as_ref().ok_or("请选择文档")?.path);
-        let name = path.file_name().and_then(|name| name.to_str()).ok_or("文档文件名无效")?;
-        let extension = path.extension().and_then(|ext| ext.to_str()).ok_or("文档后缀无效")?;
+        let name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or("文档文件名无效")?;
+        let extension = path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .ok_or("文档后缀无效")?;
         (name.to_owned(), "文档", extension)
     };
     let Some(target) = crate::export_destination::choose(&app, &name, label, extension).await?
