@@ -24,6 +24,8 @@ mod evaluation_v065;
 mod evaluation_v066;
 #[cfg(test)]
 mod evaluation_v07;
+#[cfg(test)]
+mod evaluation_v086;
 mod evidence;
 mod export_destination;
 mod files;
@@ -1620,8 +1622,9 @@ async fn search_workspace(
     if cancel.load(Ordering::SeqCst) {
         return Err("操作已取消".into());
     }
-    if workspace(state)?.root != ws.root
-        || state.workspace_generation.load(Ordering::SeqCst) != generation
+    if !fixed
+        && (workspace(state)?.root != ws.root
+            || state.workspace_generation.load(Ordering::SeqCst) != generation)
     {
         return Err("项目已切换，已忽略旧检索".into());
     }
@@ -1719,7 +1722,7 @@ async fn ask_question(
 ) -> Result<ChatResponse, String> {
     let _guard = begin_chat(&state, &request_id)?;
     ask_pipeline(
-        &app,
+        Some(&app),
         &state,
         &question,
         &question,
@@ -1747,7 +1750,7 @@ fn begin_chat<'a>(state: &'a AppState, request_id: &str) -> Result<BusyGuard<'a>
     Ok(guard)
 }
 async fn ask_pipeline(
-    app: &tauri::AppHandle,
+    app: Option<&tauri::AppHandle>,
     state: &AppState,
     retrieval_question: &str,
     prompt_question: &str,
@@ -1760,12 +1763,14 @@ async fn ask_pipeline(
     web_question: Option<&str>,
     web_access: assistant_sources::WebAccess,
 ) -> Result<ChatResponse, String> {
+    use assistant_runtime::AnswerRoute;
+
     let generation = state.workspace_generation.load(Ordering::SeqCst);
     let config = settings(&state)?.chat;
     if !config.enabled {
         return Err("请在模型设置中启用问答服务".into());
     }
-    let (local, mut web) = tokio::join!(
+    let (local, web) = tokio::join!(
         search_inner(
             state,
             retrieval_question,
@@ -1773,7 +1778,7 @@ async fn ask_pipeline(
             semantic.unwrap_or(true),
             retrieval_mode.as_deref(),
             &state.cancel_chat,
-            Some((app, request_id))
+            app.map(|app| (app, request_id))
         ),
         async {
             match web_question {
@@ -1802,16 +1807,9 @@ async fn ask_pipeline(
     let budget = config.context_chars.saturating_sub(
         prompt_question.chars().count() + providers::ANSWER_SYSTEM.chars().count() + 500,
     );
-    let sources = retrieval::generation_context(
-        &context_workspace,
-        &found.results,
-        if web.evidence.is_empty() {
-            budget
-        } else {
-            budget * 2 / 3
-        },
-        scope.is_some(),
-    );
+    let sources = assistant_runtime::local_first(budget, !web.evidence.is_empty(), |allowed| {
+        retrieval::generation_context(&context_workspace, &found.results, allowed, scope.is_some())
+    });
     let mut trace = assistant_sources::Trace::default();
     trace
         .steps
@@ -1819,31 +1817,38 @@ async fn ask_pipeline(
     if sources.iter().any(|s| s.match_kind.contains("wiki")) {
         trace.steps.push("Wiki · 按主题和章节定位原文".into());
     }
-    assistant_runtime::web_trace(&mut trace, &web, !sources.is_empty());
+    assistant_runtime::record_web_search(&mut trace, &web);
     let external = assistant_runtime::select_external(
-        std::mem::take(&mut web.evidence),
+        &web.evidence,
         sources.len(),
         budget.saturating_sub(providers::chat_source_text(&sources).chars().count()),
         &mut trace.unread,
     );
-    if !external.is_empty() {
-        actual_mode = if sources.is_empty() { "web" } else { "mixed" }.into();
-    } else {
-        trace.route = if sources.is_empty() {
-            "no-evidence"
-        } else {
-            "local"
-        }
-        .into();
+    let route = AnswerRoute::from_context(
+        true,
+        web.expected,
+        !sources.is_empty(),
+        !external.is_empty(),
+    );
+    trace.route = route.as_str().into();
+    if route == AnswerRoute::Mixed {
+        actual_mode = "mixed".into();
     }
     let warnings = found
         .warning
         .into_iter()
         .chain(web.warning)
         .collect::<Vec<_>>();
-    if sources.is_empty() && external.is_empty() {
+    if route == AnswerRoute::NoLocalEvidence {
+        let mut warnings = warnings;
+        if !external.is_empty() {
+            warnings.push(
+                "已找到网页，但网页不能替代本轮指定的本地资料。需要只查网页时，请新建通用问答。"
+                    .into(),
+            );
+        }
         return Ok(ChatResponse{external_sources:vec![],trace:Some(trace),memory: None,
-            finish_reason:"no_evidence".into(),text:"本轮没有找到足够直接、可引用的证据。请检查资料范围、索引和联网设置，或换一个更具体的问题。".into(),
+            finish_reason:"no_evidence".into(),text:"本轮没能从指定的本地资料找到足够直接的证据。可以调整资料范围、检查索引，或换一个更具体的问题。".into(),
             sources,warning:(!warnings.is_empty()).then(||warnings.join("\n")),retrieval_mode:actual_mode,
             rerank_status,model:String::new(),scope,chart_warnings:vec![],rejected_charts:vec![],citation_checks:vec![]});
     }
@@ -1874,28 +1879,24 @@ async fn ask_pipeline(
             citation_checks: vec![],
         });
     }
-    let _ = app.emit(
-        "chat-sources",
-        ChatSourcesEvent {
-            request_id: request_id.to_string(),
-            sources: sources.clone(),
-        },
-    );
-    let _ = app.emit(
-        "chat-status",
-        ChatStatusEvent {
-            request_id: request_id.to_string(),
-            stage: "generating".into(),
-            detail: "正在依据已保存且版本校验通过的资料生成回答".into(),
-        },
-    );
+    if let Some(app) = app {
+        let _ = app.emit(
+            "chat-sources",
+            ChatSourcesEvent {
+                request_id: request_id.to_string(),
+                sources: sources.clone(),
+            },
+        );
+        assistant_runtime::progress(
+            app,
+            request_id,
+            "generating",
+            "正在依据已保存且版本校验通过的资料生成回答",
+        );
+    }
     let mut question_for_model = prompt_question.to_string();
     if web.expected && external.is_empty() {
         question_for_model.push_str("\n公开资料未核验，只回答当前原文支持的部分。");
-    }
-    if sources.is_empty() && !external.is_empty() {
-        question_for_model
-            .push_str("\n本轮只有网页证据。不要用外部事实代替用户要求核对的内部文档内容。");
     }
     let context = providers::chat_source_text(&sources)
         + &external
@@ -1927,7 +1928,7 @@ async fn ask_pipeline(
         providers::ANSWER_SYSTEM,
         &prompt,
         &state.cancel_chat,
-        Some(app),
+        app,
         request_id,
     )
     .await;
@@ -1954,7 +1955,8 @@ async fn ask_pipeline(
         )
         .collect::<Vec<_>>();
     let chart_audit = answer_validation::audit_charts(&output.text, &chart_sources);
-    let citation_checks = answer_validation::audit_citations(&output.text, &output.finish_reason, &chart_sources);
+    let citation_checks =
+        answer_validation::audit_citations(&output.text, &output.finish_reason, &chart_sources);
     let mut warnings = warnings;
     if output.finish_reason == "cancelled" {
         warnings.push("已停止，保留的内容尚未完成，请核对后再使用。".into());
@@ -2089,6 +2091,68 @@ mod v05_io_tests {
             .manage(state)
             .build(tauri::test::mock_context(tauri::test::noop_assets()))
             .unwrap()
+    }
+    #[tokio::test]
+    async fn fixed_search_uses_only_the_authorized_non_active_space() {
+        let data = tempfile::tempdir().unwrap();
+        let target = library::create_project(data.path(), "指定空间").unwrap();
+        let in_scope = library::create_document(
+            data.path(),
+            &target.id,
+            "合成航线.md",
+            "白鹭航线开放24小时。",
+        )
+        .unwrap();
+        let out_of_scope =
+            library::create_document(data.path(), "inbox", "其他航线.md", "白鹭航线开放72小时。")
+                .unwrap();
+        documents::refresh_project(data.path(), &target.id).unwrap();
+        documents::refresh_project(data.path(), "inbox").unwrap();
+        let active = documents::library_workspace(data.path(), "inbox").unwrap();
+        let fixed = documents::library_workspace(data.path(), &target.id).unwrap();
+        let app = index_test_app(
+            data.path().to_path_buf(),
+            active.clone(),
+            Settings::default(),
+        );
+        let state = app.state::<AppState>();
+        let cancel = AtomicBool::new(false);
+        let result = search_workspace(
+            &state,
+            "白鹭航线开放多久",
+            None,
+            false,
+            Some("keyword"),
+            &cancel,
+            None,
+            Some(fixed),
+        )
+        .await
+        .unwrap();
+        assert!(!result.results.is_empty());
+        assert!(result
+            .results
+            .iter()
+            .all(|hit| hit.document_id.as_deref() == Some(in_scope.id.as_str())));
+        assert!(result.results.iter().all(|hit| !hit.text.contains("72")));
+        let ordinary = search_workspace(
+            &state,
+            "白鹭航线开放多久",
+            None,
+            false,
+            Some("keyword"),
+            &cancel,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+        assert!(!ordinary.results.is_empty());
+        assert!(ordinary
+            .results
+            .iter()
+            .all(|hit| hit.document_id.as_deref() == Some(out_of_scope.id.as_str())));
+        assert_eq!(workspace(&state).unwrap().root, active.root);
     }
     #[tokio::test]
     async fn index_plan_fails_closed_on_catalogue_errors_and_global_recovery_block() {

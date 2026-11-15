@@ -175,7 +175,7 @@ fn web_route(question: &str, access: WebAccess) -> WebRoute {
 }
 
 pub async fn web(
-    app: &tauri::AppHandle,
+    app: Option<&tauri::AppHandle>,
     state: &AppState,
     config: &Provider,
     question: &str,
@@ -201,7 +201,9 @@ pub async fn web(
     if !web_retrieval::is_enabled(state) {
         return unavailable("自动联网尚未配置或已关闭，公开时效资料未核验。");
     }
-    progress(app, request_id, "planning", "正在判断本轮需要哪些来源");
+    if let Some(app) = app {
+        progress(app, request_id, "planning", "正在判断本轮需要哪些来源");
+    }
     let cancel = &state.cancel_chat;
     let plan = async {
         let key = crate::read_key(state, "chat", &config.base_url, cancel).await?;
@@ -226,7 +228,9 @@ pub async fn web(
             }
         }
     };
-    progress(app, request_id, "web_search", "正在搜索网页并核对公开来源");
+    if let Some(app) = app {
+        progress(app, request_id, "web_search", "正在搜索网页并核对公开来源");
+    }
     finish_web_search(web_retrieval::search(state, query, cancel).await)
 }
 
@@ -288,16 +292,16 @@ fn finish_web_search(result: Result<web_retrieval::WebResults, String>) -> WebTu
 }
 
 pub fn select_external(
-    items: Vec<Evidence>,
+    items: &[Evidence],
     base: usize,
     remaining: usize,
     omitted: &mut Vec<String>,
 ) -> Vec<Evidence> {
     let mut remaining = remaining;
     let mut selected = Vec::new();
-    for mut item in items {
-        item.metadata.citation = base + selected.len() + 1;
-        let cost = item.as_prompt().chars().count();
+    for item in items {
+        let citation = base + selected.len() + 1;
+        let cost = item.as_prompt_with_citation(citation).chars().count();
         if cost > remaining {
             if !omitted.contains(&item.metadata.label) {
                 omitted.push(item.metadata.label.clone());
@@ -305,12 +309,55 @@ pub fn select_external(
             continue;
         }
         remaining -= cost;
+        let mut item = item.clone();
+        item.metadata.citation = citation;
         selected.push(item);
     }
     selected
 }
 
+pub(crate) fn local_first<T>(
+    budget: usize,
+    has_web: bool,
+    mut select: impl FnMut(usize) -> Vec<T>,
+) -> Vec<T> {
+    if has_web {
+        let reserved = select(budget * 2 / 3);
+        if !reserved.is_empty() {
+            return reserved;
+        }
+    }
+    select(budget)
+}
+
+fn choose_external_context(
+    local: &[Evidence],
+    public: &[Evidence],
+    budget: usize,
+    unread: &mut Vec<String>,
+) -> Vec<Evidence> {
+    let preexisting_unread = unread.len();
+    let mut selected = local_first(budget, !local.is_empty() && !public.is_empty(), |allowed| {
+        unread.truncate(preexisting_unread);
+        select_external(local, 0, allowed, unread)
+    });
+    if public.is_empty() {
+        return selected;
+    }
+    let used = selected.iter().map(|e| e.as_prompt().chars().count()).sum();
+    selected.extend(select_external(
+        public,
+        selected.len(),
+        budget.saturating_sub(used),
+        unread,
+    ));
+    selected
+}
+
 fn snippets(question: &str, path: &str, content: &str) -> Vec<(String, usize, usize)> {
+    if content.trim().is_empty() {
+        return Vec::new();
+    }
     if content.chars().count() <= 2800 {
         return vec![(content.to_string(), 1, content.lines().count())];
     }
@@ -399,25 +446,53 @@ fn current(data: &std::path::Path, conversation: &str, items: &[Evidence]) -> bo
     })
 }
 
-pub fn web_trace(trace: &mut Trace, web: &WebTurn, has_local: bool) {
+pub fn record_web_search(trace: &mut Trace, web: &WebTurn) {
     if let Some(examined) = web.examined {
         trace
             .steps
             .push(format!("公开网页 · 检查 {examined} 条候选"));
     }
-    trace.route = match (has_local, !web.evidence.is_empty()) {
-        (true, true) => "mixed",
-        (true, false) => "local",
-        (false, true) => "web",
-        (false, false) => {
-            if web.expected {
-                "web-unavailable"
-            } else {
-                "direct"
-            }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum AnswerRoute {
+    Direct,
+    Local,
+    Mixed,
+    Web,
+    NoLocalEvidence,
+    NoWebEvidence,
+}
+
+impl AnswerRoute {
+    pub(crate) fn from_context(
+        require_local: bool,
+        expect_web: bool,
+        has_local: bool,
+        has_web: bool,
+    ) -> Self {
+        match (has_local, has_web) {
+            (true, true) => Self::Mixed,
+            (true, false) => Self::Local,
+            // Web pages may supplement local evidence, but can never stand in for the
+            // authorized local scope, including when its excerpts did not fit the budget.
+            (false, _) if require_local => Self::NoLocalEvidence,
+            (false, true) => Self::Web,
+            (false, false) if expect_web => Self::NoWebEvidence,
+            (false, false) => Self::Direct,
         }
     }
-    .into();
+
+    pub(crate) fn as_str(&self) -> &'static str {
+        match self {
+            Self::Direct => "direct",
+            Self::Local => "local",
+            Self::Mixed => "mixed",
+            Self::Web => "web",
+            Self::NoLocalEvidence => "no-evidence",
+            Self::NoWebEvidence => "web-unavailable",
+        }
+    }
 }
 
 pub async fn general(
@@ -561,21 +636,22 @@ pub async fn general(
     };
     // Check explicit files and attachment ownership before starting the web
     // planner. Whole-space retrieval can still run concurrently afterwards.
-    let (local, mut web) = tokio::try_join!(biased; local_search, async {
-        Ok::<_, String>(web(app, state, &config, question, request, started.web_access).await)
+    let (local, web) = tokio::try_join!(biased; local_search, async {
+        Ok::<_, String>(web(Some(app), state, &config, question, request, started.web_access).await)
     })?;
-    let (mut evidence, steps, unread, mut notices, local_mode, rank_used) = local;
+    let (evidence, steps, unread, mut notices, local_mode, rank_used) = local;
     let mut trace = Trace {
         steps,
         unread,
         ..Default::default()
     };
-    web_trace(&mut trace, &web, !evidence.is_empty());
+    record_web_search(&mut trace, &web);
     if let Some(warning) = web.warning {
         notices.push(warning);
     }
     let selected_scope = !selection.is_empty();
-    let grounded = selected_scope || web.expected;
+    let expect_web = web.expected || !web.evidence.is_empty();
+    let grounded = selected_scope || expect_web;
     let system = if grounded {
         providers::ANSWER_SYSTEM
     } else {
@@ -605,36 +681,16 @@ pub async fn general(
     let budget = config
         .context_chars
         .saturating_sub(system.chars().count() + prompt.chars().count() + 300);
-    let external = if !evidence.is_empty() && !web.evidence.is_empty() {
-        let mut local = select_external(evidence, 0, budget * 2 / 3, &mut trace.unread);
-        let remaining =
-            budget.saturating_sub(local.iter().map(|e| e.as_prompt().chars().count()).sum());
-        let public = select_external(
-            std::mem::take(&mut web.evidence),
-            local.len(),
-            remaining,
-            &mut trace.unread,
-        );
-        local.extend(public);
-        local
-    } else {
-        evidence.append(&mut web.evidence);
-        select_external(evidence, 0, budget, &mut trace.unread)
-    };
+    let external = choose_external_context(&evidence, &web.evidence, budget, &mut trace.unread);
     let has_local = external.iter().any(|e| e.metadata.kind != "web");
     let has_web = external.iter().any(|e| e.metadata.kind == "web");
-    trace.route = match (has_local, has_web) {
-        (true, true) => "mixed",
-        (true, false) => "local",
-        (false, _) if selected_scope => "no-evidence",
-        (false, true) => "web",
-        (false, false) if web.expected => "web-unavailable",
-        _ => "direct",
-    }
-    .into();
-    let unavailable = (grounded && external.is_empty()) || (selected_scope && !has_local);
-    if unavailable {
-        let text = if selected_scope {
+    let route = AnswerRoute::from_context(selected_scope, expect_web, has_local, has_web);
+    trace.route = route.as_str().into();
+    if matches!(
+        route,
+        AnswerRoute::NoLocalEvidence | AnswerRoute::NoWebEvidence
+    ) {
+        let text = if route == AnswerRoute::NoLocalEvidence {
             notices.push("所选资料未提供足够证据。可以补充资料或检查文档索引。".into());
             "未能从本轮指定资料核实请求。"
         } else {
@@ -759,6 +815,99 @@ mod tests {
     use super::*;
 
     #[test]
+    fn web_reservation_yields_to_the_only_local_excerpt_and_records_final_omissions() {
+        let body = "所选本地原文。".repeat(150);
+        let long = local_item(
+            "document",
+            "local",
+            "本地原文",
+            None,
+            &body,
+            (body.clone(), 1, 1),
+        );
+        let short = local_item(
+            "document",
+            "short",
+            "短原文",
+            None,
+            "原文。",
+            ("原文。".into(), 1, 1),
+        );
+        let public = local_item(
+            "web",
+            "web",
+            "公共网页",
+            None,
+            "网页。",
+            ("网页。".into(), 1, 1),
+        );
+        let budget = long.as_prompt().chars().count() + 1;
+        let mut unread = vec!["范围内另有未检索资料".into()];
+        let chosen = choose_external_context(
+            std::slice::from_ref(&long),
+            std::slice::from_ref(&public),
+            budget,
+            &mut unread,
+        );
+        assert_eq!(chosen.len(), 1);
+        assert_eq!(chosen[0].metadata.id, long.metadata.id);
+        assert_eq!(chosen[0].metadata.citation, 1);
+        assert_eq!(unread, ["范围内另有未检索资料", &public.metadata.label]);
+
+        let mut unread = Vec::new();
+        let chosen = choose_external_context(
+            &[long.clone(), short.clone()],
+            std::slice::from_ref(&public),
+            budget,
+            &mut unread,
+        );
+        assert_eq!(chosen.len(), 2);
+        assert_eq!(chosen[0].metadata.id, short.metadata.id);
+        assert_eq!(chosen[1].metadata.id, public.metadata.id);
+        assert_eq!(chosen[1].metadata.citation, 2);
+        assert_eq!(unread, [long.metadata.label]);
+    }
+
+    #[test]
+    fn only_unscoped_questions_may_use_web_as_their_only_evidence() {
+        assert_eq!(
+            AnswerRoute::from_context(true, true, false, true),
+            AnswerRoute::NoLocalEvidence
+        );
+        assert_eq!(
+            AnswerRoute::from_context(true, true, true, true),
+            AnswerRoute::Mixed
+        );
+        assert_eq!(
+            AnswerRoute::from_context(true, false, true, false),
+            AnswerRoute::Local
+        );
+        assert_eq!(
+            AnswerRoute::from_context(false, true, false, true),
+            AnswerRoute::Web
+        );
+        assert_eq!(
+            AnswerRoute::from_context(false, true, false, false),
+            AnswerRoute::NoWebEvidence
+        );
+        assert_eq!(
+            AnswerRoute::from_context(false, false, false, false),
+            AnswerRoute::Direct
+        );
+    }
+
+    #[test]
+    fn empty_selected_files_do_not_supply_evidence() {
+        for text in ["", "\r\n   \t\n"] {
+            assert!(snippets("内容是什么", "空白.md", text).is_empty());
+        }
+        assert_eq!(
+            snippets("内容是什么", "资料.md", "可引用内容")[0].0,
+            "可引用内容"
+        );
+    }
+
+    #[test]
     fn supplied_text_transform_skips_web_planning_and_needs_no_public_evidence() {
         for question in [
             "本轮不联网。请把“今天图书馆不开门”翻译成英文。",
@@ -837,8 +986,11 @@ mod tests {
         ] {
             let web = finish_web_search(Err(reason.into()));
             let mut trace = Trace::default();
-            web_trace(&mut trace, &web, false);
-            assert_eq!(trace.route, "web-unavailable");
+            record_web_search(&mut trace, &web);
+            assert_eq!(
+                AnswerRoute::from_context(false, web.expected, false, false).as_str(),
+                "web-unavailable"
+            );
             assert!(trace.steps.is_empty());
             let warning = web.warning.unwrap();
             assert!(warning.contains(reason));
@@ -852,7 +1004,7 @@ mod tests {
             evidence: vec![],
         }));
         let mut trace = Trace::default();
-        web_trace(&mut trace, &web, false);
+        record_web_search(&mut trace, &web);
         assert_eq!(trace.steps, ["公开网页 · 检查 0 条候选"]);
         assert!(web.warning.unwrap().contains("未返回网页候选"));
 
@@ -862,8 +1014,11 @@ mod tests {
             evidence: vec![],
         }));
         let mut trace = Trace::default();
-        web_trace(&mut trace, &web, true);
-        assert_eq!(trace.route, "local");
+        record_web_search(&mut trace, &web);
+        assert_eq!(
+            AnswerRoute::from_context(false, web.expected, true, false).as_str(),
+            "local"
+        );
         assert_eq!(trace.steps, ["公开网页 · 检查 2 条候选"]);
         assert!(web.warning.unwrap().contains("未取得可引用的网页正文"));
     }

@@ -888,6 +888,35 @@
 .assistant-citation-checks li + li {
   margin-top: 4px;
 }
+.assistant-answer-basis {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  min-height: 24px;
+  margin-block: 4px;
+  color: var(--ui-muted, #62695e);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.assistant-answer-basis button,
+.assistant-check-source {
+  min-height: 24px;
+  padding: 1px 6px;
+  color: inherit;
+  border-radius: 4px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font: inherit;
+}
+.assistant-check-source {
+  margin-inline-start: 4px;
+}
+.assistant-answer-basis button:hover,
+.assistant-check-source:hover {
+  background: var(--ui-hover, #e7e9e1);
+  color: var(--ui-text, #282d25);
+}
 .answer-text .citation {
   min-width: 24px;
   height: 24px;

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BookOpen } from "lucide-react";
+import { BookOpen, CircleAlert } from "lucide-react";
 import Answer from "../Answer";
 import type { AnswerSnapshot } from "../answerContent";
 import type { SearchResult } from "../types";
@@ -98,6 +98,22 @@ export function answerRecord(
 }
 export { ConversationHeader } from "./ConversationHeader";
 
+function answerBasis(record: AnswerRecord, choices: SearchResult[]) {
+  if (!record.complete) return;
+  if (record.snapshot?.finishReason === "no_evidence")
+    return { label: "本轮未能核实", missing: true };
+  if (choices.length) {
+    const web = choices.some((source) => source.external?.kind === "web");
+    const local = choices.some((source) => source.external?.kind !== "web");
+    return {
+      label: local && web ? "本地资料与网页" : web ? "公开网页" : "所选资料",
+      missing: false,
+    };
+  }
+  if (record.trace?.route === "direct")
+    return { label: "直接回答 · 本轮未附来源", missing: false };
+}
+
 export function ConversationTimeline({
   conversation,
   root,
@@ -158,13 +174,36 @@ export function ConversationTimeline({
     conversation?.revision,
   ]);
   const renderAnswer = (record: AnswerRecord, key: string, active = false) => {
-    const choices = answerCitations(
+    const citations = answerCitations(
       record.sources,
       record.externalSources ?? [],
-    ).filter((source): source is SearchResult => Boolean(source));
+    );
+    const choices = citations.filter((source): source is SearchResult =>
+      Boolean(source),
+    );
     const first = choices[0];
+    const basis = !active ? answerBasis(record, choices) : undefined;
     return (
       <>
+        {basis && (
+          <div className="assistant-answer-basis">
+            {basis.missing ? (
+              <CircleAlert size={14} aria-hidden="true" />
+            ) : (
+              <BookOpen size={14} aria-hidden="true" />
+            )}
+            <span>{basis.label}</span>
+            {first && (
+              <button
+                type="button"
+                title="查看本轮提供给模型的资料"
+                onClick={(event) => onOpen(first, choices, event.currentTarget)}
+              >
+                本轮依据 · {choices.length}
+              </button>
+            )}
+          </div>
+        )}
         {record.text && (
           <Answer
             text={record.text}
@@ -199,9 +238,22 @@ export function ConversationTimeline({
                     {check.status === "conflict" ? "与来源不一致" : "待核对"}
                   </strong>{" "}
                   {check.excerpt}
-                  {!!check.citations.length && (
-                    <small> · 引用 {check.citations.join("、")}</small>
-                  )}
+                  {check.citations.map((number) => {
+                    const source = citations[number - 1];
+                    return source ? (
+                      <button
+                        key={number}
+                        type="button"
+                        className="assistant-check-source"
+                        title={source.title ?? undefined}
+                        onClick={(event) =>
+                          onOpen(source, choices, event.currentTarget)
+                        }
+                      >
+                        查看引用 {number}
+                      </button>
+                    ) : null;
+                  })}
                 </li>
               ))}
             </ul>
@@ -218,7 +270,7 @@ export function ConversationTimeline({
             >
               保存为文档
             </button>
-            {first && (
+            {first && !basis && (
               <button
                 type="button"
                 onClick={(event) => onOpen(first, choices, event.currentTarget)}
@@ -236,7 +288,7 @@ export function ConversationTimeline({
             )}
           </div>
         )}
-        {!record.text && first && (
+        {!record.text && first && !basis && (
           <button
             type="button"
             onClick={(event) => onOpen(first, choices, event.currentTarget)}

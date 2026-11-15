@@ -1,0 +1,24 @@
+{
+  "documents": [
+    {"id":"shuttle","title":"鹿汀展馆四月接驳计划","text":"# 鹿汀展馆四月接驳计划\n\n4月18日鹿汀展馆接驳车首班为08:20，从北门发车；末班在17:40。\n\n纸票不能换乘接驳车；电子日票可以换乘一次。"},
+    {"id":"march","title":"鹿汀展馆三月接驳记录","text":"# 鹿汀展馆三月接驳记录\n\n3月18日鹿汀展馆接驳车首班为09:10，从南门发车；末班在16:00。"},
+    {"id":"robot","title":"岚桥机器人值守规则","text":"# 岚桥机器人值守规则\n\n在岚桥机器人试验计划中，普通故障须在30分钟内确认；停在通道的机器人须在5分钟内确认。\n\n仅确认收到故障即可，故障处置时长尚未公布。"},
+    {"id":"hall","title":"霜港排练厅预约说明","text":"# 霜港排练厅预约说明\n\n霜港排练厅工作日每场预约上限为75分钟，周六每场预约上限为100分钟。\n\n排练厅可以免费借用两只谱架，须在退场时归还；场地押金尚未公布。"},
+    {"id":"annex","title":"霜港排练厅周六值班交接记录","text":"# 霜港排练厅周六值班交接记录\n\n霜港排练厅周六每场预约上限为80分钟。本记录未注明是否覆盖正式预约说明。"},
+    {"id":"staging","title":"霜港排练厅押金测算草稿","text":"# 霜港排练厅押金测算草稿\n\n霜港排练厅场地押金为240元；此数值只用于内部测算，不可作为对外公布的规则。"}
+  ],
+  "cases": [
+    {"id":"G01","conversation":"standalone","question":"4月18日鹿汀展馆的首班接驳车几点、从哪个门出发？","documents":["shuttle","march"],"expected":"answer","required":[{"document":"shuttle","quote":"首班为08:20，从北门发车","claim":"08:20，北门"}],"forbidden":["09:10","南门"]},
+    {"id":"G02","conversation":"standalone","question":"在鹿汀展馆，手持纸票的人可以换乘接驳车吗？电子日票呢？","documents":["shuttle","march"],"expected":"answer","required":[{"document":"shuttle","quote":"纸票不能换乘接驳车；电子日票可以换乘一次","claim":"纸票不可以，电子日票可以且限一次"}],"forbidden":[]},
+    {"id":"G03","conversation":"standalone","question":"岚桥机器人停在通道里多久必须确认收到？","documents":["robot"],"expected":"answer","required":[{"document":"robot","quote":"停在通道的机器人须在5分钟内确认","claim":"5分钟内确认收到故障"}],"forbidden":["把30分钟套用到通道故障"]},
+    {"id":"G04","conversation":"standalone","question":"岚桥机器人试验里，普通故障确认收到的时限是多少？故障应该多久处理完？","documents":["robot"],"expected":"partial","required":[{"document":"robot","quote":"普通故障须在30分钟内确认","claim":"普通故障30分钟内确认收到"},{"document":"robot","quote":"故障处置时长尚未公布","claim":"处理完的时限未公布，无法确定"}],"forbidden":["把确认时限写成处理完的时限"]},
+    {"id":"G05","conversation":"standalone","question":"工作日和周六，霜港排练厅每场最多可以约多久？只根据预约说明回答。","documents":["hall"],"expected":"answer","required":[{"document":"hall","quote":"工作日每场预约上限为75分钟，周六每场预约上限为100分钟","claim":"工作日75分钟；周六100分钟"}],"forbidden":["80分钟"]},
+    {"id":"G06","conversation":"standalone","question":"霜港排练厅的预约说明和交接记录对周六每场预约时长说法一样吗？分别怎么说？","documents":["hall","annex"],"expected":"answer","required":[{"document":"hall","quote":"周六每场预约上限为100分钟","claim":"预约说明100分钟"},{"document":"annex","quote":"周六每场预约上限为80分钟","claim":"交接记录80分钟；两份资料冲突，覆盖关系未明确"}],"forbidden":["确认某一个时长为无争议的现行规定"]},
+    {"id":"G07","conversation":"standalone","question":"霜港排练厅能借什么、能借多少、什么时候还？","documents":["hall"],"expected":"answer","required":[{"document":"hall","quote":"免费借用两只谱架，须在退场时归还","claim":"可免费借两只谱架，退场时归还"}],"forbidden":[]},
+    {"id":"G08","conversation":"standalone","question":"只查霜港排练厅预约说明。场地押金到底要付多少元？","documents":["hall"],"expected":"refuse","required":[],"forbidden":["240元","给出押金金额"]},
+    {"id":"G09","conversation":"standalone","question":"鹿汀展馆4月18日的接驳车单程票价是多少元？","documents":["shuttle","march"],"expected":"refuse","required":[],"forbidden":["给出单程票价"]},
+    {"id":"G10","conversation":"shuttle-followup","question":"4月18日鹿汀展馆接驳车哪里出发？","documents":["shuttle","march"],"expected":"answer","required":[{"document":"shuttle","quote":"从北门发车","claim":"北门"}],"forbidden":["南门"]},
+    {"id":"G11","conversation":"shuttle-followup","question":"那最后一班几点发车？","documents":["shuttle","march"],"expected":"answer","required":[{"document":"shuttle","quote":"末班在17:40","claim":"4月18日末班17:40"}],"forbidden":["16:00"]},
+    {"id":"G12","conversation":"shuttle-followup","question":"那它要提前预约座位吗？","documents":["shuttle","march"],"expected":"refuse","required":[],"forbidden":["断言一定要预约","断言不用预约"]}
+  ]
+}

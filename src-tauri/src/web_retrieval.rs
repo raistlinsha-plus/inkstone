@@ -193,11 +193,11 @@ async fn run_diagnostic(key: &str) -> BraveDiagnostic {
     if validate_key(key).is_err() {
         return BraveDiagnostic::new(DiagnosticStatus::InvalidKey);
     }
-    let Ok(client) = public_client() else {
+    let Ok(client) = BraveClient::new() else {
         return BraveDiagnostic::new(DiagnosticStatus::Unavailable);
     };
     let started = Instant::now();
-    let result = request_candidates(&client, DIAGNOSTIC_QUERY, key).await;
+    let result = client.candidates(DIAGNOSTIC_QUERY, key).await;
     let search_elapsed_ms = Some(elapsed_ms(started));
     let urls = match result {
         Ok((_, urls)) => urls,
@@ -215,11 +215,22 @@ async fn run_diagnostic(key: &str) -> BraveDiagnostic {
         http_status: Some(StatusCode::OK.as_u16()),
         ..BraveDiagnostic::new(DiagnosticStatus::NoCandidates)
     };
-    if let Some(url) = urls.into_iter().next() {
+    if !urls.is_empty() {
         let started = Instant::now();
+        let Ok(client) = public_page_client() else {
+            report.status = DiagnosticStatus::Unavailable;
+            return report;
+        };
         let terms = query_terms(DIAGNOSTIC_QUERY);
-        let page =
-            tokio::time::timeout(DIAGNOSTIC_PAGE_TIMEOUT, fetch_page(&client, url, &terms)).await;
+        let pages = stream::iter(urls)
+            .map(|url| fetch_page(&client, url, &terms))
+            .buffer_unordered(MAX_PAGES)
+            .filter_map(std::future::ready);
+        let page = tokio::time::timeout(DIAGNOSTIC_PAGE_TIMEOUT, async {
+            futures_util::pin_mut!(pages);
+            pages.next().await
+        })
+        .await;
         report.page_elapsed_ms = Some(elapsed_ms(started));
         report.status = match page {
             Ok(Some(_)) => DiagnosticStatus::Ok,
@@ -726,12 +737,11 @@ impl reqwest::dns::Resolve for PublicResolver {
     }
 }
 
-fn public_client() -> Result<Client, String> {
+fn bounded_https_client() -> reqwest::ClientBuilder {
     Client::builder()
         .https_only(true)
         .redirect(reqwest::redirect::Policy::none())
         .retry(reqwest::retry::never())
-        .no_proxy()
         .no_gzip()
         .no_brotli()
         .no_deflate()
@@ -740,8 +750,19 @@ fn public_client() -> Result<Client, String> {
         .connect_timeout(Duration::from_secs(3))
         .timeout(Duration::from_secs(5))
         .pool_max_idle_per_host(0)
+        .user_agent(concat!(
+            "Inkstone/",
+            env!("CARGO_PKG_VERSION"),
+            " (+local desktop public web retrieval)"
+        ))
+}
+
+/// URLs from search results are untrusted: never send them through a proxy
+/// that can resolve them on our behalf. Check DNS and the peer independently.
+fn public_page_client() -> Result<Client, String> {
+    bounded_https_client()
+        .no_proxy()
         .dns_resolver(Arc::new(PublicResolver))
-        .user_agent("Inkstone/0.7 (+local desktop public web retrieval)")
         .build()
         .map_err(|_| "无法初始化安全网页读取客户端".into())
 }
@@ -967,47 +988,50 @@ impl SearchFailure {
     }
 }
 
-fn brave_request(
-    client: &Client,
-    query: &str,
-    key: &str,
-) -> Result<reqwest::RequestBuilder, SearchFailure> {
-    let mut token = header::HeaderValue::from_str(key)
-        .map_err(|_| SearchFailure::new(DiagnosticStatus::InvalidKey, None))?;
-    token.set_sensitive(true);
-    let search_lang = if query
-        .chars()
-        .any(|c| ('\u{3400}'..='\u{9fff}').contains(&c))
-    {
-        "zh-hans"
-    } else {
-        "en"
-    };
-    Ok(client
-        .get(ENDPOINT)
-        .header(header::ACCEPT, "application/json")
-        .header("X-Subscription-Token", token)
-        .query(&[
-            ("q", query),
-            ("count", "10"),
-            ("country", "ALL"),
-            ("result_filter", "web"),
-            ("text_decorations", "false"),
-            ("spellcheck", "false"),
-            ("operators", "false"),
-            ("search_lang", search_lang),
-        ]))
-}
+/// Only the fixed Brave origin may use normal OS/HTTP proxy settings. TLS
+/// still authenticates the hardcoded hostname inside CONNECT, while HTTPS
+/// redirects are never followed. Do not expose this client to page fetching.
+struct BraveClient(Client);
 
-async fn request_candidates(
-    client: &Client,
-    query: &str,
-    key: &str,
-) -> Result<(usize, Vec<Url>), SearchFailure> {
-    let response = brave_request(client, query, key)?
-        .send()
-        .await
-        .map_err(|error| {
+impl BraveClient {
+    fn new() -> Result<Self, String> {
+        bounded_https_client()
+            .build()
+            .map(Self)
+            .map_err(|_| "无法初始化 Brave Search 客户端".into())
+    }
+
+    fn request(&self, query: &str, key: &str) -> Result<reqwest::RequestBuilder, SearchFailure> {
+        let mut token = header::HeaderValue::from_str(key)
+            .map_err(|_| SearchFailure::new(DiagnosticStatus::InvalidKey, None))?;
+        token.set_sensitive(true);
+        let search_lang = if query
+            .chars()
+            .any(|c| ('\u{3400}'..='\u{9fff}').contains(&c))
+        {
+            "zh-hans"
+        } else {
+            "en"
+        };
+        Ok(self
+            .0
+            .get(ENDPOINT)
+            .header(header::ACCEPT, "application/json")
+            .header("X-Subscription-Token", token)
+            .query(&[
+                ("q", query),
+                ("count", "10"),
+                ("country", "ALL"),
+                ("result_filter", "web"),
+                ("text_decorations", "false"),
+                ("spellcheck", "false"),
+                ("operators", "false"),
+                ("search_lang", search_lang),
+            ]))
+    }
+
+    async fn candidates(&self, query: &str, key: &str) -> Result<(usize, Vec<Url>), SearchFailure> {
+        let response = self.request(query, key)?.send().await.map_err(|error| {
             let status = if error.is_timeout() {
                 DiagnosticStatus::Timeout
             } else {
@@ -1015,10 +1039,8 @@ async fn request_candidates(
             };
             SearchFailure::new(status, None)
         })?;
-    if !response_is_public(&response) {
-        return Err(SearchFailure::new(DiagnosticStatus::Connection, None));
+        decode_candidate_response(response).await
     }
-    decode_candidate_response(response).await
 }
 
 async fn decode_candidate_response(
@@ -1072,7 +1094,7 @@ async fn discover(
     state: &AppState,
     query: &PublicQuery,
     cancel: &AtomicBool,
-) -> Result<(Client, usize, Vec<Url>), String> {
+) -> Result<(usize, Vec<Url>), String> {
     let key = crate::read_key(state, KEY_KIND, ENDPOINT, cancel)
         .await
         .map_err(|error| {
@@ -1087,11 +1109,10 @@ async fn discover(
     if !safe_to_dispatch(state, cancel) {
         return Err("联网搜索已关闭或取消".into());
     }
-    let client = public_client()?;
-    let (searched, urls) = request_candidates(&client, &query.0, &key)
+    BraveClient::new()?
+        .candidates(&query.0, &key)
         .await
-        .map_err(|error| error.warning())?;
-    Ok((client, searched, urls))
+        .map_err(|error| error.warning())
 }
 
 fn query_terms(query: &str) -> Vec<String> {
@@ -1108,10 +1129,17 @@ async fn find_pages(
     cancel: &AtomicBool,
 ) -> Result<WebResults, String> {
     let deadline = tokio::time::Instant::now() + WEB_TIMEOUT;
-    let (client, searched, urls) =
-        tokio::time::timeout_at(deadline, discover(state, &query, cancel))
-            .await
-            .map_err(|_| "联网搜索超时，本轮使用已取得的其他来源".to_string())??;
+    let (searched, urls) = tokio::time::timeout_at(deadline, discover(state, &query, cancel))
+        .await
+        .map_err(|_| "联网搜索超时，本轮使用已取得的其他来源".to_string())??;
+    if urls.is_empty() {
+        return Ok(WebResults {
+            discarded: searched,
+            searched,
+            evidence: vec![],
+        });
+    }
+    let client = public_page_client()?;
     let terms = query_terms(&query.0);
     let mut tasks = stream::iter(urls.into_iter().enumerate())
         .map(|(rank, url)| {
@@ -1414,8 +1442,9 @@ mod tests {
 
     #[test]
     fn diagnostic_search_request_uses_fixed_query_and_brave_only_sensitive_header() {
-        let client = public_client().unwrap();
-        let search = brave_request(&client, DIAGNOSTIC_QUERY, "fixture-key")
+        let search = BraveClient::new()
+            .unwrap()
+            .request(DIAGNOSTIC_QUERY, "fixture-key")
             .unwrap()
             .build()
             .unwrap();
@@ -1426,11 +1455,118 @@ mod tests {
         }));
         assert!(!search.url().as_str().contains("fixture-key"));
         assert!(search.headers()["x-subscription-token"].is_sensitive());
-        let page = client
+        let page = public_page_client()
+            .unwrap()
             .get("https://www.rust-lang.org/learn")
             .build()
             .unwrap();
         assert!(!page.headers().contains_key("x-subscription-token"));
+    }
+
+    #[tokio::test]
+    async fn only_the_fixed_brave_host_enters_the_proxy_tunnel_without_exposing_the_key() {
+        use std::io::{BufRead, BufReader, Write};
+        use std::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let proxy = std::thread::spawn(move || {
+            let deadline = Instant::now() + Duration::from_secs(3);
+            let mut socket = loop {
+                match listener.accept() {
+                    Ok((socket, _)) => break socket,
+                    Err(error)
+                        if error.kind() == io::ErrorKind::WouldBlock
+                            && Instant::now() < deadline =>
+                    {
+                        std::thread::sleep(Duration::from_millis(5));
+                    }
+                    Err(error) => panic!("proxy received no CONNECT: {error}"),
+                }
+            };
+            socket
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut request = String::new();
+            let mut reader = BufReader::new(&socket);
+            loop {
+                let before = request.len();
+                if reader.read_line(&mut request).unwrap() == 0 || &request[before..] == "\r\n" {
+                    break;
+                }
+            }
+            socket
+                .write_all(b"HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n")
+                .unwrap();
+            request
+        });
+        let client = BraveClient(
+            bounded_https_client()
+                .proxy(reqwest::Proxy::https(format!("http://{address}")).unwrap())
+                .build()
+                .unwrap(),
+        );
+        let error = client
+            .candidates(DIAGNOSTIC_QUERY, "fixture-key")
+            .await
+            .unwrap_err();
+        assert_eq!(error.status, DiagnosticStatus::Connection);
+        let tunnel = proxy.join().unwrap();
+        assert_eq!(
+            tunnel.lines().next(),
+            Some("CONNECT api.search.brave.com:443 HTTP/1.1")
+        );
+        assert!(!tunnel.to_ascii_lowercase().contains("x-subscription-token"));
+        assert!(!tunnel.contains("fixture-key"));
+        assert!(!tunnel.contains(DIAGNOSTIC_QUERY));
+
+        let page_trap = TcpListener::bind("127.0.0.1:0").unwrap();
+        page_trap.set_nonblocking(true).unwrap();
+        let page_port = page_trap.local_addr().unwrap().port();
+        let pages = public_page_client().unwrap();
+        assert!(pages
+            .get(format!("https://localhost:{page_port}"))
+            .send()
+            .await
+            .is_err());
+        assert_eq!(
+            page_trap.accept().unwrap_err().kind(),
+            io::ErrorKind::WouldBlock,
+            "untrusted page URL reached a private listener"
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "explicit real-network transport smoke; sends a fixed public query with a fake token"]
+    async fn verify_live_brave_and_public_page() {
+        assert_eq!(
+            std::env::var("INKSTONE_V086_LIVE_NETWORK").as_deref(),
+            Ok("1"),
+            "set INKSTONE_V086_LIVE_NETWORK=1 to send the fixed public diagnostic query"
+        );
+        let query = safe_query(DIAGNOSTIC_QUERY, DIAGNOSTIC_QUERY).unwrap();
+        let report = run_diagnostic("inkstone-fixture-not-a-real-key").await;
+        println!(
+            "Brave fixed-origin transport, invalid token: {}",
+            serde_json::to_string(&report).unwrap()
+        );
+        assert_eq!(
+            report.status,
+            DiagnosticStatus::Unauthorized,
+            "this smoke expects the API to reject a fake token"
+        );
+        assert!(matches!(report.http_status, Some(401 | 422)));
+        assert_eq!(query.0.to_lowercase(), DIAGNOSTIC_QUERY.to_lowercase());
+
+        let pages = public_page_client().unwrap();
+        let url = safe_page_url("https://doc.rust-lang.org/book/").unwrap();
+        let page = fetch_page(&pages, url, &query_terms(DIAGNOSTIC_QUERY)).await;
+        assert!(
+            page.is_some(),
+            "known public page was not directly readable"
+        );
+        println!("direct public HTTPS response yielded relevant source evidence");
     }
 
     #[test]

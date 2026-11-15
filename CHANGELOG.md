@@ -2,6 +2,12 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v0.8.6 · 有据问答
+
+- 指定本地资料时严格保留原范围，避免证据不足时用网页结果代替；独立的通用问答仍能直接回答或按授权搜索。
+- 回答明确展示资料类型和核实状态；需要核对的结论可直接打开对应来源。
+- 固定的 Brave Search API 与网页取证使用独立网络策略。新增留出题集，分别评估资料、回答和引用。[交付说明](docs/DELIVERY-v0.8.6.md)
+
 ## v0.8.5 · 首次使用与本机升级
 
 - 在文档空间体验离线样例、关键词搜索和原文定位。问答入口说明模型配置与本轮资料的使用流程。

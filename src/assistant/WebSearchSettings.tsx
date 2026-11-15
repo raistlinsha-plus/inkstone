@@ -14,8 +14,8 @@ const diagnosticMessages = {
   invalid_key: "密钥格式不正确，请检查复制的内容后重试。",
   keychain:
     "暂时无法读取已保存的密钥。请检查 macOS 钥匙串授权，或用新输入的密钥测试。",
-  timeout: "连接 Brave Search 超时。请检查当前网络是否能直连 Brave Search。",
-  connection: "未能与 Brave Search 建立连接。请检查当前网络的 DNS 和直连情况。",
+  timeout: "连接 Brave Search 超时。请检查网络或系统代理后重试。",
+  connection: "未能与 Brave Search 建立连接。请检查网络、DNS 或系统代理。",
   unauthorized: "Brave Search 未接受该密钥。请检查密钥是否有效。",
   forbidden: "Brave Search 拒绝了访问。请检查密钥权限和搜索订阅。",
   rate_limited:
@@ -24,7 +24,7 @@ const diagnosticMessages = {
   unexpected_status: "Brave Search 返回了非预期的 HTTP 状态。请稍后重试。",
   invalid_response: "Brave Search 已响应，但返回的数据无法读取。",
   no_candidates: "Brave 搜索接口已响应，本次未返回符合安全规则的公开网页。",
-  page_unreadable: "Brave 搜索接口可用，但本次抽查的公开网页无法读取正文。",
+  page_unreadable: "Brave 搜索接口可用，但本次未能直连并读取候选网页的正文。",
   unavailable: "暂时无法运行连接测试。请稍后重试。",
 } as const;
 
@@ -116,7 +116,7 @@ export default function WebSearchSettings({
       <h2>自动联网</h2>
       <p>
         配置 Brave Search
-        后，模型按问题判断是否查公开资料。应用校验可发送的公开查询，网页访问使用独立的请求。
+        后，模型按问题判断是否查公开资料。搜索接口可使用系统代理，候选网页只允许安全直连。
       </p>
       {!settings && !error && <p role="status">正在读取搜索设置…</p>}
       {settings && (
@@ -178,8 +178,8 @@ export default function WebSearchSettings({
               测试连接
             </button>
             <p id="web-search-test-description">
-              发送一条固定的公开查询，并尝试读取一条公开网页。测试可能计入 Brave
-              用量，可在自动联网关闭时运行，且不会保存密钥或设置。
+              发送一条固定的公开查询，并尝试读取候选网页的正文。测试可能计入
+              Brave 用量，可在自动联网关闭时运行，且不会保存密钥或设置。
             </p>
             <div role="status" aria-atomic="true">
               {testing && <p>正在测试 Brave Search…</p>}
