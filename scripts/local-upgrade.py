@@ -131,7 +131,12 @@ def application(app, version=None, hashes=None):
     canonical(app / PLIST, "Info.plist")
     with (app / PLIST).open("rb") as file:
         info = plistlib.load(file)
-    actual = info["CFBundleShortVersionString"]
+    short = info["CFBundleShortVersionString"]
+    actual = info.get("InkstoneReleaseVersion", short)
+    if "InkstoneReleaseVersion" in info:
+        require(isinstance(actual, str) and VERSION.fullmatch(actual)
+                and actual.split("-", 1)[0] == short,
+                "应用版本与 macOS 数字版本不匹配")
     require(info["CFBundleIdentifier"] == BUNDLE_ID and info["CFBundleExecutable"] == "inkstone",
             "应用标识或可执行文件名称不匹配")
     require(version is None or version == actual, f"应用版本应为 {version}，实际为 {actual}")

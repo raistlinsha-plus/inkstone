@@ -1,6 +1,6 @@
 # Inkstone roadmap
 
-The current source preview is **v0.8.7**. [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
+The current source preview is **v0.9.0-beta.1**. It adds the release workflow for a notarized Apple Silicon beta. The public app download depends on real notarization, clean Mac acceptance and binary notice review. [Delivery notes](DELIVERY-v0.9.0-beta.1.md) · [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
 
 - [v0.8.0 release preparation](DELIVERY-v0.8.0.md) records verification and remaining distribution gates.
 - [v0.8.1 question workbench](DELIVERY-v0.8.1.md) introduces contextual navigation and citation-to-document return.
@@ -14,6 +14,12 @@ The current source preview is **v0.8.7**. [Published source previews and tags](h
 - [v0.8.6 grounded answers](DELIVERY-v0.8.6.md) keeps a selected scope intact, labels the evidence at each turn, and adds a separate answer and citation evaluation.
 
 - [v0.8.7 Wiki review and saved citations](DELIVERY-v0.8.7.md) compares a proposal to its base and verifies managed sources from saved answers.
+
+## v0.9 macOS beta
+
+- Verify Developer ID signing with the hardened runtime and a secure timestamp. Submit through Apple, attach the ticket and check the final ZIP after extraction. [Release runbook](MACOS_RELEASE.md)
+- Install the verified download on a clean Apple Silicon Mac with Gatekeeper enabled. Test offline first launch and exercise upgrade and rollback with fictional documents.
+- Review the notices and rights for the exact binary before sharing it. Link the validated archive and its checksum from the GitHub prerelease.
 
 ## Ready to try in the source preview
 
@@ -35,7 +41,6 @@ The current source preview is **v0.8.7**. [Published source previews and tags](h
 
 - Observe first-time users completing import → question → source and Wiki scope → review → original source. Refine model setup and fallback explanations using those observations.
 - Extend the held-out answer evaluation with independently reviewed and less structured corpora. Keep source coverage, unsupported answers, unnecessary refusals, latency and model calls separate. Record search-worthiness, public-query blocks, useful webpage evidence and failure reasons before broadening the web path.
-- v0.9 will focus on a notarized Mac beta and clean-machine install and rollback.
 - Improve asset sizes, startup/performance measurement and module boundaries without expanding the format surface at the same time.
 - Observe the Motuan pilot during ordinary work sessions over at least five natural usage days. Review motion, quiet settings and growth before adapting motion to the other companions.
 

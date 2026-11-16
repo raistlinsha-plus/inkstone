@@ -2,7 +2,7 @@
 
 本机升级工具从 **v0.8.5** 起复用同一套预检、备份与回退流程。日常使用 `/Applications/Inkstone.app`，Bundle ID 为 `local.inkstone.desktop`。
 
-2026-11-07；当前统一使用 **v0.7.0-rc.4**。这是本机部署整理，不改变应用功能版本，也不代表正式 v0.7.0 或 GitHub 发行完成。
+**v0.9.0-beta.1** 的本机应用仍走临时签名和本机升级流程。GitHub 源码、Developer ID 公证制品和本机候选包分别核验。 [本轮交付](DELIVERY-v0.9.0-beta.1.md) · [macOS 公证发布手册](MACOS_RELEASE.md)
 
 ## 唯一日常入口
 
@@ -23,12 +23,20 @@
 ```sh
 npm run bundle
 node scripts/release-manifest.mjs
-release_dir=artifacts/v0.8.5-development
+inkstone_version=$(node -p 'require("./package.json").version')
+inkstone_release_dir="artifacts/v${inkstone_version}-development"
+inkstone_zip="Inkstone-v${inkstone_version}-macos-arm64.zip"
 ditto -c -k --sequesterRsrc --keepParent \
   src-tauri/target/release/bundle/macos/Inkstone.app \
-  "$release_dir/Inkstone-v0.8.5-macos-arm64.zip"
-(cd "$release_dir" && shasum -a 256 Inkstone-v0.8.5-macos-arm64.zip > SHA256SUMS)
-python3 scripts/local-upgrade.py preflight --artifact-dir "$release_dir" --from-version 0.8.4
+  "$inkstone_release_dir/$inkstone_zip"
+(cd "$inkstone_release_dir" && shasum -a 256 "$inkstone_zip" > SHA256SUMS)
+inkstone_installed_plist=/Applications/Inkstone.app/Contents/Info.plist
+inkstone_installed_version=$(
+  /usr/libexec/PlistBuddy -c 'Print :InkstoneReleaseVersion' "$inkstone_installed_plist" 2>/dev/null ||
+    /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$inkstone_installed_plist"
+)
+python3 scripts/local-upgrade.py preflight --artifact-dir "$inkstone_release_dir" \
+  --from-version "$inkstone_installed_version"
 ```
 
 将预检输出的 `state` 路径保存到变量 `inkstone_upgrade_state`。预检会先展开候选应用，并预编译便携备份验收，因此此时可以继续使用旧版。保存文档并正常退出后，执行：
@@ -47,7 +55,7 @@ python3 scripts/local-upgrade.py rollback --state "$inkstone_upgrade_state"
 
 回退会把当前资料保留在私有事务的 `return-stage`，恢复后活跃资料回到升级前时点。系统偏好和 WebKit 界面状态仅随原始快照备查。该目录、原始快照和便携备份均位于本机 Git 忽略的 `artifacts` 下。API 密钥仍由 macOS 钥匙串管理。可用 `python3 scripts/local-upgrade.test.py` 在临时目录验证故障和回退。
 
-## 历史整理记录
+## 2026-11-07 历史整理记录
 
 旧 v0.6.2 应用已通过正常退出请求执行自身草稿/保存流程，没有强制结束。关闭后重新建立快照，覆盖 **336 篇**现有文档，并在副本上生成及校验完整产品备份。不能沿用前次 309 篇时点的快照代替本轮备份。
 

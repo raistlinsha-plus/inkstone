@@ -92,6 +92,9 @@ jobs:
       - name: Local upgrade and rollback fixtures
         if: steps.scope.outputs.docs_only != 'true'
         run: python3 scripts/local-upgrade.test.py
+      - name: Notarized release gate fixtures (no credentials)
+        if: steps.scope.outputs.docs_only != 'true'
+        run: python3 scripts/macos-notarized-release.test.py
       - name: macOS application bundle (local ad-hoc signature)
         if: steps.scope.outputs.docs_only != 'true'
         run: |
@@ -100,7 +103,10 @@ jobs:
           npm run bundle -- --target aarch64-apple-darwin --config '{"build":{"beforeBuildCommand":""}}'
       - name: Verify local signature
         if: steps.scope.outputs.docs_only != 'true'
-        run: codesign --verify --deep --strict src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Inkstone.app
+        run: |
+          app=src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Inkstone.app
+          codesign --verify --deep --strict "$app"
+          python3 -c 'import json, plistlib, re, sys; version=json.load(open("package.json"))["version"]; info=plistlib.load(open(sys.argv[1], "rb")); assert info.get("InkstoneReleaseVersion", info["CFBundleShortVersionString"]) == version; assert info["CFBundleShortVersionString"] == version.split("-", 1)[0]; assert re.fullmatch(r"[0-9]+(?:\.[0-9]+){0,2}", info["CFBundleVersion"])' "$app/Contents/Info.plist"
       - name: Save Cargo cache from main
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cargo-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
