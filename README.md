@@ -1,16 +1,16 @@
 # Inkstone · 砚台
 
-**Write locally. Build a Wiki from your notes. Check the sources.**
+**Ask your notes. Open the source.**
 
-A Markdown workspace for **macOS 13+ on Apple Silicon** with a source-linked Wiki and a standalone AI chat workspace. Bring your own compatible model API. Keep an optional ink companion beside your work.
+Inkstone is a local-first Markdown workspace for **macOS 13+ on Apple Silicon**. Build a Wiki from selected notes, ask questions about those notes, and open the original passage behind a citation. Editing and keyword search work offline. AI features use a compatible model API you configure.
 
-[中文](docs/README.zh-CN.md) · [Start from source](docs/QUICKSTART.md) · [Roadmap](docs/ROADMAP.md) · [Releases](https://github.com/raistlinsha-plus/inkstone/releases) · [Feedback](https://github.com/raistlinsha-plus/inkstone/issues)
+[中文](docs/README.zh-CN.md) · [Try it from source](#try-it-from-source) · [v0.9.0-beta.1 release](https://github.com/raistlinsha-plus/inkstone/releases/tag/v0.9.0-beta.1) · [Preview feedback](https://github.com/raistlinsha-plus/inkstone/discussions/11) · [Roadmap](docs/ROADMAP.md)
 
-**v0.9.0-beta.1 · Source preview.** This update adds the macOS signing and notarization workflow and records the checks required for a clean installation. GitHub assets for this release are source code and checksums. The notarized macOS app download is pending. [Delivery notes](docs/DELIVERY-v0.9.0-beta.1.md) · [Published versions](https://github.com/raistlinsha-plus/inkstone/releases)
+**v0.9.0-beta.1 is a source preview with a Chinese interface.** The release includes a source archive and SHA-256 checksum. The notarized macOS app download is pending. [Release notes](docs/DELIVERY-v0.9.0-beta.1.md) · [Product brochure (Chinese PDF)](https://github.com/raistlinsha-plus/inkstone/releases/download/v0.9.0-beta.1/inkstone-v0.9.0-beta.1-brochure-zh-CN.pdf)
 
-![Inkstone cited conversation using fictional reading-activity data](docs/assets/launch-v0.7/02-conversation.png)
+![Inkstone v0.9.0-beta.1 shows an answer beside a reference to its source](https://github.com/raistlinsha-plus/inkstone/releases/download/v0.9.0-beta.1/inkstone-social-preview.png)
 
-*Earlier v0.7 interface with fictional documents and simulated model responses. The screenshot shows the citation workflow.*
+*The example uses fictional notes and a simulated model response.*
 
 ## What makes Inkstone useful?
 
@@ -33,11 +33,19 @@ This earlier v0.7 walkthrough shows document import, scoped questions and source
 You need Apple's command-line developer tools, Node **24.14.0**, npm **11.9.0**, and Rust **1.99.1**. See `toolchain.json`.
 
 ```sh
+git clone --branch v0.9.0-beta.1 https://github.com/raistlinsha-plus/inkstone.git
+cd inkstone
 npm ci --registry=https://registry.npmjs.org
 npm run desktop
 ```
 
-Start with two fictional reading-plan notes. Ask how many events were planned and completed, check the two original passages, then ask whether satisfaction was measured. The first build downloads dependencies and compiles locally. [v0.7.3 walkthrough](examples/v0.7.3/README.md) · [Quickstart](docs/QUICKSTART.md)
+The first build downloads dependencies and compiles locally. Start with one offline task.
+
+1. In the document-space home, click **打开离线样例** (Open offline sample).
+2. Search for **阅读活动** (reading events), then open a result to see the original Markdown.
+3. If you have a compatible model API, try the two-note walkthrough. Ask how many events were planned and completed, then check whether the notes reported satisfaction.
+
+[Two-note walkthrough](examples/v0.7.3/README.md) · [Detailed quickstart (Chinese)](docs/QUICKSTART.md)
 
 Editing and keyword search work without model credentials. Configure a compatible model API for answers, Wiki organization or vectors. Optional reranking uses a separately configured Cohere-compatible endpoint, and optional web search uses your Brave Search API key.
 
