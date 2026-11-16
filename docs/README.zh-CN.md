@@ -6,7 +6,7 @@ Inkstone 将 Markdown 写作、文档空间、Wiki 与独立 AI 问答放在一�
 
 [English](../README.md) · [源码快速开始](QUICKSTART.md) · [后续计划](ROADMAP.md) · [公开版本](https://github.com/raistlinsha-plus/inkstone/releases)
 
-**v0.8.7 源码预览**，面向 macOS 13+ Apple Silicon。本版可按基线比较 Wiki 提案的改动，并从保存后的回答核对受管理文档原文。 [交付说明](DELIVERY-v0.8.7.md) · [公开版本](https://github.com/raistlinsha-plus/inkstone/releases)
+**v0.9.0-beta.1 源码预览**，面向 macOS 13+ Apple Silicon。本版建立 macOS 签名、公证和干净环境验收流程。GitHub 提供源码和校验文件，公证安装包待 Apple 公证及独立安装验收后发布。 [交付说明](DELIVERY-v0.9.0-beta.1.md) · [公开版本](https://github.com/raistlinsha-plus/inkstone/releases)
 
 ![带引用的问答，使用虚构阅读活动资料](assets/launch-v0.7/02-conversation.png)
 
@@ -37,11 +37,11 @@ npm run desktop
 
 编辑和关键词检索无需模型。向量、Wiki 整理和问答使用自己配置的兼容模型 API，重排使用独立的 Cohere 兼容端点。文档、索引、Wiki、会话及同伴状态保存在本机。模型操作按用途发送问题、片段或选定资料，可能产生服务商费用。启用联网后，模型只根据当前问题规划搜索，Brave Search 接收通过规则校验的公开查询。密钥保存在 macOS Keychain。[安全策略](../SECURITY.md) · [联网范围](DELIVERY-v0.7.2.md)
 
-`npm run bundle`生成独立本机应用；日常只使用 `/Applications/Inkstone.app`，构建与验收包临时保留，见[版本及资料管理](LOCAL-INSTALLATION.md)。当前为临时签名，不等同正式安装包发行。
+`npm run bundle` 生成使用临时签名的独立本机应用。日常从 `/Applications/Inkstone.app` 打开，独立保留构建和测试包。 [本机版本及资料管理](LOCAL-INSTALLATION.md) · [macOS 公证发布手册](MACOS_RELEASE.md)
 
 ## 当前边界与参与方式
 
-真实 Brave Search 帐号、原生辅助功能、跨机安装和更大语料评测等待单独验收。独立问答支持 TXT、Markdown、JSON、MMD 文本附件。PDF/OCR、云协作、单轮跨空间选取资料和悬浮桌宠列在后续范围。[本地检索评测](../evals/v0.7.5/README.md)
+真实 Brave Search 帐号、原生辅助功能、干净 Mac 安装和更大语料评测等待单独验收。独立问答支持 TXT、Markdown、JSON、MMD 文本附件。PDF/OCR、云协作、单轮跨空间选取资料和悬浮桌宠列在后续范围。 [本地检索评测](../evals/v0.7.5/README.md)
 
 欢迎提交虚构最小复现、可用性反馈和独立问答评测；不要上传密钥、真实资料或私人备份。[贡献指南](../CONTRIBUTING.md) · [已知限制](KNOWN-LIMITATIONS.md)。如果这个方向对你有用，也欢迎点一个 Star 帮助更多人发现。
 

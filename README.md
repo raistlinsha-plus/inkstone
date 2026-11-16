@@ -6,7 +6,7 @@ A Markdown workspace for **macOS 13+ on Apple Silicon** with a source-linked Wik
 
 [中文](docs/README.zh-CN.md) · [Start from source](docs/QUICKSTART.md) · [Roadmap](docs/ROADMAP.md) · [Releases](https://github.com/raistlinsha-plus/inkstone/releases) · [Feedback](https://github.com/raistlinsha-plus/inkstone/issues)
 
-**v0.8.7 · Source preview.** Review what changed in each Wiki proposal and verify managed document citations from saved answers. [Current delivery notes](docs/DELIVERY-v0.8.7.md) · [Published versions](https://github.com/raistlinsha-plus/inkstone/releases)
+**v0.9.0-beta.1 · Source preview.** This update adds the macOS signing and notarization workflow and records the checks required for a clean installation. GitHub assets for this release are source code and checksums. The notarized macOS app download is pending. [Delivery notes](docs/DELIVERY-v0.9.0-beta.1.md) · [Published versions](https://github.com/raistlinsha-plus/inkstone/releases)
 
 ![Inkstone cited conversation using fictional reading-activity data](docs/assets/launch-v0.7/02-conversation.png)
 
@@ -41,7 +41,7 @@ Start with two fictional reading-plan notes. Ask how many events were planned an
 
 Editing and keyword search work without model credentials. Configure a compatible model API for answers, Wiki organization or vectors. Optional reranking uses a separately configured Cohere-compatible endpoint, and optional web search uses your Brave Search API key.
 
-Build an independent local app with `npm run bundle`. Use `/Applications/Inkstone.app` as the single daily installation and keep temporary build/test bundles separate. This is a locally ad-hoc signed build, not a notarized public installer. It runs without Node or a development server after building. [Installation/data boundaries](docs/LOCAL-INSTALLATION.md).
+Build a standalone, ad hoc signed local app with `npm run bundle`. Use `/Applications/Inkstone.app` as the single daily installation and keep build and test bundles separate. The built app runs without Node or a development server. [Local installation and data](docs/LOCAL-INSTALLATION.md) · [macOS release runbook](docs/MACOS_RELEASE.md)
 
 ## Local data, explicit model requests
 
@@ -49,10 +49,10 @@ Documents, indexes, conversations, Wiki state and companion state are stored on 
 
 ## Candidate status
 
-Live Brave Search account verification, externally reviewed answer quality, native accessibility and cross-machine installation remain separate gates. Standalone chat supports TXT, Markdown, JSON and MMD attachments. PDF/OCR, cloud collaboration, multi-space selection in one turn and a floating desktop pet remain future scope. [Offline retrieval comparison](evals/v0.7.5/README.md) · [Known limitations](docs/KNOWN-LIMITATIONS.md)
+Live Brave Search account verification, externally reviewed answer quality, native accessibility and installation on a clean Mac remain separate checks. Standalone chat supports TXT, Markdown, JSON and MMD attachments. PDF/OCR, cloud collaboration, multi-space selection in one turn and a floating desktop pet remain future scope. [Offline retrieval comparison](evals/v0.7.5/README.md) · [Known limitations](docs/KNOWN-LIMITATIONS.md)
 
 Want to help? Try a workflow, report a small fictional reproduction, or independently review a retrieval case. [Contributing](CONTRIBUTING.md) · [Architecture](docs/ARCHITECTURE-v0.7.md) · [Technology](docs/TECH-STACK-v0.7.md). If this direction is useful to you, a star helps others find it.
 
 ## License
 
-Inkstone source is **Apache-2.0**. Dependencies retain their licenses, including some unmodified MPL-2.0 packages; see `LICENSE`, `NOTICE`, `THIRD_PARTY_NOTICES.md` and `licenses/`. Twenty acquired packages still lack standalone local notice text, so binary redistribution review is incomplete. Artwork provenance and candidate status are recorded under `src/companion/assets/`.
+Inkstone source is **Apache-2.0**. Dependencies retain their licenses, including some unmodified MPL-2.0 packages. The current inventory includes 17 entries without a collected standalone license file. Review of the notices and provenance of components shipped in the binary is pending. See `LICENSE`, `NOTICE`, `THIRD_PARTY_NOTICES.md`, `licenses/` and artwork records under `src/companion/assets/`.
