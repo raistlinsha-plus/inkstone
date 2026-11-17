@@ -4,7 +4,9 @@
 
 Inkstone is a local-first Markdown workspace for **macOS 13+ on Apple Silicon**. Build a Wiki from selected notes, ask questions about those notes, and open the original passage behind a citation. Editing and keyword search work offline. AI features use a compatible model API you configure.
 
-[中文](docs/README.zh-CN.md) · [Try it from source](#try-it-from-source) · [v0.9.0-beta.1 release](https://github.com/raistlinsha-plus/inkstone/releases/tag/v0.9.0-beta.1) · [Preview feedback](https://github.com/raistlinsha-plus/inkstone/discussions/11) · [Roadmap](docs/ROADMAP.md)
+[Try the interactive demo](https://raistlinsha-plus.github.io/inkstone/) · [中文](docs/README.zh-CN.md) · [Build from source](#try-it-from-source) · [Preview feedback](https://github.com/raistlinsha-plus/inkstone/discussions/11) · [Roadmap](docs/ROADMAP.md)
+
+The browser walkthrough uses fictional notes and simulated answers. Open a citation to check the original passage, then try the question the notes cannot answer.
 
 **v0.9.0-beta.1 is a source preview with a Chinese interface.** The release includes a source archive and SHA-256 checksum. The notarized macOS app download is pending. [Release notes](docs/DELIVERY-v0.9.0-beta.1.md) · [Product brochure (Chinese PDF)](https://github.com/raistlinsha-plus/inkstone/releases/download/v0.9.0-beta.1/inkstone-v0.9.0-beta.1-brochure-zh-CN.pdf)
 
