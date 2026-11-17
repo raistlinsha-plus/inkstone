@@ -4,7 +4,9 @@
 
 Inkstone 将 Markdown 写作、文档空间、Wiki 与独立 AI 问答放在一个 Mac 应用中。使用自己的模型 API，按本轮需要选资料，也可以选择让书房同伴陪你工作。
 
-[English](../README.md) · [源码快速开始](QUICKSTART.md) · [试用交流](https://github.com/raistlinsha-plus/inkstone/discussions/11) · [后续计划](ROADMAP.md)
+[浏览器交互演示](https://raistlinsha-plus.github.io/inkstone/) · [English](../README.md) · [源码快速开始](QUICKSTART.md) · [试用交流](https://github.com/raistlinsha-plus/inkstone/discussions/11) · [后续计划](ROADMAP.md)
+
+演示无需安装，使用虚构笔记和模拟回答。可以点开引用核对原文，再试问一个资料里没有答案的问题。
 
 **v0.9.0-beta.1 源码预览**，面向 macOS 13+ Apple Silicon。GitHub 提供源码和校验文件，公开安装包待 Apple 公证及独立安装验收。 [发布页](https://github.com/raistlinsha-plus/inkstone/releases/tag/v0.9.0-beta.1) · [中文宣传册 PDF](https://github.com/raistlinsha-plus/inkstone/releases/download/v0.9.0-beta.1/inkstone-v0.9.0-beta.1-brochure-zh-CN.pdf)
 
