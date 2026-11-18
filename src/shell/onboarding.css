@@ -1,0 +1,63 @@
+.welcome-first-use {
+  margin: 0 0 16px;
+  padding: 16px;
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+  background: var(--ui-surface);
+}
+.welcome-first-use h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.welcome-first-use summary {
+  width: fit-content;
+  cursor: pointer;
+  font-weight: 600;
+}
+.welcome-first-use p,
+.offline-example p {
+  color: var(--ui-muted);
+  margin: 6px 0 10px;
+  line-height: 1.5;
+}
+.first-use-actions,
+.offline-example-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.welcome-first-use details[open] .first-use-actions {
+  margin-top: 12px;
+}
+.offline-example {
+  margin: 0 0 12px;
+  padding: 12px;
+  border: 1px solid var(--ui-line);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.offline-example h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.offline-example blockquote {
+  margin: 8px 0;
+  padding: 6px 10px;
+  border-inline-start: 2px solid var(--ui-line);
+  color: var(--ui-muted);
+}
+.offline-example-answer {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+.offline-example-answer > p {
+  margin: 0;
+  color: var(--ui-text);
+}
+@media (max-width: 950px) {
+  .file-actions .ask-document-label {
+    display: none;
+  }
+}

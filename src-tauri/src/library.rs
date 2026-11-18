@@ -480,6 +480,18 @@ pub(crate) fn prepare_local_example(data: &Path, project: &str) -> Result<Docume
     .map_err(|error| format!("样例已保存，本地关键词索引未完成。请重试：{error}"))?;
     Ok(document)
 }
+
+pub(crate) const OFFLINE_EXAMPLE_PROJECT: &str = "22adb640-1a43-4b7c-824e-1bef7aaabc08";
+
+pub(crate) fn prepare_isolated_local_example(data: &Path) -> Result<Document, String> {
+    conn(data)?
+        .execute(
+            "INSERT OR IGNORE INTO projects VALUES(?,?,?)",
+            params![OFFLINE_EXAMPLE_PROJECT, "离线体验", now()],
+        )
+        .map_err(err)?;
+    prepare_local_example(data, OFFLINE_EXAMPLE_PROJECT)
+}
 pub fn touch(data: &Path, root: &Path, path: &str) {
     if let Some(project) = project_at_root(data, root) {
         if let Ok(c) = conn(data) {
@@ -1325,6 +1337,27 @@ pub fn export_bundle(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn offline_example_is_idempotent_in_a_separate_space() {
+        let data = tempfile::tempdir().unwrap();
+        let own = create_document(data.path(), "inbox", "我的资料.md", "# 原文").unwrap();
+        let first = prepare_isolated_local_example(data.path()).unwrap();
+        let reused = prepare_isolated_local_example(data.path()).unwrap();
+        assert_eq!(first.id, reused.id);
+        assert_eq!(first.project_id, OFFLINE_EXAMPLE_PROJECT);
+        assert_eq!(last_project(data.path()), "inbox");
+        let inbox = crate::documents::library_workspace(data.path(), &own.project_id).unwrap();
+        assert!(!inbox.root.join(&first.path).exists());
+        assert_eq!(
+            list(data.path())
+                .unwrap()
+                .documents
+                .iter()
+                .filter(|doc| doc.project_id == "inbox")
+                .count(),
+            1
+        );
+    }
     #[test]
     fn local_example_reuses_edited_and_renamed_document_and_refreshes_keyword_index() {
         let data = tempfile::tempdir().unwrap();

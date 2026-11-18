@@ -30,6 +30,7 @@ import {
   RefreshCw,
   Pin,
   Link2,
+  Search,
 } from "lucide-react";
 import SourceReviewDialog from "./SourceReviewDialog";
 import RelinkDialog from "./RelinkDialog";
@@ -44,6 +45,7 @@ interface Props {
   onOpen: (doc: LibraryDocument) => void;
   onNew: () => void;
   onImport: (task?: ImportTask) => void;
+  onSearch?: () => void;
   onRefresh: () => Promise<void>;
   onTrash: (doc: LibraryDocument, restore: boolean) => Promise<void>;
   onBeforeAction: () => Promise<boolean>;
@@ -68,6 +70,7 @@ export default function LibraryBrowser({
   onOpen,
   onNew,
   onImport,
+  onSearch,
   onRefresh,
   onTrash,
   onBeforeAction,
@@ -197,6 +200,14 @@ export default function LibraryBrowser({
             <p>接续最近的工作，或从置顶资料开始。文档副本保存在本机。</p>
           </div>
           <div>
+            {onSearch && view.documents.some((item) =>
+              item.projectId === projectId && item.status === "ready"
+            ) && (
+              <button className="button" disabled={busy} onClick={onSearch}>
+                <Search size={15} />
+                搜索这些资料
+              </button>
+            )}
             <button
               className="button"
               disabled={busy}
@@ -220,6 +231,7 @@ export default function LibraryBrowser({
           </div>
         </header>
       )}
+      {!compact && firstUseGuide}
       {!compact && (
         <div className="workbench-overview">
           <div>
@@ -253,7 +265,6 @@ export default function LibraryBrowser({
           </button>
         </div>
       )}
-      {!compact && firstUseGuide}
       <div className="library-controls">
         {compact && (
           <div className="library-project">

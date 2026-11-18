@@ -107,10 +107,7 @@ export interface Commands {
     },
     LibraryDocument
   >;
-  library_prepare_local_example: Command<
-    { projectId: string },
-    LibraryDocument
-  >;
+  library_prepare_local_example: Command<undefined, LibraryDocument>;
   library_reveal: Command<{ projectId: string }, void>;
   begin_index: Command<Scope, IndexPlan>;
   index_document: Command<

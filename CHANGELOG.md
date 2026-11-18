@@ -2,6 +2,11 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v0.9.0-beta.2 · 首次使用
+
+- 首页提供「用示例体验」和「导入我的资料」。独立的离线空间可查找原文、核对模拟回答并保存带版本引用的示例。
+- 「问这篇文档」将问题限定到当前文档。第一次发送可连接问答模型，保存设置后返回原问题和资料选择。 [交付说明](docs/DELIVERY-v0.9.0-beta.2.md)
+
 ## v0.9.0-beta.1 · macOS 公证流程与源码预览
 
 - 增加 Developer ID 签名、公证提交、票据附加和最终 ZIP 复验流程。生成可独立校验的发布回执和 SHA-256 校验文件。
