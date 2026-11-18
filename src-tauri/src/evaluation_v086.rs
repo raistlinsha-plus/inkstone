@@ -20,13 +20,46 @@ use std::{
 const FIXTURE: &str = include_str!("../../evals/v0.8.6/grounded-holdout.json");
 const RUBRIC: &str = include_str!("../../evals/v0.8.6/RUBRIC.md");
 const HASHES: &str = include_str!("../../evals/v0.8.6/SHA256SUMS");
-const MAX_REQUESTS: usize = 40;
-const MAX_SECONDS: u64 = 240;
+const NEXT_FIXTURE: &str = include_str!("../../evals/v0.9.1/grounded-holdout.json");
+const NEXT_RUBRIC: &str = include_str!("../../evals/v0.9.1/RUBRIC.md");
+const NEXT_HASHES: &str = include_str!("../../evals/v0.9.1/SHA256SUMS");
+
+struct Suite {
+    id: &'static str,
+    env_prefix: &'static str,
+    fixture: &'static str,
+    rubric: &'static str,
+    hashes: &'static str,
+    max_requests: usize,
+    max_seconds: u64,
+}
+
+const ORIGINAL: Suite = Suite {
+    id: "v086",
+    env_prefix: "INKSTONE_086",
+    fixture: FIXTURE,
+    rubric: RUBRIC,
+    hashes: HASHES,
+    max_requests: 40,
+    max_seconds: 240,
+};
+
+const EXTENDED: Suite = Suite {
+    id: "v091",
+    env_prefix: "INKSTONE_091",
+    fixture: NEXT_FIXTURE,
+    rubric: NEXT_RUBRIC,
+    hashes: NEXT_HASHES,
+    max_requests: 160,
+    max_seconds: 600,
+};
 
 #[derive(Deserialize)]
 struct Fixture {
     documents: Vec<Document>,
     cases: Vec<Case>,
+    #[serde(default)]
+    spaces: HashMap<String, Vec<String>>,
 }
 
 #[derive(Deserialize)]
@@ -40,6 +73,7 @@ struct Document {
 struct Case {
     id: String,
     conversation: String,
+    space: Option<String>,
     question: String,
     documents: Vec<String>,
     expected: String,
@@ -53,22 +87,53 @@ struct Requirement {
     claim: String,
 }
 
-fn fixture() -> Fixture {
-    let expected: Vec<_> = HASHES.lines().collect();
+fn fixture(suite: &Suite) -> Fixture {
+    let expected: Vec<_> = suite.hashes.lines().collect();
     assert_eq!(expected.len(), 2);
-    for (line, bytes) in expected.into_iter().zip([FIXTURE, RUBRIC]) {
+    for (line, bytes) in expected.into_iter().zip([suite.fixture, suite.rubric]) {
         assert_eq!(files::hash(bytes), line.split_whitespace().next().unwrap());
     }
-    serde_json::from_str(FIXTURE).expect("valid frozen fixture")
+    serde_json::from_str(suite.fixture).expect("valid frozen fixture")
 }
 
 #[test]
 fn frozen_holdout_declares_valid_evidence_and_an_unselected_distractor() {
-    let f = fixture();
+    let f = fixture(&ORIGINAL);
+    check_requirements(&f);
+    assert_eq!(f.cases.len(), 12);
+    assert_eq!(f.cases.iter().filter(|q| q.expected == "refuse").count(), 3);
+    let private = f.documents.iter().find(|d| d.id == "staging").unwrap();
+    assert!(private.text.contains("240元"));
+    assert!(f.cases.iter().all(|q| !q.documents.contains(&private.id)));
+}
+
+#[test]
+fn extended_holdout_declares_scopes_and_frozen_requirements() {
+    let f = fixture(&EXTENDED);
+    check_requirements(&f);
+    assert_eq!(f.cases.len(), 40);
+    assert_eq!(f.spaces.len(), 5);
+    assert_eq!(f.cases.iter().filter(|q| q.expected == "refuse").count(), 6);
+    assert!(f
+        .documents
+        .iter()
+        .filter(|d| d.id.ends_with("-private"))
+        .all(|d| { f.cases.iter().all(|q| !q.documents.contains(&d.id)) }));
+}
+
+fn check_requirements(f: &Fixture) {
     let mut ids = HashSet::new();
+    let mut conversations = HashMap::new();
     for case in &f.cases {
         assert!(ids.insert(&case.id));
         assert!(!case.documents.is_empty());
+        if let Some(space) = &case.space {
+            assert!(case.documents.iter().all(|d| f.spaces[space].contains(d)));
+        }
+        if case.conversation != "standalone" {
+            let previous = conversations.insert(&case.conversation, &case.documents);
+            assert!(previous.is_none_or(|previous| previous == &case.documents));
+        }
         assert_eq!(case.expected == "refuse", case.required.is_empty());
         for requirement in &case.required {
             assert!(case.documents.contains(&requirement.document));
@@ -81,11 +146,6 @@ fn frozen_holdout_declares_valid_evidence_and_an_unselected_distractor() {
             assert!(!requirement.claim.is_empty());
         }
     }
-    assert_eq!(f.cases.len(), 12);
-    assert_eq!(f.cases.iter().filter(|q| q.expected == "refuse").count(), 3);
-    let private = f.documents.iter().find(|d| d.id == "staging").unwrap();
-    assert!(private.text.contains("240元"));
-    assert!(f.cases.iter().all(|q| !q.documents.contains(&private.id)));
 }
 
 fn isolated_state(data: &Path, settings: Settings) -> Result<AppState, &'static str> {
@@ -125,26 +185,39 @@ struct FixtureWorkspace {
     paths: HashMap<String, String>,
 }
 
+fn workspace_members(fixture: &Fixture, case: &Case) -> Vec<String> {
+    let mut members = match &case.space {
+        Some(space) if case.documents.len() == 1 => fixture.spaces[space].clone(),
+        Some(_) => case.documents.clone(),
+        None => match case.documents[0].as_str() {
+            "shuttle" => vec!["shuttle".into(), "march".into()],
+            "hall" if case.documents.len() == 1 => vec!["hall".into(), "staging".into()],
+            _ => case.documents.clone(),
+        },
+    };
+    members.sort();
+    members
+}
+
 fn copy_fixture(
     data: &Path,
     fixture: &Fixture,
     embeddings: Option<(&models::Provider, &HashMap<String, Vec<Vec<f32>>>)>,
-) -> Result<HashMap<&'static str, FixtureWorkspace>, String> {
+) -> Result<HashMap<Vec<String>, FixtureWorkspace>, String> {
     let mut workspaces = HashMap::new();
-    for (key, members) in [
-        ("shuttle", &["shuttle", "march"][..]),
-        ("robot", &["robot"][..]),
-        ("hall", &["hall", "staging"][..]),
-        ("hall-comparison", &["hall", "annex"][..]),
-    ] {
-        let project = library::create_project(data, key)?;
+    for case in &fixture.cases {
+        let members = workspace_members(fixture, case);
+        if workspaces.contains_key(&members) {
+            continue;
+        }
+        let project = library::create_project(data, &format!("评测空间 {}", workspaces.len() + 1))?;
         let ws = documents::library_workspace(data, &project.id)?;
         let mut conn = db::open(&ws.db)?;
         let mut paths = HashMap::new();
         for doc in fixture
             .documents
             .iter()
-            .filter(|doc| members.contains(&doc.id.as_str()))
+            .filter(|doc| members.contains(&doc.id))
         {
             let managed = library::create_document(data, &project.id, &doc.title, &doc.text)?;
             let hash = files::hash(&doc.text);
@@ -165,7 +238,7 @@ fn copy_fixture(
             paths.insert(doc.id.clone(), managed.path);
         }
         workspaces.insert(
-            key,
+            members,
             FixtureWorkspace {
                 workspace: ws,
                 paths,
@@ -190,7 +263,11 @@ async fn embed_fixture(
     for doc in &fixture.documents {
         // The scope-negative distractor is indexed lexically only, so its text is
         // absent from outbound evaluation requests, even during index preparation.
-        if doc.id == "staging" {
+        if !fixture
+            .cases
+            .iter()
+            .any(|case| case.documents.contains(&doc.id))
+        {
             continue;
         }
         for chunk in chunks(doc) {
@@ -253,12 +330,25 @@ async fn saved_key(state: &AppState, role: &str, address: &str) -> Result<String
 #[test]
 #[ignore = "Explicit live evaluation with saved address-bound keys and synthetic documents only"]
 fn live_grounded_holdout() -> Result<(), &'static str> {
-    if std::env::var("INKSTONE_086_LIVE").as_deref() != Ok("1") || cfg!(feature = "desktop-e2e") {
-        return Err("requires explicit INKSTONE_086_LIVE=1 and the standard build");
+    run_live(&ORIGINAL)
+}
+
+#[test]
+#[ignore = "Explicit live evaluation with saved address-bound keys and synthetic documents only"]
+fn live_extended_holdout() -> Result<(), &'static str> {
+    run_live(&EXTENDED)
+}
+
+fn run_live(suite: &Suite) -> Result<(), &'static str> {
+    if std::env::var(format!("{}_LIVE", suite.env_prefix)).as_deref() != Ok("1")
+        || cfg!(feature = "desktop-e2e")
+    {
+        return Err("requires the suite's explicit LIVE=1 and the standard build");
     }
-    let mode = std::env::var("INKSTONE_086_MODE").map_err(|_| "choose keyword or rerank")?;
-    if !matches!(mode.as_str(), "keyword" | "rerank") {
-        return Err("choose keyword or rerank");
+    let mode = std::env::var(format!("{}_MODE", suite.env_prefix))
+        .map_err(|_| "choose keyword, hybrid or rerank")?;
+    if !matches!(mode.as_str(), "keyword" | "hybrid" | "rerank") {
+        return Err("choose keyword, hybrid or rerank");
     }
     let settings_path = PathBuf::from(std::env::var_os("HOME").ok_or("missing home directory")?)
         .join("Library/Application Support/local.inkstone.desktop/settings.json");
@@ -268,7 +358,7 @@ fn live_grounded_holdout() -> Result<(), &'static str> {
         .enable_all()
         .build()
         .map_err(|_| "runtime initialization failed")?;
-    let result = runtime.block_on(grounded_holdout(&mode, config.settings, true));
+    let result = runtime.block_on(grounded_holdout(suite, &mode, config.settings, true));
     // A timed-out macOS system authorization may still own the native
     // credential thread. This explicit test must report without waiting on it.
     runtime.shutdown_background();
@@ -278,7 +368,13 @@ fn live_grounded_holdout() -> Result<(), &'static str> {
 #[tokio::test]
 #[ignore = "Explicit report destination for the offline evidence check"]
 async fn offline_grounded_holdout() -> Result<(), &'static str> {
-    grounded_holdout("keyword", Settings::default(), false).await
+    grounded_holdout(&ORIGINAL, "keyword", Settings::default(), false).await
+}
+
+#[tokio::test]
+#[ignore = "Explicit report destination for the offline evidence check"]
+async fn offline_extended_holdout() -> Result<(), &'static str> {
+    grounded_holdout(&EXTENDED, "keyword", Settings::default(), false).await
 }
 
 async fn offline_context(
@@ -324,27 +420,35 @@ async fn offline_context(
     })
 }
 
-async fn grounded_holdout(mode: &str, config: Settings, live: bool) -> Result<(), &'static str> {
-    let path =
-        PathBuf::from(std::env::var_os("INKSTONE_086_REPORT").ok_or("report path required")?);
+async fn grounded_holdout(
+    suite: &Suite,
+    mode: &str,
+    config: Settings,
+    live: bool,
+) -> Result<(), &'static str> {
+    let path = PathBuf::from(
+        std::env::var_os(format!("{}_REPORT", suite.env_prefix)).ok_or("report path required")?,
+    );
     if !path.is_absolute() || path.exists() {
         return Err("use an unused absolute report path");
     }
     if live && (!config.chat.enabled || providers::validate(&config.chat).is_err()) {
         return Err("enable a valid saved chat service");
     }
+    if mode != "keyword"
+        && (!config.embedding.enabled || providers::validate(&config.embedding).is_err())
+    {
+        return Err("configure a saved embedding service to run hybrid or rerank mode");
+    }
     if mode == "rerank"
-        && (!config.embedding.enabled
-            || !config.rerank.enabled
-            || providers::validate(&config.embedding).is_err()
-            || providers::validate_reranker(&config.rerank).is_err())
+        && (!config.rerank.enabled || providers::validate_reranker(&config.rerank).is_err())
     {
         return Err("configure saved embedding and reranking services to run rerank mode");
     }
     let data = tempfile::tempdir().map_err(|_| "isolation setup failed")?;
     let state = isolated_state(data.path(), config.clone())?;
-    let fixture = fixture();
-    let trace = eval_trace::Trace::new(MAX_REQUESTS, MAX_SECONDS);
+    let fixture = fixture(suite);
+    let trace = eval_trace::Trace::new(suite.max_requests, suite.max_seconds);
     let mut keys = Vec::new();
     let mut rows = Vec::new();
     let mut stage = "setup";
@@ -353,11 +457,13 @@ async fn grounded_holdout(mode: &str, config: Settings, live: bool) -> Result<()
             stage = "read-chat-key";
             keys.push(saved_key(&state, "chat", &config.chat.base_url).await?);
         }
-        let vectors = if mode == "rerank" {
+        let vectors = if mode != "keyword" {
             stage = "read-embedding-key";
             keys.push(saved_key(&state, "embedding", &config.embedding.base_url).await?);
-            stage = "read-rerank-key";
-            keys.push(saved_key(&state, "rerank", &config.rerank.endpoint).await?);
+            if mode == "rerank" {
+                stage = "read-rerank-key";
+                keys.push(saved_key(&state, "rerank", &config.rerank.endpoint).await?);
+            }
             stage = "embed-fixture";
             Some(embed_fixture(&state, &fixture, &config.embedding, &keys[1]).await?)
         } else {
@@ -373,17 +479,10 @@ async fn grounded_holdout(mode: &str, config: Settings, live: bool) -> Result<()
         let mut conversations = HashMap::new();
         for case in &fixture.cases {
             stage = "evaluate-question";
-            let group = match case.documents[0].as_str() {
-                "shuttle" => "shuttle",
-                "robot" => "robot",
-                "hall" if case.documents.len() > 1 => "hall-comparison",
-                "hall" => "hall",
-                _ => return Err("fixture workspace not mapped"),
-            };
             let FixtureWorkspace {
                 workspace: ws,
                 paths,
-            } = &spaces[group];
+            } = &spaces[&workspace_members(&fixture, case)];
             *state.workspace.lock().unwrap() = Some(ws.clone());
             let owner = assistant::workspace_id(data.path(), ws);
             let scope = (case.documents.len() == 1).then(|| paths[&case.documents[0]].clone());
@@ -398,7 +497,7 @@ async fn grounded_holdout(mode: &str, config: Settings, live: bool) -> Result<()
                 None => assistant::create(data.path(), &owner, scope, "合成资料".into(), None)
                     .map_err(|_| "fixture-conversation-failed")?,
             };
-            let request = format!("v086-{}", case.id);
+            let request = format!("{}-{}", suite.id, case.id);
             let _busy = crate::begin_chat(&state, &request).map_err(|_| "fixture-turn-busy")?;
             let started = assistant::begin_with_sources(
                 data.path(),
@@ -485,7 +584,7 @@ async fn grounded_holdout(mode: &str, config: Settings, live: bool) -> Result<()
                     .collect::<Vec<_>>()
             });
             rows.push(json!({
-                "id":case.id, "elapsedMs":start.elapsed().as_millis(),
+                "id":case.id, "expected":case.expected,"elapsedMs":start.elapsed().as_millis(),
                 "httpAttempts":trace.snapshot()["httpAttempts"].as_u64().unwrap_or_default() - before,
                 "expectedEvidenceInContext":expected_evidence, "sourceDocuments":source_documents,
                 "outOfScopePath":out_of_scope_path,
@@ -507,15 +606,16 @@ async fn grounded_holdout(mode: &str, config: Settings, live: bool) -> Result<()
     let result = eval_trace::TRACE
         .scope(
             trace.clone(),
-            tokio::time::timeout(Duration::from_secs(MAX_SECONDS), operation),
+            tokio::time::timeout(Duration::from_secs(suite.max_seconds), operation),
         )
         .await
         .unwrap_or(Err("wall-time-budget-exhausted"));
     let report = json!({
-        "version":env!("CARGO_PKG_VERSION"), "fixtureSha256":files::hash(FIXTURE), "rubricSha256":files::hash(RUBRIC),
+        "version":env!("CARGO_PKG_VERSION"), "suite":suite.id,
+        "fixtureSha256":files::hash(suite.fixture), "rubricSha256":files::hash(suite.rubric),
         "status":if result.is_ok() { "complete" } else { "incomplete" },
         "stage":stage, "error":result.as_ref().err(), "mode":mode, "live":live, "usage":trace.snapshot(),
-        "models":{"chat":live.then_some(config.chat.model),"embedding":(mode == "rerank").then_some(config.embedding.model),
+        "models":{"chat":live.then_some(config.chat.model),"embedding":(mode != "keyword").then_some(config.embedding.model),
                   "rerank":(mode == "rerank").then_some(config.rerank.model)},
         "syntheticOnly":true,"independentFixtureAuthor":true,"externalBlindReview":false,
         "manualReview":null,"records":rows

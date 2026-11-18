@@ -438,6 +438,10 @@ pub(crate) fn explicitly_offline(question: &str) -> bool {
                     "当前空间",
                     "公司内部",
                     "我发的",
+                    "我的资料",
+                    "我的笔记",
+                    "我的文档",
+                    "我提供的",
                 ]
                 .iter()
                 .any(|target| object.starts_with(target))

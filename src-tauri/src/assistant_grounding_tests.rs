@@ -157,6 +157,26 @@ fn explicit_subject_prefixes_are_not_mistaken_for_a_missing_pronoun() {
 }
 
 #[test]
+fn a_bare_service_followup_inherits_only_an_explicit_time_request() {
+    assert_eq!(
+        followup_clock("那最后一班呢？", Some("周日首班几点？")),
+        Some("末班")
+    );
+    assert_eq!(
+        followup_clock("那最后一班呢？", Some("周日首班哪个门发车？")),
+        None
+    );
+    assert_eq!(
+        followup_clock("那最后一班几点发车？", Some("周日首班哪个门发车？")),
+        Some("末班")
+    );
+    assert_eq!(
+        followup_clock("那最后一班7月15日几点？", Some("周日首班几点？")),
+        None
+    );
+}
+
+#[test]
 fn first_question_resolves_fixed_document_or_explicit_name_but_not_unsupported_pronouns() {
     let data = tempfile::tempdir().unwrap();
     let doc = library::create_document(
