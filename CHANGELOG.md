@@ -2,6 +2,11 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v0.9.2 · Wiki 主题与来源维护
+
+- Wiki 首页并列显示已发布主题和最近变化。待审列表优先显示出处过时或结论冲突的改动，审阅时可查看摘要、大纲与来源变化。
+- 有权限继续查看的旧摘录独立呈现，无法作为现行依据或跳转。过时版本只能在仍有已核验原文时部分恢复。 [交付说明](docs/DELIVERY-v0.9.2.md)
+
 ## v0.9.1 · 有据问答与 40 道留出题
 
 - 对分别有出处的复合问题、不同文档的说法、短追问和明确日期收紧取证逻辑，减少遗漏和旧日期串入。独立问答使用同一范围内、版本仍可核对的原文承接简短追问。

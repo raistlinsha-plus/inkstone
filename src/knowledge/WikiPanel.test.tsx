@@ -339,3 +339,107 @@ test("an obsolete generation base blocks publishing while the candidate can stil
     panel.getByRole<HTMLButtonElement>("button", { name: "拒绝改动" }).disabled,
   ).toBe(false);
 });
+
+test("opens recent changes from the topics home and keeps older excerpts out of source navigation", async () => {
+  const published = {
+    ...change,
+    status: "published",
+    stale: true,
+    canRestore: true,
+    restoreRevision: 1,
+    restoreAvailability: "unavailable",
+  };
+  const snapshot = {
+    ...status,
+    pages: [page],
+    currentPendingCount: 0,
+    changes: [published],
+  };
+  const historical = {
+    ...page,
+    revision: 2,
+    summary: "",
+    body: "# 凭条",
+    stale: true,
+    refs: [],
+    historicalSources: [
+      {
+        documentId: "manual",
+        title: "手册.md",
+        startLine: 2,
+        endLine: 2,
+        excerpt: "旧版手册为 72 小时。",
+      },
+      {
+        documentId: "removed",
+        title: "停用通知.md",
+        startLine: 4,
+        endLine: 4,
+      },
+    ],
+  };
+  api.listen.mockResolvedValue(vi.fn());
+  api.invoke.mockImplementation(async (command) => {
+    if (command === "wiki_status") return snapshot;
+    if (command === "wiki_read") return historical;
+    throw Error(command);
+  });
+
+  const jump = vi.fn();
+  const panel = openPanel(jump);
+  expect(
+    await panel.findByRole("heading", { name: "已发布主题" }),
+  ).toBeTruthy();
+  const recent = within(panel.getByRole("region", { name: "最近变化" }));
+  fireEvent.click(recent.getByRole("button", { name: /凭条.*已生效/ }));
+  const details = (await panel.findByText(/已变化或不可用的出处/)).closest(
+    "details",
+  );
+  expect(details).toBeTruthy();
+  details!.open = true;
+  expect(within(details!).getByText("旧版手册为 72 小时。")).toBeTruthy();
+  expect(within(details!).getByText("原文当前不可用")).toBeTruthy();
+  expect(within(details!).queryByRole("button")).toBeNull();
+  expect(jump).not.toHaveBeenCalled();
+  expect(
+    panel.getByRole<HTMLButtonElement>("button", { name: "恢复改动前版本" })
+      .disabled,
+  ).toBe(true);
+});
+
+test("takes the reader to a source problem before routine pending changes", async () => {
+  const damaged = {
+    ...change,
+    id: "stale",
+    pageId: "other",
+    title: "过时凭条",
+    stale: true,
+  };
+  api.listen.mockResolvedValue(vi.fn());
+  api.invoke.mockImplementation(async (command) => {
+    if (command === "wiki_status")
+      return {
+        ...status,
+        changes: [{ ...change, created: 2 }, damaged],
+        currentPendingCount: 2,
+      };
+    if (command === "wiki_read")
+      return {
+        ...page,
+        id: damaged.pageId,
+        title: damaged.title,
+        stale: true,
+        refs: [],
+      };
+    throw Error(command);
+  });
+  const panel = openPanel();
+  fireEvent.click(await panel.findByRole("button", { name: "查看待审阅改动" }));
+  expect(
+    await panel.findByRole("group", { name: "正在审阅 过时凭条" }),
+  ).toBeTruthy();
+  expect(
+    panel.getByRole<HTMLButtonElement>("button", { name: "仅发布原文摘录" })
+      .disabled,
+  ).toBe(true);
+});

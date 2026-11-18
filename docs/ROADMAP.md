@@ -1,6 +1,6 @@
 # Inkstone roadmap
 
-The current source preview is **v0.9.0-beta.1**. It adds the release workflow for a notarized Apple Silicon beta. The public app download depends on real notarization, clean Mac acceptance and binary notice review. [Delivery notes](DELIVERY-v0.9.0-beta.1.md) · [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
+The development checkout is **v0.9.2**. The latest published source preview is **v0.9.0-beta.1**. The public app download depends on real notarization, clean Mac acceptance and binary notice review. [Development delivery](DELIVERY-v0.9.2.md) · [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
 
 - [v0.8.0 release preparation](DELIVERY-v0.8.0.md) records verification and remaining distribution gates.
 - [v0.8.1 question workbench](DELIVERY-v0.8.1.md) introduces contextual navigation and citation-to-document return.
@@ -14,6 +14,10 @@ The current source preview is **v0.9.0-beta.1**. It adds the release workflow fo
 - [v0.8.6 grounded answers](DELIVERY-v0.8.6.md) keeps a selected scope intact, labels the evidence at each turn, and adds a separate answer and citation evaluation.
 
 - [v0.8.7 Wiki review and saved citations](DELIVERY-v0.8.7.md) compares a proposal to its base and verifies managed sources from saved answers.
+
+- [v0.9.0-beta.2 first use](DELIVERY-v0.9.0-beta.2.md) adds an independent offline example and an in-context chat setup.
+- [v0.9.1 evidence selection](DELIVERY-v0.9.1.md) improves compound questions, comparison, and follow-ups and adds 40 frozen cases.
+- [v0.9.2 Wiki](DELIVERY-v0.9.2.md) adds recent changes beside topics and separates earlier snippets from currently verifiable citations.
 
 ## v0.9 macOS beta
 

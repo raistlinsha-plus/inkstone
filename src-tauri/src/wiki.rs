@@ -155,11 +155,24 @@ pub(crate) struct Page {
     summary: PageSummary,
     body: String,
     refs: Vec<Original>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    historical_sources: Vec<HistoricalSource>,
     related: Vec<RelatedPage>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     summary_issues: Vec<SummaryIssue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     review_comparison: Option<review_compare::ReviewComparison>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HistoricalSource {
+    document_id: String,
+    title: String,
+    start_line: usize,
+    end_line: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    excerpt: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -178,7 +191,12 @@ struct ChangeSummary {
     reason: String,
     created: i64,
     source_count: usize,
+    stale: bool,
     can_restore: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    restore_revision: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    restore_availability: Option<&'static str>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     summary_issues: Vec<SummaryIssue>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -403,15 +421,40 @@ fn status(data: &Path, ws: &Workspace, space: &str) -> Result<Status, String> {
     let changes = store::changes(&db, space)?
         .into_iter()
         .map(|change| {
-            let can_restore = change.base > 0 && change.result > 0;
-            let restore_summary_issues = if can_restore {
-                store::revision(&db, space, &change.page_id, change.base)
-                    .ok()
-                    .map_or_else(Vec::new, |historical| historical.summary_issues())
-            } else {
+            let historical = (change.base > 0 && change.result > 0)
+                .then(|| store::revision(&db, space, &change.page_id, change.base).ok())
+                .flatten();
+            let (restore_availability, restore_summary_issues) =
+                historical
+                    .as_ref()
+                    .map_or((None, Vec::new()), |historical| {
+                        let current =
+                            inputs_current(data, ws, space, &policy, historical, &mut hashes)
+                                && historical.originals().all(|source| {
+                                    source_current(data, ws, space, &policy, source, &mut hashes)
+                                });
+                        let issues = if current {
+                            historical.summary_issues()
+                        } else {
+                            Vec::new()
+                        };
+                        let availability = if current && issues.is_empty() {
+                            "full"
+                        } else if historical.originals().any(|source| {
+                            source_current(data, ws, space, &policy, source, &mut hashes)
+                        }) {
+                            "excerpts"
+                        } else {
+                            "unavailable"
+                        };
+                        (Some(availability), issues)
+                    });
+            let stale = !inputs_current(data, ws, space, &policy, &change.content, &mut hashes);
+            let summary_issues = if stale {
                 Vec::new()
+            } else {
+                change.content.summary_issues()
             };
-            let summary_issues = change.content.summary_issues();
             ChangeSummary {
                 id: change.id,
                 page_id: change.page_id,
@@ -419,13 +462,16 @@ fn status(data: &Path, ws: &Workspace, space: &str) -> Result<Status, String> {
                 status: change.status,
                 reason: change.reason,
                 created: change.created,
+                stale,
                 source_count: change
                     .content
                     .originals()
                     .map(|r| &r.document_id)
                     .collect::<HashSet<_>>()
                     .len(),
-                can_restore,
+                can_restore: historical.is_some(),
+                restore_revision: historical.map(|_| change.base),
+                restore_availability,
                 summary_issues,
                 restore_summary_issues,
             }
@@ -790,24 +836,34 @@ pub(crate) fn wiki_read(
     change_id: Option<String>,
 ) -> Result<Page, String> {
     let (ws, space) = active(&state)?;
-    let db = store::read(&state.data_dir)?;
-    let policy = store::policy(&db, &space)?;
-    let (revision, content, review_comparison) = if let Some(change_id) = change_id.as_deref() {
-        let change = store::change(&db, &space, change_id)?;
+    read_page(&state.data_dir, &ws, &space, page_id, change_id.as_deref())
+}
+
+fn read_page(
+    data: &Path,
+    ws: &Workspace,
+    space: &str,
+    page_id: String,
+    change_id: Option<&str>,
+) -> Result<Page, String> {
+    let db = store::read(data)?;
+    let policy = store::policy(&db, space)?;
+    let (revision, content, review_comparison) = if let Some(change_id) = change_id {
+        let change = store::change(&db, space, change_id)?;
         if change.page_id != page_id {
             return Err("改动与页面不匹配".into());
         }
         let comparison = if change.status == "pending" {
-            Some(review_compare::read(&db, &space, &change, &policy)?)
+            Some(review_compare::read(&db, space, &change, &policy)?)
         } else {
             None
         };
         (change.result.max(change.base), change.content, comparison)
     } else {
-        let revision = store::current_revision(&db, &space, &page_id)?;
+        let revision = store::current_revision(&db, space, &page_id)?;
         (
             revision,
-            store::revision(&db, &space, &page_id, revision)?,
+            store::revision(&db, space, &page_id, revision)?,
             None,
         )
     };
@@ -816,13 +872,17 @@ pub(crate) fn wiki_read(
         page_id,
         revision,
         &content,
-        &state.data_dir,
-        &ws,
-        &space,
+        data,
+        ws,
+        space,
         &policy,
         &mut hashes,
     );
-    let summary_issues = content.summary_issues();
+    let summary_issues = if summary.stale {
+        Vec::new()
+    } else {
+        content.summary_issues()
+    };
     let hide_summary = change_id.is_none() && !summary_issues.is_empty();
     if hide_summary {
         summary.summary.clear();
@@ -837,14 +897,27 @@ pub(crate) fn wiki_read(
         }
     );
     let mut refs = Vec::new();
+    let mut historical_sources = Vec::new();
     for section in &content.sections {
-        let sources = section
-            .refs
-            .iter()
-            .filter(|source| {
-                source_current(&state.data_dir, &ws, &space, &policy, source, &mut hashes)
-            })
-            .collect::<Vec<_>>();
+        let mut sources = Vec::new();
+        for source in &section.refs {
+            if source_current(data, ws, space, &policy, source, &mut hashes) {
+                sources.push(source);
+            } else if policy.document_ids.contains(&source.document_id) {
+                // Keep a labeled older excerpt for authorized, readable documents only.
+                // Earlier coordinates never grant permission to navigate to the current file.
+                let readable =
+                    current_version(data, ws, space, &policy, &source.document_id, &mut hashes)
+                        .is_some();
+                historical_sources.push(HistoricalSource {
+                    document_id: source.document_id.clone(),
+                    title: source.title.clone(),
+                    start_line: source.start_line,
+                    end_line: source.end_line,
+                    excerpt: readable.then(|| source.quote.clone()),
+                });
+            }
+        }
         if sources.is_empty() {
             continue;
         }
@@ -875,7 +948,7 @@ pub(crate) fn wiki_read(
     let mut related = Vec::new();
     if !summary.stale {
         for title in &content.related {
-            if let Some((id, _)) = store::find(&db, &space, &store::title_key(title))? {
+            if let Some((id, _)) = store::find(&db, space, &store::title_key(title))? {
                 if id != summary.id {
                     related.push(RelatedPage {
                         id,
@@ -889,6 +962,7 @@ pub(crate) fn wiki_read(
         summary,
         body,
         refs,
+        historical_sources,
         related,
         summary_issues,
         review_comparison,

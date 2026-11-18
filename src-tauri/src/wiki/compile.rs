@@ -1429,6 +1429,97 @@ mod tests {
     }
 
     #[test]
+    fn wiki_lifecycle_separates_changed_excerpts_from_current_sources_and_blocks_stale_restore() {
+        let (data, ws, space, provider, doc) = fixture();
+        let plan = prepare(data.path(), &ws, &space, &provider, false)
+            .unwrap()
+            .unwrap();
+        let mut conn = store::write(data.path()).unwrap();
+        let first = store::Change {
+            id: "first".into(),
+            page_id: "topic".into(),
+            base: 0,
+            result: 0,
+            policy_revision: plan.policy.revision,
+            status: "pending".into(),
+            reason: "fixture".into(),
+            created: store::now(),
+            content: build_content(model_page("住宿上限为 500 元。", 1, 2), &plan.input).unwrap(),
+        };
+        store::save_change(&conn, &space, &first).unwrap();
+        super::super::apply_review(&conn, data.path(), &ws, &space, "first", "publish").unwrap();
+
+        files::write_atomic(
+            &ws.root.join(&doc.path),
+            "出差规则\n住宿上限为 650 元。\n其他信息。".as_bytes(),
+        )
+        .unwrap();
+        let outdated =
+            super::super::read_page(data.path(), &ws, &space, "topic".into(), None).unwrap();
+        assert!(outdated.summary.stale);
+        assert!(outdated.refs.is_empty());
+        assert!(!outdated.body.contains("500 元"));
+        let prior = serde_json::to_value(&outdated.historical_sources[0]).unwrap();
+        assert_eq!(prior["excerpt"], "住宿上限为 500 元。");
+        assert!(prior.get("hash").is_none() && prior.get("path").is_none());
+        assert!(super::super::recall(data.path(), &ws, "差旅费用", None)
+            .unwrap()
+            .is_empty());
+
+        let plan = prepare(data.path(), &ws, &space, &provider, false)
+            .unwrap()
+            .unwrap();
+        let update = store::Change {
+            id: "update".into(),
+            base: 1,
+            content: build_content(model_page("住宿上限为 650 元。", 1, 2), &plan.input).unwrap(),
+            ..first
+        };
+        let tx = conn.transaction().unwrap();
+        store::save_change(&tx, &space, &update).unwrap();
+        tx.commit().unwrap();
+        let candidate =
+            super::super::read_page(data.path(), &ws, &space, "topic".into(), Some("update"))
+                .unwrap();
+        assert_eq!(candidate.refs[0].quote, "住宿上限为 650 元。");
+        assert!(candidate.review_comparison.is_some());
+        super::super::apply_review(&conn, data.path(), &ws, &space, "update", "publish").unwrap();
+        assert_eq!(
+            super::super::recall(data.path(), &ws, "差旅费用", None).unwrap()[0].text,
+            "住宿上限为 650 元。"
+        );
+        let state = serde_json::to_value(status(data.path(), &ws, &space).unwrap()).unwrap();
+        let published = state["changes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|change| change["id"] == "update")
+            .unwrap();
+        assert_eq!(published["restoreRevision"], 1);
+        assert_eq!(published["restoreAvailability"], "unavailable");
+        {
+            let tx = conn.transaction().unwrap();
+            assert!(
+                super::super::apply_review(&tx, data.path(), &ws, &space, "update", "restore")
+                    .is_err()
+            );
+        }
+        assert_eq!(store::current_revision(&conn, &space, "topic").unwrap(), 2);
+
+        library::trash(data.path(), &doc.id, false).unwrap();
+        let dropped =
+            super::super::read_page(data.path(), &ws, &space, "topic".into(), Some("first"))
+                .unwrap();
+        assert!(dropped.refs.is_empty());
+        assert!(dropped.historical_sources[0].excerpt.is_none());
+        store::purge_document(data.path(), &space, &doc.id).unwrap();
+        assert!(
+            super::super::read_page(data.path(), &ws, &space, "topic".into(), Some("first"))
+                .is_err()
+        );
+    }
+
+    #[test]
     fn unsupported_summary_is_blocked_and_excerpt_publish_keeps_only_verified_text() {
         let (data, ws, space, provider, doc) = fixture();
         files::write_atomic(

@@ -177,13 +177,15 @@
 .wiki-change-list + .wiki-change-list {
   margin-top: 12px;
 }
-.wiki-change-list h3 {
+.wiki-change-list h3,
+.wiki-section-title {
   margin: 4px 6px;
   color: var(--ui-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 650;
 }
-.wiki-dialog .wiki-list button {
+.wiki-dialog :is(.wiki-list, .wiki-recent) :where(.wiki-change-list) button,
+.wiki-dialog .wiki-list > button {
   min-height: 40px;
   padding: 8px;
   text-align: left;
@@ -191,16 +193,30 @@
   border-radius: 7px;
   overflow-wrap: anywhere;
 }
-.wiki-dialog .wiki-list button small {
+.wiki-dialog :is(.wiki-list, .wiki-recent) button small {
   display: block;
   margin-top: 4px;
   font-size: 12px;
   color: var(--ui-muted);
 }
-.wiki-dialog .wiki-list p {
+.wiki-dialog :is(.wiki-list, .wiki-recent) p {
   margin: 8px 6px;
   color: var(--ui-muted);
   line-height: 1.6;
+}
+.wiki-recent {
+  min-width: 0;
+}
+.wiki-recent .wiki-all-changes {
+  margin-block-start: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  min-height: 34px;
+  color: var(--ui-accent);
+}
+.wiki-attention {
+  color: var(--ui-warning-text);
+  font-weight: 650;
 }
 .wiki-dialog :is(.wiki-list, .wiki-policy) label {
   display: grid;
@@ -270,6 +286,14 @@
 .wiki-review-context strong {
   color: var(--ui-text);
 }
+.wiki-review-context p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.wiki-restore-note {
+  color: var(--ui-muted);
+  line-height: 1.55;
+}
 .wiki-review-context:focus-visible {
   outline: 2px solid var(--ui-action);
   outline-offset: 3px;
@@ -308,6 +332,25 @@
 }
 .wiki-review-changes li strong {
   color: var(--ui-text);
+}
+.wiki-conclusion-diff {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 8px;
+  margin: 4px 0;
+}
+.wiki-conclusion-diff div {
+  padding: 8px 10px;
+  background: var(--ui-field);
+  border: 1px solid var(--ui-line);
+  border-radius: 6px;
+}
+.wiki-conclusion-diff dt {
+  font-weight: 650;
+  color: var(--ui-text);
+}
+.wiki-conclusion-diff dd {
+  margin: 3px 0 0;
 }
 .wiki-dialog :is(.panel-warning, .wiki-summary-warning) {
   color: var(--ui-warning-text);
@@ -367,10 +410,18 @@
 .wiki-dialog .markdown-reading pre code {
   background: transparent;
 }
-.wiki-evidence {
+.wiki-evidence,
+.wiki-historical-sources {
   min-width: 0;
   margin-top: 12px;
   border-top: 1px solid var(--ui-line);
+}
+.wiki-historical-sources p {
+  color: var(--ui-muted);
+  margin: 0;
+}
+.wiki-historical-label {
+  padding: 8px 10px;
 }
 .wiki-citation-list {
   display: grid;
@@ -433,6 +484,9 @@
     padding-inline-start: 12px;
     border-top: 0;
     border-inline-start: 1px solid var(--ui-line);
+  }
+  .wiki-page-review .wiki-historical-sources {
+    grid-column: 1 / -1;
   }
 }
 @media (max-width: 720px) {
