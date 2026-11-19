@@ -1,6 +1,10 @@
 # Inkstone roadmap
 
-The development checkout is **v0.9.2**. The latest published source preview is **v0.9.0-beta.1**. The public app download depends on real notarization, clean Mac acceptance and binary notice review. [Development delivery](DELIVERY-v0.9.2.md) · [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
+The **v0.9.2 source preview** includes the first-use, grounded-answer and Wiki improvements from the three latest development milestones. The public app download depends on real notarization, clean Mac acceptance and binary notice review. [Development delivery](DELIVERY-v0.9.2.md) · [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
+
+## Product milestones after v0.9.2
+
+The next proposed milestones cover grounded answers (v0.9.3), Wiki source review (v0.9.4), first-use and everyday Mac workflows (v0.9.5), and a source release candidate for v0.10.0 if the acceptance results support it. Public macOS installer distribution is a separate track. [中文版路线图和验收目标](ROADMAP.zh-CN.md)
 
 - [v0.8.0 release preparation](DELIVERY-v0.8.0.md) records verification and remaining distribution gates.
 - [v0.8.1 question workbench](DELIVERY-v0.8.1.md) introduces contextual navigation and citation-to-document return.
