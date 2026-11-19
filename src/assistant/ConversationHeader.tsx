@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   Expand,
@@ -6,6 +6,8 @@ import {
   MessageSquarePlus,
   History,
   MoreHorizontal,
+  PanelRightClose,
+  ArrowUpRight,
   SlidersHorizontal,
   X,
 } from "lucide-react";
@@ -29,7 +31,14 @@ export function ConversationHeader({
   onPreferences,
   showNew = true,
   scope = null,
+  dock,
 }: {
+  dock?: {
+    modes: ReactNode;
+    onClose: () => void;
+    onGeneral?: () => void;
+    canOpenGeneral: boolean;
+  };
   controller: AssistantController;
   disabled: boolean;
   expanded: boolean;
@@ -61,6 +70,7 @@ export function ConversationHeader({
   const [hasMore, setHasMore] = useState(false);
   const [searchError, setSearchError] = useState("");
   const searchSequence = useRef(0);
+  const moreActions = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     const sequence = ++searchSequence.current;
     if (dialog !== "history") return;
@@ -106,6 +116,14 @@ export function ConversationHeader({
     }
   }
   const c = controller.conversation;
+  const firstQuestion = c?.turns?.[0]?.question ?? "";
+  const autoTitle = Array.from(firstQuestion).slice(0, 32).join("");
+  const namedTitle =
+    c?.title && c.title !== autoTitle && c.title !== "新会话" ? c.title : "";
+  const headerTitle =
+    !controller.general && c?.title === autoTitle
+      ? "当前会话"
+      : c?.title || "新会话";
   useEffect(() => {
     setBackground(undefined);
     setPreview(undefined);
@@ -140,21 +158,40 @@ export function ConversationHeader({
       setWorking(false);
     }
   }
+  const expandAction = (
+    <button
+      onClick={onExpand}
+      aria-pressed={expanded}
+      aria-label={expanded ? "返回编辑" : "展开问答"}
+      title={expanded ? "返回编辑" : "展开问答"}
+    >
+      {expanded ? <Minimize2 size={15} /> : <Expand size={15} />}
+      <span>{expanded ? "返回编辑" : "展开问答"}</span>
+    </button>
+  );
   return (
     <>
-      <div className="assistant-toolbar">
-        <div className="assistant-conversation-title">
-          <strong>{c?.title || "新会话"}</strong>
-          <small>
-            {controller.general
-              ? c?.archived
-                ? "通用问答 · 已归档"
-                : "通用问答 · 每轮可添加资料"
-              : c
-                ? `固定范围 · ${c.scopeLabel}${c.archived ? " · 已归档" : ""}`
-                : "首次发送后固定资料范围"}
-          </small>
-        </div>
+      <div
+        className={
+          dock ? "panel-tabs contextual-ask-header" : "assistant-toolbar"
+        }
+      >
+        {dock ? (
+          dock.modes
+        ) : (
+          <div className="assistant-conversation-title">
+            <strong title={c?.title}>{headerTitle}</strong>
+            {(controller.general || c?.archived) && (
+              <small>
+                {controller.general
+                  ? c?.archived
+                    ? "通用问答 · 已归档"
+                    : "通用问答 · 每轮可添加资料"
+                  : "已归档"}
+              </small>
+            )}
+          </div>
+        )}
         <div className="assistant-toolbar-actions">
           <button
             disabled={disabled}
@@ -162,7 +199,7 @@ export function ConversationHeader({
               setDialog("history");
             }}
             title="会话历史"
-            aria-label="会话"
+            aria-label={dock ? "会话历史" : "会话"}
           >
             <History size={15} />
             <span>会话</span>
@@ -171,23 +208,15 @@ export function ConversationHeader({
             <button
               disabled={disabled}
               onClick={onNew}
-              aria-label="新建"
+              aria-label={dock ? "新建会话" : "新建"}
               title="新建会话"
             >
               <MessageSquarePlus size={15} />
               <span>新建</span>
             </button>
           )}
-          <button
-            onClick={onExpand}
-            aria-pressed={expanded}
-            aria-label={expanded ? "返回编辑" : "展开问答"}
-            title={expanded ? "返回编辑" : "展开问答"}
-          >
-            {expanded ? <Minimize2 size={15} /> : <Expand size={15} />}
-            <span>{expanded ? "返回编辑" : "展开问答"}</span>
-          </button>
-          {onPreferences && (
+          {(!dock || expanded) && expandAction}
+          {!dock && onPreferences && (
             <button
               disabled={disabled}
               onClick={onPreferences}
@@ -198,64 +227,127 @@ export function ConversationHeader({
               <span>回答偏好</span>
             </button>
           )}
-          {c && (
-            <details className="assistant-manage">
-              <summary aria-label="管理当前会话">
+          {(c || dock) && (
+            <details
+              ref={moreActions}
+              className="assistant-manage"
+              onKeyDown={(event) => {
+                if (event.key !== "Escape" || !event.currentTarget.open) return;
+                event.stopPropagation();
+                event.currentTarget.open = false;
+                event.currentTarget.querySelector("summary")?.focus();
+              }}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget))
+                  event.currentTarget.open = false;
+              }}
+            >
+              <summary
+                aria-label={dock ? "更多会话操作" : "管理当前会话"}
+                title={dock ? "更多会话操作" : "管理当前会话"}
+              >
                 <MoreHorizontal size={16} />
               </summary>
-              <div>
-                <button
-                  disabled={disabled}
-                  onClick={() => {
-                    setTitle(c.title);
-                    setDialog("rename");
-                  }}
-                >
-                  重命名会话
-                </button>
-                <button
-                  disabled={disabled}
-                  onClick={() =>
-                    void run(async () => {
-                      await controller.update({ archived: !c.archived });
-                    })
-                  }
-                >
-                  {c.archived ? "取消归档" : "归档会话"}
-                </button>
-                <button
-                  disabled={disabled}
-                  onClick={() =>
-                    void run(async () => {
-                      const data = await invoke<{
-                        markdown: string;
-                        allMarkdown: string;
-                        json: string;
-                      }>("assistant_export", {
-                        conversationId: c.id,
-                        ...(controller.general ? { general: true } : {}),
-                      });
-                      setExportText(data.markdown);
-                      setExportData({
-                        current: data.markdown,
-                        all: data.allMarkdown,
-                      });
-                      setExportScope("current");
-                      setExportJson(data.json);
-                      setDialog("export");
-                    })
-                  }
-                >
-                  导出会话
-                </button>
-                <button disabled={disabled} onClick={() => setDialog("delete")}>
-                  删除会话…
-                </button>
+              <div
+                onClick={(event) => {
+                  if (
+                    !(event.target as Element).closest("button") ||
+                    !moreActions.current
+                  )
+                    return;
+                  moreActions.current.open = false;
+                  moreActions.current.querySelector("summary")?.focus();
+                }}
+              >
+                {dock && !expanded && expandAction}
+                {dock?.onGeneral && (
+                  <button
+                    disabled={!dock.canOpenGeneral}
+                    onClick={dock.onGeneral}
+                  >
+                    <ArrowUpRight size={15} /> 通用问答
+                  </button>
+                )}
+                {dock && onPreferences && (
+                  <button disabled={disabled} onClick={onPreferences}>
+                    <SlidersHorizontal size={15} /> 回答偏好
+                  </button>
+                )}
+                {c && (
+                  <>
+                    <button
+                      disabled={disabled}
+                      onClick={() => {
+                        setTitle(c.title);
+                        setDialog("rename");
+                      }}
+                    >
+                      重命名会话
+                    </button>
+                    <button
+                      disabled={disabled}
+                      onClick={() =>
+                        void run(async () => {
+                          await controller.update({ archived: !c.archived });
+                        })
+                      }
+                    >
+                      {c.archived ? "取消归档" : "归档会话"}
+                    </button>
+                    <button
+                      disabled={disabled}
+                      onClick={() =>
+                        void run(async () => {
+                          const data = await invoke<{
+                            markdown: string;
+                            allMarkdown: string;
+                            json: string;
+                          }>("assistant_export", {
+                            conversationId: c.id,
+                            ...(controller.general ? { general: true } : {}),
+                          });
+                          setExportText(data.markdown);
+                          setExportData({
+                            current: data.markdown,
+                            all: data.allMarkdown,
+                          });
+                          setExportScope("current");
+                          setExportJson(data.json);
+                          setDialog("export");
+                        })
+                      }
+                    >
+                      导出会话
+                    </button>
+                    <button
+                      disabled={disabled}
+                      onClick={() => setDialog("delete")}
+                    >
+                      删除会话…
+                    </button>
+                  </>
+                )}
               </div>
             </details>
           )}
+          {dock && (
+            <button
+              type="button"
+              aria-label="收起知识侧栏"
+              title="收起知识侧栏"
+              onClick={dock.onClose}
+            >
+              <PanelRightClose size={15} />
+            </button>
+          )}
         </div>
       </div>
+      {dock && (namedTitle || c?.archived) && (
+        <div className="contextual-thread-title">
+          {namedTitle && <strong title={namedTitle}>{namedTitle}</strong>}
+          {c?.archived && <span>已归档</span>}
+        </div>
+      )}
       {controller.error && (
         <div className="panel-warning" role="alert">
           {controller.error}

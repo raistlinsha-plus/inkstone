@@ -346,7 +346,7 @@ export default function TextEditor({
                 color: "var(--ui-text)",
               },
               ".cm-scroller": {
-                fontFamily: '"SFMono-Regular", Menlo, monospace',
+                fontFamily: "var(--font-mono)",
                 lineHeight: "1.9",
               },
               ".cm-content": { padding: "30px 24px" },
@@ -433,6 +433,17 @@ export default function TextEditor({
       },
       featureConfigs: {
         [Crepe.Feature.BlockEdit]: {
+          blockHandle: {
+            // Nested list indentation moves the text, but the controls stay in the page margin.
+            getPosition: ({ active, editorDom }) => {
+              const block = active.el.getBoundingClientRect();
+              const page = editorDom.getBoundingClientRect();
+              const left =
+                page.left + parseFloat(getComputedStyle(editorDom).paddingLeft);
+              return new DOMRect(left, block.top, 0, block.height);
+            },
+            getOffset: () => 4,
+          },
           buildMenu: (builder) => {
             builder.clear();
             for (const group of ["文本", "列表", "内容块", "插入内容"]) {
@@ -751,6 +762,8 @@ export default function TextEditor({
               });
             })
           : null;
+        let openHeadingMenu: HTMLElement | null = null;
+        let headingEntryKey: "ArrowUp" | "ArrowDown" | null = null;
         const labelBar = () => {
           toolbar?.refresh();
           const selector = bar?.querySelector<HTMLElement>(
@@ -770,7 +783,23 @@ export default function TextEditor({
               overflowY: "auto",
               zIndex: "80",
             });
+            // Crepe prevents pointerdown's default focus to retain the editor selection.
+            if (dropdown !== openHeadingMenu) {
+              const options = dropdown.querySelectorAll<HTMLButtonElement>(
+                ".top-bar-heading-option",
+              );
+              const target =
+                headingEntryKey === "ArrowUp"
+                  ? options[options.length - 1]
+                  : headingEntryKey === "ArrowDown"
+                    ? options[0]
+                    : (dropdown.querySelector<HTMLButtonElement>(".active") ??
+                      options[0]);
+              target?.focus({ preventScroll: true });
+              headingEntryKey = null;
+            }
           }
+          openHeadingMenu = dropdown ?? null;
         };
         labelBar();
         const observer = new MutationObserver(labelBar);
@@ -805,31 +834,32 @@ export default function TextEditor({
               dropdown?.contains(button)
             ) {
               event.preventDefault();
-              if (!dropdown)
+              if (!dropdown) {
+                headingEntryKey =
+                  event.key === "ArrowUp" ? "ArrowUp" : "ArrowDown";
                 button.dispatchEvent(
                   new PointerEvent("pointerdown", {
                     bubbles: true,
                     cancelable: true,
                   }),
                 );
-              requestAnimationFrame(() => {
+              } else {
                 const options = Array.from(
-                  bar.querySelectorAll<HTMLButtonElement>(
+                  dropdown.querySelectorAll<HTMLButtonElement>(
                     ".top-bar-heading-option",
                   ),
                 );
                 const index = options.indexOf(button);
-                options[
+                const next =
                   index < 0
                     ? event.key === "ArrowUp"
                       ? options.length - 1
                       : 0
                     : (index +
-                        (event.key === "ArrowDown" ? 1 : options.length - 1) +
-                        options.length) %
-                      options.length
-                ]?.focus();
-              });
+                        (event.key === "ArrowDown" ? 1 : options.length - 1)) %
+                      options.length;
+                options[next]?.focus();
+              }
             }
           }
           if (event.key === "Enter" || event.key === " ") {
@@ -1008,6 +1038,25 @@ export default function TextEditor({
     <div
       className={`editor-surface ${mode}`}
       ref={root}
+      onScroll={
+        mode === "visual"
+          ? (event) => {
+              event.currentTarget.dataset.scrolled = "true";
+            }
+          : undefined
+      }
+      onPointerMove={
+        mode === "visual"
+          ? (event) => {
+              if (
+                event.currentTarget.dataset.scrolled &&
+                !event.buttons &&
+                (event.movementX || event.movementY)
+              )
+                delete event.currentTarget.dataset.scrolled;
+            }
+          : undefined
+      }
       onClickCapture={(event) => {
         const link = (event.target as HTMLElement).closest("a");
         if (link) {

@@ -1,10 +1,6 @@
 .inkstone-calendar {
   color: var(--ui-text);
-  font:
-    13px/1.6 -apple-system,
-    BlinkMacSystemFont,
-    "PingFang SC",
-    sans-serif;
+  font: 13px/1.6 var(--font-sans);
   min-width: 0;
   --fc-monarch-primary: var(--ui-action);
   --fc-monarch-primary-over: var(--ui-action-hover);
@@ -347,9 +343,7 @@
   display: flex;
   gap: 10px;
   align-items: center;
-  font-family: "Songti SC", "STSong", serif;
-  font-size: 29px;
-  font-weight: 600;
+  font: var(--font-page-title);
 }
 .project-calendar-heading p {
   margin: 0;

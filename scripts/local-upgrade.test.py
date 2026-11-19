@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import plistlib
 from pathlib import Path
 import tempfile
 import unittest
@@ -110,6 +111,17 @@ class UpgradeTests(unittest.TestCase):
         self.assertEqual(self.hashes(self.app), self.new)
         upgrade.apply(self.state)
         self.assertEqual(upgrade.saved(self.state)["phase"], "installed")
+
+    def test_same_version_revisions_use_numeric_build_order(self):
+        for before, after, newer in (
+                ("9020", "9021", True), ("9021", "9020", False),
+                ("9.2.9", "9.2.10", True), ("9.2", "9.2.0", False)):
+            for app, number in ((self.app, before), (self.candidate, after)):
+                (app / upgrade.PLIST).write_bytes(plistlib.dumps({"CFBundleVersion": number}))
+            self.assertEqual(upgrade.bundle_build(self.candidate) > upgrade.bundle_build(self.app), newer)
+        (self.app / upgrade.PLIST).write_bytes(plistlib.dumps({}))
+        with self.assertRaises(upgrade.UpgradeError):
+            upgrade.bundle_build(self.app)
 
     def test_rollback_resumes_after_data_exchange(self):
         upgrade.apply(self.state)

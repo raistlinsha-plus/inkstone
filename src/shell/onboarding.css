@@ -1,6 +1,7 @@
 .welcome-first-use {
   margin: 0 0 16px;
-  padding: 16px;
+  padding: 12px 14px;
+  color: var(--ui-text);
   border: 1px solid var(--ui-line);
   border-radius: 10px;
   background: var(--ui-surface);
@@ -60,4 +61,53 @@
   .file-actions .ask-document-label {
     display: none;
   }
+}
+
+/* Both first-use surfaces follow the app appearance and the user's system setting. */
+.main-content:has(> .welcome-page) {
+  background: var(--ui-paper);
+  color: var(--ui-text);
+}
+.welcome-page :is(.welcome-heading h1, .workspace-summary strong) {
+  color: var(--ui-text);
+}
+.welcome-page :is(.ink-mark, .welcome-heading h1 span, .text-button) {
+  color: var(--ui-accent);
+}
+.welcome-page :is(.eyebrow, .version-pill, .welcome-heading p, .workspace-summary span) {
+  color: var(--ui-muted);
+}
+.welcome-page .workspace-summary {
+  color: var(--ui-muted);
+  background: var(--ui-surface);
+  border-color: var(--ui-line);
+}
+.welcome-page .version-pill {
+  border-color: var(--ui-line);
+}
+.welcome-page .welcome-actions {
+  flex-wrap: wrap;
+}
+:is(.welcome-page, .library-browser) .button {
+  color: var(--ui-text);
+  background: var(--ui-field);
+  border-color: var(--ui-control-line);
+}
+:is(.welcome-page, .library-browser) .button.ghost {
+  color: var(--ui-muted);
+  background: transparent;
+  border-color: transparent;
+}
+:is(.welcome-page, .library-browser) .button:hover:not(:disabled) {
+  background: var(--ui-hover);
+  border-color: var(--ui-control-line);
+}
+:is(.welcome-page, .library-browser) .button.primary {
+  background: var(--ui-action);
+  border-color: var(--ui-action);
+  color: var(--ui-on-action);
+}
+:is(.welcome-page, .library-browser) .button.primary:hover:not(:disabled) {
+  background: var(--ui-action-hover);
+  border-color: var(--ui-action-hover);
 }

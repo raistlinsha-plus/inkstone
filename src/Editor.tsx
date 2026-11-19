@@ -81,6 +81,10 @@ export default function Editor({
   const [jump, setJump] = useState<number>();
   const [outline, setOutline] = useState(false);
   const [ratio, setRatio] = useState(50);
+  const sourcePaneId = useId();
+  const resizeStart = useRef({ x: 0, ratio: 50, paneWidth: 0 });
+  const resizeSplit = (value: number) =>
+    setRatio(Math.min(75, Math.max(25, Math.round(value))));
   const [insertOpen, setInsertOpen] = useState(false);
   const insertMenuId = useId();
   const pendingInsertFocus = useRef<"first" | "last">(null);
@@ -407,8 +411,9 @@ export default function Editor({
           </nav>
         )}
         <div
+          id={sourcePaneId}
           className="editor-source-pane"
-          style={hasPreview ? { flexBasis: `${ratio}%` } : undefined}
+          style={hasPreview ? { flex: `${ratio} 1 0px` } : undefined}
         >
           <TextEditor
             handleRef={inner}
@@ -436,17 +441,57 @@ export default function Editor({
         </div>
         {hasPreview && (
           <>
-            <div className="split-divider">
-              <input
-                aria-label="编辑与预览宽度"
-                type="range"
-                min="25"
-                max="75"
-                value={ratio}
-                onChange={(e) => setRatio(Number(e.target.value))}
-              />
-            </div>
-            <div className="editor-preview-pane">
+            <div
+              className="split-divider"
+              role="separator"
+              tabIndex={0}
+              aria-label="编辑与预览宽度"
+              aria-orientation="vertical"
+              aria-controls={sourcePaneId}
+              aria-valuemin={25}
+              aria-valuemax={75}
+              aria-valuenow={ratio}
+              aria-valuetext={`编辑区 ${ratio}%`}
+              onPointerDown={(event) => {
+                if (!event.isPrimary || event.button !== 0) return;
+                const divider = event.currentTarget;
+                const source = divider.previousElementSibling!;
+                const preview = divider.nextElementSibling!;
+                resizeStart.current = {
+                  x: event.clientX,
+                  ratio,
+                  paneWidth:
+                    source.getBoundingClientRect().width +
+                    preview.getBoundingClientRect().width,
+                };
+                divider.setPointerCapture(event.pointerId);
+              }}
+              onPointerMove={(event) => {
+                if (!event.currentTarget.hasPointerCapture(event.pointerId))
+                  return;
+                const start = resizeStart.current;
+                if (start.paneWidth)
+                  resizeSplit(
+                    start.ratio +
+                      ((event.clientX - start.x) * 100) / start.paneWidth,
+                  );
+              }}
+              onKeyDown={(event) => {
+                const next = {
+                  ArrowLeft: ratio - 5,
+                  ArrowRight: ratio + 5,
+                  Home: 25,
+                  End: 75,
+                }[event.key];
+                if (next === undefined) return;
+                event.preventDefault();
+                resizeSplit(next);
+              }}
+            />
+            <div
+              className="editor-preview-pane"
+              style={{ flex: `${100 - ratio} 1 0px` }}
+            >
               {mode === "mindmap" && kind === "markdown" ? (
                 <Mindmap
                   viewKey={`${viewKey}:outline`}

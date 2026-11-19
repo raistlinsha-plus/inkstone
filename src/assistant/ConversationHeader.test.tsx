@@ -115,3 +115,42 @@ test("export defaults to the current branch and explicitly switches to all recor
       .value,
   ).toBe("全部分支与候选内容");
 });
+
+test("document questions share one header while named and archived threads keep their context", () => {
+  const onExpand = vi.fn();
+  const common = {
+    dock: {
+      modes: <button>问答</button>,
+      onClose: vi.fn(),
+      onGeneral: vi.fn(),
+      canOpenGeneral: true,
+    },
+    disabled: false,
+    expanded: false,
+    onExpand,
+    onNew: vi.fn(),
+    onActivate: vi.fn(),
+    onError: vi.fn(),
+  };
+  const controller = {
+    general: false,
+    conversation: null,
+    workspaceKey: "space",
+  } as unknown as AssistantController;
+  const { rerender } = render(<ConversationHeader {...common} controller={controller} />);
+  expect(screen.queryByText("新会话")).toBeNull();
+  expect(screen.getByRole("button", { name: "会话历史" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "新建会话" })).toBeTruthy();
+  const more = screen.getByLabelText("更多会话操作");
+  fireEvent.click(more);
+  fireEvent.click(screen.getByRole("button", { name: "展开问答" }));
+  expect(onExpand).toHaveBeenCalledOnce();
+  expect(more.closest("details")?.open).toBe(false);
+  expect(document.activeElement).toBe(more);
+  rerender(<ConversationHeader {...common} controller={{
+    ...controller,
+    conversation: { title: "春季读书会", archived: true, turns: [] },
+  } as unknown as AssistantController} />);
+  expect(screen.getByText("春季读书会")).toBeTruthy();
+  expect(screen.getByText("已归档")).toBeTruthy();
+});

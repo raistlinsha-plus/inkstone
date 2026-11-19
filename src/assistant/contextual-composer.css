@@ -1,0 +1,154 @@
+.ask-form > .general-composer-field {
+  display: contents;
+}
+
+.workspace-shell .contextual-panel form.ask-form.document-composer {
+  position: relative;
+  flex: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 6px 8px;
+  border-radius: 16px;
+  margin: 6px 12px 12px;
+  padding: 10px 10px 7px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+}
+
+.workspace-shell .contextual-panel .document-composer:focus-within {
+  border-color: var(--ui-control-line);
+  box-shadow: none;
+}
+.workspace-shell .contextual-panel .document-composer:has(textarea:focus-visible) {
+  border-color: var(--ui-focus);
+}
+
+.document-composer > .assistant-background-chip,
+.document-composer > .document-composer-field {
+  grid-column: 1 / -1;
+}
+.document-composer > .document-composer-field {
+  position: relative;
+  display: block;
+  min-width: 0;
+  min-height: 25px;
+  max-height: min(140px, 24vh);
+  margin: 0;
+  overflow: hidden;
+}
+.document-composer .composer-text-measure,
+.workspace-shell .contextual-panel .document-composer textarea {
+  display: block;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 2px 4px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  font-size: 14px;
+  line-height: 21px;
+}
+/* Matching metrics also size restored drafts and reflow them on sidebar resize. */
+.composer-text-measure {
+  visibility: hidden;
+  pointer-events: none;
+}
+.composer-text-measure::before { content: attr(data-value) " "; }
+.workspace-shell .contextual-panel .document-composer textarea {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  resize: none;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ui-text);
+}
+.document-composer .question-source-chips,
+.document-composer > .composer-send-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 30px;
+  margin: 0;
+  padding: 0;
+}
+.document-composer .composer-send-row { justify-content: end; }
+.document-composer .composer-send-row span { font-size: 11px; }
+.document-composer .composer-web-toggle,
+.document-composer .assistant-composer-options > summary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  margin: 0;
+  padding: 0 6px;
+  border-radius: 7px;
+  color: var(--ui-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.document-composer .assistant-composer-options > summary {
+  min-width: 30px;
+  padding: 0;
+  list-style: none;
+}
+.document-composer summary::-webkit-details-marker { display: none; }
+.document-composer .composer-web-toggle input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+.document-composer .composer-web-toggle:has(input:focus-visible) {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 1px;
+}
+.document-composer .composer-web-toggle:has(input:checked),
+.document-composer .assistant-composer-options[open] > summary,
+.document-composer .assistant-composer-options[data-preferences-skipped] > summary {
+  background: var(--ui-selected);
+  color: var(--ui-accent);
+}
+.document-composer .composer-web-toggle:hover:not(:has(input:disabled)),
+.document-composer .assistant-composer-options > summary:hover {
+  background: var(--ui-hover);
+  color: var(--ui-text);
+}
+.document-composer .composer-web-toggle:has(input:disabled) {
+  opacity: .65;
+  cursor: default;
+}
+.document-composer .assistant-composer-options { position: static; }
+.document-composer .assistant-composer-options > div {
+  inset: auto auto calc(100% + 4px) 0;
+  box-sizing: border-box;
+  width: min(252px, 100%);
+  max-width: 100%;
+}
+.document-composer .send-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+}
+
+@media (max-height: 720px) {
+  .workspace-shell .contextual-panel .document-composer {
+    padding: 8px 10px 6px !important;
+  }
+  .workspace-shell .contextual-panel .document-composer textarea {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+}

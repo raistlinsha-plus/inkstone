@@ -354,6 +354,13 @@ export function installV07Fixture({
     }
     if (command === "library_recovery_report")
       return { checkedAt: Date.now(), items: [] };
+    if (command === "calendar_list")
+      return {
+        documents: store.documents
+          .filter((d) => d.projectId === args.projectId && d.status === "ready" && /\.md$/i.test(d.path))
+          .map((d) => ({ documentId: d.id, title: d.title, path: d.path, ...store.files[d.path] })),
+        warnings: [],
+      };
     if (command === "workspace_index_status")
       return {
         checkedAt: Date.now(),

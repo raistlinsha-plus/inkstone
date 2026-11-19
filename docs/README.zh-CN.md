@@ -8,9 +8,9 @@ Inkstone 将 Markdown 写作、文档空间、Wiki 与独立 AI 问答放在一�
 
 演示无需安装，使用虚构笔记和模拟回答。可以点开引用核对原文，再试问一个资料里没有答案的问题。
 
-**v0.9.2** 新增独立离线样例，可在第一次提问时连接模型。Wiki 审阅区会区分当前依据与历史摘录。[版本说明与原生验收](DELIVERY-v0.9.2.md)
+**v0.9.3** 沿用文档库的系统无衬线字体，统一工作区标题与正文。打开文档后可以边写边问，也可以拖宽问答侧栏。窄窗下可从单行格式栏继续编辑。[本轮改动与操作说明](DELIVERY-v0.9.3.md)
 
-GitHub 提供 v0.9.2 源码和 SHA-256 校验文件，面向 macOS 13+ Apple Silicon。[获取源码](https://github.com/raistlinsha-plus/inkstone/releases/tag/v0.9.2) · [v0.9.0-beta.1 中文宣传册 PDF](https://github.com/raistlinsha-plus/inkstone/releases/download/v0.9.0-beta.1/inkstone-v0.9.0-beta.1-brochure-zh-CN.pdf)
+GitHub 提供 v0.9.3 源码和 SHA-256 校验文件，面向 macOS 13+ Apple Silicon。[获取源码](https://github.com/raistlinsha-plus/inkstone/releases/tag/v0.9.3) · [v0.9.0-beta.1 中文宣传册 PDF](https://github.com/raistlinsha-plus/inkstone/releases/download/v0.9.0-beta.1/inkstone-v0.9.0-beta.1-brochure-zh-CN.pdf)
 
 ![砚台 v0.9.0-beta.1 带原文引用的问答示例](https://github.com/raistlinsha-plus/inkstone/releases/download/v0.9.0-beta.1/inkstone-social-preview.png)
 
@@ -33,7 +33,7 @@ GitHub 提供 v0.9.2 源码和 SHA-256 校验文件，面向 macOS 13+ Apple Sil
 先准备 Apple 命令行开发工具、Node 24.14.0、npm 11.9.0 和 Rust 1.99.1，然后：
 
 ```sh
-git clone --branch v0.9.2 https://github.com/raistlinsha-plus/inkstone.git
+git clone --branch v0.9.3 https://github.com/raistlinsha-plus/inkstone.git
 cd inkstone
 npm ci --registry=https://registry.npmjs.org
 npm run desktop

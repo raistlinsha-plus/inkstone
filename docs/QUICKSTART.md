@@ -8,7 +8,7 @@
 2. 克隆仓库并运行：
 
    ```sh
-   git clone --branch v0.9.2 https://github.com/raistlinsha-plus/inkstone.git
+   git clone --branch v0.9.3 https://github.com/raistlinsha-plus/inkstone.git
    cd inkstone
    npm ci --registry=https://registry.npmjs.org
    npm run desktop

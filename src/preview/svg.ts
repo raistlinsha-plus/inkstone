@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify";
-import { lightGraphExport, previewColors } from "./theme";
+import { diagramFontFamily, lightGraphExport, mindmapFontSize, previewColors } from "./theme";
 
 /** Export plain text labels as native SVG so XML viewers keep Markmap labels. */
 export function serializeSvg(svg: SVGElement): string {
@@ -47,8 +47,8 @@ export function serializeSvg(svg: SVGElement): string {
     text.setAttribute("x", foreign.getAttribute("x") ?? "0");
     text.setAttribute("y", String(Number(foreign.getAttribute("y") ?? 0) + 16));
     text.setAttribute("fill", "#203a30");
-    text.setAttribute("font-family", "sans-serif");
-    text.setAttribute("font-size", "16");
+    text.setAttribute("font-family", diagramFontFamily);
+    text.setAttribute("font-size", String(mindmapFontSize));
     text.textContent = foreign.textContent ?? "";
     foreign.replaceWith(text);
   }

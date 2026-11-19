@@ -67,7 +67,7 @@
   width: 100%;
   min-height: 260px;
   display: block;
-  font-family: SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.7;
 }
@@ -135,10 +135,7 @@
   overflow: auto;
   color: var(--ui-text);
   background: var(--ui-surface);
-  font:
-    12px/1.7 SFMono-Regular,
-    Menlo,
-    monospace;
+  font: 12px/1.7 var(--font-mono);
 }
 .data-chart .graph-actions {
   padding: 7px 10px;

@@ -2,6 +2,13 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v0.9.3 · 工作区字体与文档问答
+
+- 空间首页、日历和文档标题沿用文档库的系统无衬线字体。编辑与阅读共用标题层级，源码和行内代码保持等宽。
+- 正文格式栏在窄窗保持单行。修复标题菜单从其他面板打开时的键盘焦点，并调整块拖动手柄、选区和行内代码的呈现。
+- 文档问答共用一行顶栏，输入框随草稿伸缩。侧栏支持拖动和键盘调宽，回答可核对当轮的资料与依据。
+- 空间首页跟随深浅色，集中显示空间资料操作。更新后的深色主题覆盖「问这篇文档」按钮和标题菜单。[版本说明](docs/DELIVERY-v0.9.3.md)
+
 ## v0.9.2 · Wiki 主题与来源维护
 
 - Wiki 首页并列显示已发布主题和最近变化。待审列表优先显示出处过时或结论冲突的改动，审阅时可查看摘要、大纲与来源变化。

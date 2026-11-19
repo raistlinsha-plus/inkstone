@@ -164,10 +164,7 @@
   border: 1px solid #ced8c5;
   border-radius: 6px;
   padding: 12px;
-  font:
-    12px/1.7 SFMono-Regular,
-    Menlo,
-    monospace;
+  font: 12px/1.7 var(--font-mono);
   color: #354832;
 }
 .source-version {
@@ -208,41 +205,6 @@
   }
 }
 
-/* The sidebar navigates; the workbench resumes work and explains pending tasks. */
-.workbench-overview {
-  display: grid;
-  grid-template-columns:
-    minmax(80px, 0.6fr) minmax(80px, 0.6fr) minmax(180px, 1.5fr)
-    minmax(180px, 1.5fr);
-  gap: 12px;
-  margin: 0 0 24px;
-}
-.workbench-overview > div,
-.workbench-overview > button {
-  padding: 16px;
-  background: #f1f4eb;
-  border: 1px solid #dfe5d8;
-  border-radius: 9px;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  color: #3b5141;
-  min-width: 0;
-}
-.workbench-overview strong {
-  font-size: 24px;
-  font-weight: 600;
-}
-.workbench-overview span {
-  font-size: 12px;
-  color: #65735c;
-  line-height: 1.6;
-}
-.workbench-overview > button:hover {
-  border-color: #88a084;
-  background: #eaf0e2;
-}
 .workbench-type-filter,
 .index-filter {
   display: flex;
@@ -252,17 +214,32 @@
 .workbench-type-filter {
   margin: 12px 0;
 }
-.workbench-type-filter button,
 .index-filter button {
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 12px;
   color: #586b50;
 }
-.workbench-type-filter button[aria-pressed="true"],
 .index-filter button[aria-pressed="true"] {
   color: #2f5945;
   background: #e4eddb;
+}
+.workbench-type-filter button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--ui-muted);
+}
+.workbench-type-filter button[aria-pressed="true"] {
+  color: var(--ui-accent);
+  background: var(--ui-selected);
+}
+.library-browser:not(.compact) .library-documents {
+  padding: 0;
+  overflow: visible;
+}
+.library-browser:not(.compact) :is(.library-document, .library-tabs button, .workbench-type-filter button):hover {
+  background: var(--ui-hover);
 }
 .library-browser:not(.compact) .library-controls {
   padding: 0 0 12px;
@@ -350,7 +327,7 @@
 .document-index-row dd {
   margin: 0;
   overflow-wrap: anywhere;
-  font-family: SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
 }
 .index-check-time {
   font-size: 11px;
@@ -466,11 +443,6 @@
   font-size: 13px;
   line-height: 1.6;
   overflow-wrap: anywhere;
-}
-@media (max-width: 1000px) {
-  .workbench-overview {
-    grid-template-columns: 1fr 1fr;
-  }
 }
 @media (max-width: 640px) {
   .document-index-row {

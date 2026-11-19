@@ -35,9 +35,13 @@
   background: var(--ui-hover, #e7e9e1);
   color: var(--ui-text, #32382f);
 }
-.workspace-shell .workspace-rail .main-nav button.active {
+.workspace-shell .workspace-rail .main-nav button.active,
+.workspace-shell .workspace-rail .main-nav button.active:hover:not(:disabled) {
   background: var(--ui-selected, #e0e9de);
   color: var(--ui-accent, #2c5943);
+}
+.workspace-shell .workspace-rail .main-nav button.active svg {
+  stroke-width: 2.25;
 }
 .workspace-shell .workspace-rail .main-nav span {
   display: none;
@@ -345,7 +349,6 @@
 .workspace-shell .sidebar-resizer:is(:hover, :focus-visible) {
   background: var(--ui-focus);
 }
-.workspace-shell .workspace-rail .main-nav button.active::before,
 .workbench-history li button[aria-current]::before {
   content: "";
   position: absolute;
@@ -430,6 +433,16 @@
 }
 .workspace-shell .sidebar .library-empty button {
   color: var(--ui-accent);
+}
+
+/* Sharing a window must leave enough room to read and operate the document. */
+.main-layout:not(.assistant-expanded):has(> .contextual-panel:not([hidden])) > .main-content {
+  min-width: 320px;
+}
+.main-layout:not(.assistant-expanded) > .contextual-panel {
+  flex-shrink: 1;
+  min-width: 300px;
+  max-width: 640px;
 }
 
 .workspace-shell .knowledge-panel {
@@ -793,3 +806,256 @@
 .workspace-shell .knowledge-panel .search-form input:focus-visible {
   outline: none;
 }
+
+/* One continuous top edge across the editor and its document sidebar. */
+.workspace-shell {
+  --workspace-header-height: 48px;
+}
+.workspace-shell .contextual-panel > .panel-tabs {
+  height: var(--workspace-header-height);
+  min-height: var(--workspace-header-height);
+  padding: 0 10px;
+  background: var(--ui-paper);
+  gap: 3px;
+}
+.workspace-shell .contextual-panel .panel-tabs > button:not(.icon-button) {
+  height: 32px;
+  padding: 0 9px;
+  gap: 5px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.workspace-shell .contextual-panel .panel-tabs > button.active {
+  background: var(--ui-selected);
+}
+.workspace-shell .contextual-panel .panel-tabs > button.active::after {
+  display: none;
+}
+.workspace-shell .contextual-panel .panel-tabs button:hover:not(:disabled):not(.active) {
+  color: var(--ui-text);
+  background: var(--ui-hover);
+}
+.workspace-shell .contextual-panel .panel-tabs > .open-general-ask {
+  margin-left: auto;
+  font-size: 12px;
+}
+.workspace-shell .contextual-panel .panel-tabs > .icon-button {
+  height: 32px;
+  width: 30px;
+  margin: 0 0 0 auto;
+}
+.workspace-shell .contextual-panel .open-general-ask ~ .icon-button {
+  margin-left: 0;
+}
+.workspace-shell .contextual-panel .search-form {
+  padding: 16px 14px 0;
+}
+.workspace-shell .contextual-panel .search-form > div {
+  border-color: var(--ui-line);
+  border-radius: 9px;
+}
+.knowledge-context {
+  position: relative;
+  flex: 0 1 auto;
+  min-height: 48px;
+  max-height: min(38vh, 252px);
+  overflow: auto;
+  padding: 6px 14px 10px;
+  border-bottom: 1px solid var(--ui-line);
+  color: var(--ui-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.knowledge-scope {
+  width: fit-content;
+  max-width: calc(100% - 88px);
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.knowledge-scope > svg { flex-shrink: 0; }
+.workspace-shell .knowledge-scope select {
+  min-width: 0;
+  max-width: 100%;
+  height: 28px;
+  padding: 2px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ui-text);
+  font: inherit;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.knowledge-scope select:hover:enabled { background: var(--ui-hover); }
+.knowledge-scope select:disabled { cursor: default; }
+.knowledge-options > summary {
+  position: absolute;
+  right: 12px;
+  top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 6px;
+  list-style: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.knowledge-options > summary::-webkit-details-marker { display: none; }
+.knowledge-options > summary:hover, .knowledge-options[open] > summary {
+  color: var(--ui-text);
+  background: var(--ui-hover);
+}
+.knowledge-options-body {
+  padding: 10px 12px;
+  margin: 3px 0 8px;
+  border-radius: 7px;
+  background: var(--ui-surface);
+}
+.knowledge-options label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.knowledge-options select {
+  min-height: 30px;
+  max-width: 68%;
+  color: var(--ui-text);
+  background: var(--ui-field);
+  border: 1px solid var(--ui-control-line);
+  border-radius: 5px;
+  padding-inline: 4px;
+}
+.knowledge-options-body p, .knowledge-index-note { margin: 5px 0; }
+.knowledge-context .knowledge-options-body button, .knowledge-index-note button {
+  padding: 2px 0;
+  color: var(--ui-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.knowledge-index-note button { margin-left: 5px; }
+.knowledge-data-flow { display: block; font-size: 11px; }
+.knowledge-search-hint, .workspace-shell .contextual-panel .ask-scroll .panel-empty {
+  padding: 18px 0;
+  text-align: left;
+}
+.knowledge-search-hint h3, .workspace-shell .contextual-panel .ask-scroll .panel-empty h3 {
+  margin: 0 0 6px;
+  color: var(--ui-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.knowledge-search-hint p, .workspace-shell .contextual-panel .ask-scroll .panel-empty p {
+  margin: 0;
+  color: var(--ui-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+.workspace-shell .contextual-panel .example-searches {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 14px 0;
+}
+.workspace-shell .contextual-panel .example-searches button {
+  text-align: left;
+  min-height: 32px;
+  padding: 4px 10px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  color: var(--ui-text);
+  border-radius: 6px;
+}
+.workspace-shell .contextual-panel .contextual-ask-header .assistant-toolbar-actions {
+  margin-left: auto;
+  gap: 2px;
+}
+.workspace-shell .contextual-panel .contextual-ask-header .assistant-toolbar-actions > button,
+.workspace-shell .contextual-panel .contextual-ask-header .assistant-manage > summary {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  min-width: 28px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ui-muted);
+}
+.workspace-shell .contextual-panel .contextual-ask-header .assistant-toolbar-actions > button > span {
+  display: none;
+}
+.workspace-shell .contextual-panel .contextual-ask-header .assistant-toolbar-actions > button:hover:enabled,
+.workspace-shell .contextual-panel .contextual-ask-header .assistant-manage > summary:hover,
+.workspace-shell .contextual-panel .contextual-ask-header .assistant-manage[open] > summary {
+  background: var(--ui-hover);
+  color: var(--ui-text);
+}
+.contextual-ask-header .assistant-manage > div {
+  top: calc(100% + 4px);
+}
+.contextual-thread-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 14px 0;
+  color: var(--ui-muted);
+  font-size: 12px;
+}
+.contextual-thread-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contextual-thread-title span {
+  flex: none;
+}
+.workspace-shell .contextual-panel .answer-text :is(.preview-table, .chart-table) :is(th, td) {
+  border-color: var(--ui-line);
+}
+.assistant-context-actions { margin: 8px 0 4px; }
+.assistant-quick-actions, .assistant-extra-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.workspace-shell .contextual-panel .assistant-context-actions :is(button, summary) {
+  min-height: 28px;
+  padding: 4px 6px;
+  gap: 5px;
+  border: 0;
+  border-radius: 5px;
+  color: var(--ui-muted);
+  background: transparent;
+  font-size: 12px;
+}
+.assistant-quick-actions button { display: inline-flex; align-items: center; justify-content: center; }
+.workspace-shell .contextual-panel .assistant-context-actions button:hover:not(:disabled),
+.workspace-shell .contextual-panel .assistant-context-actions summary:hover,
+.workspace-shell .contextual-panel .assistant-context-actions [aria-expanded="true"] {
+  color: var(--ui-text);
+  background: var(--ui-hover);
+}
+.assistant-extra-actions {
+  align-items: start;
+  margin: 4px 0;
+  padding: 5px 2px;
+  border-block: 1px solid var(--ui-line);
+}
+.assistant-extra-actions .assistant-technical {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.assistant-extra-actions .assistant-technical[open] { flex-basis: 100%; }
+
+.assistant-extra-actions[hidden] { display: none; }

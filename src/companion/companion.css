@@ -225,9 +225,7 @@
   flex: 1;
 }
 .companion-dialog h2 {
-  font-family: "Songti SC", serif;
-  font-size: 24px;
-  font-weight: 500;
+  font: 650 22px/1.4 var(--font-sans);
   margin: 0 0 8px;
 }
 .companion-dialog header p {
@@ -254,9 +252,7 @@
   line-height: 1.8;
 }
 .companion-dialog-content h3 {
-  font:
-    500 19px/1.6 "Songti SC",
-    serif;
+  font: 600 18px/1.4 var(--font-sans);
   margin: 10px 0 12px;
 }
 .companion-dialog-content label {
@@ -537,9 +533,7 @@
 .companion-prose {
   max-width: 660px;
   margin: 0 auto;
-  font:
-    16px/2.15 "Songti SC",
-    serif;
+  font: 16px/1.85 var(--font-sans);
   color: var(--ui-text);
 }
 .companion-prose p {
