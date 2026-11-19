@@ -762,6 +762,8 @@ export default function TextEditor({
               });
             })
           : null;
+        let openHeadingMenu: HTMLElement | null = null;
+        let headingEntryKey: "ArrowUp" | "ArrowDown" | null = null;
         const labelBar = () => {
           toolbar?.refresh();
           const selector = bar?.querySelector<HTMLElement>(
@@ -781,7 +783,23 @@ export default function TextEditor({
               overflowY: "auto",
               zIndex: "80",
             });
+            // Crepe prevents pointerdown's default focus to retain the editor selection.
+            if (dropdown !== openHeadingMenu) {
+              const options = dropdown.querySelectorAll<HTMLButtonElement>(
+                ".top-bar-heading-option",
+              );
+              const target =
+                headingEntryKey === "ArrowUp"
+                  ? options[options.length - 1]
+                  : headingEntryKey === "ArrowDown"
+                    ? options[0]
+                    : (dropdown.querySelector<HTMLButtonElement>(".active") ??
+                      options[0]);
+              target?.focus({ preventScroll: true });
+              headingEntryKey = null;
+            }
           }
+          openHeadingMenu = dropdown ?? null;
         };
         labelBar();
         const observer = new MutationObserver(labelBar);
@@ -816,31 +834,32 @@ export default function TextEditor({
               dropdown?.contains(button)
             ) {
               event.preventDefault();
-              if (!dropdown)
+              if (!dropdown) {
+                headingEntryKey =
+                  event.key === "ArrowUp" ? "ArrowUp" : "ArrowDown";
                 button.dispatchEvent(
                   new PointerEvent("pointerdown", {
                     bubbles: true,
                     cancelable: true,
                   }),
                 );
-              requestAnimationFrame(() => {
+              } else {
                 const options = Array.from(
-                  bar.querySelectorAll<HTMLButtonElement>(
+                  dropdown.querySelectorAll<HTMLButtonElement>(
                     ".top-bar-heading-option",
                   ),
                 );
                 const index = options.indexOf(button);
-                options[
+                const next =
                   index < 0
                     ? event.key === "ArrowUp"
                       ? options.length - 1
                       : 0
                     : (index +
-                        (event.key === "ArrowDown" ? 1 : options.length - 1) +
-                        options.length) %
-                      options.length
-                ]?.focus();
-              });
+                        (event.key === "ArrowDown" ? 1 : options.length - 1)) %
+                      options.length;
+                options[next]?.focus();
+              }
             }
           }
           if (event.key === "Enter" || event.key === " ") {

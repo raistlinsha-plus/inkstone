@@ -58,11 +58,13 @@ try {
   await page
     .getByRole("heading", { name: "甲方案参与人数较多", exact: true })
     .waitFor();
-  await page
-    .locator(".assistant-turn")
-    .first()
-    .getByText(/^回答候选/)
-    .waitFor();
+  const firstTurn = page.locator(".assistant-turn").first();
+  await firstTurn.getByText("你 · 第1轮", { exact: true }).waitFor();
+  await firstTurn.getByRole("button", { name: "保存为文档" }).waitFor();
+  assert.equal(
+    await firstTurn.getByRole("combobox", { name: /^回答候选/ }).count(),
+    0,
+  );
   assert.equal(await page.locator(".assistant-turn").count(), 1);
   checks.push("real App renders a persistent first turn through synthetic IPC");
   await page.getByLabel("更多会话操作").click();
@@ -74,9 +76,10 @@ try {
     () => document.querySelector(".assistant-timeline")?.scrollTop === 0,
   );
   await shot("01-chat-workspace");
-  await page.locator(".assistant-evidence summary").click();
-  await page.locator(".assistant-evidence button").first().click();
-  await page.getByRole("dialog", { name: "本轮来源预览" }).waitFor();
+  await firstTurn.getByRole("button", { name: "本轮依据 · 1" }).click();
+  const evidence = page.getByRole("dialog", { name: "本轮来源预览" });
+  await evidence.getByRole("heading", { name: "两种活动" }).waitFor();
+  await evidence.getByText(/甲方案：周二，120人。乙方案：周四，80人/).waitFor();
   await shot("02-source-preview");
   await page.getByRole("button", { name: "回到会话", exact: true }).click();
   checks.push("candidate-owned evidence preview");
@@ -100,7 +103,11 @@ try {
   await page.getByLabel("向当前空间提问").fill("请再次比较人数");
   await page.getByRole("button", { name: "发送问题", exact: true }).click();
   await page.getByRole("button", { name: "停止生成", exact: true }).click();
-  await page.getByText(/^已停止 · 当前选择/).waitFor();
+  const lastTurn = page.locator(".assistant-turn").last();
+  await lastTurn
+    .locator(".assistant-branches")
+    .getByText("已停止", { exact: true })
+    .waitFor();
   checks.push("stop retains a stopped candidate");
   await page
     .locator(".assistant-turn")
@@ -108,24 +115,42 @@ try {
     .getByRole("button", { name: "重新生成", exact: true })
     .click();
   await page.getByLabel("向当前空间提问").fill("尚未发送的下一问");
-  await page
-    .locator(".assistant-turn")
-    .last()
-    .getByText(/^回答候选/)
-    .waitFor();
+  const candidates = lastTurn.getByRole("combobox", {
+    name: "回答候选 请再次比较人数",
+  });
+  await candidates
+    .getByRole("option", { name: "2/2 · 已完成" })
+    .waitFor({ state: "attached" });
+  assert.equal(
+    await candidates.locator("option:checked").textContent(),
+    "2/2 · 已完成",
+  );
+  assert.equal(
+    await candidates.getByRole("option", { name: "1/2 · 已停止" }).count(),
+    1,
+  );
   assert.equal(
     await page.getByLabel("向当前空间提问").inputValue(),
     "尚未发送的下一问",
   );
   checks.push("regeneration preserves composer draft");
-  await page.getByRole("button", { name: "同伴设置", exact: true }).click();
-  await page.getByRole("button", { name: "更换角色", exact: true }).click();
+  await page.getByRole("button", { name: "书房同伴", exact: true }).click();
   await page
-    .locator(".companion-choose")
-    .waitFor({ timeout: 3000 })
-    .catch(() => {});
+    .getByRole("navigation", { name: "同伴功能" })
+    .getByRole("button", { name: "偏好与数据" })
+    .click();
+  await page.getByRole("button", { name: "更换角色", exact: true }).click();
+  const picker = page.getByRole("region", { name: "选择书房同伴" });
+  await picker.getByRole("heading", { name: "选择书房同伴" }).waitFor();
+  assert.equal(
+    await picker.locator(".companion-character-grid button").count(),
+    3,
+  );
   await shot("04-character-picker");
-  await page.getByRole("button", { name: "关闭同伴面板", exact: true }).click();
+  await page.getByRole("button", { name: "返回工作区", exact: true }).click();
+  checks.push(
+    "companion workspace opens preferences and shows all three character choices",
+  );
   await page.getByRole("button", { name: "模型与设置", exact: true }).click();
   await page.getByRole("button", { name: "自动联网设置", exact: true }).click();
   const diagnostic = page.getByRole("dialog", { name: "自动联网设置" });
@@ -143,7 +168,7 @@ try {
   await diagnostic.getByRole("button", { name: "测试连接" }).click();
   await diagnostic
     .getByRole("status")
-    .getByText(/无法读取正文/)
+    .getByText(/Brave 搜索接口可用.*未能直连并读取候选网页的正文/)
     .waitFor();
   await diagnostic.getByText("HTTP 200", { exact: true }).waitFor();
   assert.deepEqual(await searchCalls(), [
@@ -260,6 +285,7 @@ try {
   assert(state.fixture);
   assert.deepEqual(external, []);
   assert.deepEqual(errors, []);
+  assert.deepEqual([...new Set(state.unknown)], []);
   const result = {
     passed: true,
     scope:
