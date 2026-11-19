@@ -65,6 +65,7 @@ try {
     .waitFor();
   assert.equal(await page.locator(".assistant-turn").count(), 1);
   checks.push("real App renders a persistent first turn through synthetic IPC");
+  await page.getByLabel("更多会话操作").click();
   await page.getByRole("button", { name: "展开问答", exact: true }).click();
   await page.locator(".assistant-timeline").evaluate((el) => {
     el.scrollTop = 0;
@@ -194,10 +195,12 @@ try {
           .getByText("阅读活动比较 · QA合成", { exact: true })
           .waitFor();
         await fresh.locator(".assistant-turn").first().waitFor();
-        if (expanded && width > 1100)
+        if (expanded && width > 1100) {
+          await fresh.getByLabel("更多会话操作").click();
           await fresh
             .getByRole("button", { name: "展开问答", exact: true })
             .click();
+        }
         await fresh.locator(".assistant-timeline").evaluate((el) => {
           el.scrollTop = 0;
         });
