@@ -7,6 +7,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import Answer from "../Answer";
+import { retrievalLabels, rerankLabel } from "../knowledge/retrievalLabels";
 import type { AnswerSnapshot } from "../answerContent";
 import type { SearchResult } from "../types";
 import { answerCitations } from "./sourceDisplay";
@@ -27,17 +28,7 @@ const preferenceLabels: Record<string, string> = {
   length: "回答篇幅",
   original_units: "资料单位",
 };
-const retrievalLabels = new Map([
-  ["direct", "直接回答"],
-  ["local", "本地资料"],
-  ["web", "公开网页"],
-  ["mixed", "本地资料和公开网页"],
-  ["web-unavailable", "公开资料未核验"],
-  ["no-evidence", "所选资料缺少足够证据"],
-  ["bm25", "本地关键词（BM25）"],
-  ["hybrid", "本地关键词和向量"],
-  ["selected", "指定资料"],
-]);
+
 
 export interface AnswerRecord {
   question: string;
@@ -209,7 +200,7 @@ export function ConversationTimeline({
                 {retrievalLabels.get(record.snapshot.retrievalMode) ??
                   record.snapshot.retrievalMode}
                 {record.snapshot.rerankStatus &&
-                  ` · 重排 ${record.snapshot.rerankStatus}`}
+                  ` · ${rerankLabel(record.snapshot.rerankStatus)}`}
               </p>
             )}
           </>

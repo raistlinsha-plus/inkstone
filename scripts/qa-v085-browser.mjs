@@ -153,7 +153,7 @@ try {
   );
 
   await page.getByRole("button", { name: "对样例提问", exact: true }).click();
-  await page.getByLabel("向当前空间提问").waitFor();
+  await page.getByLabel("向当前文档提问").waitFor();
   assert.equal(
     await page.getByLabel("资料范围", { exact: true }).inputValue(),
     "current",

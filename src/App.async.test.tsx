@@ -380,7 +380,7 @@ async function openSampleAndSearch(content = bundledSample) {
     warning: null,
     semantic: false,
     retrievalMode: "bm25",
-    rerankStatus: "disabled",
+    rerankStatus: "not-requested",
   }));
   render(<App />);
   fireEvent.click(await screen.findByText("从资料到第一条回答"));
@@ -407,6 +407,8 @@ async function openSampleAndSearch(content = bundledSample) {
   const source = await screen.findByRole("button", {
     name: /关键词命中.*计划开展 4 场阅读活动/,
   });
+  expect(screen.getByText("本地关键词（BM25）")).toBeTruthy();
+  expect(screen.queryByText(/not-requested/)).toBeNull();
   expect(calls("search")).toEqual([
     [
       "search",
@@ -456,7 +458,7 @@ test("first question setup preserves both the unsent question and current docume
   await boot();
   await openDocument("a.md");
   fireEvent.click(screen.getByRole("button", { name: "问这篇文档" }));
-  const composer = await readyComposer("向当前空间提问");
+  const composer = await readyComposer("向当前文档提问");
   fireEvent.change(composer, { target: { value: "这篇资料讲了什么？" } });
   fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
   const modal = await screen.findByRole("dialog", { name: "模型设置" });
@@ -506,7 +508,7 @@ test("asking about the example starts a new document-scoped draft without sharin
   };
   const sample = await openSampleAndSearch();
   fireEvent.click(screen.getByRole("button", { name: "对样例提问" }));
-  const composer = await readyComposer("向当前空间提问");
+  const composer = await readyComposer("向当前文档提问");
   expect(composer.value).toBe("");
   expect(mockConversation.draft).toBe("应该保留的旧草稿");
   expect(calls("assistant_create")).toHaveLength(0);
@@ -1224,7 +1226,7 @@ test("changing search scope leaves the question draft bound to the selected docu
   await screen.findByText("文档空间首页");
   fireEvent.click(screen.getByRole("button", { name: "搜索资料" }));
   fireEvent.click(screen.getByRole("button", { name: "问答" }));
-  const composer = screen.getByLabelText("向当前空间提问") as HTMLTextAreaElement;
+  const composer = screen.getByLabelText("向当前文档提问") as HTMLTextAreaElement;
   expect(composer.disabled).toBe(true);
   fireEvent.submit(composer.closest("form")!);
   expect(calls("assistant_ask")).toHaveLength(0);
@@ -1340,7 +1342,7 @@ async function askSynthetic(response?: unknown) {
   fireEvent.change(screen.getByLabelText("检索方式"), {
     target: { value: "keyword" },
   });
-  fireEvent.change(await readyComposer("向当前空间提问"), {
+  fireEvent.change(await readyComposer("向当前文档提问"), {
     target: { value: "请分析季度资料" },
   });
   fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
@@ -1879,9 +1881,13 @@ test("an answer keeps its request scope and explicit retrieval mode when control
   });
   await screen.findByRole("heading", { name: "季度分析" });
   expect(screen.getByRole("table")).toBeTruthy();
+  expect(screen.getByRole("textbox", { name: "向当前文档提问" })).toBeTruthy();
+  await openDocument("b.md");
+  expect(screen.getByRole("textbox", { name: "向会话文档 a.md 提问" })).toBeTruthy();
   fireEvent.change(screen.getByLabelText("资料范围"), {
     target: { value: "workspace" },
   });
+  expect(screen.getByRole("textbox", { name: "向当前空间提问" })).toBeTruthy();
   expect(
     within(document.querySelector(".assistant-turn")!).getByText(
       /当前文档 · a.md.*段本地证据/,
@@ -2095,7 +2101,7 @@ test("assistant keeps multiple turns and transfers the explicitly selected older
     ...syntheticAnswer,
     text: "## 后续结论\n\n另一轮的回答。",
   }));
-  fireEvent.change(screen.getByLabelText("向当前空间提问"), {
+  fireEvent.change(screen.getByLabelText("向当前文档提问"), {
     target: { value: "请继续分析第二季度" },
   });
   fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
@@ -2116,7 +2122,7 @@ test("assistant keeps multiple turns and transfers the explicitly selected older
 test("question composer protects IME Enter and Shift+Enter while Enter sends", async () => {
   await askSynthetic(syntheticAnswer);
   await screen.findByRole("heading", { name: "季度分析" });
-  const input = screen.getByLabelText("向当前空间提问");
+  const input = screen.getByLabelText("向当前文档提问");
   fireEvent.change(input, { target: { value: "追问资料" } });
   fireEvent.keyDown(input, { key: "Enter", isComposing: true, keyCode: 229 });
   fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
@@ -2194,7 +2200,7 @@ test("retrying a failed regeneration never sends the next question draft", async
   await askSynthetic(syntheticAnswer);
   await screen.findByRole("heading", { name: "季度分析" });
   const turnId = mockConversation.turns[0].id;
-  const input = screen.getByLabelText("向当前空间提问") as HTMLTextAreaElement;
+  const input = screen.getByLabelText("向当前文档提问") as HTMLTextAreaElement;
   fireEvent.change(input, { target: { value: "下一问的未发送草稿" } });
   overrides.set("assistant_ask", () =>
     Promise.reject(Error("原问题未重新发送")),
@@ -2280,7 +2286,7 @@ test("durable acceptance clears only the submitted input, preserving later typin
   const answer = deferred<any>();
   await askSynthetic(answer.promise);
   const sent = calls("assistant_ask")[0][1];
-  const input = screen.getByLabelText("向当前空间提问") as HTMLTextAreaElement;
+  const input = screen.getByLabelText("向当前文档提问") as HTMLTextAreaElement;
   expect(input.value).toBe("请分析季度资料");
   fireEvent.change(input, { target: { value: "后来输入的新问题" } });
   act(() =>
@@ -2305,7 +2311,7 @@ test("exit stops generation then durably flushes the next question before quitti
       payload: { requestId: sent.requestId },
     }),
   );
-  fireEvent.change(screen.getByLabelText("向当前空间提问"), {
+  fireEvent.change(screen.getByLabelText("向当前文档提问"), {
     target: { value: "退出前必须保留的下一问" },
   });
   overrides.set("cancel_chat", () => {
@@ -2327,7 +2333,7 @@ test("exit preserves the latest single-document draft scope without starting gen
   fireEvent.change(screen.getByLabelText("资料范围"), {
     target: { value: "current" },
   });
-  fireEvent.change(screen.getByLabelText("向当前空间提问"), {
+  fireEvent.change(screen.getByLabelText("向当前文档提问"), {
     target: { value: "单文档的未发送问题" },
   });
   await act(async () => {

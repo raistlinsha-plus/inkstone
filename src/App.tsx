@@ -7,6 +7,7 @@ import ExternalSourcePreview from "./assistant/ExternalSourcePreview";
 import SourcePreviewFrame from "./assistant/SourcePreviewFrame";
 import { answerCitations, documentCitation } from "./assistant/sourceDisplay";
 import WebSearchSettings from "./assistant/WebSearchSettings";
+import { retrievalLabels, rerankLabel } from "./knowledge/retrievalLabels";
 import RetrievalOptions, { retrievalDisclosure } from "./knowledge/RetrievalOptions";
 import WikiPanel from "./knowledge/WikiPanel";
 import { listen } from "@tauri-apps/api/event";
@@ -146,15 +147,6 @@ const modeLabel = (mode: string) =>
   ({ keyword: "本地关键词", hybrid: "BM25 + 向量", rerank: "混合检索 + 重排" })[
     mode
   ] ?? mode;
-const rerankLabel = (status: string) =>
-  ({
-    applied: "已重排",
-    fallback: "重排降级",
-    disabled: "未启用重排",
-    "not-requested": "未请求重排",
-    "no-candidates": "无候选",
-    "strict-unavailable": "重排不可用",
-  })[status] ?? status;
 
 const answerExecution = (snapshot: AnswerSnapshot) => {
   const actual =
@@ -2091,16 +2083,11 @@ export default function App() {
       setResults(response.results);
       setSearched(true);
       setQueryWarning(response.warning ?? "");
+      const actualMode = retrievalLabels.get(response.retrievalMode) ?? response.retrievalMode;
       setRetrievalStatus(
-        (response.retrievalMode === "hybrid" ? "BM25 + 向量" : "BM25") +
-          " · " +
-          ({
-            disabled: "未启用重排",
-            "no-candidates": "无候选，未调用重排",
-            applied: "已重排",
-            fallback: "重排降级",
-            "strict-unavailable": "严格模式：重排不可用",
-          }[response.rerankStatus] ?? response.rerankStatus),
+        response.rerankStatus && response.rerankStatus !== "not-requested"
+          ? actualMode + " · " + rerankLabel(response.rerankStatus)
+          : actualMode,
       );
     } catch (e) {
       if (searchRequest.current === id && workspaceEpoch.current === epoch)
@@ -4083,7 +4070,7 @@ export default function App() {
                   )}
                   <textarea
                     ref={questionInput}
-                    aria-label={generalAsk ? "向 AI 提问" : "向当前空间提问"}
+                    aria-label={generalAsk ? "向 AI 提问" : separateFixedScope ? `向会话文档 ${basename(fixedScope)} 提问` : panelScope === "current" ? "向当前文档提问" : "向当前空间提问"}
                     value={question}
                     maxLength={1500}
                     disabled={composerLocked || documentScopeMissing}

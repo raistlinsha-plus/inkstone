@@ -190,7 +190,7 @@ try {
     await page.locator(".library-open[aria-current=page]").waitFor();
     await page.getByRole("button", { name: "问这篇文档", exact: true }).click();
     const panel = page.locator(".contextual-panel");
-    await panel.locator("textarea").fill("两种阅读活动各有多少人参加？");
+    await panel.getByRole("textbox", { name: "向当前文档提问" }).fill("两种阅读活动各有多少人参加？");
     await panel.getByRole("button", { name: "发送问题" }).click();
     await panel.getByRole("heading", { name: "甲方案参与人数较多" }).waitFor();
     await panel.getByRole("table").waitFor();
