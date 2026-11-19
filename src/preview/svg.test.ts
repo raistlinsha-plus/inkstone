@@ -12,6 +12,8 @@ test("export retains Markmap labels as SVG text and removes active content", () 
   expect(doc.querySelector("parsererror")).toBeNull();
   expect(doc.querySelector("text")?.textContent).toBe("Markdown 中文 & JSON");
   expect(doc.querySelector("text")?.getAttribute("y")).toBe("16");
+  expect(doc.querySelector("text")?.getAttribute("font-family")).toBe("system-ui, sans-serif");
+  expect(doc.querySelector("text")?.getAttribute("font-size")).toBe("14");
   expect(doc.querySelector("svg > rect")?.getAttribute("fill")).toBe("#fffefa");
   expect(doc.querySelector("script, foreignObject, image, a")).toBeNull();
   expect(root.querySelector("foreignObject")).not.toBeNull();

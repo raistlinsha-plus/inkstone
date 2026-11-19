@@ -28,6 +28,9 @@ export const previewColors = {
   },
 } satisfies Record<PreviewTheme, Record<string, string>>;
 
+// SVG files and sandboxed diagram frames need a concrete, portable system font.
+export const diagramFontFamily = "system-ui, sans-serif";
+export const mindmapFontSize = 14;
 export const lightGraphExport = "#fffefa";
 
 export function applyPreviewTheme(theme: PreviewTheme) {

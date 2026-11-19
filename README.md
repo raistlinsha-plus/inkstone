@@ -8,9 +8,9 @@ Inkstone is a local-first Markdown workspace for **macOS 13+ on Apple Silicon**.
 
 The browser walkthrough uses fictional notes and simulated answers. Open a citation to check the original passage, then try the question the notes cannot answer.
 
-**v0.9.2** adds a dedicated offline sample, in-context setup for your first model, and a Wiki review view that distinguishes current evidence from historical excerpts. [Release notes and native acceptance](docs/DELIVERY-v0.9.2.md)
+**v0.9.3** uses the document library’s system typeface across the workspace. Ask a question beside a document, resize the sidebar, or use the single-row formatting toolbar in a narrow window. [Release notes](docs/DELIVERY-v0.9.3.md)
 
-The GitHub source preview includes a source archive and SHA-256 checksum. The interface is in Chinese. [Download v0.9.2 source](https://github.com/raistlinsha-plus/inkstone/releases/tag/v0.9.2) · [v0.9.0-beta.1 brochure (Chinese PDF)](https://github.com/raistlinsha-plus/inkstone/releases/download/v0.9.0-beta.1/inkstone-v0.9.0-beta.1-brochure-zh-CN.pdf)
+The GitHub source preview includes a source archive and SHA-256 checksum. The interface is in Chinese. [Download v0.9.3 source](https://github.com/raistlinsha-plus/inkstone/releases/tag/v0.9.3) · [v0.9.0-beta.1 brochure (Chinese PDF)](https://github.com/raistlinsha-plus/inkstone/releases/download/v0.9.0-beta.1/inkstone-v0.9.0-beta.1-brochure-zh-CN.pdf)
 
 ![Inkstone v0.9.0-beta.1 shows an answer beside a reference to its source](https://github.com/raistlinsha-plus/inkstone/releases/download/v0.9.0-beta.1/inkstone-social-preview.png)
 
@@ -37,7 +37,7 @@ This earlier v0.7 walkthrough shows document import, scoped questions and source
 You need Apple's command-line developer tools, Node **24.14.0**, npm **11.9.0**, and Rust **1.99.1**. See `toolchain.json`.
 
 ```sh
-git clone --branch v0.9.2 https://github.com/raistlinsha-plus/inkstone.git
+git clone --branch v0.9.3 https://github.com/raistlinsha-plus/inkstone.git
 cd inkstone
 npm ci --registry=https://registry.npmjs.org
 npm run desktop

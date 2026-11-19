@@ -346,7 +346,7 @@ export default function TextEditor({
                 color: "var(--ui-text)",
               },
               ".cm-scroller": {
-                fontFamily: '"SFMono-Regular", Menlo, monospace',
+                fontFamily: "var(--font-mono)",
                 lineHeight: "1.9",
               },
               ".cm-content": { padding: "30px 24px" },

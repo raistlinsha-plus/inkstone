@@ -635,10 +635,7 @@
 }
 .structure-form textarea {
   min-height: 100px;
-  font:
-    13px/1.7 SFMono-Regular,
-    Menlo,
-    monospace;
+  font: 13px/1.7 var(--font-mono);
 }
 .structure-form > div:last-child {
   gap: 8px;

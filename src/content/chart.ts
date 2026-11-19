@@ -1,5 +1,6 @@
 import { inspectJson, type JsonNode } from "./json";
 import {
+  diagramFontFamily,
   lightGraphExport,
   previewColors,
   type PreviewTheme,
@@ -282,7 +283,7 @@ export function chartOption(
     backgroundColor: canvas,
     color: palette,
     textStyle: {
-      fontFamily: "system-ui, sans-serif",
+      fontFamily: diagramFontFamily,
       color: colors.text,
       fontSize: 13,
     },

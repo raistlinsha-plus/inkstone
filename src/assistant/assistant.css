@@ -234,10 +234,7 @@
   margin-top: 5px;
 }
 .assistant-export {
-  font:
-    12px/1.8 ui-monospace,
-    SFMono-Regular,
-    monospace;
+  font: 12px/1.8 var(--font-mono);
   min-height: 240px;
 }
 .assistant-timeline {
@@ -378,7 +375,7 @@
   border: 1px solid #dfe5d8;
   border-radius: 7px;
   padding: 16px;
-  font: 13px/1.85 inherit;
+  font: 13px/1.85 var(--font-sans);
   max-height: 55dvh;
   overflow: auto;
 }

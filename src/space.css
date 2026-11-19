@@ -164,10 +164,7 @@
   border: 1px solid #ced8c5;
   border-radius: 6px;
   padding: 12px;
-  font:
-    12px/1.7 SFMono-Regular,
-    Menlo,
-    monospace;
+  font: 12px/1.7 var(--font-mono);
   color: #354832;
 }
 .source-version {
@@ -330,7 +327,7 @@
 .document-index-row dd {
   margin: 0;
   overflow-wrap: anywhere;
-  font-family: SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
 }
 .index-check-time {
   font-size: 11px;

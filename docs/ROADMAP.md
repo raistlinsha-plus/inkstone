@@ -1,10 +1,10 @@
 # Inkstone roadmap
 
-The **v0.9.2 source preview** includes the first-use, grounded-answer and Wiki improvements from the three latest development milestones. The public app download depends on real notarization, clean Mac acceptance and binary notice review. [Development delivery](DELIVERY-v0.9.2.md) · [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
+The **v0.9.3 source preview** brings consistent workspace typography, a compact document question panel and a single-row editing toolbar. The public app download depends on real notarization, clean Mac acceptance and binary notice review. [Workspace changes](DELIVERY-v0.9.3.md) · [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
 
-## Product milestones after v0.9.2
+## Product milestones after v0.9.3
 
-The next proposed milestones cover grounded answers (v0.9.3), Wiki source review (v0.9.4), first-use and everyday Mac workflows (v0.9.5), and a source release candidate for v0.10.0 if the acceptance results support it. Public macOS installer distribution is a separate track. [中文版路线图和验收目标](ROADMAP.zh-CN.md)
+Improving evidence retrieval for questions phrased in the user’s own words remains the first priority. Its version number will be set after evaluation. Wiki source review (planned v0.9.4), first-use and everyday Mac workflows (planned v0.9.5), and a possible v0.10.0 source release candidate follow in that order. Public macOS installer distribution is a separate track. [中文版路线图和验收目标](ROADMAP.zh-CN.md)
 
 - [v0.8.0 release preparation](DELIVERY-v0.8.0.md) records verification and remaining distribution gates.
 - [v0.8.1 question workbench](DELIVERY-v0.8.1.md) introduces contextual navigation and citation-to-document return.

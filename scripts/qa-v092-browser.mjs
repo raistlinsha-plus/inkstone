@@ -170,6 +170,11 @@ try {
     await page.getByRole("button", { name: "我的文档", exact: true }).click();
     const home = page.locator("main .library-browser");
     await home.getByRole("heading", { level: 1 }).waitFor();
+    const titleStyle = (heading) => heading.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return [style.fontFamily, style.fontSize, style.fontWeight];
+    });
+    const reference = await titleStyle(home.getByRole("heading", { level: 1 }));
     for (const colorScheme of ["dark", "light"]) {
       await page.emulateMedia({ colorScheme });
       await page.waitForFunction(
@@ -185,11 +190,24 @@ try {
       assert.equal(matchesTheme, true, colorScheme + " library canvas");
       assert.equal(await page.locator(".library-open[aria-current=page]").count(), 0);
     }
+    await page.getByRole("button", { name: "日历", exact: true }).click();
+    const calendarTitle = page.getByRole("heading", { name: "项目日历", exact: true });
+    assert.deepEqual(await titleStyle(calendarTitle), reference, "calendar uses the library title style");
+    await page.getByRole("button", { name: "我的文档", exact: true }).click();
     const fileButton = home.getByRole("button", { name: /阅读活动方案\.md/ }).first();
     await fileButton.click();
     await page.locator(".library-open[aria-current=page]").waitFor();
     const views = page.getByRole("group", { name: "文档视图" });
     await views.getByRole("button", { name: "正文", pressed: true }).waitFor();
+    const richTitle = page.locator(".ProseMirror h1");
+    assert.deepEqual(await titleStyle(richTitle), reference, "visual document title");
+    await views.getByRole("button", { name: "分栏" }).click();
+    const previewTitle = page.locator(".editor-preview-pane").getByRole("heading", { level: 1 });
+    assert.deepEqual(await titleStyle(previewTitle), reference, "split preview title");
+    const sourceFont = await page.locator(".cm-content").evaluate((el) => getComputedStyle(el).fontFamily);
+    assert.match(sourceFont, /monospace/i, "source editor uses a monospace stack");
+    await views.getByRole("button", { name: "正文" }).click();
+    checks.push("Calendar, visual editing and split preview match the library title; source uses monospace");
     await page.getByRole("button", { name: "问这篇文档", exact: true }).click();
     const panel = page.locator(".contextual-panel");
     const input = panel.getByRole("textbox", { name: "向当前文档提问" });

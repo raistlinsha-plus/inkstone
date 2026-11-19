@@ -5,6 +5,8 @@ import { serializeSvg } from "./svg";
 import { graphViewport } from "./viewport";
 import {
   applyPreviewTheme,
+  diagramFontFamily,
+  mindmapFontSize,
   previewColors,
   previewTheme,
   type PreviewTheme,
@@ -50,7 +52,7 @@ function renderMermaid(source: string, id: string, theme: PreviewTheme) {
       flowchart: { htmlLabels: false },
       themeVariables: {
         darkMode: theme === "dark",
-        fontFamily: "system-ui, sans-serif",
+        fontFamily: diagramFontFamily,
         background: colors.canvas,
         primaryColor: colors.node,
         primaryTextColor: colors.text,
@@ -291,7 +293,7 @@ window.addEventListener("message", async (event) => {
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.style.width = "100%";
       svg.style.height = "calc(100vh - 4px)";
-      svg.style.fontSize = "14px";
+      svg.style.setProperty("--markmap-font", `400 ${mindmapFontSize}px/20px ${diagramFontFamily}`);
       colorMindmap(svg, theme);
       host.append(svg);
       const localMap = Markmap.create(svg, {
