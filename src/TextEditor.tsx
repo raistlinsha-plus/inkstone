@@ -433,6 +433,17 @@ export default function TextEditor({
       },
       featureConfigs: {
         [Crepe.Feature.BlockEdit]: {
+          blockHandle: {
+            // Nested list indentation moves the text, but the controls stay in the page margin.
+            getPosition: ({ active, editorDom }) => {
+              const block = active.el.getBoundingClientRect();
+              const page = editorDom.getBoundingClientRect();
+              const left =
+                page.left + parseFloat(getComputedStyle(editorDom).paddingLeft);
+              return new DOMRect(left, block.top, 0, block.height);
+            },
+            getOffset: () => 4,
+          },
           buildMenu: (builder) => {
             builder.clear();
             for (const group of ["文本", "列表", "内容块", "插入内容"]) {
@@ -1008,6 +1019,25 @@ export default function TextEditor({
     <div
       className={`editor-surface ${mode}`}
       ref={root}
+      onScroll={
+        mode === "visual"
+          ? (event) => {
+              event.currentTarget.dataset.scrolled = "true";
+            }
+          : undefined
+      }
+      onPointerMove={
+        mode === "visual"
+          ? (event) => {
+              if (
+                event.currentTarget.dataset.scrolled &&
+                !event.buttons &&
+                (event.movementX || event.movementY)
+              )
+                delete event.currentTarget.dataset.scrolled;
+            }
+          : undefined
+      }
       onClickCapture={(event) => {
         const link = (event.target as HTMLElement).closest("a");
         if (link) {

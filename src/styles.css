@@ -1613,9 +1613,6 @@ a {
   min-width: 0;
   min-height: 0;
 }
-.has-preview .editor-source-pane {
-  flex: 0 0 50%;
-}
 .editor-preview-pane {
   flex: 1;
   min-width: 0;
@@ -1624,19 +1621,13 @@ a {
   background: #fffefa;
 }
 .split-divider {
-  width: 11px;
-  flex: 0 0 11px;
-  background: #f0f3e9;
-  position: relative;
-}
-.split-divider input {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 90px;
-  transform: translate(-50%, -50%) rotate(90deg);
-  accent-color: #668270;
+  flex: 0 0 8px;
   cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+}
+.split-divider:is(:hover, :focus-visible, :active) {
+  box-shadow: inset 0 0 0 2px var(--ui-focus);
 }
 .document-outline {
   width: 170px;
@@ -2128,10 +2119,13 @@ a {
 }
 /* v0.3 managed library */
 .library-browser {
-  padding: 34px 40px;
+  padding: 28px clamp(16px, 2.7vw, 40px);
   overflow: auto;
   height: 100%;
-  color: #344b3d;
+  color: var(--ui-text);
+}
+.library-browser:not(.compact) {
+  background: var(--ui-paper);
 }
 .library-browser.compact {
   padding: 8px;
@@ -2152,29 +2146,52 @@ a {
 }
 .library-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 26px;
+  gap: 12px 20px;
+  margin-bottom: 12px;
+}
+.library-heading > div:first-child {
+  flex: 1 1 190px;
+  min-width: 0;
 }
 .library-heading h1 {
-  font:
-    600 32px "Songti SC",
-    serif;
-  margin: 8px 0;
-}
-.library-heading span {
-  font-size: 11px;
-  letter-spacing: 2px;
-  color: #657c68;
+  font-size: 26px;
+  line-height: 1.3;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+  margin: 0;
 }
 .library-heading p {
+  margin: 5px 0 0;
   font-size: 13px;
-  color: #61705d;
+  color: var(--ui-muted);
 }
-.library-heading > div:last-child {
+.library-heading-actions, .library-space-tools {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.library-space-tools {
+  margin: 0 0 14px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--ui-line);
+}
+.library-space-tools button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  color: var(--ui-muted);
+  font-size: 12px;
+}
+.library-space-tools button:hover:not(:disabled) {
+  color: var(--ui-text);
+  background: var(--ui-hover);
 }
 .library-project {
   display: flex;
@@ -2229,14 +2246,14 @@ a {
   padding: 8px;
   border: 0;
   background: transparent;
-  color: #64725b;
+  color: var(--ui-muted);
   font-size: 12px;
   text-align: left;
 }
 .library-view-warning {
   font-size: 12px;
   padding: 8px;
-  color: #885d30;
+  color: var(--ui-warning-text);
 }
 .library-browser.compact .library-list-meta {
   flex-wrap: wrap;
@@ -2352,11 +2369,11 @@ a {
 }
 .library-shortcuts button,
 .library-inline-form button {
-  border: 1px solid #c8d4c2;
+  border: 1px solid var(--ui-control-line);
   border-radius: 6px;
   padding: 6px;
-  color: #365740;
-  background: #f8faf5;
+  color: var(--ui-accent);
+  background: var(--ui-field);
   font-size: 12px;
 }
 .library-inline-form {
@@ -2371,15 +2388,16 @@ a {
 .library-search {
   width: 100%;
   padding: 9px;
-  border: 1px solid #cdd7c7;
+  border: 1px solid var(--ui-control-line);
   border-radius: 6px;
-  color: #324a37;
-  background: #fffefa;
+  color: var(--ui-text);
+  background: var(--ui-field);
   font-size: 13px;
   margin-bottom: 12px;
 }
 .library-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   margin-bottom: 12px;
 }
@@ -2387,22 +2405,22 @@ a {
   padding: 6px 10px;
   border-radius: 5px;
   font-size: 12px;
-  color: #526b51;
+  color: var(--ui-muted);
 }
 .library-tabs .active {
-  background: #e3ebdc;
-  color: #2f533c;
+  background: var(--ui-selected);
+  color: var(--ui-accent);
 }
 .library-document {
   position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
-  border-bottom: 1px solid #e1e6da;
+  border-bottom: 1px solid var(--ui-line);
   padding: 12px 6px;
 }
 .library-document.selected {
-  background: #e5eddf;
+  background: var(--ui-selected);
   border-radius: 7px;
 }
 .library-open {
@@ -2426,7 +2444,7 @@ a {
 }
 .library-open small {
   display: block;
-  color: #657760;
+  color: var(--ui-muted);
   font-size: 11px;
   margin-top: 5px;
 }
@@ -2448,9 +2466,9 @@ a {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: #fffefa;
-  border: 1px solid #cbd4c4;
-  box-shadow: 0 8px 25px #0002;
+  background: var(--ui-overlay);
+  border: 1px solid var(--ui-line);
+  box-shadow: 0 8px 25px var(--ui-shadow);
   border-radius: 8px;
   padding: 8px;
   min-width: 145px;
@@ -2461,29 +2479,30 @@ a {
   text-align: left;
   padding: 7px;
   font-size: 12px;
-  color: #3b543e;
+  color: var(--ui-text);
 }
 .library-doc-menu button:hover {
-  background: #eaf0e4;
+  background: var(--ui-hover);
 }
 .library-empty {
   padding: 40px 10px;
   text-align: center;
-  color: #697d60;
+  color: var(--ui-muted);
   font-size: 13px;
 }
 .library-empty button {
-  color: #3d6648;
+  color: var(--ui-accent);
   text-decoration: underline;
 }
 .library-rename {
   position: fixed;
+  color: var(--ui-text);
   z-index: 110;
-  background: #fffefa;
+  background: var(--ui-field);
   padding: 24px;
-  border: 1px solid #c5d1bd;
+  border: 1px solid var(--ui-control-line);
   border-radius: 10px;
-  box-shadow: 0 10px 50px #0003;
+  box-shadow: 0 10px 50px var(--ui-shadow);
   top: 30vh;
   left: 35vw;
   width: 360px;
@@ -2498,7 +2517,8 @@ a {
   padding: 8px 18px;
 }
 .import-recovery {
-  background: #f5f1e3;
+  background: var(--ui-warning-surface);
+  color: var(--ui-warning-text);
   padding: 12px;
   font-size: 12px;
   border-radius: 8px;
@@ -2511,7 +2531,7 @@ a {
 }
 .import-recovery button {
   text-decoration: underline;
-  color: #596d40;
+  color: var(--ui-warning-text);
 }
 .import-modal {
   max-width: 760px;
@@ -3030,7 +3050,7 @@ a {
   justify-content: space-between;
   gap: 12px;
   margin: 10px 0;
-  color: #627159;
+  color: var(--ui-muted);
   font-size: 12px;
 }
 .library-list-meta label {
@@ -3039,17 +3059,14 @@ a {
   gap: 8px;
 }
 .library-list-meta select {
-  border: 1px solid #d6ddcf;
-  background: #fffefa;
+  border: 1px solid var(--ui-control-line);
+  background: var(--ui-field);
   padding: 5px 7px;
   border-radius: 5px;
 }
 .compact .library-list-meta {
   margin: 7px 3px;
   font-size: 11px;
-}
-.library-heading {
-  padding-bottom: 20px;
 }
 .library-open small {
   font-size: 12px;

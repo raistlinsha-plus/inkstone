@@ -14,7 +14,6 @@ import {
 } from "./library/selectors";
 import { useViewPreferences } from "./library/useViewPreferences";
 import TrashDialog from "./library/TrashDialog";
-import { appVersion } from "./version";
 import { invoke } from "@tauri-apps/api/core";
 import {
   FileText,
@@ -29,6 +28,8 @@ import {
   History,
   RefreshCw,
   Pin,
+  Database,
+  Archive,
   Link2,
   Search,
 } from "lucide-react";
@@ -144,6 +145,9 @@ export default function LibraryBrowser({
     pins,
     compact ? "all" : typeFilter,
   );
+  const readyDocuments = compact
+    ? []
+    : view.documents.filter((doc) => doc.projectId === projectId && doc.status === "ready");
   const order = docs.map((d) => d.id).join("|") + preferences.pinnedCollapsed;
   useLayoutEffect(() => {
     const list = listRef.current,
@@ -195,76 +199,42 @@ export default function LibraryBrowser({
       {!compact && (
         <header className="library-heading">
           <div>
-            <span>LOCAL LIBRARY · v{appVersion}</span>
             <h1>{project?.title ?? "我的文档"}</h1>
-            <p>接续最近的工作，或从置顶资料开始。文档副本保存在本机。</p>
+            <p>
+              {readyDocuments.length} 篇文档
+              {" · "}
+              {readyDocuments.filter((doc) => pins.includes(doc.id)).length} 篇置顶
+            </p>
           </div>
-          <div>
-            {onSearch && view.documents.some((item) =>
-              item.projectId === projectId && item.status === "ready"
-            ) && (
-              <button className="button" disabled={busy} onClick={onSearch}>
-                <Search size={15} />
-                搜索这些资料
-              </button>
-            )}
-            <button
-              className="button"
-              disabled={busy}
-              onClick={() => void exportDoc()}
-            >
-              <Download size={15} />
-              导出空间
-            </button>
+          <div className="library-heading-actions">
             <button className="button primary" disabled={busy} onClick={onNew}>
-              <Plus size={15} />
-              新建文档
+              <Plus size={15} /> 新建文档
             </button>
-            <button
-              className="button"
-              disabled={busy}
-              onClick={() => onImport()}
-            >
-              <Upload size={15} />
-              导入文档
+            <button className="button" disabled={busy} onClick={() => onImport()}>
+              <Upload size={15} /> 导入文档
             </button>
           </div>
         </header>
       )}
-      {!compact && firstUseGuide}
       {!compact && (
-        <div className="workbench-overview">
-          <div>
-            <strong>
-              {
-                view.documents.filter(
-                  (d) => d.projectId === projectId && d.status === "ready",
-                ).length
-              }
-            </strong>
-            <span>空间文档</span>
-          </div>
-          <div>
-            <strong>
-              {
-                view.documents.filter(
-                  (d) =>
-                    d.projectId === projectId &&
-                    d.status === "ready" &&
-                    pins.includes(d.id),
-                ).length
-              }
-            </strong>
-            <span>置顶资料</span>
-          </div>
-          <button onClick={onIndex} disabled={busy || !onIndex}>
-            查看逐文档索引<span>核对关键词、向量与正文版本</span>
+        <div className="library-space-tools" role="group" aria-label="空间工具">
+          {onSearch && readyDocuments.length > 0 && (
+            <button disabled={busy} onClick={onSearch}>
+              <Search size={15} /> 搜索这些资料
+            </button>
+          )}
+          <button disabled={busy || !onIndex} onClick={onIndex}>
+            <Database size={15} /> 查看逐文档索引
           </button>
-          <button onClick={onBackup} disabled={busy || !onBackup}>
-            备份与恢复预演<span>正文、附件、历史与恢复草稿</span>
+          <button disabled={busy} onClick={() => void exportDoc()}>
+            <Download size={15} /> 导出空间
+          </button>
+          <button disabled={busy || !onBackup} onClick={onBackup}>
+            <Archive size={15} /> 备份与恢复预演
           </button>
         </div>
       )}
+      {!compact && firstUseGuide}
       <div className="library-controls">
         {compact && (
           <div className="library-project">
@@ -429,6 +399,7 @@ export default function LibraryBrowser({
             <button
               key={id}
               className={tab === id ? "active" : ""}
+              aria-pressed={tab === id}
               onClick={() => {
                 anchor.current = null;
                 setTab(id as LibraryTab);
@@ -566,6 +537,7 @@ export default function LibraryBrowser({
                   <button
                     className="library-open"
                     title={d.title}
+                    aria-current={selected === d.path && d.projectId === projectId ? "page" : undefined}
                     disabled={busy}
                     onClick={() => {
                       setMenu("");

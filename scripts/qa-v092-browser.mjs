@@ -162,6 +162,43 @@ try {
     checks.push("Authorized one document, reviewed a proposal, published it and opened its original passage");
     await finish();
   }
+  {
+    const { page, finish, checks } = await contextFor(
+      "document-workspace", {}, { width: 1432, height: 818 },
+    );
+    active = page;
+    await page.getByRole("button", { name: "我的文档", exact: true }).click();
+    const home = page.locator("main .library-browser");
+    await home.getByRole("heading", { level: 1 }).waitFor();
+    for (const colorScheme of ["dark", "light"]) {
+      await page.emulateMedia({ colorScheme });
+      await page.waitForFunction(
+        (theme) => document.documentElement.dataset.theme === theme, colorScheme,
+      );
+      const matchesTheme = await home.evaluate((el) => {
+        const swatch = el.appendChild(document.createElement("span"));
+        swatch.style.backgroundColor = "var(--ui-paper)";
+        const matches = getComputedStyle(el).backgroundColor === getComputedStyle(swatch).backgroundColor;
+        swatch.remove();
+        return matches;
+      });
+      assert.equal(matchesTheme, true, colorScheme + " library canvas");
+      assert.equal(await page.locator(".library-open[aria-current=page]").count(), 0);
+    }
+    const fileButton = home.getByRole("button", { name: /阅读活动方案\.md/ }).first();
+    await fileButton.click();
+    await page.locator(".library-open[aria-current=page]").waitFor();
+    await page.getByRole("button", { name: "问这篇文档", exact: true }).click();
+    const panel = page.locator(".contextual-panel");
+    await panel.locator("textarea").fill("两种阅读活动各有多少人参加？");
+    await panel.getByRole("button", { name: "发送问题" }).click();
+    await panel.getByRole("heading", { name: "甲方案参与人数较多" }).waitFor();
+    await panel.getByRole("table").waitFor();
+    await panel.getByRole("button", { name: "复制 Markdown" }).waitFor();
+    assert.equal(await panel.evaluate((el) => el.scrollWidth <= el.clientWidth), true);
+    checks.push("Library follows both system themes, selection follows the open document, and its cited tabular answer fits the side panel");
+    await finish();
+  }
   await writeFile(resolve(out, "validation.json"), JSON.stringify({ passed: true, reports }, null, 2) + "\n");
 } catch (error) {
   if (active) {

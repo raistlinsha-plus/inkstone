@@ -590,6 +590,26 @@ test("pane visibility is restored and deliberate toggles persist for the next la
   expect(localStorage.getItem("inkstone:panel-open")).toBe("false");
 });
 
+test("navigating to the library or a document reveals the destination behind a compact search panel", async () => {
+  vi.stubGlobal("matchMedia", () => ({
+    matches: true,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+  await boot();
+  const showSearch = () => fireEvent.click(screen.getByRole("button", { name: "搜索资料" }));
+  showSearch();
+  await screen.findByRole("textbox", { name: "搜索资料" });
+  fireEvent.click(screen.getByRole("button", { name: "我的文档" }));
+  await waitFor(() => expect(screen.queryByRole("textbox", { name: "搜索资料" })).toBeNull());
+  expect(within(screen.getByRole("main")).getByText("文档空间首页")).toBeTruthy();
+  showSearch();
+  await screen.findByRole("textbox", { name: "搜索资料" });
+  await openDocument("a.md");
+  await waitFor(() => expect(screen.queryByRole("textbox", { name: "搜索资料" })).toBeNull());
+  expect(screen.getByTestId("opened-path").textContent).toContain("a.md");
+});
+
 test("restoring the previous document finishes before exposing the workspace", async () => {
   localStorage.setItem(
     "inkstone:session:/library/p1",
@@ -1163,6 +1183,51 @@ test("double clicking a new calendar document creates one copy", async () => {
       screen.getByRole("button", { name: "我的文档" }).matches(":disabled"),
     ).toBe(false),
   );
+});
+
+test("search never uses the last editor behind the space homepage or silently widens document scope", async () => {
+  await boot();
+  await openDocument("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "搜索资料" }));
+  const scope = screen.getByLabelText("资料范围") as HTMLSelectElement;
+  fireEvent.change(scope, { target: { value: "current" } });
+  expect(scope.selectedOptions[0].textContent).toContain("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "我的文档" }));
+  await screen.findByText("文档空间首页");
+  fireEvent.click(screen.getByRole("button", { name: "搜索资料" }));
+  const query = screen.getByRole("textbox", { name: "搜索资料" });
+  fireEvent.change(query, { target: { value: "今天有哪些事项" } });
+  expect(screen.getByRole("button", { name: "执行搜索" }).matches(":disabled")).toBe(true);
+  fireEvent.submit(query.closest("form")!);
+  expect(calls("search")).toHaveLength(0);
+  expect(calls("calendar_list")).toHaveLength(0);
+  fireEvent.change(screen.getByLabelText("资料范围"), { target: { value: "workspace" } });
+  fireEvent.change(query, { target: { value: "记录" } });
+  fireEvent.submit(query.closest("form")!);
+  await waitFor(() => expect(calls("search")[0]?.[1]).toMatchObject({ scope: null }));
+});
+
+test("changing search scope leaves the question draft bound to the selected document", async () => {
+  await boot();
+  await openDocument("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "搜索资料" }));
+  fireEvent.click(screen.getByRole("button", { name: "问答" }));
+  await readyComposer("向当前空间提问");
+  fireEvent.change(screen.getByLabelText("资料范围"), { target: { value: "current" } });
+  fireEvent.click(screen.getByRole("button", { name: /^检索$/ }));
+  fireEvent.change(screen.getByLabelText("资料范围"), { target: { value: "workspace" } });
+  fireEvent.click(screen.getByRole("button", { name: "问答" }));
+  const scope = screen.getByLabelText("资料范围") as HTMLSelectElement;
+  expect(scope.value).toBe("current");
+  expect(scope.selectedOptions[0].textContent).toContain("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "我的文档" }));
+  await screen.findByText("文档空间首页");
+  fireEvent.click(screen.getByRole("button", { name: "搜索资料" }));
+  fireEvent.click(screen.getByRole("button", { name: "问答" }));
+  const composer = screen.getByLabelText("向当前空间提问") as HTMLTextAreaElement;
+  expect(composer.disabled).toBe(true);
+  fireEvent.submit(composer.closest("form")!);
+  expect(calls("assistant_ask")).toHaveLength(0);
 });
 
 test("cancelled date navigation neither reports success nor starts a fallback RAG request", async () => {
@@ -1860,6 +1925,7 @@ test("answer insertion previews content before one explicit editor insertion", a
   await screen.findByRole("heading", { name: "季度分析" });
   const before = (screen.getByLabelText("测试正文") as HTMLTextAreaElement)
     .value;
+  fireEvent.click(screen.getByRole("button", { name: "更多回答操作" }));
   fireEvent.click(screen.getByRole("button", { name: "插入正文" }));
   expect(screen.getByRole("dialog", { name: "预览插入回答" })).toBeTruthy();
   expect((screen.getByLabelText("测试正文") as HTMLTextAreaElement).value).toBe(
@@ -1973,6 +2039,8 @@ test("no evidence reports no model call and unknown completion keeps structured 
     model: "",
     finishReason: "no_evidence",
   });
+  fireEvent.click(await screen.findByRole("button", { name: "更多回答操作" }));
+  fireEvent.click(screen.getByText("技术详情"));
   await screen.findByText(/未调用问答模型/);
   expect(screen.queryByText(/test-model/)).toBeNull();
 });
@@ -2131,6 +2199,7 @@ test("retrying a failed regeneration never sends the next question draft", async
   overrides.set("assistant_ask", () =>
     Promise.reject(Error("原问题未重新发送")),
   );
+  fireEvent.click(screen.getByRole("button", { name: "更多回答操作" }));
   fireEvent.click(screen.getByRole("button", { name: "重新生成" }));
   const retry = await screen.findByRole("button", { name: "重试原问题" });
   expect(input.value).toBe("下一问的未发送草稿");

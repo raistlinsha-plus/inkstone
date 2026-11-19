@@ -7,6 +7,7 @@ import ExternalSourcePreview from "./assistant/ExternalSourcePreview";
 import SourcePreviewFrame from "./assistant/SourcePreviewFrame";
 import { answerCitations, documentCitation } from "./assistant/sourceDisplay";
 import WebSearchSettings from "./assistant/WebSearchSettings";
+import RetrievalOptions, { retrievalDisclosure } from "./knowledge/RetrievalOptions";
 import WikiPanel from "./knowledge/WikiPanel";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -14,6 +15,8 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { confirm, open } from "@tauri-apps/plugin-dialog";
 import {
   ArrowDownToLine,
+  ArrowUpRight,
+  FolderOpen,
   ArrowLeft,
   ArrowUp,
   Check,
@@ -99,6 +102,7 @@ import SettingsModal from "./SettingsModal";
 import Sources from "./shell/Sources";
 import SpaceNavigation from "./shell/SpaceNavigation";
 import Titlebar from "./shell/Titlebar";
+import KnowledgePanelResizer from "./shell/KnowledgePanelResizer";
 import Tree from "./shell/Tree";
 import WelcomePage, { FirstUseGuide } from "./shell/WelcomePage";
 import OfflineExample from "./shell/OfflineExample";
@@ -187,6 +191,7 @@ export default function App() {
   const [offlineExample, setOfflineExample] = useState<LibraryDocument>();
   const previousExampleProject = useRef<string | undefined>(undefined);
   const [scope, setScope] = useState<"workspace" | "current">("workspace");
+  const [searchScope, setSearchScope] = useState<"workspace" | "current">("workspace");
   const [retrievalMode, setRetrievalMode] = useState<
     "keyword" | "hybrid" | "rerank"
   >("hybrid");
@@ -301,6 +306,7 @@ export default function App() {
     setDraftContext(next);
   }
   function saveAssistantDraft(scope: string | null, text: string) {
+    if (scope === null && documentScopeMissing) return;
     assistantRef.current.saveDraft(scope, text, draftContextRef.current);
   }
   function changeDraftContext(next: AssistantDraftContext) {
@@ -496,6 +502,15 @@ export default function App() {
   const nameMutation = useRef<PendingMutation | null>(null);
   const [fileMenu, setFileMenu] = useState(false);
   const [welcome, setWelcome] = useState(true);
+  const visibleDocument = !welcome && !calendarOpen ? document : null;
+  const isExampleSpace =
+    !!offlineExample && workspace?.managedProjectId === offlineExample.projectId;
+  const searchingExample = isExampleSpace && visibleDocument?.path === offlineExample.path;
+  const exampleSearch = searchingExample && panel === "search";
+  const effectiveSearchScope = searchingExample ? "current" : searchScope;
+  const panelScope = panel === "search" ? effectiveSearchScope : scope;
+  const documentScopeMissing = !generalAsk && scope === "current" && !visibleDocument &&
+    !(assistant.conversation && !assistantScopeChanged && assistant.conversation.scope);
   const [booting, setBooting] = useState(true);
   const [startupError, setStartupError] = useState("");
   const [startupAttempt, setStartupAttempt] = useState(0);
@@ -1141,10 +1156,16 @@ export default function App() {
     if (path) return openPath(path, target, true);
     return true;
   }
+  function revealDocumentPane() {
+    if (focusedKnowledge) {
+      setPanelOpen(false);
+      setAssistantExpanded(false);
+    }
+  }
   async function showLibraryHome() {
     if (navigationBlocked()) return;
     if (!workspaceRef.current?.managedProjectId) {
-      await useLibrary();
+      if (await useLibrary()) revealDocumentPane();
       return;
     }
     const request = ++openSequence.current,
@@ -1162,6 +1183,7 @@ export default function App() {
     setCalendarBusy(false);
     setCalendarOpen(false);
     setWelcome(true);
+    revealDocumentPane();
   }
   async function openLibraryDocument(
     doc: LibraryDocument,
@@ -1173,9 +1195,11 @@ export default function App() {
     if (doc.projectId === workspaceRef.current?.managedProjectId) {
       if (!(await openPath(doc.path, target))) return false;
       await refreshLibrary();
-      return true;
+    } else if (!(await useLibrary(doc.projectId, doc.path, false, target))) {
+      return false;
     }
-    return useLibrary(doc.projectId, doc.path, false, target);
+    if (!keepConversation) revealDocumentPane();
+    return true;
   }
   async function openAnswerSource(source: AnswerSourceLink) {
     if (navigationBlocked()) return;
@@ -1265,7 +1289,7 @@ export default function App() {
       setSearched(false);
       setQueryWarning("");
       setRetrievalStatus("");
-      setScope("current");
+      setSearchScope("current");
       setRetrievalMode("keyword");
       setQuery("阅读活动");
       setOfflineExample(sample);
@@ -1324,15 +1348,16 @@ export default function App() {
     view: libraryView,
     projectId: workspace?.managedProjectId ?? "inbox",
     busy,
-    selected: document?.path,
-    onProject: (id: string, committed = false) =>
-      void useLibrary(id, undefined, committed),
+    selected: visibleDocument?.path,
+    onProject: async (id: string, committed = false) => {
+      if (await useLibrary(id, undefined, committed)) revealDocumentPane();
+    },
     onOpen: (d: LibraryDocument) => void openLibraryDocument(d),
     onNew: () => nameAction("new"),
     onImport: showImport,
     onSearch: () => {
       cancelSearch();
-      setScope("workspace");
+      setSearchScope("workspace");
       if (!stats.embeddingReady) setRetrievalMode("keyword");
       setQuery("");
       setResults([]);
@@ -1832,10 +1857,11 @@ export default function App() {
     setResults([]);
     setSearched(false);
     setRetrievalStatus("");
+    setQueryWarning("");
   }, [
     workspace?.root,
-    scope,
-    scope === "current" ? document?.path : undefined,
+    effectiveSearchScope,
+    effectiveSearchScope === "current" ? visibleDocument?.path : undefined,
   ]);
   async function loadCalendar(
     range?: DateRange,
@@ -1879,7 +1905,6 @@ export default function App() {
     }
   }
   function calendarQueryRange(text: string) {
-    if (scope === "current" && !docRef.current) return null;
     const range = dateQuery(text, new Date(), currentTimeZone());
     return range &&
       isCalendarIntent(text, range.terms) &&
@@ -1887,12 +1912,9 @@ export default function App() {
       ? range
       : null;
   }
-  async function routeDateQuery(range: DateRange): Promise<boolean> {
+  async function routeDateQuery(range: DateRange, path?: string): Promise<boolean> {
     cancelSearch();
-    const loaded = await loadCalendar(
-      range,
-      scope === "current" ? docRef.current?.path : undefined,
-    );
+    const loaded = await loadCalendar(range, path);
     if (loaded)
       notify(
         "已按 " + range.label + " 显示完整事项列表 · " + currentTimeZone(),
@@ -2033,9 +2055,13 @@ export default function App() {
       return;
     const previousEpoch = workspaceEpoch.current,
       navigation = openSequence.current;
+    if (panelScope === "current" && !visibleDocument) {
+      notify("请打开文档，或选择当前空间。");
+      return;
+    }
     const range = calendarQueryRange(query);
     if (range) {
-      await routeDateQuery(range);
+      await routeDateQuery(range, panelScope === "current" ? visibleDocument?.path : undefined);
       return;
     }
     if (
@@ -2043,10 +2069,6 @@ export default function App() {
       navigation !== openSequence.current
     )
       return;
-    if (searchScope === "current" && !document) {
-      notify("请先打开一篇文档");
-      return;
-    }
     cancelSearch();
     const id = crypto.randomUUID(),
       epoch = workspaceEpoch.current;
@@ -2059,7 +2081,7 @@ export default function App() {
     try {
       const response = await invoke("search", {
         query,
-        scope: searchScope === "current" ? document?.path : null,
+        scope: panelScope === "current" ? visibleDocument?.path : null,
         semantic: searchMode !== "keyword",
         retrievalMode: searchMode,
         requestId: id,
@@ -2157,7 +2179,7 @@ export default function App() {
     return assistant.conversation && !assistantScopeChanged
       ? assistant.conversation.scope
       : scope === "current"
-        ? (document?.path ?? null)
+        ? (visibleDocument?.path ?? null)
         : null;
   }
   const assistantScope = currentAssistantScope();
@@ -2236,6 +2258,7 @@ export default function App() {
       setPanel(next);
       setPanelOpen(true);
       if (focusComposer) setFocusQuestion(true);
+      if (next === "search") requestAnimationFrame(() => searchInput.current?.focus());
     };
     if (!generalAsk) openPanel();
     else
@@ -2256,10 +2279,14 @@ export default function App() {
       return;
     const epoch = workspaceEpoch.current,
       navigation = openSequence.current;
+    if (!options?.retry && documentScopeMissing) {
+      notify("请打开文档，或选择当前空间。");
+      return;
+    }
     if (!options?.retry && !generalAsk) {
       const range = calendarQueryRange(prompt);
       if (range) {
-        await routeDateQuery(range);
+        await routeDateQuery(range, currentAssistantScope() ?? undefined);
         return;
       }
     }
@@ -2271,15 +2298,6 @@ export default function App() {
       return;
     if (!settings?.chat.enabled) {
       openFirstUseModelSettings();
-      return;
-    }
-    if (
-      !generalAsk &&
-      scope === "current" &&
-      !document &&
-      !assistant.conversation?.scope
-    ) {
-      notify("请先打开一篇文档");
       return;
     }
     const id = crypto.randomUUID(),
@@ -2669,117 +2687,83 @@ export default function App() {
                 : "回答已就绪"
               : "安静陪读";
 
-  const isExampleSpace =
-    !!offlineExample && workspace?.managedProjectId === offlineExample.projectId;
-  const searchingExample = isExampleSpace && document?.path === offlineExample.path;
-  const exampleSearch = searchingExample && panel === "search";
-  const searchScope = exampleSearch ? "current" : scope;
   const searchMode = exampleSearch ? "keyword" : retrievalMode;
   const retrievalScopePath =
     panel === "ask"
       ? currentAssistantScope()
-      : scope === "current"
-        ? document?.path
+      : panelScope === "current"
+        ? visibleDocument?.path
         : null;
+  const fixedScope = panel === "ask" && assistant.conversation && !assistantScopeChanged
+    ? assistant.conversation.scope
+    : null;
+  const scopeDocument = fixedScope || visibleDocument?.path;
+  const separateFixedScope = fixedScope && fixedScope !== visibleDocument?.path;
+  const missingScope = panelScope === "current" && !scopeDocument;
   const retrievalControls = (
-    <>
-      <div className="scope-row">
-        <span>资料范围</span>
+    <section className="knowledge-context" aria-label="检索范围与设置">
+      <div className="knowledge-scope">
+        {panelScope === "workspace" ? <FolderOpen size={15} /> : <FileText size={15} />}
         <select
           aria-label="资料范围"
-          value={searchScope}
-          disabled={chatBusy || exampleSearch}
+          title={panelScope === "current" ? scopeDocument ?? "尚未打开文档" : workspace?.name}
+          value={separateFixedScope ? "fixed" : panelScope}
+          disabled={chatBusy || exampleSearch || !workspace}
           onChange={(e) => {
-            const next = e.target.value as "workspace" | "current";
+            const next = e.target.value;
+            if (next !== "workspace" && (next !== "current" || !visibleDocument)) return;
+            if (panel === "search") {
+              setSearchScope(next);
+              return;
+            }
             setScope(next);
             setAssistantScopeChanged(true);
             const { branch, ...context } = draftContextRef.current;
-            if (branch) {
-              restoreDraftContext(context);
-              if (panel === "ask")
-                saveAssistantDraft(
-                  next === "current" ? (document?.path ?? null) : null,
-                  questionRef.current,
-                );
-            }
+            if (branch) restoreDraftContext(context);
+            if (panel === "ask" && (questionRef.current || branch))
+              assistantRef.current.saveDraft(
+                next === "current" ? visibleDocument?.path ?? null : null,
+                questionRef.current, context,
+              );
           }}
         >
-          <option value="workspace">当前空间</option>
-          <option value="current" disabled={!document}>
-            当前文档
+          <option value="workspace">空间 · {workspace?.name ?? "未选择"}</option>
+          {separateFixedScope && <option value="fixed">会话文档 · {basename(fixedScope)}</option>}
+          <option value="current" disabled={!visibleDocument}>
+            {visibleDocument ? "文档 · " + basename(visibleDocument.path) : "文档 · 未选择"}
           </option>
         </select>
       </div>
-      <div className="retrieval-choice">
-        <label>
-          检索方式
-          <select
-            aria-label="检索方式"
-            value={searchMode}
-            disabled={chatBusy || queryBusy || exampleSearch}
-            onChange={(e) => {
-              cancelSearch();
-              setResults([]);
-              setSearched(false);
-              setRetrievalMode(e.target.value as typeof retrievalMode);
-            }}
-          >
-            <option value="keyword">本地关键词</option>
-            <option value="hybrid">BM25 + 向量</option>
-            <option value="rerank" disabled={!settings?.rerank.enabled}>
-              混合检索 + 重排
-            </option>
-          </select>
-        </label>
-        <p>
-          {exampleSearch
-            ? "在本机搜索样例正文。"
-            : retrievalMode === "keyword"
-            ? "检索在本机进行；问答仍会将证据发送给问答模型。"
-            : retrievalMode === "hybrid"
-              ? "问题会发送给向量模型；问答另发送选定证据。"
-              : "问题与候选资料会发送给重排模型。"}
+      <RetrievalOptions
+        key={panel}
+        mode={searchMode}
+        locked={chatBusy || queryBusy || !workspace}
+        example={exampleSearch}
+        rerankEnabled={!!settings?.rerank.enabled}
+        embeddingEnabled={!!settings?.embedding.enabled}
+        snapshot={indexSnapshotError || indexSnapshotLoading ? null : indexSnapshot}
+        scopePath={retrievalScopePath}
+        onChange={(next) => {
+          cancelSearch();
+          setResults([]);
+          setQueryWarning("");
+          setSearched(false);
+          setRetrievalMode(next);
+        }}
+        onInspect={() => setIndexOpen(true)}
+      />
+      <small className="knowledge-data-flow">
+        {missingScope
+          ? "请打开一篇文档，或在资料范围中选择空间。"
+          : retrievalDisclosure[searchMode][panel]}
+      </small>
+      {panel === "ask" && (dirty || indexDirty) && (
+        <p className="knowledge-index-note" role="status">
+          {dirty ? "当前编辑尚未保存。" : "索引待更新。"}回答使用已入库版本。
+          <button type="button" onClick={() => setIndexOpen(true)} disabled={chatBusy}>查看索引</button>
         </p>
-        {searchMode !== "keyword" && (
-          <div className="retrieval-readiness" role="status">
-            {!settings?.embedding.enabled
-              ? "向量未启用：本次可使用本地关键词检索。"
-              : !indexSnapshot || indexSnapshotError || indexSnapshotLoading
-                ? "向量准备情况尚未核对或正在重新核对。"
-                : !indexSnapshot.documents.some(
-                      (d) =>
-                        d.included &&
-                        (!retrievalScopePath || d.path === retrievalScopePath),
-                    )
-                  ? "当前范围尚未建立可用向量；可先使用本地关键词或显式建库。"
-                  : indexSnapshot.documents
-                        .filter(
-                          (d) =>
-                            !retrievalScopePath ||
-                            d.path === retrievalScopePath,
-                        )
-                        .some((d) => d.included && d.vectorState !== "ready")
-                    ? "部分文档缺少当前向量或需要更新；实际检索方式以结果说明为准。"
-                    : "已核对的纳入文档具有当前模型向量。"}
-            <button
-              disabled={chatBusy || queryBusy}
-              onClick={() => setIndexOpen(true)}
-            >
-              查看准备情况
-            </button>
-          </div>
-        )}
-        {panel === "ask" && (dirty || indexDirty) && (
-          <p className="index-note" role="status">
-            回答依据已保存并入库的版本。
-            {dirty ? "当前编辑尚未保存。" : "索引待更新。"}
-            <button onClick={() => setIndexOpen(true)} disabled={chatBusy}>
-              查看索引
-            </button>
-          </p>
-        )}
-      </div>
-    </>
+      )}
+    </section>
   );
 
   const firstUseGuide = (
@@ -3679,52 +3663,14 @@ export default function App() {
         {(panelOpen || citationReturn) && (
           <aside
             hidden={!panelOpen || companionOpen}
-            className={`knowledge-panel ${panel === "ask" ? "ask-panel" : ""}`}
+            className={`knowledge-panel ${standaloneAskOpen ? "" : "contextual-panel"} ${panel === "ask" ? "ask-panel" : ""}`}
             style={{ "--knowledge-width": `${panelWidth}px` } as CSSProperties}
           >
-            <div
-              className="panel-resize"
-              role="separator"
-              aria-label="知识侧栏宽度"
-              aria-orientation="vertical"
-              tabIndex={0}
-              aria-valuemin={300}
-              aria-valuemax={640}
-              aria-valuenow={panelWidth}
-              onKeyDown={(e) => {
-                if (
-                  ["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)
-                ) {
-                  e.preventDefault();
-                  updatePanelWidth(
-                    e.key === "Home"
-                      ? 300
-                      : e.key === "End"
-                        ? 640
-                        : panelWidth + (e.key === "ArrowLeft" ? 20 : -20),
-                  );
-                }
-              }}
-              onPointerDown={(e) => {
-                e.preventDefault();
-                e.currentTarget.setPointerCapture(e.pointerId);
-                const start = e.clientX,
-                  initial = panelWidth;
-                const move = (event: PointerEvent) =>
-                  updatePanelWidth(initial + start - event.clientX);
-                const end = () => {
-                  window.removeEventListener("pointermove", move);
-                  window.removeEventListener("pointerup", end);
-                  window.removeEventListener("pointercancel", end);
-                };
-                window.addEventListener("pointermove", move);
-                window.addEventListener("pointerup", end);
-                window.addEventListener("pointercancel", end);
-              }}
-            />
+            <KnowledgePanelResizer preferredWidth={panelWidth} onResize={updatePanelWidth} />
             {!standaloneAskOpen && (
               <div className="panel-tabs">
                 <button
+                  aria-pressed={panel === "search"}
                   className={panel === "search" ? "active" : ""}
                   onClick={() => openKnowledgePanel("search")}
                 >
@@ -3732,9 +3678,10 @@ export default function App() {
                   检索
                 </button>
                 <button
+                  aria-pressed={panel === "ask"}
                   className={panel === "ask" ? "active" : ""}
                   aria-label={generalAsk ? "通用问答当前页" : undefined}
-                  onClick={() => setPanel("ask")}
+                  onClick={() => openKnowledgePanel("ask", true)}
                 >
                   <Sparkles size={15} />
                   {generalAsk ? "AI 问答" : "问答"}
@@ -3742,10 +3689,12 @@ export default function App() {
                 {enableGeneralAsk && !generalAsk && (
                   <button
                     type="button"
+                    className="open-general-ask"
+                    title="进入独立问答工作台"
                     onClick={openGeneralAsk}
                     disabled={chatBusy}
                   >
-                    通用问答
+                    通用问答 <ArrowUpRight size={13} />
                   </button>
                 )}
                 {compactWindow && panel === "search" && (
@@ -3766,23 +3715,6 @@ export default function App() {
                 </button>
               </div>
             )}
-            {generalAsk && panel === "ask" ? null : panel === "ask" ? (
-              <details className="assistant-configuration">
-                <summary>
-                  资料与检索设置 ·{" "}
-                  {assistant.conversation && !assistantScopeChanged
-                    ? assistant.conversation.scopeLabel
-                    : scope === "current"
-                      ? `当前文档 · ${document ? basename(document.path) : "未选择"}`
-                      : "当前空间"}{" "}
-                  · {modeLabel(retrievalMode)}
-                  {dirty || indexDirty ? " · 版本待更新" : ""}
-                </summary>
-                {retrievalControls}
-              </details>
-            ) : (
-              retrievalControls
-            )}
             {panel === "search" ? (
               <>
                 <form
@@ -3797,14 +3729,14 @@ export default function App() {
                     <input
                       ref={searchInput}
                       aria-label="搜索资料"
-                      placeholder="在你的资料里寻找…"
+                      placeholder="搜索关键词或原文…"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       maxLength={1500}
                     />
                     <button
                       className="icon-button"
-                      disabled={!workspace || !query.trim()}
+                      disabled={!workspace || missingScope || queryBusy || !query.trim()}
                       aria-label="执行搜索"
                     >
                       {queryBusy ? (
@@ -3825,6 +3757,7 @@ export default function App() {
                     </button>
                   )}
                 </form>
+                {retrievalControls}
                 <div className="panel-scroll">
                   {searchingExample && document && (
                     <OfflineExample
@@ -3896,28 +3829,12 @@ export default function App() {
                         </div>
                       )}
                     </>
-                  ) : (
-                    <div className="panel-empty">
-                      <div className="orbit-icon">
-                        <Search size={25} strokeWidth={1.4} />
-                        <span />
-                        <i />
-                      </div>
-                      <h3>想找的，或许就在笔记里</h3>
-                      <p>
-                        从一个关键词开始，
-                        <br />
-                        重新发现你积累的知识。
-                      </p>
-                      <div className="example-searches">
-                        {["项目计划", "灵感记录", "技术方案"].map((text) => (
-                          <button key={text} onClick={() => setQuery(text)}>
-                            {text}
-                          </button>
-                        ))}
-                      </div>
+                  ) : (!queryBusy && !queryWarning && !searchingExample && (
+                    <div className="knowledge-search-hint">
+                      <h3>查找原文</h3>
+                      <p>输入关键词，按 Enter 查看匹配段落。</p>
                     </div>
-                  )}
+                  ))}
                 </div>
               </>
             ) : (
@@ -3945,6 +3862,7 @@ export default function App() {
                       : undefined
                   }
                 />
+                {!generalAsk && retrievalControls}
                 {preferencesOpen && (workspace || generalAsk) && (
                   <AnswerPreferences
                     workspaceRoot={workspace?.root}
@@ -4064,18 +3982,18 @@ export default function App() {
                 ) : (
                   <div className="panel-scroll ask-scroll">
                     <div className="panel-empty">
-                      <div className="orbit-icon">
+                      {generalAsk && <div className="orbit-icon">
                         <Sparkles size={26} strokeWidth={1.4} />
                         <span />
                         <i />
-                      </div>
+                      </div>}
                       <h3>
-                        {generalAsk ? "今天想做些什么？" : "向自己的知识提问"}
+                        {generalAsk ? "今天想做些什么？" : "问问这些资料"}
                       </h3>
                       <p>
                         {generalAsk
                           ? "直接聊天、写作或解释。需要时可添加文件和知识空间。"
-                          : "从一个问题开始，打开回答的来源核对，再将回答保存到文档。"}
+                          : "回答附有可打开的原文引用。"}
                       </p>
                       {!generalAsk && !stats.documents && workspace && (
                         <div className="assistant-first-use">
@@ -4108,17 +4026,17 @@ export default function App() {
                           : searchingExample
                             ? ["社区读书会计划开展几场阅读活动？"]
                             : [
-                                "比较资料中的两种方案，列出相同点与差异",
-                                "总结这些资料，并注明尚未确定的部分",
-                                "当前资料还缺少哪些信息？",
+                                "总结资料要点，并注明出处",
+                                "哪些事项还需要确认？",
                               ]
                         ).map((text) => (
                           <button
                             key={text}
-                            disabled={composerLocked}
+                            disabled={composerLocked || documentScopeMissing}
                             onClick={() => {
                               questionRef.current = text;
                               setQuestion(text);
+                              questionInput.current?.focus();
                               saveAssistantDraft(currentAssistantScope(), text);
                             }}
                           >
@@ -4168,7 +4086,7 @@ export default function App() {
                     aria-label={generalAsk ? "向 AI 提问" : "向当前空间提问"}
                     value={question}
                     maxLength={1500}
-                    disabled={composerLocked}
+                    disabled={composerLocked || documentScopeMissing}
                     placeholder={
                       generalAsk ? "写下你的问题或想法…" : "向你的资料提问…"
                     }
@@ -4238,11 +4156,7 @@ export default function App() {
                     <span>
                       {chatBusy && question.trim()
                         ? "下一问草稿自动保存"
-                        : generalAsk
-                          ? "Enter 发送 / Shift+Enter 换行"
-                          : assistant.conversation
-                            ? "基于会话固定范围 · Enter发送 / Shift+Enter换行"
-                            : "首次发送后固定资料范围 · Enter发送 / Shift+Enter换行"}
+                        : "Enter 发送 / Shift+Enter 换行"}
                     </span>
                     {chatBusy ? (
                       <button
@@ -4262,6 +4176,7 @@ export default function App() {
                         aria-label="发送问题"
                         disabled={
                           (!workspace && !generalAsk) ||
+                          documentScopeMissing ||
                           sourceBusy ||
                           composerLocked ||
                           !question.trim()

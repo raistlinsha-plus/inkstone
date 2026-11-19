@@ -106,6 +106,12 @@ export function ConversationHeader({
     }
   }
   const c = controller.conversation;
+  const firstQuestion = c?.turns?.[0]?.question ?? "";
+  const autoTitle = Array.from(firstQuestion).slice(0, 32).join("");
+  const headerTitle =
+    !controller.general && c?.title === autoTitle
+      ? "当前会话"
+      : c?.title || "新会话";
   useEffect(() => {
     setBackground(undefined);
     setPreview(undefined);
@@ -144,16 +150,16 @@ export function ConversationHeader({
     <>
       <div className="assistant-toolbar">
         <div className="assistant-conversation-title">
-          <strong>{c?.title || "新会话"}</strong>
-          <small>
-            {controller.general
-              ? c?.archived
-                ? "通用问答 · 已归档"
-                : "通用问答 · 每轮可添加资料"
-              : c
-                ? `固定范围 · ${c.scopeLabel}${c.archived ? " · 已归档" : ""}`
-                : "首次发送后固定资料范围"}
-          </small>
+          <strong title={c?.title}>{headerTitle}</strong>
+          {(controller.general || c?.archived) && (
+            <small>
+              {controller.general
+                ? c?.archived
+                  ? "通用问答 · 已归档"
+                  : "通用问答 · 每轮可添加资料"
+                : "已归档"}
+            </small>
+          )}
         </div>
         <div className="assistant-toolbar-actions">
           <button

@@ -137,6 +137,53 @@
   background: var(--ui-paper);
   color: var(--ui-text);
 }
+.document-editor .editor-surface.visual > .milkdown {
+  display: flex;
+  flex-direction: column;
+}
+.document-editor .editor-surface.visual .ProseMirror {
+  flex: 1 0 auto;
+  width: 100%;
+  /* Reserve room for two 24px controls, their 2px gap and a 4px text inset. */
+  padding-left: 58px !important;
+  cursor: text;
+}
+.document-editor .ProseMirror .inkstone-node-view {
+  cursor: auto;
+}
+.document-editor .milkdown .milkdown-block-handle {
+  transition: none;
+  pointer-events: none;
+}
+.document-editor .milkdown-block-handle .operation-item {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 3px;
+}
+.document-editor .milkdown-block-handle .operation-item svg {
+  width: 18px;
+  height: 18px;
+}
+.document-editor .milkdown-block-handle[data-show="true"] .operation-item {
+  pointer-events: auto;
+}
+.document-editor .milkdown-block-handle .operation-item:last-child {
+  cursor: grab;
+}
+.document-editor .milkdown-block-handle .operation-item:last-child:active,
+.document-editor .milkdown-table-block .cell-handle:active {
+  cursor: grabbing;
+}
+.document-editor .editor-surface.visual:not(:hover) .milkdown-block-handle,
+.document-editor
+  .editor-surface[data-scrolled]
+  .ProseMirror:not([data-dragging="true"])
+  ~ .milkdown-block-handle,
+.document-editor .milkdown-table-block .handle[data-show="false"] {
+  visibility: hidden;
+}
 .document-editor :is(.ProseMirror, .markdown-reading, .markdown-preview) a {
   color: var(--ui-accent);
 }
@@ -335,6 +382,14 @@
 .editor-toolbar .mode-switch button.active {
   background: var(--ui-selected);
   color: var(--ui-accent);
+}
+.editor-toolbar .file-actions > .button {
+  background: var(--ui-field);
+  border-color: var(--ui-control-line);
+  color: var(--ui-accent);
+}
+.editor-toolbar .file-actions > .button:hover:not(:disabled) {
+  background: var(--ui-hover);
 }
 .editor-toolbar :is(.file-actions .icon-button, .dropdown button) {
   color: var(--ui-text);

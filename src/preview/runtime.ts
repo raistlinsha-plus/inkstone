@@ -104,30 +104,56 @@ function tree(node: any): any {
     children: (node.children ?? []).map(tree),
   };
 }
+function refreshPanCursor() {
+  const overflow =
+    host.scrollWidth > host.clientWidth + 1 ||
+    host.scrollHeight > host.clientHeight + 1;
+  host.toggleAttribute(
+    "data-pannable",
+    !!map || (kind === "mermaid" && overflow),
+  );
+}
 if (typeof ResizeObserver !== "undefined")
   new ResizeObserver(() => {
     if (map) map.svg.attr("height", Math.max(160, window.innerHeight - 4));
+    refreshPanCursor();
   }).observe(host);
-let drag: { x: number; y: number; left: number; top: number } | null = null;
+let drag: {
+  pointerId: number;
+  x: number;
+  y: number;
+  left: number;
+  top: number;
+} | null = null;
 host.addEventListener("pointerdown", (event) => {
-  if (!map) {
+  if (
+    !map &&
+    host.hasAttribute("data-pannable") &&
+    event.isPrimary &&
+    event.button === 0
+  ) {
     drag = {
+      pointerId: event.pointerId,
       x: event.clientX,
       y: event.clientY,
       left: host.scrollLeft,
       top: host.scrollTop,
     };
     host.setPointerCapture(event.pointerId);
+    host.setAttribute("data-panning", "");
   }
 });
 host.addEventListener("pointermove", (event) => {
-  if (drag) {
+  if (drag && drag.pointerId === event.pointerId) {
     host.scrollLeft = drag.left + drag.x - event.clientX;
     host.scrollTop = drag.top + drag.y - event.clientY;
   }
 });
-host.addEventListener("pointerup", () => {
-  drag = null;
+host.addEventListener("lostpointercapture", (event) => {
+  if (drag?.pointerId === event.pointerId) {
+    drag = null;
+    host.removeAttribute("data-panning");
+  }
 });
 host.addEventListener("dblclick", () => {
   if (!map) notify("locate");
@@ -182,6 +208,7 @@ window.addEventListener("message", async (event) => {
             : scale * (data.action === "in" ? 1.25 : 0.8);
         scale = Math.max(0.2, Math.min(4, scale));
         svg.style.width = `${scale * 100}%`;
+        refreshPanCursor();
       }
     }
     return;
@@ -219,6 +246,9 @@ window.addEventListener("message", async (event) => {
   diagramSource = data.source;
   map?.destroy();
   map = null;
+  drag = null;
+  host.removeAttribute("data-pannable");
+  host.removeAttribute("data-panning");
   if (!preserveMermaidView) {
     host.replaceChildren();
     scale = 1;
@@ -267,6 +297,9 @@ window.addEventListener("message", async (event) => {
       const localMap = Markmap.create(svg, {
         duration: 0,
         autoFit: false,
+        // A plain wheel scrolls the enclosing document. Pinch/ctrl-wheel and drag still operate the map.
+        pan: false,
+        scrollForPan: true,
         maxInitialScale: 1,
         initialExpandLevel: 4,
         maxWidth: 220,
@@ -275,6 +308,13 @@ window.addEventListener("message", async (event) => {
       });
       map = localMap;
       localMap.zoom.scaleExtent([0.005, 16]);
+      localMap.zoom.on("start.inkstone", (event) => {
+        if (map === localMap && event.sourceEvent?.type === "mousedown")
+          host.setAttribute("data-panning", "");
+      });
+      localMap.zoom.on("end.inkstone", () => {
+        if (map === localMap) host.removeAttribute("data-panning");
+      });
       localMap.zoom.on("zoom.inkstone", (event) => {
         if (map !== localMap) return;
         mapViewport = {
@@ -316,6 +356,7 @@ window.addEventListener("message", async (event) => {
       });
     } else throw new Error("不支持的本地图表类型。");
     if (!current()) return;
+    refreshPanCursor();
     renderedGeneration = job.generation;
     notify("ready", {}, job);
   } catch (error) {

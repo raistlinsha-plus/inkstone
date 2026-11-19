@@ -145,3 +145,28 @@ test("keyboard opens the insert menu and Escape returns to the toolbar", () => {
   expect(document.activeElement).toBe(trigger);
   expect(screen.queryByRole("menu")).toBeNull();
 });
+
+test("the split separator resizes with the keyboard without changing document content", () => {
+  const changed = vi.fn();
+  render(
+    <Editor
+      path="test.md"
+      content="# 原文"
+      mode="split"
+      onChange={changed}
+      onError={vi.fn()}
+    />,
+  );
+  const divider = screen.getByRole("separator", { name: "编辑与预览宽度" });
+  divider.focus();
+  expect(divider.getAttribute("aria-valuenow")).toBe("50");
+  fireEvent.keyDown(divider, { key: "ArrowRight" });
+  expect(divider.getAttribute("aria-valuenow")).toBe("55");
+  fireEvent.keyDown(divider, { key: "Home" });
+  fireEvent.keyDown(divider, { key: "ArrowLeft" });
+  expect(divider.getAttribute("aria-valuenow")).toBe("25");
+  fireEvent.keyDown(divider, { key: "End" });
+  expect(divider.getAttribute("aria-valuenow")).toBe("75");
+  expect(document.activeElement).toBe(divider);
+  expect(changed).not.toHaveBeenCalled();
+});
