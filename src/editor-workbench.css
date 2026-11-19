@@ -1,6 +1,6 @@
 .document-editor {
-  --editor-control-size: 32px;
-  --editor-control-gap: 4px;
+  --editor-control-size: 30px;
+  --editor-control-gap: 3px;
   --editor-group-gap: 8px;
   color: var(--ui-text);
   background: var(--ui-paper);
@@ -8,8 +8,8 @@
 
 .document-editor .editor-tools {
   gap: 8px;
-  padding: 6px 14px;
-  min-height: 44px;
+  padding: 4px 12px;
+  min-height: 40px;
   border-color: var(--ui-line);
   background: var(--ui-surface);
 }
@@ -19,33 +19,92 @@
   border-color: var(--ui-line);
 }
 .document-editor .editor-tools button {
-  color: var(--ui-text);
+  color: var(--ui-muted);
+}
+.document-editor .editor-tools button:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: -2px;
+}
+.document-editor .history-tools button,
+.document-editor .editor-tools > button,
+.document-editor .insert-control > button {
+  min-height: var(--editor-control-size);
+  height: var(--editor-control-size);
+}
+.document-editor .history-tools button {
+  width: var(--editor-control-size);
+}
+.document-editor .editor-tools > .formatting-host.milkdown,
+.document-editor .formatting-host .milkdown-top-bar {
+  background: transparent;
+}
+.document-editor .formatting-host .milkdown-top-bar {
+  min-height: var(--editor-control-size);
 }
 .document-editor .editor-tools button:hover:not(:disabled) {
+  color: var(--ui-text);
   background: var(--ui-hover);
 }
 .document-editor .editor-tools > button.selected,
 .document-editor .formatting-host .milkdown-top-bar .top-bar-item.active {
   color: var(--ui-accent);
-  border-color: var(--ui-control-line);
+  border-color: transparent;
   background: var(--ui-selected);
 }
 .document-editor .formatting-host .milkdown-top-bar .top-bar-inner {
   gap: var(--editor-control-gap);
 }
 .document-editor .formatting-host .milkdown-top-bar .top-bar-heading-selector {
-  flex-basis: 96px;
-  width: 96px;
+  flex-basis: 82px;
+  width: 82px;
 }
 .document-editor .formatting-host .milkdown-top-bar .top-bar-heading-button {
-  width: 94px;
-  justify-content: space-between;
-  background: transparent;
-  border-color: var(--ui-line);
-}
-.document-editor .formatting-host .milkdown-top-bar .top-bar-heading-label {
+  width: 100%;
   min-width: 0;
+  height: var(--editor-control-size);
+  justify-content: space-between;
+  padding: 3px 6px;
+  background: transparent;
+  border-color: transparent;
+}
+.document-editor .formatting-host .top-bar-heading-button .top-bar-heading-label {
+  min-width: 0;
+  color: var(--ui-text);
+  font: inherit;
+  font-size: 13px;
   text-align: start;
+}
+.document-editor .formatting-host .top-bar-heading-button .top-bar-chevron {
+  width: 14px;
+}
+.document-editor .formatting-host .top-bar-heading-button .top-bar-chevron svg {
+  width: 13px;
+  color: var(--ui-muted);
+  stroke: currentColor;
+}
+.document-editor .formatting-host .milkdown-top-bar .top-bar-heading-dropdown {
+  padding: 4px;
+  background: var(--ui-overlay);
+  border: 1px solid var(--ui-line);
+  box-shadow: 0 6px 22px var(--ui-shadow);
+}
+.document-editor .formatting-host .milkdown-top-bar .top-bar-heading-option,
+.document-editor .formatting-host .format-overflow-menu .format-overflow-option {
+  border: 0;
+  background: transparent;
+  color: var(--ui-text);
+}
+.document-editor .formatting-host .milkdown-top-bar .top-bar-heading-option {
+  padding: 5px 8px;
+}
+.document-editor .formatting-host .top-bar-heading-dropdown .top-bar-heading-option:hover,
+.document-editor .formatting-host .format-overflow-menu .format-overflow-option:hover {
+  background: var(--ui-hover);
+}
+.document-editor .formatting-host .milkdown-top-bar .top-bar-heading-option.active,
+.document-editor .formatting-host .format-overflow-option[aria-checked="true"] {
+  color: var(--ui-accent);
+  background: var(--ui-selected);
 }
 .document-editor .formatting-host .milkdown-top-bar .top-bar-item,
 .document-editor .formatting-host .format-overflow-button {
@@ -83,21 +142,24 @@
   border-inline-start: 1px solid var(--ui-line);
   pointer-events: none;
 }
+.document-editor .formatting-host .milkdown-top-bar .top-bar-item svg,
 .document-editor .formatting-host .milkdown-top-bar button svg {
   width: 16px;
   height: 16px;
+  fill: none;
   color: currentColor;
   stroke: currentColor;
   stroke-width: 1.75;
 }
 .document-editor .formatting-host .format-overflow-button {
+  margin-inline-start: var(--editor-control-gap);
   background: transparent;
-  border-color: var(--ui-line);
+  border-color: transparent;
 }
 .document-editor .insert-control > button {
-  color: var(--ui-accent);
-  background: var(--ui-field);
-  border-color: var(--ui-control-line);
+  color: var(--ui-text);
+  background: transparent;
+  border-color: transparent;
 }
 .document-editor :is(.insert-menu, .format-overflow-menu, .block-menu > div) {
   background: var(--ui-overlay);
@@ -109,14 +171,17 @@
   border-color: var(--ui-line);
 }
 .document-editor[data-compact-tools="true"] .editor-tools {
-  gap: 4px 6px;
-  padding-inline: 8px;
+  flex-wrap: nowrap;
+  gap: 4px;
+  padding-inline: 6px;
 }
-.document-editor[data-compact-tools="true"]
-  .editor-tools
-  > .formatting-host:not([hidden]) {
-  padding-top: 4px;
-  border-top: 1px solid var(--ui-line);
+.document-editor[data-compact-tools="true"] .editor-tools > .formatting-host {
+  order: 0;
+  flex: 1 1 0;
+  width: auto;
+}
+.document-editor[data-compact-tools="true"] .toolbar-label {
+  display: none;
 }
 
 .document-editor .milkdown {
@@ -127,6 +192,8 @@
   --crepe-color-surface-low: var(--ui-paper);
   --crepe-color-on-surface-low: var(--ui-text);
   --crepe-color-primary: var(--ui-accent);
+  --crepe-color-inline-code: var(--ui-code-link);
+  --crepe-color-inline-area: var(--ui-hover);
   --crepe-color-secondary: var(--ui-selected);
   --crepe-color-on-secondary: var(--ui-accent);
   --crepe-color-outline: var(--ui-control-line);
@@ -368,6 +435,10 @@
   color: var(--ui-muted);
   border-color: var(--ui-line);
 }
+.editor-toolbar {
+  min-height: var(--workspace-header-height, 48px);
+  padding-block: 5px;
+}
 .editor-toolbar .document-title {
   color: var(--ui-text);
 }
@@ -384,9 +455,13 @@
   color: var(--ui-accent);
 }
 .editor-toolbar .file-actions > .button {
-  background: var(--ui-field);
-  border-color: var(--ui-control-line);
+  background: transparent;
+  border-color: transparent;
+  color: var(--ui-text);
+}
+.editor-toolbar .file-actions > .button svg {
   color: var(--ui-accent);
+  stroke: currentColor;
 }
 .editor-toolbar .file-actions > .button:hover:not(:disabled) {
   background: var(--ui-hover);

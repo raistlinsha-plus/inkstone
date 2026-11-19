@@ -188,9 +188,23 @@ try {
     const fileButton = home.getByRole("button", { name: /阅读活动方案\.md/ }).first();
     await fileButton.click();
     await page.locator(".library-open[aria-current=page]").waitFor();
+    const views = page.getByRole("group", { name: "文档视图" });
+    await views.getByRole("button", { name: "正文", pressed: true }).waitFor();
     await page.getByRole("button", { name: "问这篇文档", exact: true }).click();
     const panel = page.locator(".contextual-panel");
-    await panel.getByRole("textbox", { name: "向当前文档提问" }).fill("两种阅读活动各有多少人参加？");
+    const input = panel.getByRole("textbox", { name: "向当前文档提问" });
+    const inputHeight = () => input.evaluate(el => el.getBoundingClientRect().height);
+    const emptyHeight = await inputHeight();
+    await input.fill("第一行\n第二行\n第三行\n第四行");
+    await page.waitForFunction(
+      (old) => document.querySelector(".contextual-panel textarea").getBoundingClientRect().height > old,
+      emptyHeight,
+    );
+    await input.fill("两种阅读活动各有多少人参加？");
+    await page.waitForFunction(
+      (old) => document.querySelector(".contextual-panel textarea").getBoundingClientRect().height <= old + 1,
+      emptyHeight,
+    );
     await panel.getByRole("button", { name: "发送问题" }).click();
     await panel.getByRole("heading", { name: "甲方案参与人数较多" }).waitFor();
     await panel.getByRole("table").waitFor();

@@ -179,10 +179,18 @@ def materialize_candidate(zip_path, destination):
     run("/usr/bin/ditto", "-x", "-k", zip_path, destination)
 
 
+def bundle_build(app):
+    with (app / PLIST).open("rb") as file:
+        build = str(plistlib.load(file).get("CFBundleVersion", ""))
+    require(re.fullmatch(r"[0-9]+(?:\.[0-9]+){0,2}", build), "本机修订需要可比较的数字构建号")
+    parts = [int(part) for part in build.split(".")]
+    return tuple((parts + [0, 0])[:3])
+
+
 def preflight(artifact_dir, from_version):
     manifest = read_json(artifact_dir / "release-manifest.json")
     version = manifest["version"]
-    require(bool(VERSION.fullmatch(version)) and version != from_version, "候选版本无效或与已安装版本相同")
+    require(bool(VERSION.fullmatch(version)), "候选版本无效")
     source = git_head()
     require(manifest["sourceDirty"] is False and manifest["sourceCommit"] == source
             and manifest["target"] == "aarch64-apple-darwin"
@@ -212,6 +220,9 @@ def preflight(artifact_dir, from_version):
         (state / "candidate/Inkstone.app").rename(state / "bundle")
         (state / "candidate").rmdir()
         application(state / "bundle", version, hashes)
+        if version == from_version:
+            require(bundle_build(state / "bundle") > bundle_build(APP),
+                    "相同版本的本机修订需要更高的构建号")
         same_volume(APP / "Contents", state / "bundle/Contents")
         cargo_test("--no-run")
         record(state, {

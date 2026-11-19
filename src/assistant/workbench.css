@@ -807,11 +807,15 @@
   outline: none;
 }
 
-/* The document sidebar keeps the input and its active source in view. */
+/* One continuous top edge across the editor and its document sidebar. */
+.workspace-shell {
+  --workspace-header-height: 48px;
+}
 .workspace-shell .contextual-panel > .panel-tabs {
-  min-height: 48px;
-  height: auto;
-  padding: 7px 12px;
+  height: var(--workspace-header-height);
+  min-height: var(--workspace-header-height);
+  padding: 0 10px;
+  background: var(--ui-paper);
   gap: 3px;
 }
 .workspace-shell .contextual-panel .panel-tabs > button:not(.icon-button) {
@@ -966,45 +970,53 @@
   color: var(--ui-text);
   border-radius: 6px;
 }
-.workspace-shell .contextual-panel .assistant-toolbar {
-  background: transparent;
-  padding: 8px 14px;
-  border-bottom: 0;
+.workspace-shell .contextual-panel .contextual-ask-header .assistant-toolbar-actions {
+  margin-left: auto;
+  gap: 2px;
 }
-.workspace-shell .contextual-panel .assistant-toolbar .assistant-toolbar-actions > button {
-  background: transparent;
-  border-color: transparent;
-}
-.workspace-shell .contextual-panel .assistant-toolbar .assistant-toolbar-actions > button:is(:hover, :focus-visible):enabled {
-  background: var(--ui-hover);
-}
-.workspace-shell .contextual-panel .assistant-toolbar + .knowledge-context {
-  padding-top: 0;
-}
-.contextual-panel .assistant-toolbar + .knowledge-context .knowledge-options > summary {
-  top: 0;
-}
-.workspace-shell .contextual-panel .ask-form {
-  width: auto;
-  margin: 8px 12px 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--ui-line);
-  border-radius: 10px;
-  background: var(--ui-field);
-}
-.workspace-shell .contextual-panel .ask-form:focus-within {
-  border-color: var(--ui-focus);
-  box-shadow: 0 0 0 1px var(--ui-focus);
-}
-.workspace-shell .contextual-panel .ask-form textarea:focus-visible {
-  outline: none;
-}
-.workspace-shell .contextual-panel .ask-form textarea {
-  padding: 2px 0;
+.workspace-shell .contextual-panel .contextual-ask-header .assistant-toolbar-actions > button,
+.workspace-shell .contextual-panel .contextual-ask-header .assistant-manage > summary {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  min-width: 28px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
   border: 0;
+  border-radius: 6px;
   background: transparent;
+  color: var(--ui-muted);
 }
-
+.workspace-shell .contextual-panel .contextual-ask-header .assistant-toolbar-actions > button > span {
+  display: none;
+}
+.workspace-shell .contextual-panel .contextual-ask-header .assistant-toolbar-actions > button:hover:enabled,
+.workspace-shell .contextual-panel .contextual-ask-header .assistant-manage > summary:hover,
+.workspace-shell .contextual-panel .contextual-ask-header .assistant-manage[open] > summary {
+  background: var(--ui-hover);
+  color: var(--ui-text);
+}
+.contextual-ask-header .assistant-manage > div {
+  top: calc(100% + 4px);
+}
+.contextual-thread-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 14px 0;
+  color: var(--ui-muted);
+  font-size: 12px;
+}
+.contextual-thread-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contextual-thread-title span {
+  flex: none;
+}
 .workspace-shell .contextual-panel .answer-text :is(.preview-table, .chart-table) :is(th, td) {
   border-color: var(--ui-line);
 }

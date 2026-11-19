@@ -7,6 +7,7 @@ import "./space.css";
 import "./assistant/assistant.css";
 import "./workbench-theme.css";
 import "./assistant/workbench.css";
+import "./assistant/contextual-composer.css";
 import "./editor-workbench.css";
 import "./knowledge/wiki.css";
 

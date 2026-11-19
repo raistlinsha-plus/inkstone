@@ -20,6 +20,8 @@
 
 从 Apple Silicon Mac 上的主仓库运行。候选包由干净且已提交的源码构建，预检核对该提交、发行清单、ZIP 校验和、应用版本和签名完整性。
 
+同一版本的本机修订用 macOS 构建号区分。预检只接受比已安装构建更高的修订，备份与回退沿用下方流程。可以把专用制品目录作为第一个参数传给 `scripts/release-manifest.mjs`，将本机修订的清单和 ZIP 放在同一目录。
+
 ```sh
 npm run bundle
 node scripts/release-manifest.mjs

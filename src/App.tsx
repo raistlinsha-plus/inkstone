@@ -18,6 +18,8 @@ import {
   ArrowDownToLine,
   ArrowUpRight,
   FolderOpen,
+  Globe,
+  GlobeLock,
   ArrowLeft,
   ArrowUp,
   Check,
@@ -2687,6 +2689,27 @@ export default function App() {
   const scopeDocument = fixedScope || visibleDocument?.path;
   const separateFixedScope = fixedScope && fixedScope !== visibleDocument?.path;
   const missingScope = panelScope === "current" && !scopeDocument;
+  const knowledgeModes = (
+    <>
+      <button
+        aria-pressed={panel === "search"}
+        className={panel === "search" ? "active" : ""}
+        onClick={() => openKnowledgePanel("search")}
+      >
+        <Search size={15} />
+        检索
+      </button>
+      <button
+        aria-pressed={panel === "ask"}
+        className={panel === "ask" ? "active" : ""}
+        aria-label={generalAsk ? "通用问答当前页" : undefined}
+        onClick={() => openKnowledgePanel("ask", true)}
+      >
+        <Sparkles size={15} />
+        {generalAsk ? "AI 问答" : "问答"}
+      </button>
+    </>
+  );
   const retrievalControls = (
     <section className="knowledge-context" aria-label="检索范围与设置">
       <div className="knowledge-scope">
@@ -2806,15 +2829,23 @@ export default function App() {
   }
   const composerLocked =
     assistant.loading || openingConversation || citationOpening;
+  const localOnlyTurn = draftContext.webAccess === "local-only";
   const turnControls = (
     <>
       <label
-        className="assistant-skip-preference"
-        title="仍可向已配置的聊天模型发送问题和所选资料"
+        className={generalAsk ? "assistant-skip-preference" : "composer-web-toggle"}
+        title={
+          generalAsk
+            ? "仍可向已配置的聊天模型发送问题和所选资料"
+            : localOnlyTurn
+              ? "本轮不搜索网页。点击恢复自动判断。"
+              : "本轮允许模型按需搜索网页，受联网设置限制。点击关闭。"
+        }
       >
         <input
           type="checkbox"
-          checked={draftContext.webAccess === "local-only"}
+          aria-label="本轮不搜索网页"
+          checked={localOnlyTurn}
           disabled={chatBusy || composerLocked}
           onChange={(event) => {
             const { webAccess, ...context } = draftContextRef.current;
@@ -2823,10 +2854,33 @@ export default function App() {
             else if (webAccess) changeDraftContext(context);
           }}
         />
-        本轮不搜索网页
+        {generalAsk ? "本轮不搜索网页" : (
+          <>
+            {localOnlyTurn ? <GlobeLock size={15} /> : <Globe size={15} />}
+            {localOnlyTurn ? "不搜网页" : "按需搜索网页"}
+          </>
+        )}
       </label>
-      <details className="assistant-composer-options">
-        <summary>{skipPreferences ? "已停用回答偏好" : "更多选项"}</summary>
+      <details
+        className="assistant-composer-options"
+        data-preferences-skipped={skipPreferences || undefined}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget))
+            event.currentTarget.open = false;
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "Escape" || !event.currentTarget.open) return;
+          event.stopPropagation();
+          event.currentTarget.open = false;
+          event.currentTarget.querySelector("summary")?.focus();
+        }}
+      >
+        <summary
+          aria-label={skipPreferences ? "更多选项，已停用回答偏好" : "更多选项"}
+          title={skipPreferences ? "更多选项，已停用回答偏好" : "更多选项"}
+        >
+          {generalAsk ? (skipPreferences ? "已停用回答偏好" : "更多选项") : <MoreHorizontal size={17} />}
+        </summary>
         <div>
           <label className="assistant-skip-preference">
             <input
@@ -2838,6 +2892,7 @@ export default function App() {
             本轮停用回答偏好
           </label>
           <p>所选资料可发给聊天模型。本轮选项随发送重置。</p>
+          {!generalAsk && <p><kbd>Enter</kbd> 发送 · <kbd>Shift+Enter</kbd> 换行</p>}
         </div>
       </details>
     </>
@@ -3417,9 +3472,10 @@ export default function App() {
                   <span title={document.path}>{titleOf(document.path)}</span>
                   {dirty && <span className="unsaved-dot" />}
                 </div>
-                <div className="mode-switch">
+                <div className="mode-switch" role="group" aria-label="文档视图">
                   <button
                     className={mode === "source" ? "active" : ""}
+                    aria-pressed={mode === "source"}
                     onClick={() => changeMode("source")}
                   >
                     <Code2 size={13} />
@@ -3428,6 +3484,7 @@ export default function App() {
                   <button
                     disabled={documentKind(document.path) !== "markdown"}
                     className={mode === "visual" ? "active" : ""}
+                    aria-pressed={mode === "visual"}
                     onClick={() => changeMode("visual")}
                   >
                     <PenLine size={13} />
@@ -3435,6 +3492,7 @@ export default function App() {
                   </button>
                   <button
                     className={mode === "split" ? "active" : ""}
+                    aria-pressed={mode === "split"}
                     onClick={() => changeMode("split")}
                   >
                     分栏
@@ -3442,6 +3500,7 @@ export default function App() {
                   <button
                     disabled={documentKind(document.path) !== "markdown"}
                     className={mode === "mindmap" ? "active" : ""}
+                    aria-pressed={mode === "mindmap"}
                     onClick={() => changeMode("mindmap")}
                   >
                     大纲脑图
@@ -3654,25 +3713,9 @@ export default function App() {
             style={{ "--knowledge-width": `${panelWidth}px` } as CSSProperties}
           >
             <KnowledgePanelResizer preferredWidth={panelWidth} onResize={updatePanelWidth} />
-            {!standaloneAskOpen && (
+            {panel === "search" && (
               <div className="panel-tabs">
-                <button
-                  aria-pressed={panel === "search"}
-                  className={panel === "search" ? "active" : ""}
-                  onClick={() => openKnowledgePanel("search")}
-                >
-                  <Search size={15} />
-                  检索
-                </button>
-                <button
-                  aria-pressed={panel === "ask"}
-                  className={panel === "ask" ? "active" : ""}
-                  aria-label={generalAsk ? "通用问答当前页" : undefined}
-                  onClick={() => openKnowledgePanel("ask", true)}
-                >
-                  <Sparkles size={15} />
-                  {generalAsk ? "AI 问答" : "问答"}
-                </button>
+                {knowledgeModes}
                 {enableGeneralAsk && !generalAsk && (
                   <button
                     type="button"
@@ -3684,7 +3727,7 @@ export default function App() {
                     通用问答 <ArrowUpRight size={13} />
                   </button>
                 )}
-                {compactWindow && panel === "search" && (
+                {compactWindow && (
                   <button
                     className="return-to-editor"
                     onClick={() => setPanelOpen(false)}
@@ -3827,6 +3870,12 @@ export default function App() {
             ) : (
               <>
                 <ConversationHeader
+                  dock={standaloneAskOpen ? undefined : {
+                    modes: knowledgeModes,
+                    onClose: closeKnowledge,
+                    onGeneral: enableGeneralAsk ? openGeneralAsk : undefined,
+                    canOpenGeneral: !chatBusy,
+                  }}
                   controller={assistant}
                   disabled={chatBusy || composerLocked || sourceBusy}
                   expanded={focusedKnowledge}
@@ -4044,7 +4093,7 @@ export default function App() {
                   </div>
                 )}
                 <form
-                  className="ask-form"
+                  className={generalAsk ? "ask-form" : "ask-form document-composer"}
                   aria-busy={openingConversation || undefined}
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -4068,34 +4117,46 @@ export default function App() {
                       <small>发送时会将以上背景一并发给聊天模型。</small>
                     </section>
                   )}
-                  <textarea
-                    ref={questionInput}
-                    aria-label={generalAsk ? "向 AI 提问" : separateFixedScope ? `向会话文档 ${basename(fixedScope)} 提问` : panelScope === "current" ? "向当前文档提问" : "向当前空间提问"}
-                    value={question}
-                    maxLength={1500}
-                    disabled={composerLocked || documentScopeMissing}
-                    placeholder={
-                      generalAsk ? "写下你的问题或想法…" : "向你的资料提问…"
-                    }
-                    onChange={(e) => {
-                      questionRef.current = e.target.value;
-                      setQuestion(e.target.value);
-                      saveAssistantDraft(
-                        currentAssistantScope(),
-                        e.target.value,
-                      );
-                    }}
-                    onKeyDown={(e) => {
-                      if (
-                        !isImeEvent(e.nativeEvent) &&
-                        !e.shiftKey &&
-                        e.key === "Enter"
-                      ) {
-                        e.preventDefault();
-                        void ask();
+                  <div className={generalAsk ? "general-composer-field" : "document-composer-field"}>
+                    {!generalAsk && (
+                      <span className="composer-text-measure" aria-hidden="true" data-value={question} />
+                    )}
+                    <textarea
+                      ref={questionInput}
+                      aria-label={generalAsk ? "向 AI 提问" : separateFixedScope ? `向会话文档 ${basename(fixedScope)} 提问` : panelScope === "current" ? "向当前文档提问" : "向当前空间提问"}
+                      rows={generalAsk ? 2 : 1}
+                      value={question}
+                      maxLength={1500}
+                      disabled={composerLocked || documentScopeMissing}
+                      placeholder={
+                        generalAsk
+                          ? "写下你的问题或想法…"
+                          : documentScopeMissing
+                            ? "请先选择资料…"
+                            : panelScope === "current"
+                              ? "就这篇文档提问…"
+                              : "询问这个空间的资料…"
                       }
-                    }}
-                  />
+                      onChange={(e) => {
+                        questionRef.current = e.target.value;
+                        setQuestion(e.target.value);
+                        saveAssistantDraft(
+                          currentAssistantScope(),
+                          e.target.value,
+                        );
+                      }}
+                      onKeyDown={(e) => {
+                        if (
+                          !isImeEvent(e.nativeEvent) &&
+                          !e.shiftKey &&
+                          e.key === "Enter"
+                        ) {
+                          e.preventDefault();
+                          void ask();
+                        }
+                      }}
+                    />
+                  </div>
                   {generalAsk ? (
                     <QuestionSources
                       view={libraryView}
@@ -4139,12 +4200,10 @@ export default function App() {
                       {turnControls}
                     </section>
                   )}
-                  <div>
-                    <span>
-                      {chatBusy && question.trim()
-                        ? "下一问草稿自动保存"
-                        : "Enter 发送 / Shift+Enter 换行"}
-                    </span>
+                  <div className="composer-send-row">
+                    {(generalAsk || (chatBusy && question.trim())) && (
+                      <span>{chatBusy && question.trim() ? "下一问草稿自动保存" : "Enter 发送 / Shift+Enter 换行"}</span>
+                    )}
                     {chatBusy ? (
                       <button
                         type="button"
@@ -4159,7 +4218,7 @@ export default function App() {
                     ) : (
                       <button
                         className="send-button"
-                        title="发送问题"
+                        title="发送问题（Enter），Shift+Enter 换行"
                         aria-label="发送问题"
                         disabled={
                           (!workspace && !generalAsk) ||

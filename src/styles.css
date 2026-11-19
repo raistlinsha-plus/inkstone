@@ -3147,7 +3147,7 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #68765e;
+  color: var(--ui-muted);
   font-size: 11px;
 }
 .document-title > span:not(.document-project):not(.unsaved-dot) {

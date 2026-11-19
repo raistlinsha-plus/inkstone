@@ -2,7 +2,7 @@ import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const { version } = JSON.parse(
   await readFile(join(root, "package.json"), "utf8"),
@@ -38,7 +38,9 @@ const report = {
   validation:
     "See verification/state.json and native acceptance record; manifest existence does not imply unrun checks passed.",
 };
-const out = join(root, `artifacts/v${version}-development`);
+const out = process.argv[2]
+  ? resolve(root, process.argv[2])
+  : join(root, `artifacts/v${version}-development`);
 await mkdir(out, { recursive: true });
 await writeFile(
   join(out, "release-manifest.json"),
