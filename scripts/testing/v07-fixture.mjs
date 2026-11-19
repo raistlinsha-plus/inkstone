@@ -4,9 +4,11 @@ export function installV07Fixture({
   clean = false,
   companionPilot = false,
   onboardingSampleMarkdown = "",
+  isolatedOnboarding = false,
 } = {}) {
   const offlineOnboarding = !!onboardingSampleMarkdown;
-  const key = `inkstone-v07-ui-qa-store-${offlineOnboarding ? "offline-onboarding" : clean ? "clean" : companionPilot ? "pilot" : "base"}`,
+  const sampleSpace = "22adb640-1a43-4b7c-824e-1bef7aaabc08";
+  const key = `inkstone-v07-ui-qa-store-${isolatedOnboarding ? "isolated-onboarding" : offlineOnboarding ? "offline-onboarding" : clean ? "clean" : companionPilot ? "pilot" : "base"}`,
     clone = (x) => JSON.parse(JSON.stringify(x));
   const root = "/qa/inkstone-v07",
     now = () => new Date().toISOString(),
@@ -142,10 +144,11 @@ export function installV07Fixture({
     hasChatKey: false,
     hasRerankKey: false,
   };
+  let openedProject = "qa-space";
   const ws = () => ({
     root,
-    name: "北岸阅读计划（合成）",
-    managedProjectId: "qa-space",
+    name: store.spaces.find((space) => space.id === openedProject)?.title,
+    managedProjectId: openedProject,
     files: [],
     stats: currentStats(),
   });
@@ -167,20 +170,20 @@ export function installV07Fixture({
             embeddingReady: false,
           }
         : stats;
-  const source = () => ({
+  const source = (document = store.documents[0]) => ({
     id: 1,
-    path: store.documents[0].path,
+    path: document.path,
     text: offlineOnboarding
-      ? store.files[store.documents[0].path].content.split("\n")[6]
+      ? store.files[document.path].content.split("\n")[6]
       : "甲方案：周二，120人。乙方案：周四，80人。资料未提供满意度、费用或长期效果。",
     heading: offlineOnboarding ? "活动安排" : "两种活动",
     startLine: 7,
     endLine: offlineOnboarding ? 7 : 11,
-    hash: store.files[store.documents[0].path].hash,
+    hash: store.files[document.path].hash,
     score: 1,
     evidence: true,
-    title: store.documents[0].title,
-    documentId: "doc-1",
+    title: document.title,
+    documentId: document.id,
   });
   const wiki = {
     policy: {
@@ -245,17 +248,24 @@ export function installV07Fixture({
         candidateCount: 3,
         httpStatus: 200,
       };
-    if (command === "open_library") return ws();
+    if (command === "open_library") {
+      if (isolatedOnboarding) openedProject = args.projectId ?? "qa-space";
+      return ws();
+    }
     if (command === "library_prepare_local_example" && offlineOnboarding) {
-      if (args.projectId !== "qa-space")
+      if (!isolatedOnboarding && args.projectId !== "qa-space")
         throw Error("合成样例只能进入验收空间");
-      const template = templates.documents[0];
+      if (isolatedOnboarding && !store.spaces.some((s) => s.id === sampleSpace))
+        store.spaces.push({ id: sampleSpace, title: "离线体验" });
+      const template = isolatedOnboarding
+        ? { ...templates.documents[0], projectId: sampleSpace }
+        : templates.documents[0];
       if (!store.documents.some(({ id }) => id === template.id)) {
         store.documents.push(template);
         store.files[template.path] = templates.files[template.path];
       }
       store.indexed ??= {};
-      store.indexed[template.path] ??= [source()];
+      store.indexed[template.path] ??= [source(template)];
       persist();
       return clone(template);
     }
@@ -435,7 +445,7 @@ export function installV07Fixture({
         path = `documents/${id}/${args.title}`;
       const d = {
         id,
-        projectId: "qa-space",
+        projectId: isolatedOnboarding ? args.projectId : "qa-space",
         path,
         title: args.title,
         source: "",
@@ -617,7 +627,10 @@ export function installV07Fixture({
         c.revision++;
         persist();
         send("assistant-accepted", { requestId: args.requestId });
-        const selectedSource = store.documents.length ? source() : null;
+        const selectedDocument = isolatedOnboarding
+          ? store.documents.find((doc) => args.sources?.documentIds?.includes(doc.id))
+          : store.documents[0];
+        const selectedSource = selectedDocument ? source(selectedDocument) : null;
         const insufficient = /满意|更好/.test(t.question),
           text = offlineOnboarding
             ? "## 计划开展四场活动\n\n3 场在社区阅览室举行，1 场在河畔公园举行。[1]"
@@ -657,14 +670,14 @@ export function installV07Fixture({
             args.general && selectedSource && args.sources?.projectId
               ? [
                   {
-                    id: `doc-1:${selectedSource.startLine}-${selectedSource.endLine}`,
+                    id: `${selectedSource.documentId}:${selectedSource.startLine}-${selectedSource.endLine}`,
                     kind: "document",
                     label: selectedSource.title,
                     citation: 1,
                     excerpt: selectedSource.text,
                     contentHash: selectedSource.hash,
-                    projectId: "qa-space",
-                    documentId: "doc-1",
+                    projectId: selectedDocument.projectId,
+                    documentId: selectedSource.documentId,
                   },
                 ]
               : [],

@@ -2,7 +2,7 @@
 
 本机升级工具从 **v0.8.5** 起复用同一套预检、备份与回退流程。日常使用 `/Applications/Inkstone.app`，Bundle ID 为 `local.inkstone.desktop`。
 
-**v0.9.0-beta.1** 的本机应用仍走临时签名和本机升级流程。GitHub 源码、Developer ID 公证制品和本机候选包分别核验。 [本轮交付](DELIVERY-v0.9.0-beta.1.md) · [macOS 公证发布手册](MACOS_RELEASE.md)
+**v0.9.2** 的本机候选应用沿用临时签名和本机升级流程。GitHub 源码、Developer ID 公证制品和本机候选包分别核验。 [开发交付](DELIVERY-v0.9.2.md) · [macOS 公证发布手册](MACOS_RELEASE.md)
 
 ## 唯一日常入口
 

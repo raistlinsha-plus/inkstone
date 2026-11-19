@@ -32,18 +32,21 @@ function serviceOrigin(address: string): string | null {
 export default function SettingsModal({
   value,
   initialTab = "embedding",
+  chatSetupOnly = false,
   onClose,
   onSave,
   onWebSearch,
 }: {
   value: Settings;
   initialTab?: Tab;
+  chatSetupOnly?: boolean;
   onClose: () => void;
   onSave: (settings: Settings) => void;
   onWebSearch?: () => void;
 }) {
   const [form, setForm] = useState<Settings>(() => ({
     ...structuredClone(value),
+    chat: { ...value.chat, enabled: chatSetupOnly || value.chat.enabled },
     rerank: { ...defaultRerankProvider, ...value.rerank },
   }));
   const [keys, setKeys] = useState({ embedding: "", chat: "", rerank: "" });
@@ -55,12 +58,16 @@ export default function SettingsModal({
     chat: false,
     rerank: false,
   });
-  const [tab, setTab] = useState<Tab>(initialTab);
+  const [tab, setTab] = useState<Tab>(chatSetupOnly ? "chat" : initialTab);
   const [busy, setBusy] = useState("");
   const [appearance, setAppearanceChoice] = useState(getAppearance);
   const testGeneration = useRef(0);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  useEffect(() => {
+    setMessage("");
+    setError("");
+  }, [form, keys, clear, reuseKeySource]);
   const targetOrigin = serviceOrigin(form.rerank.endpoint);
   const reusableSources = (["embedding", "chat"] as const).filter((source) => {
     const savedOrigin = serviceOrigin(value[source].baseUrl);
@@ -177,8 +184,7 @@ export default function SettingsModal({
     >
       <div className="modal-heading">
         <div>
-          <span className="eyebrow">YOUR MODELS, YOUR CHOICE</span>
-          <h2>连接你的模型</h2>
+          <h2>{chatSetupOnly ? "连接问答模型" : "连接你的模型"}</h2>
         </div>
         <button
           className="icon-button"
@@ -190,9 +196,11 @@ export default function SettingsModal({
         </button>
       </div>
       <p className="muted">
-        文件与索引保存在本机。按需要连接自己的 API，也可以使用本地服务。
+        {chatSetupOnly
+          ? "配置自己的问答接口。保存后返回当前问题，准备好后再发送。"
+          : "文件与索引保存在本机。按需要连接自己的 API，也可以使用本地服务。"}
       </p>
-      <div className="settings-utilities">
+      {!chatSetupOnly && <div className="settings-utilities">
         {onWebSearch && (
           <button
             type="button"
@@ -221,8 +229,8 @@ export default function SettingsModal({
           </select>
         </label>
         <small>即时生效</small>
-      </div>
-      <div
+      </div>}
+      {!chatSetupOnly && <div
         className="settings-tabs"
         role="tablist"
         aria-label="模型用途"
@@ -277,13 +285,14 @@ export default function SettingsModal({
             <span>{subtitle}</span>
           </button>
         ))}
-      </div>
+      </div>}
       <fieldset
         className="provider-fields"
         disabled={!!busy}
-        role="tabpanel"
+        role={chatSetupOnly ? undefined : "tabpanel"}
         id="settings-provider-panel"
-        aria-labelledby={"settings-tab-" + tab}
+        aria-label={chatSetupOnly ? "问答模型" : undefined}
+        aria-labelledby={chatSetupOnly ? undefined : "settings-tab-" + tab}
       >
         <label className="enable-row">
           <span>

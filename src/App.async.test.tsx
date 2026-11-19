@@ -245,6 +245,7 @@ vi.mock("./calendar/ProjectCalendar", () => ({
 vi.mock("./companion/CompanionDock", () => ({ default: () => null }));
 import App from "./App";
 import { defaultRerankProvider } from "./types";
+import bundledSample from "../examples/v0.8.5/离线体验：社区阅读活动.md?raw";
 
 const stats = { documents: 0, chunks: 0, vectors: 0, embeddingReady: false };
 const provider = {
@@ -331,24 +332,33 @@ test("the managed workbench offers the first-question guide on startup", async (
   api.realLibrary = true;
   render(<App />);
   const guide = await screen.findByRole("region", { name: "开始使用" });
-  expect(within(guide).getByText("从资料到第一条回答")).toBeTruthy();
+  fireEvent.click(within(guide).getByText("从资料到第一条回答"));
   expect(
-    within(guide).getByRole("button", { name: "复制导入文档" }),
+    within(guide).getByRole("button", { name: "导入我的资料" }),
   ).toBeTruthy();
   fireEvent.click(within(guide).getByRole("button", { name: "打开问答" }));
   const composer = await readyComposer("向当前空间提问");
   expect(document.activeElement).toBe(composer);
 });
 
-async function openSampleAndSearch() {
+async function openSampleAndSearch(content = bundledSample) {
   api.realLibrary = true;
-  const sample = libraryDoc("离线体验：社区阅读活动.md");
+  const sample = {
+    ...libraryDoc("离线体验：社区阅读活动.md", "demo-project"),
+    id: "17903a22-3f62-4bcd-8691-8720c50478a7",
+  };
   const saving = deferred<LibraryDocument>();
-  const saved = file(sample.path, "# 社区阅读活动\n\n计划开展 4 场阅读活动。");
+  const saved = { ...file(sample.path, content), hash: "a".repeat(64) };
   disk.set(sample.path, saved);
   let prepared = false;
   overrides.set("library_list", () =>
-    prepared ? { ...view, documents: [...view.documents, sample] } : view,
+    prepared
+      ? {
+          ...view,
+          projects: [...view.projects, { id: sample.projectId, title: "离线体验" }],
+          documents: [...view.documents, sample],
+        }
+      : view,
   );
   overrides.set("library_prepare_local_example", () => saving.promise);
   overrides.set("search", () => ({
@@ -358,8 +368,8 @@ async function openSampleAndSearch() {
         path: sample.path,
         title: sample.title,
         hash: saved.hash,
-        startLine: 3,
-        endLine: 3,
+        startLine: 7,
+        endLine: 7,
         heading: "活动安排",
         text: "计划开展 4 场阅读活动。",
         evidence: true,
@@ -373,7 +383,8 @@ async function openSampleAndSearch() {
     rerankStatus: "disabled",
   }));
   render(<App />);
-  const start = await screen.findByRole("button", { name: "打开离线样例" });
+  fireEvent.click(await screen.findByText("从资料到第一条回答"));
+  const start = await screen.findByRole("button", { name: "用示例体验" });
   expect(calls("library_prepare_local_example")).toHaveLength(0);
   act(() => {
     fireEvent.click(start);
@@ -381,7 +392,7 @@ async function openSampleAndSearch() {
   });
   await waitFor(() =>
     expect(calls("library_prepare_local_example")).toEqual([
-      ["library_prepare_local_example", { projectId: "p1" }],
+      ["library_prepare_local_example", undefined],
     ]),
   );
   prepared = true;
@@ -390,6 +401,7 @@ async function openSampleAndSearch() {
     name: "搜索资料",
   })) as HTMLInputElement;
   expect(search.value).toBe("阅读活动");
+  expect(calls("open_library").at(-1)?.[1]).toEqual({ projectId: sample.projectId });
   const openSearch = screen.getByRole("button", { name: "执行搜索" });
   fireEvent.click(openSearch);
   const source = await screen.findByRole("button", {
@@ -410,19 +422,73 @@ async function openSampleAndSearch() {
   fireEvent.click(source);
   await waitFor(() =>
     expect(screen.getByTestId("opened-path").textContent).toBe(
-      `${sample.path}:3`,
+      `${sample.path}:7`,
     ),
   );
   return sample;
 }
 
-test("an offline example is explicit and opens the original from document-scoped keyword search", async () => {
-  await openSampleAndSearch();
-  fireEvent.click(screen.getByRole("button", { name: "连接聊天模型" }));
+test("the isolated example can disclose missing evidence and preserve a versioned original without any model call", async () => {
+  const sample = await openSampleAndSearch();
+  fireEvent.click(screen.getByRole("button", { name: "体验模拟问答" }));
+  fireEvent.click(screen.getByRole("button", { name: "满意度怎么样？" }));
+  expect(screen.getByText(/模拟回答：这份资料没有提供满意度结果/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "查看原文 · 第 11 行" }));
+  expect(within(screen.getByRole("region", { name: "离线问答练习" }))
+    .getByText(/当前资料没有提供实际到场人数/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "打开原文" }));
+  await waitFor(() => expect(screen.getByTestId("opened-path").textContent).toBe(
+    `${sample.path}:11`,
+  ));
+  overrides.set("library_create_document", () => libraryDoc("体验回答.md", sample.projectId));
+  fireEvent.click(screen.getByRole("button", { name: "保存示例回答" }));
+  const modal = await screen.findByRole("dialog", { name: "保存回答为文档" });
+  fireEvent.click(within(modal).getByRole("button", { name: "保存新文档" }));
+  await waitFor(() => expect(calls("library_create_document").at(-1)?.[1]).toMatchObject({
+    projectId: sample.projectId,
+    content: expect.stringContaining(`inkstone-source:v1/${sample.id}/${"a".repeat(64)}/11-11`),
+  }));
+  expect(calls("assistant_ask")).toHaveLength(0);
+  expect(calls("test_provider")).toHaveLength(0);
+});
+
+test("first question setup preserves both the unsent question and current document", async () => {
+  await boot();
+  await openDocument("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "问这篇文档" }));
+  const composer = await readyComposer("向当前空间提问");
+  fireEvent.change(composer, { target: { value: "这篇资料讲了什么？" } });
+  fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
   const modal = await screen.findByRole("dialog", { name: "模型设置" });
-  expect(
-    within(modal).getByRole("tab", { name: /问答模型/, selected: true }),
-  ).toBeTruthy();
+  expect(within(modal).getByRole("heading", { name: "连接问答模型" })).toBeTruthy();
+  expect(within(modal).queryByRole("tab", { name: /向量化模型/ })).toBeNull();
+  expect(calls("assistant_ask")).toHaveLength(0);
+  overrides.set("save_settings", () => ({
+    ...settings,
+    chat: { ...settings.chat, enabled: true, model: "fixture" },
+  }));
+  fireEvent.click(within(modal).getByRole("button", { name: "保存设置" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "模型设置" })).toBeNull());
+  expect(composer.value).toBe("这篇资料讲了什么？");
+  expect(calls("assistant_ask")).toHaveLength(0);
+  fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+  await waitFor(() => expect(calls("assistant_ask")).toHaveLength(1));
+  expect(calls("assistant_create").at(-1)?.[1]).toMatchObject({ scope: "a.md" });
+});
+
+test("a modified sample cannot reuse fixed answers and the import action returns to personal space first", async () => {
+  await openSampleAndSearch(bundledSample + "\n后来安排调整为 2 场。\n");
+  const demo = within(screen.getByRole("region", { name: "离线问答练习" }));
+  fireEvent.click(demo.getByRole("button", { name: "体验模拟问答" }));
+  fireEvent.click(demo.getByRole("button", { name: "计划举办几场阅读活动？" }));
+  expect(demo.getByText(/样例正文已改动/)).toBeTruthy();
+  expect(demo.queryByRole("button", { name: "保存示例回答" })).toBeNull();
+  fireEvent.click(demo.getByRole("button", { name: "导入我的资料" }));
+  const importer = await screen.findByRole("dialog", { name: "导入本地文档" });
+  expect(calls("open_library").at(-1)?.[1]).toEqual({ projectId: "p1" });
+  expect((within(importer).getByLabelText("导入目标空间") as HTMLSelectElement).value)
+    .toBe("p1");
+  expect(calls("assistant_ask")).toHaveLength(0);
 });
 
 test("asking about the example starts a new document-scoped draft without sharing the previous conversation", async () => {
@@ -471,7 +537,8 @@ test("the offline example action leaves the workspace available for retry after 
     Promise.reject("离线样例在回收站中，请先恢复该文档。"),
   );
   render(<App />);
-  const start = await screen.findByRole("button", { name: "打开离线样例" });
+  fireEvent.click(await screen.findByText("从资料到第一条回答"));
+  const start = await screen.findByRole("button", { name: "用示例体验" });
   fireEvent.click(start);
   await screen.findByText(/离线样例在回收站中/);
   expect((start as HTMLButtonElement).disabled).toBe(false);

@@ -16,6 +16,8 @@ pub struct PriorSource {
 pub struct FollowupGate {
     pub sources: Vec<PriorSource>,
     pub attributes: Vec<String>,
+    pub clock: Option<&'static str>,
+    pub clock_day: Option<(u8, u8)>,
 }
 #[derive(Clone, Debug)]
 pub struct Prepared {
@@ -47,7 +49,80 @@ pub fn is_followup(question: &str, has_parent: bool) -> bool {
     let continuation = ["分别", "再问", "再比较", "再列", "再给", "再解释", "再看"]
         .iter()
         .any(|p| q.starts_with(p));
-    pointer || (has_parent && continuation)
+    pointer || (has_parent && (continuation || followup_clock(q, None).is_some()))
+}
+
+/// Resolve a bounded, explicit service-time paraphrase without treating an
+/// arbitrary question starting in "那" or a changed date as a continuation.
+pub(crate) fn followup_clock(question: &str, previous: Option<&str>) -> Option<&'static str> {
+    let question = question.trim().trim_end_matches(['？', '?', '。']);
+    [
+        ("最后一班", "末班"),
+        ("末班", "末班"),
+        ("第一班", "首班"),
+        ("首班", "首班"),
+    ]
+    .into_iter()
+    .find_map(|(label, canonical)| {
+        let rest = question
+            .strip_prefix('那')?
+            .trim_start()
+            .strip_prefix(label)?;
+        let detail = rest.trim();
+        let asks_time = matches!(
+            detail,
+            "几点" | "几点发车" | "什么时候发车" | "什么时间发车" | "的发车时间"
+        );
+        let continues_time = matches!(detail, "" | "呢")
+            && previous.is_some_and(|question| {
+                ["几点", "发车时间", "什么时候发车", "什么时间发车"]
+                    .iter()
+                    .any(|part| question.contains(part))
+            });
+        (asks_time || continues_time).then_some(canonical)
+    })
+}
+
+pub(crate) fn supports_clock(body: &str, canonical: &str) -> bool {
+    let labels = if canonical == "末班" {
+        ["末班", "最后一班"]
+    } else {
+        ["首班", "第一班"]
+    };
+    body.split(['\n', '。', '；', ';', '，', ',', '！', '？'])
+        .any(|clause| {
+            let Some(after) = labels
+                .iter()
+                .find_map(|label| clause.split_once(label).map(|(_, rest)| rest))
+            else {
+                return false;
+            };
+            if after.contains("未公布") || after.contains("取消") {
+                return false;
+            }
+            // Require a real clock time after the requested service marker in
+            // this clause. A departure time from the preceding clause is irrelevant.
+            after.match_indices([':', '：', '时']).any(|(at, mark)| {
+                let prefix = after[..at].trim_end();
+                let hour = prefix.bytes().rev().take_while(u8::is_ascii_digit).count();
+                let suffix = after[at + mark.len()..].trim_start();
+                let mins = suffix.bytes().take_while(u8::is_ascii_digit).count();
+                (1..=2).contains(&hour)
+                    && (1..=2).contains(&mins)
+                    && (mark != "时" || suffix[mins..].starts_with('分'))
+                    && prefix[prefix.len() - hour..]
+                        .parse::<u8>()
+                        .is_ok_and(|h| h <= 23)
+                    && suffix[..mins].parse::<u8>().is_ok_and(|m| m < 60)
+            })
+        })
+}
+
+pub(crate) fn prior_clock_day(started: &Started) -> Option<(u8, u8)> {
+    started
+        .previous_questions
+        .last()
+        .and_then(|q| crate::evidence::single_month_day(q))
 }
 pub fn prior_sources(
     c: &Connection,
@@ -183,7 +258,14 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
             });
         }
     }
-    let terms = attributes(&started.grounded_question);
+    let clock = followup_clock(
+        &started.grounded_question,
+        started.previous_questions.last().map(String::as_str),
+    );
+    let terms = clock.map_or_else(
+        || attributes(&started.grounded_question),
+        |canonical| vec![canonical.into()],
+    );
     let clarify = |message: &str| {
         Ok(Prepared {
             retrieval_question: started.grounded_question.clone(),
@@ -250,6 +332,8 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
         gate: Some(FollowupGate {
             sources,
             attributes: terms,
+            clock,
+            clock_day: clock.and_then(|_| prior_clock_day(started)),
         }),
         clarification: None,
     })
@@ -263,9 +347,21 @@ pub fn tighten(gate: &FollowupGate, results: &mut [SearchResult]) {
             .split_whitespace()
             .map(str::to_owned)
             .collect::<HashSet<_>>();
-        result.evidence &= identity
-            && !gate.attributes.is_empty()
-            && gate.attributes.iter().all(|term| tokens.contains(term));
+        let relevant = match gate.clock {
+            Some(canonical) => {
+                supports_clock(&result.text, canonical)
+                    && gate.clock_day.is_none_or(|day| {
+                        [&result.heading, &result.text]
+                            .iter()
+                            .any(|text| crate::evidence::month_days(text).any(|seen| seen == day))
+                    })
+            }
+            None => {
+                !gate.attributes.is_empty()
+                    && gate.attributes.iter().all(|term| tokens.contains(term))
+            }
+        };
+        result.evidence &= identity && relevant;
         if !result.evidence {
             result.match_kind = "candidate".into();
         }

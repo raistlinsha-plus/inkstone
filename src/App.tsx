@@ -101,6 +101,7 @@ import SpaceNavigation from "./shell/SpaceNavigation";
 import Titlebar from "./shell/Titlebar";
 import Tree from "./shell/Tree";
 import WelcomePage, { FirstUseGuide } from "./shell/WelcomePage";
+import OfflineExample from "./shell/OfflineExample";
 import StartupState from "./shell/StartupState";
 import type {
   IndexStatusSnapshot,
@@ -183,7 +184,8 @@ export default function App() {
   const [panel, setPanel] = useState<"search" | "ask">("search");
   const [query, setQuery] = useState("");
   const searchInput = useRef<HTMLInputElement>(null);
-  const [examplePath, setExamplePath] = useState("");
+  const [offlineExample, setOfflineExample] = useState<LibraryDocument>();
+  const previousExampleProject = useRef<string | undefined>(undefined);
   const [scope, setScope] = useState<"workspace" | "current">("workspace");
   const [retrievalMode, setRetrievalMode] = useState<
     "keyword" | "hybrid" | "rerank"
@@ -1228,8 +1230,8 @@ export default function App() {
     setImportOpen(true);
   }
   async function openLocalExample() {
-    const projectId = workspaceRef.current?.managedProjectId;
-    if (!projectId || navigationBlocked()) return;
+    if (!native || navigationBlocked()) return;
+    const previousProject = workspaceRef.current?.managedProjectId;
     let finish!: () => void;
     const operation: PendingMutation = {
       epoch: workspaceEpoch.current,
@@ -1242,20 +1244,22 @@ export default function App() {
     setNameBusy(true);
     const navigation = ++openSequence.current;
     const current = () =>
-      !closingRef.current &&
-      operation.epoch === workspaceEpoch.current &&
-      workspaceRef.current?.managedProjectId === projectId;
+      !closingRef.current && operation.epoch === workspaceEpoch.current;
     try {
       if (!(await mayLeave()) || !current()) return;
       rememberPosition();
-      const sample = await invoke("library_prepare_local_example", {
-        projectId,
-      });
+      const sample = await invoke("library_prepare_local_example");
       if (!current() || navigation !== openSequence.current) return;
-      await refreshFiles();
-      void refreshStats();
-      if (!current() || navigation !== openSequence.current) return;
-      if (!(await openPath(sample.path, undefined, true)) || !current()) return;
+      if (previousProject !== sample.projectId)
+        previousExampleProject.current = previousProject ?? "inbox";
+      if (previousProject === sample.projectId) {
+        await refreshFiles();
+        void refreshStats();
+        if (!current() || navigation !== openSequence.current) return;
+        if (!(await openPath(sample.path, undefined, true))) return;
+      } else if (!(await useLibrary(sample.projectId, sample.path, true))) return;
+      if (closingRef.current || workspaceRef.current?.managedProjectId !== sample.projectId)
+        return;
       cancelSearch();
       setResults([]);
       setSearched(false);
@@ -1264,7 +1268,7 @@ export default function App() {
       setScope("current");
       setRetrievalMode("keyword");
       setQuery("阅读活动");
-      setExamplePath(sample.path);
+      setOfflineExample(sample);
       openKnowledgePanel("search");
       requestAnimationFrame(() => searchInput.current?.focus());
     } catch (e) {
@@ -1326,6 +1330,18 @@ export default function App() {
     onOpen: (d: LibraryDocument) => void openLibraryDocument(d),
     onNew: () => nameAction("new"),
     onImport: showImport,
+    onSearch: () => {
+      cancelSearch();
+      setScope("workspace");
+      if (!stats.embeddingReady) setRetrievalMode("keyword");
+      setQuery("");
+      setResults([]);
+      setSearched(false);
+      setQueryWarning("");
+      setRetrievalStatus("");
+      openKnowledgePanel("search");
+      requestAnimationFrame(() => searchInput.current?.focus());
+    },
     onRefresh: refreshLibrary,
     onTrash: trashLibraryDocument,
     onBeforeAction: mayLeave,
@@ -2027,7 +2043,7 @@ export default function App() {
       navigation !== openSequence.current
     )
       return;
-    if (scope === "current" && !document) {
+    if (searchScope === "current" && !document) {
       notify("请先打开一篇文档");
       return;
     }
@@ -2043,9 +2059,9 @@ export default function App() {
     try {
       const response = await invoke("search", {
         query,
-        scope: scope === "current" ? document?.path : null,
-        semantic,
-        retrievalMode,
+        scope: searchScope === "current" ? document?.path : null,
+        semantic: searchMode !== "keyword",
+        retrievalMode: searchMode,
         requestId: id,
       });
       if (searchRequest.current !== id || workspaceEpoch.current !== epoch)
@@ -2254,7 +2270,7 @@ export default function App() {
     )
       return;
     if (!settings?.chat.enabled) {
-      setSettingsOpen(true);
+      openFirstUseModelSettings();
       return;
     }
     if (
@@ -2653,6 +2669,12 @@ export default function App() {
                 : "回答已就绪"
               : "安静陪读";
 
+  const isExampleSpace =
+    !!offlineExample && workspace?.managedProjectId === offlineExample.projectId;
+  const searchingExample = isExampleSpace && document?.path === offlineExample.path;
+  const exampleSearch = searchingExample && panel === "search";
+  const searchScope = exampleSearch ? "current" : scope;
+  const searchMode = exampleSearch ? "keyword" : retrievalMode;
   const retrievalScopePath =
     panel === "ask"
       ? currentAssistantScope()
@@ -2665,8 +2687,8 @@ export default function App() {
         <span>资料范围</span>
         <select
           aria-label="资料范围"
-          value={scope}
-          disabled={chatBusy}
+          value={searchScope}
+          disabled={chatBusy || exampleSearch}
           onChange={(e) => {
             const next = e.target.value as "workspace" | "current";
             setScope(next);
@@ -2693,8 +2715,8 @@ export default function App() {
           检索方式
           <select
             aria-label="检索方式"
-            value={retrievalMode}
-            disabled={chatBusy || queryBusy}
+            value={searchMode}
+            disabled={chatBusy || queryBusy || exampleSearch}
             onChange={(e) => {
               cancelSearch();
               setResults([]);
@@ -2710,13 +2732,15 @@ export default function App() {
           </select>
         </label>
         <p>
-          {retrievalMode === "keyword"
+          {exampleSearch
+            ? "在本机搜索样例正文。"
+            : retrievalMode === "keyword"
             ? "检索在本机进行；问答仍会将证据发送给问答模型。"
             : retrievalMode === "hybrid"
               ? "问题会发送给向量模型；问答另发送选定证据。"
               : "问题与候选资料会发送给重排模型。"}
         </p>
-        {retrievalMode !== "keyword" && (
+        {searchMode !== "keyword" && (
           <div className="retrieval-readiness" role="status">
             {!settings?.embedding.enabled
               ? "向量未启用：本次可使用本地关键词检索。"
@@ -2761,7 +2785,6 @@ export default function App() {
   const firstUseGuide = (
     <FirstUseGuide
       hasWorkspace={!!workspace}
-      managed={!!workspace?.managedProjectId}
       hasDocuments={
         workspace?.managedProjectId
           ? libraryView.documents.some(
@@ -2771,21 +2794,9 @@ export default function App() {
             )
           : !!workspace?.files.length
       }
-      indexed={stats.documents > 0}
-      modelReady={!!settings?.chat.enabled}
-      embeddingReady={stats.embeddingReady}
-      rerankEnabled={!!settings?.rerank.enabled}
       disabled={busy || booting}
-      onExample={
-        workspace?.managedProjectId ? () => void openLocalExample() : undefined
-      }
-      onPrepare={
-        workspace?.managedProjectId
-          ? () => showImport()
-          : () => void chooseWorkspace()
-      }
-      onIndex={() => setIndexOpen(true)}
-      onSettings={openFirstUseModelSettings}
+      onExample={() => void openLocalExample()}
+      onImport={() => showImport()}
       onAsk={openAsk}
     />
   );
@@ -2793,20 +2804,33 @@ export default function App() {
     setSettingsFromFirstUse(true);
     setSettingsOpen(true);
   }
-  const searchingExample = !!examplePath && document?.path === examplePath;
-  async function askAboutExample() {
-    const epoch = workspaceEpoch.current;
+  async function leaveExampleForImport() {
+    const project = previousExampleProject.current ?? "inbox";
+    if (!(await useLibrary(project))) return;
+    requestAnimationFrame(() => {
+      if (workspaceRef.current?.managedProjectId !== project) return;
+      setPanelOpen(false);
+      showImport();
+    });
+  }
+  async function askAboutDocument() {
+    const epoch = workspaceEpoch.current,
+      path = docRef.current?.path;
+    if (!path || navigationBlocked() || generalAsk) return;
+    if (panel === "ask" && currentAssistantScope() === path) {
+      openAsk();
+      return;
+    }
     if (
-      !searchingExample ||
       !(await newConversation()) ||
       epoch !== workspaceEpoch.current ||
-      docRef.current?.path !== examplePath ||
+      docRef.current?.path !== path ||
       closingRef.current
     )
       return;
     setScope("current");
-    setRetrievalMode("keyword");
-    restoreDraftContext({ webAccess: "local-only" });
+    if (searchingExample || !stats.embeddingReady) setRetrievalMode("keyword");
+    if (searchingExample) restoreDraftContext({ webAccess: "local-only" });
     openAsk();
   }
   const composerLocked =
@@ -3453,6 +3477,25 @@ export default function App() {
                   </button>
                 </div>
                 <div className="file-actions">
+                  {!citationReturn && !generalAsk && (
+                    <button
+                      className="button small"
+                      type="button"
+                      title={searchingExample ? "继续离线体验" : "问这篇文档"}
+                      aria-label={searchingExample ? "继续离线体验" : "问这篇文档"}
+                      disabled={busy || composerLocked}
+                      onClick={() =>
+                        searchingExample
+                          ? openKnowledgePanel("search")
+                          : void askAboutDocument()
+                      }
+                    >
+                      <Sparkles size={15} />
+                      <span className="ask-document-label">
+                        {searchingExample ? "继续离线体验" : "问这篇文档"}
+                      </span>
+                    </button>
+                  )}
                   <button
                     className="icon-button"
                     title="保存 ⌘S"
@@ -3783,6 +3826,29 @@ export default function App() {
                   )}
                 </form>
                 <div className="panel-scroll">
+                  {searchingExample && document && (
+                    <OfflineExample
+                      key={offlineExample.id}
+                      document={offlineExample}
+                      content={
+                        dirty || document.conflict || document.missing
+                          ? null
+                          : document.saved
+                      }
+                      hash={document.hash}
+                      disabled={busy}
+                      onOpenSource={(source) =>
+                        void openPath(source.path, {
+                          ...source,
+                          requireVersion: true,
+                        }).then((opened) => {
+                          if (opened && compactWindow) setPanelOpen(false);
+                        })
+                      }
+                      onSave={(record) => prepareAnswerTransfer("save", record)}
+                      onImport={() => void leaveExampleForImport()}
+                    />
+                  )}
                   {queryWarning && (
                     <div className="panel-warning">{queryWarning}</div>
                   )}
@@ -3811,25 +3877,17 @@ export default function App() {
                           }
                         }}
                       />
-                      {searchingExample && results.length > 0 && (
-                        <div className="welcome-example">
+                      {searchingExample && results.length > 0 && settings?.chat.enabled && (
+                        <div className="offline-example-actions">
                           <button
                             type="button"
                             className="button small"
                             disabled={busy}
-                            onClick={
-                              settings?.chat.enabled
-                                ? () => void askAboutExample()
-                                : openFirstUseModelSettings
-                            }
+                            onClick={() => void askAboutDocument()}
                           >
-                            {settings?.chat.enabled
-                              ? "对样例提问"
-                              : "连接聊天模型"}
+                            对样例提问
                           </button>
-                          <p>
-                            查看原文后，可以继续向样例提问。回答由你配置的模型生成。
-                          </p>
+                          <small>使用已配置的模型生成真实回答</small>
                         </div>
                       )}
                       {!results.length && (
@@ -4072,7 +4130,7 @@ export default function App() {
                         <button
                           className="button small"
                           disabled={!settings}
-                          onClick={() => setSettingsOpen(true)}
+                          onClick={openFirstUseModelSettings}
                         >
                           连接问答模型
                         </button>
@@ -4275,6 +4333,7 @@ export default function App() {
       {settingsOpen && settings && (
         <SettingsModal
           initialTab={settingsFromFirstUse ? "chat" : undefined}
+          chatSetupOnly={settingsFromFirstUse}
           onWebSearch={() => {
             setSettingsFromFirstUse(false);
             setSettingsOpen(false);
@@ -4282,6 +4341,7 @@ export default function App() {
           }}
           value={settings}
           onClose={() => {
+            if (settingsFromFirstUse) setFocusQuestion(true);
             setSettingsFromFirstUse(false);
             setSettingsOpen(false);
           }}
@@ -4290,6 +4350,7 @@ export default function App() {
               JSON.stringify(settings.embedding) !==
               JSON.stringify(next.embedding);
             setSettings(next);
+            if (settingsFromFirstUse) setFocusQuestion(true);
             setSettingsFromFirstUse(false);
             setSettingsOpen(false);
             if (indexSettingsChanged) setIndexDirty(true);
@@ -4686,7 +4747,11 @@ export default function App() {
       {importOpen && (
         <ImportDialog
           view={libraryView}
-          projectId={workspace?.managedProjectId ?? "inbox"}
+          projectId={
+            isExampleSpace
+              ? (previousExampleProject.current ?? "inbox")
+              : (workspace?.managedProjectId ?? "inbox")
+          }
           initialPaths={importPaths}
           task={importTask}
           onClose={() => setImportOpen(false)}

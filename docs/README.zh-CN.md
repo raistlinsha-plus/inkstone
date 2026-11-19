@@ -4,15 +4,17 @@
 
 Inkstone 将 Markdown 写作、文档空间、Wiki 与独立 AI 问答放在一个 Mac 应用中。使用自己的模型 API，按本轮需要选资料，也可以选择让书房同伴陪你工作。
 
-[浏览器交互演示](https://raistlinsha-plus.github.io/inkstone/) · [English](../README.md) · [源码快速开始](QUICKSTART.md) · [试用交流](https://github.com/raistlinsha-plus/inkstone/discussions/11) · [后续计划](ROADMAP.md)
+[浏览器交互演示](https://raistlinsha-plus.github.io/inkstone/) · [English](../README.md) · [源码快速开始](QUICKSTART.md) · [试用交流](https://github.com/raistlinsha-plus/inkstone/discussions/11) · [后续计划](ROADMAP.zh-CN.md)
 
 演示无需安装，使用虚构笔记和模拟回答。可以点开引用核对原文，再试问一个资料里没有答案的问题。
 
-**v0.9.0-beta.1 源码预览**，面向 macOS 13+ Apple Silicon。GitHub 提供源码和校验文件，公开安装包待 Apple 公证及独立安装验收。 [发布页](https://github.com/raistlinsha-plus/inkstone/releases/tag/v0.9.0-beta.1) · [中文宣传册 PDF](https://github.com/raistlinsha-plus/inkstone/releases/download/v0.9.0-beta.1/inkstone-v0.9.0-beta.1-brochure-zh-CN.pdf)
+**v0.9.2** 新增独立离线样例，可在第一次提问时连接模型。Wiki 审阅区会区分当前依据与历史摘录。[版本说明与原生验收](DELIVERY-v0.9.2.md)
+
+GitHub 提供 v0.9.2 源码和 SHA-256 校验文件，面向 macOS 13+ Apple Silicon。[获取源码](https://github.com/raistlinsha-plus/inkstone/releases/tag/v0.9.2) · [v0.9.0-beta.1 中文宣传册 PDF](https://github.com/raistlinsha-plus/inkstone/releases/download/v0.9.0-beta.1/inkstone-v0.9.0-beta.1-brochure-zh-CN.pdf)
 
 ![砚台 v0.9.0-beta.1 带原文引用的问答示例](https://github.com/raistlinsha-plus/inkstone/releases/download/v0.9.0-beta.1/inkstone-social-preview.png)
 
-首图使用新版的虚构资料和模拟回答。下方保留较早的 v0.7 界面演示。
+首图展示 v0.9.0-beta.1 的虚构资料和模拟回答。下方保留较早的 v0.7 界面演示。
 
 ## 可以怎样使用？
 
@@ -31,13 +33,13 @@ Inkstone 将 Markdown 写作、文档空间、Wiki 与独立 AI 问答放在一�
 先准备 Apple 命令行开发工具、Node 24.14.0、npm 11.9.0 和 Rust 1.99.1，然后：
 
 ```sh
-git clone --branch v0.9.0-beta.1 https://github.com/raistlinsha-plus/inkstone.git
+git clone --branch v0.9.2 https://github.com/raistlinsha-plus/inkstone.git
 cd inkstone
 npm ci --registry=https://registry.npmjs.org
 npm run desktop
 ```
 
-第一次编译需下载依赖。启动后在文档空间首页点击「打开离线样例」，搜索「阅读活动」，再从结果跳到原文。这一步无需模型密钥。配置兼容的模型 API 后，可以用两份虚构笔记练习添加资料、提问和核对引用。 [快速开始](QUICKSTART.md) · [两份笔记的完整示例](../examples/v0.7.3/README.md)
+第一次编译需下载依赖。启动后在文档空间首页找到「从资料到第一条回答」，点击「用示例体验」，搜索「阅读活动」，再从结果跳到原文。这一步无需模型密钥。配置兼容的模型 API 后，可以用两份虚构笔记练习添加资料、提问和核对引用。 [快速开始](QUICKSTART.md) · [两份笔记的完整示例](../examples/v0.7.3/README.md)
 
 编辑和关键词检索无需模型。向量、Wiki 整理和问答使用自己配置的兼容模型 API，重排使用独立的 Cohere 兼容端点。文档、索引、Wiki、会话及同伴状态保存在本机。模型操作按用途发送问题、片段或选定资料，可能产生服务商费用。启用联网后，模型只根据当前问题规划搜索，Brave Search 接收通过规则校验的公开查询。密钥保存在 macOS Keychain。[安全策略](../SECURITY.md) · [联网范围](DELIVERY-v0.7.2.md)
 

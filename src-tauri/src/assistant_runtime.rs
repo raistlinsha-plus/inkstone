@@ -374,11 +374,49 @@ fn snippets(question: &str, path: &str, content: &str) -> Vec<(String, usize, us
                 .count(),
         )
     });
+    crate::evidence::prioritize_selected_excerpts(question, path, &mut chunks);
     chunks
         .into_iter()
         .take(2)
         .map(|c| (c.text, c.start_line, c.end_line))
         .collect()
+}
+
+fn clock_snippets(clock: &str, title: &str, content: &str) -> Vec<(String, usize, usize)> {
+    use assistant::grounding::supports_clock;
+
+    let mut parts = snippets(clock, title, content);
+    parts.retain(|(text, _, _)| supports_clock(text, clock));
+    if parts.is_empty() && content.chars().count() > 2800 {
+        // The canonical search term and its spelling in the original may
+        // differ. The original must actually contain the requested time.
+        parts = db::local_chunks(content, title, 1800)
+            .into_iter()
+            .filter(|chunk| supports_clock(&chunk.text, clock))
+            .take(2)
+            .map(|c| (c.text, c.start_line, c.end_line))
+            .collect();
+    }
+    parts
+}
+
+fn prior_local_source_matches(
+    sources: &[ExternalSource],
+    id: &str,
+    project: Option<&str>,
+    content: &str,
+) -> bool {
+    let hash = files::hash(content);
+    sources.iter().any(|source| {
+        let same_source = if let Some(project) = project {
+            source.kind == "document"
+                && source.project_id.as_deref() == Some(project)
+                && source.document_id.as_deref() == Some(id)
+        } else {
+            source.kind == "attachment" && source.attachment_id.as_deref() == Some(id)
+        };
+        same_source && source.content_hash.as_deref() == Some(hash.as_str())
+    })
 }
 
 fn local_item(
@@ -511,6 +549,31 @@ pub async fn general(
     let question = started.grounded_question.as_str();
     let data = &state.data_dir;
     let project = selection.project_id.as_deref();
+    let clock = (!selection.is_empty())
+        .then(|| {
+            assistant::grounding::followup_clock(
+                question,
+                started.previous_questions.last().map(String::as_str),
+            )
+        })
+        .flatten();
+    // A literal date from the previous question narrows possible referents.
+    // The date must also exist in the selected, still-current original.
+    let prior_day = clock.and_then(|_| assistant::grounding::prior_clock_day(started));
+    let selected_parts = |id: &str, project: Option<&str>, title: &str, content: &str| {
+        if let Some(clock) = clock {
+            if !prior_local_source_matches(&started.previous_local_sources, id, project, content)
+                || prior_day.is_some_and(|day| {
+                    !crate::evidence::month_days(content).any(|date| date == day)
+                })
+            {
+                return Vec::new();
+            }
+            clock_snippets(clock, title, content)
+        } else {
+            snippets(question, title, content)
+        }
+    };
     let local_search = async {
         let mut items = Vec::new();
         let mut steps = Vec::new();
@@ -521,7 +584,7 @@ pub async fn general(
         let mut source_pool = Vec::<Vec<Evidence>>::new();
         for id in &selection.attachments {
             let a = assistant::attachments::read(data, &started.conversation_id, id)?;
-            let parts = snippets(question, &a.title, &a.text);
+            let parts = selected_parts(id, None, &a.title, &a.text);
             if a.text.chars().count() > 2800 {
                 unread.push(format!("{} · 仅读取相关片段", a.title));
             }
@@ -537,7 +600,7 @@ pub async fn general(
         }
         if let Some(project) = project {
             let ws = documents::library_workspace(data, project)?;
-            if selection.document_ids.is_empty() {
+            if selection.document_ids.is_empty() && clock.is_none() {
                 let found = crate::search_workspace(
                     state,
                     question,
@@ -592,9 +655,26 @@ pub async fn general(
                     }
                 }
             } else {
-                for id in &selection.document_ids {
-                    let (doc, content) = document(data, project, id)?;
-                    let parts = snippets(question, &doc.title, &content);
+                let mut prior_ids = HashSet::new();
+                let mut ids = selection
+                    .document_ids
+                    .iter()
+                    .map(String::as_str)
+                    .collect::<Vec<_>>();
+                if ids.is_empty() {
+                    ids.extend(started.previous_local_sources.iter().filter_map(|source| {
+                        let id = source.document_id.as_deref()?;
+                        (source.project_id.as_deref() == Some(project) && prior_ids.insert(id))
+                            .then_some(id)
+                    }));
+                }
+                for id in &ids {
+                    let (doc, content) = match document(data, project, id) {
+                        Ok(current) => current,
+                        Err(_) if selection.document_ids.is_empty() => continue,
+                        Err(error) => return Err(error),
+                    };
+                    let parts = selected_parts(id, Some(project), &doc.title, &content);
                     if content.chars().count() > 2800 {
                         unread.push(format!("{} · 仅读取相关片段", doc.title));
                     }
@@ -614,10 +694,7 @@ pub async fn general(
                             .collect(),
                     );
                 }
-                steps.push(format!(
-                    "直接查阅 · {} 篇文档",
-                    selection.document_ids.len()
-                ));
+                steps.push(format!("直接查阅 · {} 篇文档", ids.len()));
             }
         }
         // Make the first excerpt of every selected input compete before second excerpts.
@@ -637,7 +714,13 @@ pub async fn general(
     // Check explicit files and attachment ownership before starting the web
     // planner. Whole-space retrieval can still run concurrently afterwards.
     let (local, web) = tokio::try_join!(biased; local_search, async {
-        Ok::<_, String>(web(Some(app), state, &config, question, request, started.web_access).await)
+        Ok::<_, String>(if clock.is_some() {
+            // This continuation refers to a previously verified local schedule.
+            // A public lookup cannot resolve a missing or stale local referent.
+            WebTurn::default()
+        } else {
+            web(Some(app), state, &config, question, request, started.web_access).await
+        })
     })?;
     let (evidence, steps, unread, mut notices, local_mode, rank_used) = local;
     let mut trace = Trace {
@@ -691,8 +774,12 @@ pub async fn general(
         AnswerRoute::NoLocalEvidence | AnswerRoute::NoWebEvidence
     ) {
         let text = if route == AnswerRoute::NoLocalEvidence {
-            notices.push("所选资料未提供足够证据。可以补充资料或检查文档索引。".into());
-            "未能从本轮指定资料核实请求。"
+            if clock.is_some() {
+                "没有从上一轮已核对且仍在本轮范围内的原文找到这个发车时间。请说出线路、日期或文档名后重试。"
+            } else {
+                notices.push("可以补充资料、检查文档索引，或询问某一项具体信息。".into());
+                "本轮所选资料未能核实这个问题。"
+            }
         } else {
             "本轮未取得足够的网页证据，暂时无法核实请求。"
         };
@@ -908,6 +995,47 @@ mod tests {
     }
 
     #[test]
+    fn clock_excerpt_requires_current_source_identity_and_real_requested_time() {
+        let body = "4月22日接驳车首班为06:30；最后一班为20:05。";
+        let prior = local_item(
+            "document",
+            "verified",
+            "北岭安排",
+            Some("inbox"),
+            body,
+            (body.into(), 1, 1),
+        )
+        .metadata;
+        let sources = &[prior];
+        assert!(prior_local_source_matches(
+            sources,
+            "verified",
+            Some("inbox"),
+            body
+        ));
+        assert!(!prior_local_source_matches(
+            sources,
+            "different",
+            Some("inbox"),
+            body
+        ));
+        assert!(!prior_local_source_matches(
+            sources,
+            "verified",
+            Some("other"),
+            body
+        ));
+        assert!(!prior_local_source_matches(
+            sources,
+            "verified",
+            Some("inbox"),
+            "替换后的安排"
+        ));
+        assert_eq!(clock_snippets("末班", "北岭安排", body).len(), 1);
+        assert!(clock_snippets("末班", "北岭安排", "首班为06:30。末班时刻未公布。").is_empty());
+    }
+
+    #[test]
     fn supplied_text_transform_skips_web_planning_and_needs_no_public_evidence() {
         for question in [
             "本轮不联网。请把“今天图书馆不开门”翻译成英文。",
@@ -975,6 +1103,10 @@ mod tests {
         assert_eq!(
             web_route("不要访问外部网站。解释一下向量检索。", WebAccess::Auto),
             WebRoute::Skip
+        );
+        assert_eq!(
+            web_route("只用我的资料，核实今天的官网公告。", WebAccess::Auto),
+            WebRoute::Blocked
         );
     }
 

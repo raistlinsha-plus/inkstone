@@ -1,6 +1,6 @@
 //! Local knowledge conversations. Historical model text is never retrieval evidence.
 use crate::{
-    assistant_sources::{Selection, WebAccess},
+    assistant_sources::{ExternalSource, Selection, WebAccess},
     files, library, maintenance,
     models::{ChatResponse, Workspace},
 };
@@ -137,6 +137,7 @@ pub struct Started {
     pub web_access: WebAccess,
     pub previous_answer: Option<String>,
     pub previous_questions: Vec<String>,
+    pub previous_local_sources: Vec<ExternalSource>,
 }
 fn err(e: impl std::fmt::Display) -> String {
     format!("会话存储：{e}")
@@ -770,8 +771,11 @@ pub fn begin_with_sources(
         tx.execute("INSERT INTO turns(id,conversation_id,parent_turn_id,question,created_at,web_access) VALUES(?,?,?,?,?,?)",params![turn,id,parent,question,time,access.stored()]).map_err(err)?;
         (turn, question, parent.map(str::to_string), access)
     };
+    let history = prior_questions(&tx, id, parent.as_deref())?;
+    let clock = grounding::followup_clock(&question, history.last().map(String::as_str));
     let mut sources = None;
     let mut previous_answer = None;
+    let mut previous_local_sources = Vec::new();
     if workspace == GENERAL_OWNER {
         let selection = if regenerate.is_some() {
             attachments::selection(&tx, &turn_id)?.unwrap_or_default()
@@ -801,21 +805,46 @@ pub fn begin_with_sources(
             )
             .map_err(err)?;
         }
-        sources = Some(selection);
         if let Some(parent) = &parent {
-            previous_answer = tx.query_row(
+            let response = tx.query_row(
                 "SELECT c.response FROM turns t JOIN candidates c ON c.id=t.selected_candidate_id
                    WHERE t.id=? AND c.status='complete'",
                 [parent],
                 |r| r.get::<_, Option<String>>(0),
             ).optional().map_err(err)?.flatten()
-                .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
-                .and_then(|v| v["text"].as_str().map(|v| v.chars().take(1200).collect()));
+                .and_then(|raw| serde_json::from_str::<Value>(&raw).ok());
+            if let Some(response) = response {
+                previous_answer = response["text"]
+                    .as_str()
+                    .map(|v| v.chars().take(1200).collect());
+                if !selection.is_empty()
+                    && clock.is_some()
+                    && attachments::selection(&tx, parent)?.is_some_and(|mut prior| {
+                        let mut current = selection.clone();
+                        prior.document_ids.sort();
+                        prior.attachments.sort();
+                        current.document_ids.sort();
+                        current.attachments.sort();
+                        prior == current
+                    })
+                {
+                    previous_local_sources = response["externalSources"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(|source| {
+                            serde_json::from_value::<ExternalSource>(source.clone()).ok()
+                        })
+                        .filter(|source| source.kind == "document" || source.kind == "attachment")
+                        .collect();
+                }
+            }
         }
+        sources = Some(selection);
     }
-    let history = prior_questions(&tx, id, parent.as_deref())?;
     let (grounded_question, prompt_question) = queries(&question, &history);
-    let followup_sources = if grounding::is_followup(&question, parent.is_some()) {
+    let followup_sources = if grounding::is_followup(&question, parent.is_some()) || clock.is_some()
+    {
         Some(grounding::prior_sources(&tx, id, parent.as_deref())?)
     } else {
         None
@@ -856,11 +885,8 @@ pub fn begin_with_sources(
         sources,
         web_access,
         previous_answer,
-        previous_questions: if workspace == GENERAL_OWNER {
-            history
-        } else {
-            Vec::new()
-        },
+        previous_questions: history,
+        previous_local_sources,
     })
 }
 pub fn finish(
