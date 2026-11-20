@@ -5,7 +5,7 @@ import { imeBoundary, isImeEvent } from "./ime";
 import ModalDialog from "../ModalDialog";
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 test("IME Escape and WebKit 229 cannot close a modal; ordinary Escape still can", () => {
   const close = vi.fn();
@@ -22,11 +22,7 @@ test("IME Escape and WebKit 229 cannot close a modal; ordinary Escape still can"
   expect(close).toHaveBeenCalledOnce();
 });
 test("candidate commit does not submit a form, subsequent deliberate submit works", () => {
-  let frame: FrameRequestCallback;
-  vi.stubGlobal("requestAnimationFrame", (f: FrameRequestCallback) => {
-    frame = f;
-    return 1;
-  });
+  vi.useFakeTimers();
   const submit = vi.fn((e) => e.preventDefault());
   render(
     <div {...imeBoundary}>
@@ -44,7 +40,7 @@ test("candidate commit does not submit a form, subsequent deliberate submit work
   fireEvent.compositionEnd(input);
   fireEvent.submit(screen.getByRole("form"));
   expect(submit).not.toHaveBeenCalled();
-  frame!(0);
+  vi.advanceTimersByTime(100);
   fireEvent.submit(screen.getByRole("form"));
   expect(submit).toHaveBeenCalledOnce();
 });

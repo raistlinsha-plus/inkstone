@@ -6,6 +6,16 @@
   border-radius: 10px;
   background: var(--ui-surface);
 }
+.welcome-first-use.has-material {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.welcome-first-use.has-material summary {
+  padding-block: 4px;
+  color: var(--ui-muted);
+  font-weight: 500;
+}
 .welcome-first-use h2 {
   margin: 0;
   font-size: 16px;

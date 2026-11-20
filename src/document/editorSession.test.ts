@@ -37,3 +37,14 @@ test("malformed preferences do not block restoring a valid document path", () =>
   localStorage.setItem("inkstone:session:space", "{");
   expect(readEditorSession("space")).toBeUndefined();
 });
+
+test("a reversed rich selection survives reopening the same mode and is dropped on mode change", () => {
+  const visual = { head: 9, anchor: 14 };
+  saveEditorSession("space", "a.md", "visual", { selection: 8, scroll: 120, visual });
+  saveEditorSession("space", "a.md", "visual");
+  expect(readEditorSession("space")).toMatchObject({ visual, scroll: 120 });
+  saveEditorSession("space", "a.md", "source");
+  expect(readEditorSession("space")?.visual).toBeUndefined();
+  saveEditorSession("space", "a.md", "source", { selection: 2, anchor: 6 });
+  expect(readEditorSession("space")).toMatchObject({ selection: 2, anchor: 6 });
+});
