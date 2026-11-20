@@ -188,3 +188,67 @@ test("retry does not display progress from a finished import", async () => {
     ).toBe(false),
   );
 });
+
+test("opens existing copies and retries only failed selected files, including after a retry error", async () => {
+  const existing = {
+    source: "/source/a.md",
+    documentId: "old",
+    status: "skipped",
+    message: "已有副本",
+  };
+  const failed = {
+    source: "/source/b.md",
+    documentId: null,
+    status: "failed",
+    message: "无法读取",
+  };
+  const first = {
+    jobId: "one",
+    projectId: "p",
+    cancelled: false,
+    warnings: [],
+    items: [existing, failed],
+  };
+  api.invoke
+    .mockResolvedValueOnce(first)
+    .mockRejectedValueOnce("请重试")
+    .mockResolvedValueOnce({
+      ...first,
+      jobId: "two",
+      items: [{ ...failed, status: "imported", documentId: "new" }],
+    });
+  const onOpen = vi.fn();
+  render(
+    <ImportDialog
+      view={{
+        projects: [{ id: "p", title: "空间" }],
+        documents: [],
+        pendingImports: [],
+      }}
+      projectId="p"
+      initialPaths={[existing.source, failed.source]}
+      onBusy={vi.fn()}
+      onFinished={async () => {}}
+      onOpen={onOpen}
+      onClose={vi.fn()}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "复制导入" }));
+  fireEvent.click(await screen.findByRole("button", { name: "打开已有副本" }));
+  expect(onOpen).toHaveBeenCalledWith("old");
+  fireEvent.click(screen.getByRole("button", { name: "重试失败文件" }));
+  await screen.findByRole("alert");
+  fireEvent.click(screen.getByRole("button", { name: "重试失败文件" }));
+  await screen.findByRole("button", { name: "打开副本" });
+  expect(api.invoke.mock.calls.slice(1).map(([, args]) => args.paths)).toEqual([
+    [failed.source],
+    [failed.source],
+  ]);
+  expect(screen.getByRole("button", { name: "打开已有副本" })).toBeTruthy();
+  expect(
+    api.invoke.mock.calls
+      .slice(1)
+      .every(([, args]) => args.resumeJobId === "one"),
+  ).toBe(true);
+  expect(screen.queryByRole("button", { name: "重新检查并导入" })).toBeNull();
+});

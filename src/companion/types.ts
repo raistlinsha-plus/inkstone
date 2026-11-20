@@ -12,6 +12,7 @@ export interface CompanionSettings {
 }
 export interface RoleProgress {
   read: number[];
+  outcomes?: Partial<Record<number, "read" | "skipped">>;
   choices: Record<string, string>;
   outfit: number;
 }
@@ -51,6 +52,7 @@ export interface Snapshot extends Context {
   settings: CompanionSettings;
   events: number;
   days: number;
+  hasRevision?: boolean;
   roles: Partial<Record<CharacterId, RoleProgress>>;
   cards: ExperienceCard[];
   preferences: Preference[];
@@ -113,3 +115,17 @@ export const contextOf = (s: Snapshot): Context => ({
 });
 export const roleLevel = (p?: RoleProgress) =>
   p?.read.includes(2) ? 2 : p?.read.includes(1) ? 1 : 0;
+
+/** Old snapshots only tracked which chapters advanced growth. */
+export function chapterLabel(
+  progress: RoleProgress | undefined,
+  stage: number,
+) {
+  if (!progress?.read.includes(stage)) return "";
+  const outcome = progress.outcomes?.[stage];
+  return outcome === "read"
+    ? "已读完"
+    : outcome === "skipped"
+      ? "已跳过"
+      : "已解锁";
+}

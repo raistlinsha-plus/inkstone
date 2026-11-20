@@ -15,6 +15,7 @@ vi.mock("./TextEditor", () => ({
     useImperativeHandle(handleRef, () => ({
       getContent: () => content,
       focus: vi.fn(),
+      capturePosition: vi.fn(),
       insertBlock: vi.fn(),
       runInsertCommand: vi.fn(),
       closeMenus: vi.fn(),

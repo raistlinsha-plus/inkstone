@@ -231,6 +231,48 @@ try {
     checks.push("Library follows both system themes, selection follows the open document, and its cited tabular answer fits the side panel");
     await finish();
   }
+  for (const colorScheme of ["light", "dark"]) {
+    const { page, calls, finish, checks } = await contextFor(
+      "resume-writing-" + colorScheme, {}, { width: 960, height: 640 },
+    );
+    active = page;
+    await page.emulateMedia({ colorScheme });
+    await page.getByRole("button", { name: "我的文档", exact: true }).click();
+    const home = page.getByRole("region", { name: "我的文档" });
+    await home.getByRole("button", { name: /阅读活动方案\.md/ }).first().click();
+    await page.locator(".ProseMirror p").first().click();
+    await page.keyboard.press("Home");
+    await page.keyboard.press("Shift+ArrowRight");
+    await page.keyboard.press("Shift+ArrowRight");
+    const original = await page.evaluate(() => getSelection().toString());
+    assert.equal(original.length, 2);
+    const ask = page.getByRole("button", { name: "问这篇文档", exact: true });
+    await ask.click();
+    const input = page.getByRole("textbox", { name: "向当前文档提问" });
+    await input.fill("两种阅读活动各有多少人参加？");
+    await input.press("Enter");
+    await page.getByRole("heading", { name: "甲方案参与人数较多" }).waitFor();
+    await page.getByRole("button", { name: "保存为文档", exact: true }).waitFor();
+    await page.locator('button[title^="查看来源 1"]').first().click();
+    await page.getByRole("button", { name: "打开原文并核对版本" }).click();
+    await page.getByRole("button", { name: "返回写作位置" }).click();
+    const resumed = () => page.waitForFunction(
+      (text) => document.activeElement?.classList.contains("ProseMirror") && getSelection().toString() === text,
+      original,
+    );
+    await resumed();
+    await ask.click();
+    await page.getByRole("button", { name: "保存为文档", exact: true }).click();
+    await page.getByRole("button", { name: "保存新文档" }).click();
+    await page.getByRole("button", { name: "继续编辑原文" }).click();
+    await resumed();
+    await page.keyboard.insertText("继续写作");
+    await page.locator(".ProseMirror p").filter({ hasText: "继续写作" }).waitFor();
+    assert.equal((await calls("assistant_ask")).length, 1);
+    assert.equal((await calls("library_create_document")).length, 1);
+    checks.push("Followed a citation, resumed the selected text, saved the answer, then typed in the original position");
+    await finish();
+  }
   await writeFile(resolve(out, "validation.json"), JSON.stringify({ passed: true, reports }, null, 2) + "\n");
 } catch (error) {
   if (active) {

@@ -187,6 +187,55 @@ pub(super) fn find(
     .map_err(error)
 }
 
+/// An excerpts-only publication drops its generated title from search. When
+/// compiling the same topic again, recover its identity from the superseded
+/// proposal, without making the discarded prose searchable or visible.
+pub(super) fn compilation_target(
+    db: &Connection,
+    space: &str,
+    content: &Content,
+) -> Result<Option<(String, i64)>, String> {
+    let key = title_key(&content.title);
+    if let Some(page) = find(db, space, &key)? {
+        return Ok(Some(page));
+    }
+    let mut query = db
+        .prepare(
+            "
+        SELECT p.id, p.current, json_extract(prior.payload,'$.title'), live.payload
+        FROM pages p
+        JOIN changes live ON live.space=p.space AND live.page=p.id
+          AND live.result=p.current AND live.status='published'
+        JOIN changes prior ON prior.rowid=(
+            SELECT max(rowid) FROM changes WHERE space=p.space AND page=p.id
+              AND base=live.base AND status='superseded' AND rowid<live.rowid
+        )
+        WHERE p.space=? AND live.reason='仅发布已核验的原文摘录'
+    ",
+        )
+        .map_err(error)?;
+    let mut rows = query.query([space]).map_err(error)?;
+    let mut target = None;
+    while let Some(row) = rows.next().map_err(error)? {
+        let previous_title: String = row.get(2).map_err(error)?;
+        if title_key(&previous_title) != key {
+            continue;
+        }
+        let live: Content = decode(&row.get::<_, String>(3).map_err(error)?)?;
+        if !live
+            .originals()
+            .any(|r| content.originals().any(|n| n.document_id == r.document_id))
+        {
+            continue;
+        }
+        if target.is_some() {
+            return Ok(None);
+        }
+        target = Some((row.get(0).map_err(error)?, row.get(1).map_err(error)?));
+    }
+    Ok(target)
+}
+
 pub(super) fn current_revision(c: &Connection, space: &str, page: &str) -> Result<i64, String> {
     let value: Option<i64> = c
         .query_row(

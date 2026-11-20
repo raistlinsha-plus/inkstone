@@ -172,6 +172,8 @@ export default function App() {
     [importBusy, setImportBusy] = useState(false);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [mode, setMode] = useState<EditorMode>("visual");
+  const editorModeRef = useRef(mode);
+  editorModeRef.current = mode;
   const [line, setLine] = useState<number>();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -283,6 +285,13 @@ export default function App() {
   const [citationReturn, setCitationReturn] = useState(false);
   const [citationOpening, setCitationOpening] = useState(false);
   const citationOpenInFlight = useRef(false);
+  // One return point while reading source documents from a contextual answer.
+  const [writingReturn, setWritingReturn] = useState<{
+    root: string;
+    path: string;
+    mode: EditorMode;
+    position: EditorPosition;
+  }>();
   const citationBack = useRef<HTMLButtonElement>(null);
   const [webSettingsOpen, setWebSettingsOpen] = useState(false);
   const [wikiOpen, setWikiOpen] = useState(false);
@@ -963,6 +972,17 @@ export default function App() {
         // A failed assistant draft must cancel exit, just like a document draft.
         await assistantRef.current.flushDraft();
         cancelSearch();
+        const ws = workspaceRef.current;
+        const current = docRef.current;
+        if (ws && current && editorHandle.current) {
+          try {
+            const lastPosition = editorHandle.current.capturePosition();
+            if (lastPosition)
+              saveEditorSession(ws.root, current.path, editorModeRef.current, lastPosition);
+          } catch {
+            // The view can already be tearing down. Document and drafts were saved above.
+          }
+        }
         await invoke("quit_app");
       } catch (e) {
         closingRef.current = false;
@@ -1507,10 +1527,8 @@ export default function App() {
       };
       setDraftError("");
       setSaveWarning("");
-      const restoredPosition = restore
-        ? { selection: restore.selection, scroll: restore.scroll }
-        : undefined;
-      setPosition(restoredPosition);
+      setWritingReturn(undefined);
+      setPosition(restore);
       setDocument(next);
       docRef.current = next;
       setWelcome(false);
@@ -1551,7 +1569,7 @@ export default function App() {
           ws.root,
           path,
           nextMode,
-          restoredPosition ?? {
+          restore ?? {
             selection: 0,
             scroll: 0,
           },
@@ -2220,11 +2238,40 @@ export default function App() {
       }
     });
   }
+  function focusWritingSurface() {
+    const current = docRef.current;
+    if (!current) return;
+    const epoch = workspaceEpoch.current;
+    requestAnimationFrame(() => {
+      if (
+        epoch === workspaceEpoch.current &&
+        current.path === docRef.current?.path &&
+        current.revision === docRef.current?.revision &&
+        !globalThis.document.querySelector('[role="dialog"]')
+      )
+        editorHandle.current?.focus();
+    });
+  }
   function closeKnowledge() {
     if (citationOpenInFlight.current) return;
     setCitationPreview(undefined);
-    if (generalAsk) void leaveGeneralForDocument();
-    else setPanelOpen(false);
+    if (generalAsk) {
+      void leaveGeneralForDocument().then((left) => {
+        if (left) focusWritingSurface();
+      });
+    } else {
+      setPanelOpen(false);
+      setAssistantExpanded(false);
+      focusWritingSurface();
+    }
+  }
+  async function resumeWriting() {
+    if (navigationBlocked() || citationOpenInFlight.current) return;
+    if (writingReturn && writingReturn.root === workspaceRef.current?.root) {
+      const { path, position, mode } = writingReturn;
+      if (!(await openPath(path, undefined, false, { ...position, mode }))) return;
+    }
+    closeKnowledge();
   }
   function openCompanion() {
     if (citationOpenInFlight.current || companionOpen) return;
@@ -2657,6 +2704,20 @@ export default function App() {
         : activeAssistantCandidate?.status === "complete"
           ? "ready"
           : "idle";
+  const sameDocumentQuestion =
+    !generalAsk &&
+    panel === "ask" &&
+    !!visibleDocument &&
+    !!answerSnapshot &&
+    answerSnapshot.workspaceRoot === workspace?.root &&
+    (!answerSnapshot.scopePath ||
+      answerSnapshot.scopePath === visibleDocument.path);
+  const documentCompanionActivity =
+    !sameDocumentQuestion
+      ? "idle"
+      : answerSnapshot.finishReason === "error"
+        ? "blocked"
+        : assistantActivity;
   const assistantActivityText = chatBusy
     ? chatStopping
       ? "正在停止生成…"
@@ -2965,6 +3026,15 @@ export default function App() {
     citationOpenInFlight.current = true;
     setCitationOpening(true);
     try {
+      const originPosition =
+        !standaloneAskOpen && visibleDocument && !writingReturn
+          ? editorHandle.current?.capturePosition()
+          : undefined;
+      const returnPoint = writingReturn ?? (
+        workspace && visibleDocument && originPosition
+          ? { root: workspace.root, path: visibleDocument.path, mode, position: originPosition }
+          : undefined
+      );
       const opened = externalCitation
         ? citedDocument &&
           citedTarget &&
@@ -2983,7 +3053,12 @@ export default function App() {
       if (standaloneAskOpen) {
         setCitationReturn(true);
         setPanelOpen(false);
-      } else setCitationPreview(undefined);
+      } else {
+        setCitationPreview(undefined);
+        if (returnPoint && returnPoint.root === workspaceRef.current?.root)
+          setWritingReturn(returnPoint);
+        revealDocumentPane();
+      }
     } finally {
       citationOpenInFlight.current = false;
       setCitationOpening(false);
@@ -3626,9 +3701,15 @@ export default function App() {
                   }}
                   onError={fail}
                   position={position}
-                  onPosition={(selection, scroll) =>
-                    rememberPosition(selection, scroll)
-                  }
+                  onPosition={(selection, scroll) => {
+                    // A previous editor reports its final location while it unmounts.
+                    if (
+                      docRef.current?.path === document.path &&
+                      docRef.current.revision === document.revision &&
+                      workspaceRef.current?.root === workspace?.root
+                    )
+                      rememberPosition(selection, scroll);
+                  }}
                   onOpenDoc={(path) => void openPath(path)}
                   onOpenAnswerSource={(source) =>
                     void openAnswerSource(source).catch(fail)
@@ -3636,6 +3717,15 @@ export default function App() {
                 />
               </div>
               <footer className="editor-status">
+                {writingReturn && writingReturn.root === workspace?.root && (
+                  <button
+                    className="writing-return"
+                    title={`返回写作位置 · ${basename(writingReturn.path)}`}
+                    onClick={() => void resumeWriting()}
+                  >
+                    <ArrowLeft size={13} /> 返回写作位置
+                  </button>
+                )}
                 <span>
                   {saving ? (
                     "正在保存…"
@@ -3686,10 +3776,9 @@ export default function App() {
               documentHash={document?.hash ?? null}
               libraryRevision={libraryView}
               onOpenSource={openPath}
-              saved={!dirty}
-              activity={
-                panelOpen && panel === "ask" ? assistantActivity : "idle"
-              }
+              saved={!dirty && !saving && !document?.conflict && !document?.missing}
+              saving={saving}
+              activity={documentCompanionActivity}
               activityText={assistantActivityText}
               surface={{
                 open: companionOpen,
@@ -3702,6 +3791,7 @@ export default function App() {
                   !focusedKnowledge,
                 onOpen: openCompanion,
                 onClose: closeCompanion,
+                onResumeWriting: mode === "mindmap" ? undefined : focusWritingSurface,
               }}
             />
           )}
@@ -3730,7 +3820,7 @@ export default function App() {
                 {compactWindow && (
                   <button
                     className="return-to-editor"
-                    onClick={() => setPanelOpen(false)}
+                    onClick={closeKnowledge}
                   >
                     <PenLine size={15} />
                     返回编辑
@@ -3879,11 +3969,13 @@ export default function App() {
                   controller={assistant}
                   disabled={chatBusy || composerLocked || sourceBusy}
                   expanded={focusedKnowledge}
-                  onExpand={() =>
-                    generalAsk || compactWindow
-                      ? closeKnowledge()
-                      : setAssistantExpanded(!assistantExpanded)
-                  }
+                  onExpand={() => {
+                    if (generalAsk || compactWindow) closeKnowledge();
+                    else {
+                      setAssistantExpanded(!assistantExpanded);
+                      if (assistantExpanded) focusWritingSurface();
+                    }
+                  }}
                   onNew={() => void newConversation()}
                   showNew={!standaloneAskOpen || sidebarClosed}
                   onActivate={activateConversation}
@@ -4146,14 +4238,20 @@ export default function App() {
                         );
                       }}
                       onKeyDown={(e) => {
-                        if (
-                          !isImeEvent(e.nativeEvent) &&
-                          !e.shiftKey &&
-                          e.key === "Enter"
-                        ) {
-                          e.preventDefault();
-                          void ask();
+                        if (e.key !== "Enter" || e.shiftKey) return;
+                        if (isImeEvent(e.nativeEvent)) {
+                          // The OS handles the live candidate. A trailing plain
+                          // Enter after compositionend must not add a newline.
+                          if (
+                            e.currentTarget.dataset.imeComposing === "ending" &&
+                            !e.nativeEvent.isComposing &&
+                            e.nativeEvent.keyCode !== 229
+                          )
+                            e.preventDefault();
+                          return;
                         }
+                        e.preventDefault();
+                        if (!e.repeat) void ask();
                       }}
                     />
                   </div>
@@ -4276,6 +4374,12 @@ export default function App() {
           onImport={() => {
             setWikiOpen(false);
             showImport();
+          }}
+          onOpenCurrentDocument={async (doc) => {
+            if (await openLibraryDocument(doc)) {
+              setWikiOpen(false);
+              setPanelOpen(false);
+            }
           }}
           onOpenSource={async (source) => {
             if (!(await leaveGeneralForDocument())) return;
@@ -4663,9 +4767,17 @@ export default function App() {
             <button
               className="button"
               disabled={nameBusy}
-              onClick={closeAnswerTransfer}
+              onClick={() => {
+                closeAnswerTransfer();
+                if (answerSavedPath && !answerTransfer.general && visibleDocument) {
+                  setAnswerExpanded(false);
+                  void resumeWriting();
+                }
+              }}
             >
-              {answerSavedPath ? "完成" : "取消"}
+              {answerSavedPath && !answerTransfer.general && visibleDocument
+                ? "继续编辑原文"
+                : answerSavedPath ? "完成" : "取消"}
             </button>
             {answerSavedPath ? (
               <button

@@ -1,8 +1,10 @@
 # Inkstone v0.7 候选版产品说明
 
-当前本机交付线为 **v0.7.8**。已支持独立问答、每轮资料选择、知识 Wiki、自动联网诊断和墨团动效试点。操作步骤及状态见 [v0.7.8 交付导航](DELIVERY-INDEX-v0.7.8.md)。下文保留早期 v0.7 候选功能基线。
+适用于 v0.7 系列的历史说明。新版见 [v0.9.6 产品与功能总览](PRODUCT.md)。
 
-更新日期：2026-11-07。当前本地应用为 **0.7.0-rc.4**，已公开制品以 [Releases](https://github.com/raistlinsha-plus/inkstone/releases) 为准。
+**v0.7.8** 已支持独立问答、每轮资料选择、知识 Wiki、自动联网诊断和墨团动效试点。操作步骤及状态见 [v0.7.8 交付导航](DELIVERY-INDEX-v0.7.8.md)。下文保留早期 v0.7 候选功能基线。
+
+早期记录日期为 2026-11-07，当时的本地应用为 **0.7.0-rc.4**，已公开制品以 [Releases](https://github.com/raistlinsha-plus/inkstone/releases) 为准。
 本文描述已接入应用的能力、使用路径与已知问题；独立离线原型不作为生产功能或验收证据。
 交付制品、先前测试与限制见[候选交付说明](DELIVERY-v0.7-rc4.md)。
 

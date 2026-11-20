@@ -11,3 +11,7 @@ The [Motuan sprite](../MotuanSprite.tsx) and the [acquaintance bonus scene](motu
 ## 捡到一枚书签
 
 `motuan.story.1.jpg` is the 1672 × 941 illustrated scene used in the v0.8.3 reader and album. It was generated with OpenAI ImageGen using Inkstone's original Motuan and study illustration as references, then saved as JPEG for the application. SHA-256 `4feffc4aabf4f3ef0dffa9a331e85322ee65d464aeae0dacb35ebca891e6902d`.
+
+## v0.9.6 page-edge companions
+
+[CharacterSprite](../CharacterSprite.tsx) draws Yanzhou and Zhiwei on the same transparent pixel grid as [Motuan](../MotuanSprite.tsx). The poses and keepsakes use SVG paths authored for this repository under its Apache-2.0 license. They use local CSS for motion. The stage portraits and story CGs continue to use the assets recorded above.

@@ -8,6 +8,7 @@ import {
   useState,
   type Ref,
 } from "react";
+import type { EditorPosition } from "./document/editorSession";
 import TextEditor, { type EditorHandle as TextHandle } from "./TextEditor";
 import { DocumentSession, documentKind } from "./session";
 import { headingOutline } from "./content/blocks";
@@ -25,6 +26,8 @@ export interface InsertionTarget {
   selection: ReturnType<TextHandle["captureSelection"]>;
 }
 export interface EditorHandle {
+  focus: () => void;
+  capturePosition: () => EditorPosition | undefined;
   getContent: () => string;
   undo: () => void;
   redo: () => void;
@@ -41,7 +44,7 @@ interface Props {
   onChange: (value: string) => void;
   onError: (e: string) => void;
   onPosition?: (selection: number, scroll: number) => void;
-  position?: { selection: number; scroll: number };
+  position?: EditorPosition;
   onOpenDoc?: (path: string) => void;
   onOpenAnswerSource?: (source: AnswerSourceLink) => void;
 }
@@ -73,7 +76,14 @@ export default function Editor({
   if (!session.current) {
     session.current = new DocumentSession(content);
     session.current.selection = position?.selection ?? 0;
+    session.current.selectionAnchor = position?.anchor;
     session.current.scrollTop = position?.scroll ?? 0;
+    if (position?.visual && mode === "visual") {
+      session.current.positionMode = "visual";
+      session.current.visualSelection = position.visual.head;
+      session.current.visualAnchor = position.visual.anchor;
+      session.current.visualScrollTop = position.scroll;
+    }
   }
   const doc = session.current;
   const inner = useRef<TextHandle>(null);
@@ -154,6 +164,8 @@ export default function Editor({
   };
   useImperativeHandle(handleRef, () => ({
     getContent: sync,
+    focus: () => inner.current?.focus(),
+    capturePosition: () => inner.current?.capturePosition(),
     undo,
     redo,
     captureInsertion: () => {

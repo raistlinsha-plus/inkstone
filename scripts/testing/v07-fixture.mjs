@@ -3,6 +3,7 @@
 export function installV07Fixture({
   clean = false,
   companionPilot = false,
+  companionCharacter = "motuan",
   onboardingSampleMarkdown = "",
   isolatedOnboarding = false,
 } = {}) {
@@ -96,7 +97,8 @@ export function installV07Fixture({
       mode: "gentle",
       reducedMotion: false,
     });
-    base.companion.roles.motuan = { read: [0, 1], choices: {}, outfit: 1 };
+    base.companion.settings.characterId = companionCharacter;
+    base.companion.roles[companionCharacter] = { read: [0, 1], choices: {}, outfit: 1 };
   }
   let store;
   try {

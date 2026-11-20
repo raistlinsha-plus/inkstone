@@ -478,3 +478,20 @@
   border-color: var(--ui-line);
   box-shadow: 0 8px 26px var(--ui-shadow);
 }
+
+.editor-status .writing-return {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  min-height: 24px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--ui-accent);
+  background: transparent;
+  font: inherit;
+}
+.editor-status .writing-return:hover {
+  background: var(--ui-hover);
+}

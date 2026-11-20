@@ -37,6 +37,7 @@ import {
 import { tags } from "@lezer/highlight";
 import { linter } from "@codemirror/lint";
 import { jsonParseLinter } from "@codemirror/lang-json";
+import type { EditorPosition } from "./document/editorSession";
 import type { DocumentSession } from "./session";
 import { Crepe } from "@milkdown/crepe";
 import { commandsCtx, editorViewCtx, parserCtx } from "@milkdown/kit/core";
@@ -102,6 +103,8 @@ const sourceHighlight = HighlightStyle.define([
 ]);
 
 export interface EditorHandle {
+  focus: () => void;
+  capturePosition: () => EditorPosition | undefined;
   getContent: () => string;
   insertBlock: (kind: BlockKind, calendarView?: "agenda" | "month") => void;
   runInsertCommand: (id: string) => void;
@@ -163,11 +166,34 @@ export default function TextEditor({
   const adapter = useRef(new RichMarkdownAdapter(content));
   const callback = useRef(onChange);
   const source = useRef<EditorView | null>(null);
+  const pendingFocus = useRef<Element | null>(null);
   const readCurrent = useRef<() => string>(() => content);
   useImperativeHandle(
     handleRef,
     () => ({
       getContent: () => readCurrent.current(),
+      focus: () => {
+        if (source.current) source.current.focus();
+        else if (visual.current?.editor.status === "Created")
+          visual.current.editor.action((ctx) => ctx.get(editorViewCtx).focus());
+        else pendingFocus.current = document.activeElement;
+      },
+      capturePosition: () => {
+        if (source.current) {
+          const { anchor, head } = source.current.state.selection.main;
+          return { selection: head, anchor, scroll: source.current.scrollDOM.scrollTop };
+        }
+        if (visual.current?.editor.status === "Created")
+          return visual.current.editor.action((ctx) => {
+            const { doc, selection } = ctx.get(editorViewCtx).state;
+            const head = selection instanceof NodeSelection ? selection.from + 1 : selection.head;
+            return {
+              selection: sourceFromVisual(doc, head, readCurrent.current()),
+              visual: { anchor: selection.anchor, head },
+              scroll: root.current?.scrollTop ?? 0,
+            };
+          });
+      },
       captureSelection: () => {
         if (visual.current?.editor.status === "Created")
           return visual.current.editor.action((ctx) => ({
@@ -400,6 +426,8 @@ export default function TextEditor({
           }),
         });
       else view.scrollDOM.scrollTop = session?.scrollTop ?? 0;
+      if (pendingFocus.current === document.activeElement && pendingFocus.current) view.focus();
+      pendingFocus.current = null;
       if (session) session.positionMode = "source";
       const baseline = view.state.doc;
       readCurrent.current = () =>
@@ -698,6 +726,8 @@ export default function TextEditor({
               .setSelection(selection)
               .setMeta("addToHistory", false),
           );
+          if (pendingFocus.current === document.activeElement && pendingFocus.current) view.focus();
+          pendingFocus.current = null;
           const surface = root.current;
           const previousMode = session?.positionMode;
           requestAnimationFrame(() => {

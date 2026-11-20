@@ -29,24 +29,40 @@ export function FirstUseGuide({
 }) {
   const actions = (
     <div className="first-use-actions">
-      <button className="button primary" disabled={disabled} onClick={onExample}>
+      {hasDocuments && (
+        <button
+          className="button primary"
+          disabled={disabled || !hasWorkspace}
+          onClick={onAsk}
+        >
+          <Sparkles size={16} /> 打开问答
+        </button>
+      )}
+      <button
+        className={hasDocuments ? "button ghost" : "button primary"}
+        disabled={disabled}
+        onClick={onExample}
+      >
         <Sparkles size={16} /> 用示例体验
       </button>
       <button className="button" disabled={disabled} onClick={onImport}>
         <FolderOpen size={16} /> 导入我的资料
       </button>
-      {hasDocuments && (
-        <button className="button ghost" disabled={disabled || !hasWorkspace} onClick={onAsk}>
-          打开问答
-        </button>
-      )}
     </div>
   );
   return (
-    <section className="welcome-first-use" aria-label="开始使用">
+    <section
+      className={
+        hasDocuments ? "welcome-first-use has-material" : "welcome-first-use"
+      }
+      aria-label="开始使用"
+    >
       {hasDocuments ? (
         <details>
           <summary>从资料到第一条回答</summary>
+          <p>
+            打开问答可继续使用空间里的资料。要核对单篇笔记，可在正文点「问这篇文档」。
+          </p>
           {actions}
         </details>
       ) : (

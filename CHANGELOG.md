@@ -2,6 +2,24 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v0.9.6 · 页边的书房同伴
+
+- 桌宠记住停靠的页边与高度。编辑区变窄时收成书签，也能用键盘调整位置。
+- 保存文档后可在页边预览并确认一次经历，完成或取消后继续编辑原文。
+- 墨团、砚舟和知微各有像素形象、问候和陪读姿势。文档问答就绪时同伴短暂抬头，故事里的信物随成长呈现在页边。[版本说明](docs/DELIVERY-v0.9.6.md)
+
+从上一公开标签 v0.9.3 更新时，同时包含下列 v0.9.4 和 v0.9.5 的改动。[产品与功能](docs/PRODUCT.md) · [操作手册](docs/USER-MANUAL.zh-CN.md) · [4A 架构](docs/ARCHITECTURE-4A.md) · [技术栈](docs/TECH-STACK.md)
+
+## v0.9.5 · 首次使用与日常书写
+
+- 重复导入后可打开已有副本。逐个选取的文件部分失败后，可单独重试失败项。
+- 打开引用核对后可返回原来的编辑位置，保存回答后也可以继续编辑原文。问答输入框区分拼音确认和发送，收起侧栏会将焦点还给编辑器。[版本说明](docs/DELIVERY-v0.9.5.md)
+
+## v0.9.4 · 核对 Wiki 的每一项变化
+
+- 审阅和阅读 Wiki 时可以逐条打开来源原句，核对单方记载、不同取值与缺少依据的结论。
+- 来源变化后可从仍获授权的摘录另开当前文档。只发布摘录后，再次整理同一主题会继续更新原页面。[版本说明](docs/DELIVERY-v0.9.4.md)
+
 ## v0.9.3 · 工作区字体与文档问答
 
 - 空间首页、日历和文档标题沿用文档库的系统无衬线字体。编辑与阅读共用标题层级，源码和行内代码保持等宽。

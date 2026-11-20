@@ -124,7 +124,7 @@ export default function StoryReader({
         </button>
         {!read && canFinish && (
           <button type="button" disabled={busy} onClick={onSkip}>
-            明确跳过本章
+            跳过本章
           </button>
         )}
         {last ? (
@@ -134,7 +134,7 @@ export default function StoryReader({
             disabled={busy || (!read && episode.choices.length > 0 && !choice)}
             onClick={onFinish}
           >
-            {read ? "返回章节" : "完成本章"}
+            {read ? "返回章节" : "读完本章"}
           </button>
         ) : (
           <button

@@ -16,8 +16,17 @@ pub struct Settings {
 #[serde(rename_all = "camelCase")]
 pub struct RoleProgress {
     pub read: Vec<u8>,
+    #[serde(default)]
+    pub outcomes: BTreeMap<u8, ChapterOutcome>,
     pub choices: BTreeMap<String, String>,
     pub outfit: u8,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ChapterOutcome {
+    Read,
+    Skipped,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -72,6 +81,7 @@ pub struct Snapshot {
     pub settings: Settings,
     pub events: usize,
     pub days: usize,
+    pub has_revision: bool,
     pub roles: BTreeMap<String, RoleProgress>,
     pub cards: Vec<Card>,
     pub preferences: Vec<Preference>,

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { useImperativeHandle } from "react";
+import { useImperativeHandle, useLayoutEffect, useRef } from "react";
 import {
   act,
   cleanup,
@@ -76,6 +76,7 @@ vi.mock("./Editor", () => ({
     onChange,
     path,
     line,
+    position,
     onOpenAnswerSource,
   }: {
     handleRef: Ref<EditorHandle>;
@@ -83,9 +84,20 @@ vi.mock("./Editor", () => ({
     onChange: (s: string) => void;
     path: string;
     line?: number;
+    position?: { selection: number; anchor?: number };
     onOpenAnswerSource?: (source: AnswerSourceLink) => void;
   }) => {
+    const surface = useRef<HTMLTextAreaElement>(null);
+    useLayoutEffect(() => {
+      if (position) surface.current?.setSelectionRange(position.anchor ?? position.selection, position.selection);
+    }, []);
     useImperativeHandle(handleRef, () => ({
+      focus: () => surface.current?.focus(),
+      capturePosition: () => surface.current ? {
+        selection: surface.current.selectionEnd,
+        anchor: surface.current.selectionStart,
+        scroll: surface.current.scrollTop,
+      } : undefined,
       getContent: () => content,
       undo() {},
       redo() {},
@@ -115,6 +127,7 @@ vi.mock("./Editor", () => ({
           </button>
         )}
         <textarea
+          ref={surface}
           aria-label="测试正文"
           value={content}
           onChange={(e) => onChange(e.target.value)}
@@ -1602,8 +1615,13 @@ test("first Wiki setup guides explicitly scoped compilation, review, publication
   fireEvent.click(organize);
   fireEvent.click(await panel.findByRole("button", { name: "查看待审阅改动" }));
   expect(await panel.findByText(reference.quote)).toBeTruthy();
-  fireEvent.click(panel.getByText("资料覆盖 · 1/2 份已引用"));
-  expect(panel.getByText("本次未引用，可重试")).toBeTruthy();
+  const coverage = panel.getByText("资料覆盖 · 1/2 份已引用");
+  fireEvent.click(coverage);
+  const coverageDetails = coverage.closest("details")!;
+  expect(coverageDetails.open).toBe(true);
+  const coverageItems = within(coverageDetails);
+  expect(coverageItems.getByText("a.md").closest("li")?.textContent).toContain("已找到原文引用");
+  expect(coverageItems.getByText("b.md").closest("li")?.textContent).toContain("本次未引用，可重试");
   const review = within(panel.getByRole("group", { name: "Wiki 审阅操作" }));
   fireEvent.click(review.getByRole("button", { name: "发布改动" }));
   await waitFor(() =>
@@ -1906,8 +1924,9 @@ test("save answer creates a separate managed Markdown document without replacing
   // askSynthetic boot clears no overrides; the new document is intentionally not opened automatically.
   await askSynthetic(syntheticAnswer);
   await screen.findByRole("heading", { name: "季度分析" });
-  const before = (screen.getByLabelText("测试正文") as HTMLTextAreaElement)
-    .value;
+  const editor = screen.getByLabelText("测试正文") as HTMLTextAreaElement;
+  const before = editor.value;
+  editor.setSelectionRange(1, 3);
   fireEvent.click(screen.getByRole("button", { name: "保存为文档" }));
   fireEvent.change(screen.getByLabelText("回答文档文件名"), {
     target: { value: "季度回答.md" },
@@ -1924,6 +1943,48 @@ test("save answer creates a separate managed Markdown document without replacing
   expect((screen.getByLabelText("测试正文") as HTMLTextAreaElement).value).toBe(
     before,
   );
+  fireEvent.click(screen.getByRole("button", { name: "继续编辑原文" }));
+  await waitFor(() => expect(document.activeElement).toBe(editor));
+  expect([editor.selectionStart, editor.selectionEnd]).toEqual([1, 3]);
+
+});
+
+test("after opening a cited passage, resume writing restores the original selection and focus", async () => {
+  await askSynthetic({
+    ...syntheticAnswer,
+    text: "## 拟定时长\n\n活动为五分钟 [1]。",
+    sources: [{ id: 1, path: "a.md", title: "a.md", heading: "", hash: disk.get("a.md")!.hash,
+      startLine: 1, endLine: 1, text: "活动为五分钟", score: 1 }],
+  });
+  await screen.findByRole("heading", { name: "拟定时长" });
+  const original = screen.getByLabelText("测试正文") as HTMLTextAreaElement;
+  original.setSelectionRange(2, 4);
+  fireEvent.click(screen.getByTitle(/查看来源 1/));
+  const evidence = await screen.findByRole("dialog", { name: "本轮来源预览" });
+  fireEvent.click(within(evidence).getByRole("button", { name: "打开原文并核对版本" }));
+  const back = await screen.findByRole("button", { name: "返回写作位置" });
+  expect(screen.getByTestId("opened-path").textContent?.trim()).toBe("a.md:1");
+  fireEvent.click(back);
+  await waitFor(() => expect(screen.queryByRole("button", { name: "返回写作位置" })).toBeNull());
+  const restored = screen.getByLabelText("测试正文") as HTMLTextAreaElement;
+  await waitFor(() => expect(document.activeElement).toBe(restored));
+  expect([restored.selectionStart, restored.selectionEnd]).toEqual([2, 4]);
+});
+
+test("normal quit snapshots the live writing selection for the next launch", async () => {
+  await boot();
+  await openDocument("a.md");
+  fireEvent.click(screen.getByRole("button", { name: "源码" }));
+  const editor = screen.getByLabelText("测试正文") as HTMLTextAreaElement;
+  editor.setSelectionRange(1, 4);
+  await act(async () => { await api.close?.({ preventDefault() {} }); });
+  expect(calls("quit_app")).toHaveLength(1);
+  const saved = JSON.parse(localStorage.getItem("inkstone:session:/library/p1")!);
+  expect(saved).toMatchObject({ path: "a.md", mode: "source", anchor: 1, selection: 4 });
+  cleanup();
+  render(<App />);
+  const restored = await screen.findByLabelText("测试正文") as HTMLTextAreaElement;
+  expect([restored.selectionStart, restored.selectionEnd]).toEqual([1, 4]);
 });
 
 test("answer insertion previews content before one explicit editor insertion", async () => {
@@ -2119,17 +2180,23 @@ test("assistant keeps multiple turns and transfers the explicitly selected older
   expect(preview.textContent).not.toContain("后续结论");
 });
 
-test("question composer protects IME Enter and Shift+Enter while Enter sends", async () => {
+test("a WebKit confirmation Enter after compositionend and paint keeps the draft; the next press sends once", async () => {
   await askSynthetic(syntheticAnswer);
   await screen.findByRole("heading", { name: "季度分析" });
   const input = screen.getByLabelText("向当前文档提问");
+  input.focus();
+  fireEvent.compositionStart(input);
   fireEvent.change(input, { target: { value: "追问资料" } });
   fireEvent.keyDown(input, { key: "Enter", isComposing: true, keyCode: 229 });
-  fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
+  fireEvent.compositionEnd(input, { data: "资料" });
+  await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+  expect(fireEvent.keyDown(input, { key: "Enter", isComposing: false, keyCode: 13 })).toBe(false);
   expect(calls("assistant_ask")).toHaveLength(1);
-  await waitFor(() =>
-    expect(input.hasAttribute("data-ime-composing")).toBe(false),
-  );
+  expect((input as HTMLTextAreaElement).value).toBe("追问资料");
+  fireEvent.keyUp(input, { key: "Enter" });
+  fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
+  fireEvent.keyDown(input, { key: "Enter", repeat: true });
+  expect(calls("assistant_ask")).toHaveLength(1);
   fireEvent.keyDown(input, { key: "Enter" });
   await waitFor(() => expect(calls("assistant_ask")).toHaveLength(2));
 });

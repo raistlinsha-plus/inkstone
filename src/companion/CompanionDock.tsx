@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -21,7 +22,7 @@ import { isImeEvent } from "../platform/ime";
 import type { LibraryView } from "../library";
 import type { Workspace } from "../types";
 import stories from "./stories.json";
-import { characterArt, cgArt } from "./art";
+import { cgArt } from "./art";
 import {
   characters,
   contextOf,
@@ -29,7 +30,7 @@ import {
   stages,
   type CharacterId,
   type Snapshot,
-  type Preview,
+  chapterLabel,
   type StoryCharacter,
   type Pending,
   type CompanionRecall,
@@ -37,8 +38,15 @@ import {
 import "./companion.css";
 
 import ExperienceJournal from "./ExperienceJournal";
-import MotuanSprite from "./MotuanSprite";
 import CompanionPet from "./CompanionPet";
+import CharacterSprite from "./CharacterSprite";
+import { captureEditorReturn } from "./editorReturn";
+import {
+  confirmReceipt,
+  useWorkReceipt,
+  WorkReceipt,
+  type ReceiptResult,
+} from "./WorkReceipt";
 import StoryReader, { storyBookmark } from "./StoryReader";
 import {
   CharacterPicker,
@@ -121,6 +129,7 @@ export default function CompanionDock({
   documentPath,
   documentHash,
   saved = true,
+  saving = false,
   saveSerial,
   activity = "idle",
   activityText,
@@ -132,6 +141,7 @@ export default function CompanionDock({
   documentPath: string | null;
   documentHash: string | null;
   saved?: boolean;
+  saving?: boolean;
   saveSerial?: number;
   activity?: "working" | "needs_input" | "ready" | "blocked" | "idle";
   activityText?: string;
@@ -143,12 +153,13 @@ export default function CompanionDock({
     navigationHost?: HTMLElement | null;
     onOpen: () => void;
     onClose: () => void;
+    onResumeWriting?: () => void;
   };
 }) {
-  const [snapshot, setSnapshot] = useState<Snapshot | null>(null),
+  const [snapshot, updateSnapshot] = useState<Snapshot | null>(null),
     [view, setView] = useState<View | null>(null),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false),
+    [updating, setBusy] = useState(false),
     [notice, setNotice] = useState("");
   const [milestone, setMilestone] = useState(false);
   const [petGeneration, setPetGeneration] = useState(() => {
@@ -173,24 +184,28 @@ export default function CompanionDock({
   };
   const [selected, setSelected] = useState<CharacterId>("motuan"),
     [stage, setStage] = useState(0),
-    [choice, setChoice] = useState<string | null>(null),
-    [preview, setPreview] = useState<Preview | null>(null),
-    [text, setText] = useState(""),
-    [kind, setKind] = useState("complete"),
-    [consent, setConsent] = useState(false);
+    [choice, setChoice] = useState<string | null>(null);
+  const [receiptMessage, setReceiptMessage] = useState("");
+  const restoreWriting = useRef<ReturnType<typeof captureEditorReturn>>(null);
   const epoch = useRef(0),
     live = useRef(true);
   const root = workspace?.root ?? "";
+  const stateRead = useRef(0);
+  const setSnapshot = useCallback((next: Snapshot) => {
+    // A state read started before this write may still return its older snapshot.
+    stateRead.current++;
+    updateSnapshot(next);
+  }, []);
   const refresh = useCallback(async (clearError = true) => {
-    const requestEpoch = epoch.current;
+    const request = ++stateRead.current;
     try {
       const s = await invoke<Snapshot>("companion_state");
-      if (live.current && requestEpoch === epoch.current && s?.settings) {
-        setSnapshot(s);
+      if (live.current && request === stateRead.current && s?.settings) {
+        updateSnapshot(s);
         if (clearError) setError("");
       }
     } catch (e) {
-      if (live.current && requestEpoch === epoch.current) setError(String(e));
+      if (live.current && request === stateRead.current) setError(String(e));
     }
   }, []);
   useEffect(() => {
@@ -203,7 +218,6 @@ export default function CompanionDock({
   useEffect(() => {
     epoch.current++;
     setView(null);
-    setPreview(null);
     setBusy(false);
     setMilestone(false);
     void refresh();
@@ -328,7 +342,7 @@ export default function CompanionDock({
         }),
       (next) => {
         setSnapshot(next);
-        if (!next.settings.enabled || next.settings.characterId !== "motuan") {
+        if (!next.settings.enabled || next.settings.characterId !== role) {
           setMilestone(false);
         }
       },
@@ -336,67 +350,139 @@ export default function CompanionDock({
   };
   const openStory = (n: number) => {
     setStage(n);
-    setChoice(progress?.choices.c1 ?? null);
+    setChoice(n === 2 ? (progress?.choices.c1 ?? null) : null);
     setView("story");
   };
-  const startPreview = () => {
-    if (!workspace || !documentPath || !saved) return;
-    setConsent(false);
-    setKind("complete");
-    void run(
-      () =>
-        invoke<Preview>("companion_preview", {
-          path: documentPath,
-          workspaceRoot: workspace.root,
-        }),
-      (p) => {
-        setPreview(p);
-        setText(p.suggestedText);
-        setView("preview");
-      },
+  const receiptScope = JSON.stringify([
+    root,
+    workspace?.managedProjectId,
+    documentPath,
+    documentHash,
+    saveSerial,
+    saved,
+    saving,
+    snapshot?.generation,
+    role,
+    settings?.enabled,
+    inWorkspace,
+    surface?.showPet,
+  ]);
+  const receipt = useWorkReceipt(receiptScope);
+  const busy = updating || receipt.request?.phase === "submitting";
+  const pageEdge = managed && !inWorkspace;
+  const unavailable = !workspace?.managedProjectId
+    ? "仅受管理的文档空间支持记录经历。"
+    : !documentPath
+      ? "请先打开要记录的文档。"
+      : saving
+        ? "正在保存文档，保存完成后可以记录。"
+        : !saved
+          ? "请先保存当前文档，再记录本次完成。"
+          : "";
+  useLayoutEffect(() => {
+    restoreWriting.current = null;
+    setReceiptMessage("");
+    setMilestone(false);
+    setView((current) =>
+      current === "preview" ? (inWorkspace ? "pet" : null) : current,
     );
+  }, [receiptScope, inWorkspace]);
+  useEffect(() => {
+    if (!receiptMessage) return;
+    const timeout = setTimeout(() => setReceiptMessage(""), 3600);
+    return () => clearTimeout(timeout);
+  }, [receiptMessage]);
+
+  function returnToWriting() {
+    const restore = restoreWriting.current;
+    restoreWriting.current = null;
+    if (!restore?.()) {
+      if (surface?.onResumeWriting) {
+        surface.onResumeWriting();
+        return;
+      }
+      document
+        .querySelector<HTMLButtonElement>(".companion-pet-avatar")
+        ?.focus({ preventScroll: true });
+    }
+  }
+  function closeReceipt(restore: boolean) {
+    receipt.dismiss();
+    if (pageEdge && restore) returnToWriting();
+    else restoreWriting.current = null;
+    if (!pageEdge) setView(inWorkspace ? "pet" : null);
+  }
+  const startPreview = () => {
+    setReceiptMessage("");
+    if (!pageEdge) setView("preview");
+    void receipt.open(root, documentPath, unavailable);
   };
-  const confirm = (
-    p: Pick<Preview, "token" | "eventId">,
-    cardText: string,
-    cardKind: string,
-  ) => {
+  function recorded(result: ReceiptResult, cardKind: string, edge: boolean) {
+    setSnapshot(result.snapshot);
+    if ((edge || cardKind === "milestone") && result.status === "counted")
+      setMilestone(true);
+    const message =
+      result.status === "counted"
+        ? edge
+          ? characters[role].name +
+            {
+              motuan: "把叶签推到页边。",
+              yanzhou: "放下一枚铜书签。",
+              zhiwei: "夹好了一枚叶形纸签。",
+            }[role] +
+            "经历已记录。"
+          : "经历已记录。新章节会安静留在同伴入口。"
+        : result.status === "daily_limit"
+          ? "今天的有效经历已达上限，工作仍可继续。"
+          : "该经历已经记录，没有重复计入。";
+    if (edge) {
+      setReceiptMessage(message);
+      if (
+        document.activeElement === document.body ||
+        document.activeElement?.closest(".companion-pet-anchor")
+      )
+        returnToWriting();
+    } else {
+      setView(inWorkspace ? "pet" : null);
+      setNotice(message);
+    }
+  }
+  const retry = (p: Pending) => {
     if (!snapshot || !workspace) return;
     void run(
       () =>
-        invoke<{ status: string; snapshot: Snapshot }>("companion_confirm", {
-          workspaceRoot: workspace.root,
-          input: {
-            context: contextOf(snapshot),
-            token: p.token,
-            eventId: p.eventId,
-            text: cardText,
-            kind: cardKind,
-            consent: true,
-          },
+        confirmReceipt(root, contextOf(snapshot), {
+          token: p.token,
+          eventId: p.eventId,
+          text: p.text,
+          kind: p.kind,
         }),
-      (result) => {
-        setSnapshot(result.snapshot);
-        setView(inWorkspace ? "pet" : null);
-        setPreview(null);
-        if (
-          role === "motuan" &&
-          result.status === "counted" &&
-          cardKind === "milestone"
-        ) {
-          setMilestone(true);
-        }
-        setNotice(
-          result.status === "counted"
-            ? "经历已记录。新章节会安静留在同伴入口。"
-            : result.status === "daily_limit"
-              ? "今天的有效经历已达上限，工作仍可继续。"
-              : "该经历已经记录，没有重复计入。",
-        );
-      },
+      (result) => recorded(result, p.kind, false),
     );
   };
-  const retry = (p: Pending) => confirm(p, p.text, p.kind);
+  const workReceipt = receipt.request && (
+    <WorkReceipt
+      key={
+        "preview" in receipt.request
+          ? receipt.request.preview.token
+          : receipt.request.phase
+      }
+      request={receipt.request}
+      edge={pageEdge}
+      onCancel={() => closeReceipt(true)}
+      onSubmit={(p, text, kind) => {
+        if (unavailable) return;
+        void receipt.submit(
+          root,
+          p,
+          text,
+          kind,
+          (result) => recorded(result, kind, pageEdge),
+          () => void refresh(false),
+        );
+      }}
+    />
+  );
   const finishStory = (skipped: boolean) => {
     if (!snapshot) return;
     void run(
@@ -413,12 +499,13 @@ export default function CompanionDock({
       (s) => {
         setSnapshot(s);
         setView("stories");
-        setNotice("章节已处理，形象与相册已更新。");
+        setNotice(
+          skipped ? "已跳过本章，可以随时重看。" : "已读完本章，可以随时重看。",
+        );
         if (
-          role === "motuan" &&
           stage > 0 &&
           !progress?.read.includes(stage) &&
-          s.roles.motuan?.read.includes(stage)
+          s.roles[role]?.read.includes(stage)
         ) {
           setMilestone(true);
         }
@@ -457,6 +544,9 @@ export default function CompanionDock({
     );
   const episodes = storyData.find((s) => s.id === role)?.episodes ?? [];
   const episode = episodes[stage];
+  const reviewingReadChapter =
+    progress?.read.includes(stage) === true &&
+    (!settings?.enabled || progress.outcomes?.[stage] === "read");
   const canRead = (stageNumber: number) =>
     progress?.read.includes(stageNumber) === true ||
     (!!settings?.enabled && snapshot?.eligible === stageNumber);
@@ -464,6 +554,7 @@ export default function CompanionDock({
     !!snapshot && !!settings?.enabled && petGeneration === snapshot.generation;
   const closeView = () => {
     setNotice("");
+    receipt.dismiss();
     setView(null);
     surface?.onClose();
   };
@@ -572,7 +663,16 @@ export default function CompanionDock({
         moving={settings.mode === "gentle" && !settings.reducedMotion}
         quiet={settings.mode === "focus"}
         milestone={milestone}
-        working={activity === "working"}
+        activity={activity}
+        activityText={activityText}
+        receiptMessage={receiptMessage}
+        recordPanel={workReceipt}
+        onBeforeInteract={(origin = document.activeElement) => {
+          if (!origin?.closest(".companion-pet-anchor"))
+            restoreWriting.current = captureEditorReturn(origin);
+        }}
+        onRecord={startPreview}
+        onDismissRecord={closeReceipt}
         busy={busy}
         onQuiet={() =>
           updateSettings({
@@ -624,26 +724,18 @@ export default function CompanionDock({
                 settings.compact ? "companion-mini" : "companion-summary"
               }
             >
-              {role === "motuan" ? (
-                <MotuanSprite
-                  mood={
-                    milestone
-                      ? "milestone"
-                      : activity === "working"
-                        ? "reading"
-                        : "idle"
-                  }
-                  outfit={outfit}
-                  animate={
-                    settings.mode === "gentle" && !settings.reducedMotion
-                  }
-                />
-              ) : (
-                <img
-                  src={characterArt(role, outfit)}
-                  alt={`${r.name} ${stages[outfit]}阶段预览插画`}
-                />
-              )}
+              <CharacterSprite
+                role={role}
+                mood={
+                  milestone
+                    ? "milestone"
+                    : activity === "working"
+                      ? "reading"
+                      : "idle"
+                }
+                outfit={outfit}
+                animate={settings.mode === "gentle" && !settings.reducedMotion}
+              />
               <div>
                 <strong>
                   {r.name}
@@ -856,19 +948,14 @@ export default function CompanionDock({
             {view === "pet" && snapshot && (
               <div className="companion-pet-overview">
                 <div className="companion-profile">
-                  {role === "motuan" ? (
-                    <MotuanSprite
-                      mood={milestone ? "milestone" : "idle"}
-                      outfit={outfit}
-                      animate={
-                        milestone &&
-                        settings?.mode === "gentle" &&
-                        !settings.reducedMotion
-                      }
-                    />
-                  ) : (
-                    <img src={characterArt(role, outfit)} alt={r.name} />
-                  )}
+                  <CharacterSprite
+                    role={role}
+                    outfit={outfit}
+                    mood={milestone ? "milestone" : "idle"}
+                    animate={
+                      settings?.mode === "gentle" && !settings.reducedMotion
+                    }
+                  />
                   <div>
                     <h3>
                       {r.name} · {stages[level]}
@@ -988,7 +1075,11 @@ export default function CompanionDock({
                 )}
                 {episodes.map((ep) => (
                   <article key={ep.id}>
-                    <span>{stages[ep.stage]}</span>
+                    <span>
+                      {stages[ep.stage]}
+                      {progress?.read.includes(ep.stage) &&
+                        " · " + chapterLabel(progress, ep.stage)}
+                    </span>
                     <h3>{ep.title}</h3>
                     <p>{ep.paragraphs[0].slice(0, 54)}…</p>
                     <button
@@ -1038,15 +1129,14 @@ export default function CompanionDock({
                   generation={snapshot.generation}
                   role={role}
                   episode={episode}
-                  read={progress?.read.includes(stage) === true}
+                  read={reviewingReadChapter}
                   choice={choice}
                   lockedChoice={!!progress?.choices.c1}
                   busy={busy}
                   canFinish={!!settings?.enabled}
                   onChoice={setChoice}
                   onFinish={() =>
-                    progress?.read.includes(stage) &&
-                    (!choice || !!progress.choices.c1)
+                    reviewingReadChapter && (!choice || !!progress?.choices.c1)
                       ? setView("stories")
                       : finishStory(false)
                   }
@@ -1073,41 +1163,7 @@ export default function CompanionDock({
               </figure>
             )}
             {view === "motuan-bonus" && <MotuanBonusScene />}
-            {view === "preview" && preview && (
-              <>
-                <p>工作已成功保存。确认后保存这张经历卡；取消不会增加成长。</p>
-                <label>
-                  拟存经历
-                  <textarea
-                    maxLength={160}
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                  />
-                </label>
-                <label>
-                  经历类型
-                  <select
-                    value={kind}
-                    onChange={(e) => setKind(e.target.value)}
-                  >
-                    <option value="complete">完成一份笔记</option>
-                    <option value="milestone">确认项目里程碑</option>
-                    <option value="revision" disabled={!preview.canRevise}>
-                      复盘一次已有记录
-                    </option>
-                  </select>
-                </label>
-                <p>有效日：{preview.day}。同一文档同日不重复，每日最多两条。</p>
-                <label className="companion-check">
-                  <input
-                    type="checkbox"
-                    checked={consent}
-                    onChange={(e) => setConsent(e.target.checked)}
-                  />
-                  我确认保存以上经历卡内容，不包含未同意保留的私人信息。
-                </label>
-              </>
-            )}
+            {view === "preview" && workReceipt}
             {view === "settings" && snapshot && (
               <>
                 <div className="companion-settings-grid">
@@ -1165,12 +1221,10 @@ export default function CompanionDock({
                   />
                   减少动态效果
                 </label>
-                {role === "motuan" && (
-                  <p className="companion-note">
-                    墨团动效在温和陪伴中播放。专注模式、减少动态或 macOS
-                    的减少动态设置会让形象保持静止。
-                  </p>
-                )}
+                <p className="companion-note">
+                  角色动效在温和陪伴中播放。专注模式、减少动态或 macOS
+                  的减少动态设置会让形象保持静止。
+                </p>
                 <button
                   onClick={() => {
                     setSelected(role);
@@ -1302,22 +1356,6 @@ export default function CompanionDock({
                   与{characters[selected].name}相遇
                 </button>
               </>
-            ) : view === "preview" && preview ? (
-              <>
-                <button
-                  disabled={busy}
-                  onClick={() => setView(inWorkspace ? "pet" : null)}
-                >
-                  暂不记录
-                </button>
-                <button
-                  className="primary"
-                  disabled={busy || !consent || !text.trim()}
-                  onClick={() => confirm(preview, text, kind)}
-                >
-                  确认并记录
-                </button>
-              </>
             ) : view === "story" && !inWorkspace ? (
               <>
                 <button disabled={busy} onClick={() => finishStory(true)}>
@@ -1369,7 +1407,7 @@ export default function CompanionDock({
               >
                 返回章节
               </button>
-            ) : inWorkspace ? null : (
+            ) : inWorkspace || view === "preview" ? null : (
               <button disabled={busy} onClick={() => setView(null)}>
                 回到工作
               </button>

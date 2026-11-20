@@ -93,8 +93,11 @@ export default function ImportDialog({
             ],
       });
       if (!mounted.current) return;
-      if (selected) setPaths(Array.isArray(selected) ? selected : [selected]);
-      setResult(null);
+      if (selected) {
+        setPaths(Array.isArray(selected) ? selected : [selected]);
+        setResult(null);
+        setItems([]);
+      }
       setError("");
     } catch (e) {
       if (mounted.current) setError(String(e));
@@ -103,7 +106,7 @@ export default function ImportDialog({
       if (mounted.current) setPicking(false);
     }
   };
-  const run = async () => {
+  const run = async (retry: ImportItem[] = []) => {
     if (inFlight.current || choosing.current || !paths.length || !project)
       return;
     inFlight.current = true;
@@ -112,25 +115,42 @@ export default function ImportDialog({
     setStopping(false);
     onBusy(true);
     setError("");
-    setItems([]);
+    const retained = retry.length
+      ? items.filter((item) => item.status !== "failed")
+      : [];
+    setItems(retained);
     setResult(null);
     setProgress({ done: 0, total: 0 });
+    let copied = false;
     try {
       const response = await invoke<ImportResult>("library_import", {
         projectId: project,
-        paths,
+        paths: retry.length ? retry.map((item) => item.source) : paths,
         skipDuplicates: skip,
         attachments,
-        resumeJobId: task?.id ?? null,
+        resumeJobId:
+          result?.jobId ??
+          (task?.projectId === project &&
+          task.paths.length === paths.length &&
+          task.paths.every((path, index) => paths[index] === path)
+            ? task.id
+            : null),
       });
+      copied = true;
       retiredJobs.current.add(response.jobId);
       if (mounted.current) {
         setResult(response);
-        setItems(response.items);
+        setItems([...retained, ...response.items]);
       }
       await onFinished(response);
     } catch (e) {
-      if (mounted.current) setError(String(e));
+      if (mounted.current) {
+        if (!copied && retry.length) {
+          setResult(result);
+          setItems(items);
+        }
+        setError(String(e));
+      }
     } finally {
       if (activeJob.current) retiredJobs.current.add(activeJob.current);
       inFlight.current = false;
@@ -156,6 +176,19 @@ export default function ImportDialog({
   const imported = items.filter((i) => i.status === "imported"),
     skipped = items.filter((i) => i.status === "skipped"),
     failed = items.filter((i) => i.status === "failed");
+  // Retrying individually selected files preserves their original attachment roots.
+  const retryFailed =
+    !!result &&
+    !result.cancelled &&
+    !result.warnings.length &&
+    failed.length > 0 &&
+    failed.every((item) => paths.includes(item.source));
+  const complete =
+    !!result &&
+    !result.cancelled &&
+    !failed.length &&
+    !result.warnings.length &&
+    items.length > 0;
   return (
     <ModalDialog
       label="导入本地文档"
@@ -178,7 +211,11 @@ export default function ImportDialog({
           aria-label="导入目标空间"
           value={project}
           disabled={locked}
-          onChange={(e) => setProject(e.target.value)}
+          onChange={(e) => {
+            setProject(e.target.value);
+            setItems([]);
+            setResult(null);
+          }}
         >
           {view.projects.map((p) => (
             <option key={p.id} value={p.id}>
@@ -252,9 +289,13 @@ export default function ImportDialog({
             <div className={"import-item " + i.status} key={i.source + n}>
               <span>{i.source.split("/").at(-1)}</span>
               <small>{i.message}</small>
-              {i.documentId && i.status === "imported" && !busy && (
-                <button onClick={() => onOpen(i.documentId!)}>打开副本</button>
-              )}
+              {i.documentId &&
+                (i.status === "imported" || i.status === "skipped") &&
+                !busy && (
+                  <button onClick={() => onOpen(i.documentId!)}>
+                    {i.status === "skipped" ? "打开已有副本" : "打开副本"}
+                  </button>
+                )}
             </div>
           ))}
           {result?.warnings.map((w, i) => (
@@ -270,7 +311,11 @@ export default function ImportDialog({
         </div>
       )}
       <div className="modal-actions">
-        <button className="button" disabled={locked} onClick={close}>
+        <button
+          className={complete ? "button primary" : "button"}
+          disabled={locked}
+          onClick={close}
+        >
           {result ? "完成" : "取消"}
         </button>
         {busy ? (
@@ -282,13 +327,19 @@ export default function ImportDialog({
             {stopping ? "正在停止…" : "停止导入"}
           </button>
         ) : (
-          <button
-            className="button primary"
-            disabled={picking || !paths.length || !project}
-            onClick={() => void run()}
-          >
-            {result ? "重新检查并导入" : "复制导入"}
-          </button>
+          !complete && (
+            <button
+              className="button primary"
+              disabled={picking || !paths.length || !project}
+              onClick={() => void run(retryFailed ? failed : [])}
+            >
+              {retryFailed
+                ? "重试失败文件"
+                : result
+                  ? "重新检查并导入"
+                  : "复制导入"}
+            </button>
+          )
         )}
       </div>
     </ModalDialog>
