@@ -89,15 +89,20 @@ afterEach(() => {
   api.listen.mockReset();
 });
 
-function openPanel(onOpenSource = vi.fn()) {
+function openPanel(
+  onOpenSource = vi.fn(),
+  catalog = view,
+  onOpenCurrentDocument?: (doc: LibraryView["documents"][number]) => void,
+) {
   render(
     <WikiPanel
       projectId="space"
       workspaceRoot={root}
-      view={view}
+      view={catalog}
       onClose={vi.fn()}
       onImport={vi.fn()}
       onOpenSource={onOpenSource}
+      onOpenCurrentDocument={onOpenCurrentDocument}
     />,
   );
   return within(screen.getByRole("dialog", { name: "知识 Wiki" }));
@@ -442,4 +447,181 @@ test("takes the reader to a source problem before routine pending changes", asyn
     panel.getByRole<HTMLButtonElement>("button", { name: "仅发布原文摘录" })
       .disabled,
   ).toBe(true);
+});
+
+test("review and publication keep a single-source fact separate from a two source accounts of duration", async () => {
+  const handoff = {
+    ...view.documents[0],
+    id: "handoff",
+    title: "交接记录.md",
+    path: "交接记录.md",
+  };
+  const catalog = { ...view, documents: [...view.documents, handoff] };
+  const refs = [
+    { ...page.refs[0], quote: "每场 45 分钟。" },
+    {
+      ...page.refs[0],
+      documentId: handoff.id,
+      title: handoff.title,
+      path: handoff.path,
+      quote: "每场 60 分钟。",
+      hash: "handoff-v2",
+    },
+    {
+      ...page.refs[0],
+      documentId: handoff.id,
+      title: handoff.title,
+      path: handoff.path,
+      quote: "签到处在前台。",
+      startLine: 5,
+      endLine: 5,
+      hash: "handoff-v2",
+    },
+  ];
+  const claims = [
+    {
+      claim: "每场时长分别记录为 45、60 分钟。",
+      status: "parallel",
+      refIndices: [0, 1],
+    },
+    {
+      claim: "仅交接记录提到签到处。",
+      status: "singleSource",
+      refIndices: [2],
+    },
+  ];
+  const candidate = {
+    ...page,
+    refs,
+    claimReviews: claims,
+    reviewComparison: {
+      baseRevision: 1,
+      currentRevision: 1,
+      baseAvailable: true,
+      summaryChanged: true,
+      outlineChanged: false,
+      sources: [{ title: handoff.title, status: "updated" }],
+    },
+  };
+  const baseline = { ...page, refs, claimReviews: [claims[1]] };
+  let published = false;
+  api.listen.mockResolvedValue(vi.fn());
+  api.invoke.mockImplementation(async (command, args) => {
+    if (command === "wiki_status") return { ...status, pages: [baseline] };
+    if (command === "wiki_read")
+      return published
+        ? { ...candidate, revision: 2 }
+        : args.changeId
+          ? candidate
+          : baseline;
+    if (command === "wiki_source") return refs[2];
+    if (command === "wiki_review") {
+      published = true;
+      return {
+        ...status,
+        currentPendingCount: 0,
+        pages: [{ ...page, revision: 2 }],
+        changes: [],
+      };
+    }
+    throw Error(command);
+  });
+  const jump = vi.fn();
+  const panel = openPanel(jump, catalog);
+  fireEvent.click(await panel.findByRole("button", { name: "查看待审阅改动" }));
+  const review = within(
+    await panel.findByRole("region", { name: "结论与依据" }),
+  );
+  expect(
+    within(review.getByText("来源并列").closest("li")!).getAllByRole("button"),
+  ).toHaveLength(2);
+  expect(review.queryByText("原文取值不同")).toBeNull();
+  expect(review.queryByText("原文支持")).toBeNull();
+  const signIn = within(review.getByText("单方记载").closest("li")!);
+  expect(signIn.getByText("签到处在前台。")).toBeTruthy();
+  expect(signIn.queryByText("手册.md")).toBeNull();
+  expect(await signIn.findByText("沿用表述")).toBeTruthy();
+  expect(review.getByText("本次新增表述")).toBeTruthy();
+  fireEvent.click(signIn.getByRole("button", { name: /交接记录.md.*第 5 行/ }));
+  await waitFor(() =>
+    expect(jump).toHaveBeenCalledWith(
+      expect.objectContaining({
+        startLine: 5,
+        documentId: "handoff",
+        hash: "handoff-v2",
+      }),
+    ),
+  );
+  fireEvent.click(panel.getByRole("button", { name: "发布改动" }));
+  expect(
+    await panel.findByText("改动已发布，可在主题中查看生效版本。"),
+  ).toBeTruthy();
+  const formal = within(
+    await panel.findByRole("region", { name: "结论与依据" }),
+  );
+  expect(formal.getByText("仅交接记录提到签到处。")).toBeTruthy();
+  expect(formal.queryByText("沿用表述")).toBeNull();
+});
+
+test("opening a changed source rechecks permission and opens today's document without historical coordinates", async () => {
+  const historical = {
+    ...page,
+    stale: true,
+    refs: [],
+    body: "# 历史",
+    historicalSources: [
+      {
+        documentId: "manual",
+        title: "手册.md",
+        startLine: 23,
+        endLine: 23,
+        excerpt: "当时活动为 45 分钟。",
+      },
+    ],
+    claimReviews: [
+      { claim: "旧版资料已有变更。", status: "sourceChanged", refIndices: [] },
+    ],
+  };
+  const snapshot = {
+    ...status,
+    pages: [historical],
+    changes: [],
+    currentPendingCount: 0,
+  };
+  const openCurrent = vi.fn(),
+    jump = vi.fn();
+  let permitted = true;
+  api.listen.mockResolvedValue(vi.fn());
+  api.invoke.mockImplementation(async (command) => {
+    if (command === "wiki_status") return snapshot;
+    if (command === "wiki_read")
+      return permitted ? historical : { ...historical, historicalSources: [] };
+    if (command === "library_answer_source")
+      return { document: view.documents[0] };
+    throw Error(command);
+  });
+  const panel = openPanel(jump, view, openCurrent);
+  fireEvent.click(await panel.findByRole("button", { name: /凭条.*版本 1/ }));
+  expect(await panel.findByText("来源已变")).toBeTruthy();
+  const detail = panel.getByText(/已变化或不可用的出处/).closest("details")!;
+  detail.open = true;
+  const open = within(detail).getByRole("button", {
+    name: "打开当前文档 手册.md",
+  });
+  fireEvent.click(open);
+  await waitFor(() => expect(openCurrent).toHaveBeenCalledTimes(1));
+  expect(openCurrent.mock.calls[0]).toEqual([view.documents[0]]);
+  permitted = false;
+  fireEvent.click(
+    within(detail).getByRole("button", { name: "打开当前文档 手册.md" }),
+  );
+  expect((await panel.findByRole("alert")).textContent).toContain("已移出范围");
+  expect(panel.queryByText("当时活动为 45 分钟。")).toBeNull();
+  expect(openCurrent).toHaveBeenCalledTimes(1);
+  expect(
+    api.invoke.mock.calls.filter(
+      ([command]) => command === "library_answer_source",
+    ),
+  ).toHaveLength(1);
+  expect(jump).not.toHaveBeenCalled();
 });

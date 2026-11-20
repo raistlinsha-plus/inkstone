@@ -1602,8 +1602,13 @@ test("first Wiki setup guides explicitly scoped compilation, review, publication
   fireEvent.click(organize);
   fireEvent.click(await panel.findByRole("button", { name: "查看待审阅改动" }));
   expect(await panel.findByText(reference.quote)).toBeTruthy();
-  fireEvent.click(panel.getByText("资料覆盖 · 1/2 份已引用"));
-  expect(panel.getByText("本次未引用，可重试")).toBeTruthy();
+  const coverage = panel.getByText("资料覆盖 · 1/2 份已引用");
+  fireEvent.click(coverage);
+  const coverageDetails = coverage.closest("details")!;
+  expect(coverageDetails.open).toBe(true);
+  const coverageItems = within(coverageDetails);
+  expect(coverageItems.getByText("a.md").closest("li")?.textContent).toContain("已找到原文引用");
+  expect(coverageItems.getByText("b.md").closest("li")?.textContent).toContain("本次未引用，可重试");
   const review = within(panel.getByRole("group", { name: "Wiki 审阅操作" }));
   fireEvent.click(review.getByRole("button", { name: "发布改动" }));
   await waitFor(() =>

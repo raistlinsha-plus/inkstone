@@ -1,4 +1,5 @@
 //! Space-local, versioned Wiki. The answer pipeline only receives checked original text.
+mod claim_review;
 mod compile;
 #[cfg(test)]
 mod eval;
@@ -130,10 +131,7 @@ impl Content {
     }
 
     fn summary_issues(&self) -> Vec<SummaryIssue> {
-        audit_wiki_summary(
-            &self.summary,
-            self.originals().map(|source| source.quote.as_str()),
-        )
+        claim_review::issues(self)
     }
 }
 
@@ -155,6 +153,7 @@ pub(crate) struct Page {
     summary: PageSummary,
     body: String,
     refs: Vec<Original>,
+    claim_reviews: Vec<claim_review::ClaimReview>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     historical_sources: Vec<HistoricalSource>,
     related: Vec<RelatedPage>,
@@ -340,7 +339,11 @@ fn describe(
     let stale = !inputs_current(data, ws, space, policy, content, hashes);
     PageSummary {
         id,
-        title: content.title.clone(),
+        title: if claim_review::unverified_label(&content.title, content) {
+            "待核对主题".into()
+        } else {
+            content.title.clone()
+        },
         summary: if stale {
             String::new()
         } else {
@@ -458,7 +461,11 @@ fn status(data: &Path, ws: &Workspace, space: &str) -> Result<Status, String> {
             ChangeSummary {
                 id: change.id,
                 page_id: change.page_id,
-                title: change.content.title.clone(),
+                title: if claim_review::unverified_label(&change.content.title, &change.content) {
+                    "待核对主题".into()
+                } else {
+                    change.content.title.clone()
+                },
                 status: change.status,
                 reason: change.reason,
                 created: change.created,
@@ -883,13 +890,13 @@ fn read_page(
     } else {
         content.summary_issues()
     };
-    let hide_summary = change_id.is_none() && !summary_issues.is_empty();
+    let hide_summary = !summary_issues.is_empty();
     if hide_summary {
         summary.summary.clear();
     }
     let mut body = format!(
         "# {}\n\n{}\n",
-        markdown_text(&content.title),
+        markdown_text(&summary.title),
         if summary.stale || hide_summary {
             String::new()
         } else {
@@ -922,7 +929,12 @@ fn read_page(
             continue;
         }
         if !summary.stale {
-            body.push_str(&format!("\n## {}\n", markdown_text(&section.heading)));
+            let heading = if claim_review::unverified_label(&section.heading, &content) {
+                "来源摘录"
+            } else {
+                &section.heading
+            };
+            body.push_str(&format!("\n## {}\n", markdown_text(heading)));
         } else if refs.is_empty() {
             body.push_str("\n## 仍可核对的原文\n");
         }
@@ -939,14 +951,14 @@ fn read_page(
             }
         }
     }
-    if !summary.stale && !content.related.is_empty() {
+    if !summary.stale && !hide_summary && !content.related.is_empty() {
         body.push_str(&format!(
             "\n## 相关主题\n\n{}\n",
             markdown_text(&content.related.join(" · "))
         ));
     }
     let mut related = Vec::new();
-    if !summary.stale {
+    if !summary.stale && !hide_summary {
         for title in &content.related {
             if let Some((id, _)) = store::find(&db, space, &store::title_key(title))? {
                 if id != summary.id {
@@ -958,7 +970,22 @@ fn read_page(
             }
         }
     }
+    let contexts = claim_review::excerpt_contexts(&refs, |r| {
+        read_document(data, ws, space, &r.document_id)
+            .ok()
+            .map(|(_, text)| text)
+    });
     Ok(Page {
+        claim_reviews: claim_review::reviews(
+            &refs,
+            &contexts,
+            if change_id.is_some() {
+                &summary_issues
+            } else {
+                &[]
+            },
+            summary.stale,
+        ),
         summary,
         body,
         refs,

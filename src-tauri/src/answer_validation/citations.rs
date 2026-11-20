@@ -599,8 +599,8 @@ pub(crate) fn audit_citations(
 
 #[derive(Serialize)]
 pub(crate) struct SummaryIssue {
-    claim: String,
-    reason: &'static str,
+    pub(crate) claim: String,
+    pub(crate) reason: &'static str,
 }
 
 fn wiki_punctuation(text: &str) -> String {

@@ -4277,6 +4277,12 @@ export default function App() {
             setWikiOpen(false);
             showImport();
           }}
+          onOpenCurrentDocument={async (doc) => {
+            if (await openLibraryDocument(doc)) {
+              setWikiOpen(false);
+              setPanelOpen(false);
+            }
+          }}
           onOpenSource={async (source) => {
             if (!(await leaveGeneralForDocument())) return;
             if (
