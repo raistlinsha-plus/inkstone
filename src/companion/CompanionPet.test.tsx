@@ -108,8 +108,10 @@ test("damaged storage falls back, and the focused pet can move with arrow keys",
   pet.focus();
   fireEvent.keyDown(pet, { key: "ArrowLeft", isComposing: true });
   expect(anchor().dataset.side).toBe("right");
-  fireEvent.keyDown(pet, { key: "ArrowLeft" });
-  fireEvent.keyDown(pet, { key: "ArrowUp" });
+  act(() => {
+    fireEvent.keyDown(pet, { key: "ArrowLeft" });
+    fireEvent.keyDown(pet, { key: "ArrowUp" });
+  });
   expect(readPetPlacement().side).toBe("left");
   expect(readPetPlacement().heightRatio).toBeCloseTo(0.83);
   expect(document.activeElement).toBe(pet);

@@ -2,7 +2,7 @@
 
 本机升级工具从 **v0.8.5** 起复用同一套预检、备份与回退流程。日常使用 `/Applications/Inkstone.app`，Bundle ID 为 `local.inkstone.desktop`。
 
-**v0.9.5** 沿用同一路径和本机升级流程。升级前可记录版本和构建号，重开后核对原有空间，再打开 Wiki 核对来源，再从文档问答返回写作位置。[本轮改动](DELIVERY-v0.9.5.md) · [macOS 公证发布手册](MACOS_RELEASE.md)
+**v0.9.6** 沿用同一路径和本机升级流程。重开后核对原有空间，在「书房同伴」查看已有形象、故事和经历。选择显示桌宠后，可以返回文档体验页边停靠。[本轮改动](DELIVERY-v0.9.6.md) · [macOS 公证发布手册](MACOS_RELEASE.md)
 
 ## 唯一日常入口
 

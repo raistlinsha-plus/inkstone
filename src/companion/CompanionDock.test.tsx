@@ -419,6 +419,20 @@ async function openPetReceipt() {
   fireEvent.click(screen.getByRole("button", { name: "记录本次完成" }));
   return pet;
 }
+test("a receipt opened from the save toolbar returns to the mounted document", async () => {
+  enablePet();
+  const onResumeWriting = vi.fn();
+  render(
+    <CompanionDock
+      {...activeDoc}
+      surface={{ ...petSurface(), onResumeWriting }}
+    />,
+  );
+  await openPetReceipt();
+  fireEvent.click(await screen.findByRole("button", { name: "暂不记录" }));
+  expect(onResumeWriting).toHaveBeenCalledTimes(1);
+  localStorage.clear();
+});
 test.each(["motuan", "yanzhou", "zhiwei"] as const)(
   "a %s page-edge receipt requires consent to the edited text, records once and returns to the selection",
   async (role) => {
