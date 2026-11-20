@@ -4,7 +4,7 @@ The **v0.9.3 source preview** brings consistent workspace typography, a compact 
 
 ## Product milestones after v0.9.3
 
-Improving evidence retrieval for questions phrased in the user’s own words remains the first priority. Its version number will be set after evaluation. Wiki source review (planned v0.9.4), first-use and everyday Mac workflows (planned v0.9.5), and a possible v0.10.0 source release candidate follow in that order. Public macOS installer distribution is a separate track. [中文版路线图和验收目标](ROADMAP.zh-CN.md)
+Improving evidence retrieval for questions phrased in the user’s own words remains the first priority. Its version number will be set after evaluation. The development branch includes Wiki source review in v0.9.4, everyday writing improvements in v0.9.5 and [page-edge companions in v0.9.6](DELIVERY-v0.9.6.md). A possible v0.10.0 source release candidate follows evaluation. Public macOS installer distribution is a separate track. [中文版路线图和验收目标](ROADMAP.zh-CN.md)
 
 - [v0.8.0 release preparation](DELIVERY-v0.8.0.md) records verification and remaining distribution gates.
 - [v0.8.1 question workbench](DELIVERY-v0.8.1.md) introduces contextual navigation and citation-to-document return.

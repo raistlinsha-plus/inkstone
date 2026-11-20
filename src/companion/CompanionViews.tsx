@@ -2,6 +2,7 @@ import { Check, LockKeyhole } from "lucide-react";
 import { characterArt, cgArt } from "./art";
 import motuanBonusArt from "./assets/motuan-pilot-cg.svg";
 import {
+  chapterLabel,
   characters,
   roleLevel,
   stages,
@@ -37,12 +38,29 @@ export function CharacterPicker({
           </button>
         ))}
       </div>
-      <p>
-        像素水墨预览插画；可随时更换或关闭。默认专注、减少动态，不产生额外模型请求。
-      </p>
+      <p>同伴默认安静陪读，动作可在设置中开启。你可以随时更换同伴。</p>
     </>
   );
 }
+function chapterAvailability(snapshot: Snapshot, stage: number) {
+  const progress = snapshot.roles[snapshot.settings.characterId];
+  const label = chapterLabel(progress, stage);
+  if (label) return label;
+  if (stage === snapshot.eligible || stage === 0)
+    return snapshot.settings.enabled ? "可以开始阅读" : "开启陪伴后可读";
+
+  const missing: string[] = [];
+  const previous = stage - 1;
+  if (!progress?.read.includes(previous))
+    missing.push(`读完或跳过「${stages[previous]}」`);
+  const events = (stage === 1 ? 3 : 8) - snapshot.events;
+  const days = (stage === 1 ? 2 : 5) - snapshot.days;
+  if (events > 0) missing.push(`${events} 条经历`);
+  if (days > 0) missing.push(`${days} 个不同记录日`);
+  if (stage === 2 && snapshot.hasRevision === false) missing.push("一次复盘");
+  return missing.length ? `还需${missing.join("、")}` : "等待解锁";
+}
+
 export function GrowthOverview({
   snapshot,
   busy,
@@ -56,6 +74,7 @@ export function GrowthOverview({
     r = characters[role],
     progress = snapshot.roles[role],
     level = roleLevel(progress);
+  const next = stages.findIndex((_, i) => !progress?.read.includes(i));
   return (
     <>
       <div className="companion-profile">
@@ -68,9 +87,7 @@ export function GrowthOverview({
           <p>
             {snapshot.events}条有效经历 · {snapshot.days}个不同有效日
           </p>
-          <small>
-            成长跨空间累计；不要求连续使用，不按字数、提问或付费调用计数。
-          </small>
+          <small>各空间的经历一起计入成长，记录日可以不连续。</small>
         </div>
       </div>
       <ol className="companion-stage-list">
@@ -78,26 +95,27 @@ export function GrowthOverview({
           <li key={n}>
             <strong>{n}</strong>
             <span>
-              {progress?.read.includes(i)
-                ? "章节已处理"
-                : i === 0
-                  ? "相遇短章可阅读"
-                  : i === 1
-                    ? "3条经历 / 2个不同日，初遇已处理"
-                    : "8条经历 / 5个不同日，有一次实际复盘，相识已处理"}
+              {i === next && "下一章 · "}
+              {chapterAvailability(snapshot, i)}
             </span>
             <button
               disabled={
-                busy || (!progress?.read.includes(i) && snapshot.eligible !== i)
+                busy ||
+                (!progress?.read.includes(i) &&
+                  (!snapshot.settings.enabled || snapshot.eligible !== i))
               }
               onClick={() => onStory(i)}
             >
-              {progress?.read.includes(i) ? "重看" : "阅读"}
+              {progress?.outcomes?.[i] === "read" ? "重读" : "阅读"}
             </button>
           </li>
         ))}
       </ol>
-      <p>默契、共著留待后续内容；已有形象不会因离开或删除卡片而倒扣。</p>
+      {next === 2 && snapshot.hasRevision === false && (
+        <p>
+          复盘时，选一篇已有经历的文档，修改并保存，再将这次经历记为「复盘」。
+        </p>
+      )}
     </>
   );
 }
@@ -117,7 +135,7 @@ export function AlbumCards({
   const motuanBonusUnlocked = read.includes(1);
   return (
     <>
-      <p>每个角色两张主CG，处理相应章节后开放。资源为预览插画。</p>
+      <p>读完或跳过「相识」「同行」后，对应的故事插画会收进相册。</p>
       <div className="companion-album">
         {[1, 2].map((n) => (
           <button
@@ -139,7 +157,9 @@ export function AlbumCards({
             )}
             <strong>{episodes[n].title}</strong>
             <small>
-              {read.includes(n) ? "已解锁 · 点击查看" : "处理相应章节后解锁"}
+              {read.includes(n)
+                ? "已解锁 · 点击查看"
+                : `读完或跳过「${stages[n]}」后解锁`}
             </small>
           </button>
         ))}
@@ -160,7 +180,7 @@ export function AlbumCards({
             <small>
               {motuanBonusUnlocked
                 ? "相识纪念 · 已解锁"
-                : "相识纪念 · 处理相识章节后解锁"}
+                : "相识纪念 · 读完或跳过「相识」后解锁"}
             </small>
           </button>
         )}

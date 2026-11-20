@@ -2704,6 +2704,20 @@ export default function App() {
         : activeAssistantCandidate?.status === "complete"
           ? "ready"
           : "idle";
+  const sameDocumentQuestion =
+    !generalAsk &&
+    panel === "ask" &&
+    !!visibleDocument &&
+    !!answerSnapshot &&
+    answerSnapshot.workspaceRoot === workspace?.root &&
+    (!answerSnapshot.scopePath ||
+      answerSnapshot.scopePath === visibleDocument.path);
+  const documentCompanionActivity =
+    !sameDocumentQuestion
+      ? "idle"
+      : answerSnapshot.finishReason === "error"
+        ? "blocked"
+        : assistantActivity;
   const assistantActivityText = chatBusy
     ? chatStopping
       ? "正在停止生成…"
@@ -3762,10 +3776,9 @@ export default function App() {
               documentHash={document?.hash ?? null}
               libraryRevision={libraryView}
               onOpenSource={openPath}
-              saved={!dirty}
-              activity={
-                panelOpen && panel === "ask" ? assistantActivity : "idle"
-              }
+              saved={!dirty && !saving && !document?.conflict && !document?.missing}
+              saving={saving}
+              activity={documentCompanionActivity}
               activityText={assistantActivityText}
               surface={{
                 open: companionOpen,
@@ -3778,6 +3791,7 @@ export default function App() {
                   !focusedKnowledge,
                 onOpen: openCompanion,
                 onClose: closeCompanion,
+                onResumeWriting: mode === "mindmap" ? undefined : focusWritingSurface,
               }}
             />
           )}

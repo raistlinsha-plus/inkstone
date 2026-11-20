@@ -59,6 +59,7 @@ pub fn validate_snapshot(path: &Path) -> Result<(), String> {
     for (id, p) in &d.roles {
         if !valid_character(id)
             || p.read.iter().any(|n| *n > 2)
+            || p.outcomes.keys().any(|stage| !p.read.contains(stage))
             || p.outfit > level(p)
             || p.read
                 .iter()

@@ -223,6 +223,7 @@ fn snapshot(c: &Connection, d: Data) -> Result<Snapshot, String> {
         revision: d.revision,
         timezone: d.timezone,
         events: d.ledger.len(),
+        has_revision: d.ledger.iter().any(|e| e.kind == "revision"),
         days: d
             .ledger
             .iter()
@@ -754,6 +755,12 @@ pub fn complete_story(data: &Path, i: StoryInput) -> Result<Snapshot, String> {
         if !p.read.contains(&i.stage) {
             p.read.push(i.stage);
             p.outfit = i.stage;
+        }
+        if i.skipped {
+            // An explicit skip can classify a legacy entry but cannot undo a completed reading.
+            p.outcomes.entry(i.stage).or_insert(ChapterOutcome::Skipped);
+        } else {
+            p.outcomes.insert(i.stage, ChapterOutcome::Read);
         }
         Ok(())
     })

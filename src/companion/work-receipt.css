@@ -1,0 +1,41 @@
+.companion-work-receipt {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  outline: none;
+}
+.companion-work-receipt label:not(.companion-check) {
+  display: grid;
+  gap: 3px;
+}
+.companion-work-receipt :is(textarea, select) {
+  width: 100%;
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid var(--ui-control-line);
+  border-radius: 5px;
+  font: inherit;
+  color: var(--ui-text);
+  background: var(--ui-field);
+}
+.companion-work-receipt textarea {
+  resize: vertical;
+  max-height: 8em;
+}
+.companion-work-receipt small {
+  color: var(--ui-muted);
+  line-height: 1.45;
+}
+.companion-receipt-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.companion-receipt-actions button {
+  padding: 6px 9px;
+  border-radius: 5px;
+}
+.companion-work-receipt [role="alert"] {
+  color: var(--ui-warning-text);
+  overflow-wrap: anywhere;
+}

@@ -332,10 +332,14 @@ test("Motuan's bonus illustration uses the existing acquaintance unlock and pres
   expect(screen.getByRole("button", { name: /捡到一枚书签/ })).toBeTruthy();
 });
 
-test("other roles retain static artwork and their own story album", async () => {
+test("other roles keep their own sprite and story album", async () => {
   current.settings.characterId = "zhiwei";
   mount();
-  expect(await screen.findByAltText("知微 初遇阶段预览插画")).toBeTruthy();
+  await waitFor(() =>
+    expect(
+      document.querySelector('[data-companion-sprite="zhiwei"]'),
+    ).toBeTruthy(),
+  );
   expect(sprite()).toBe(null);
   fireEvent.click(screen.getByRole("button", { name: "相册" }));
   expect(screen.queryByRole("button", { name: /纸签下的午后/ })).toBe(null);
@@ -391,4 +395,263 @@ test("the workspace keeps desktop pet opt-in independent of stories and restores
     mocked.invoke.mock.calls.some(([name]) => name === "companion_story"),
   ).toBe(false);
   localStorage.clear();
+});
+
+const petSurface = () => ({
+  open: false,
+  showPet: true,
+  onOpen: vi.fn(),
+  onClose: vi.fn(),
+});
+const activeDoc = {
+  workspace,
+  documentPath: "note.md",
+  documentHash: "hash",
+  saved: true,
+};
+function enablePet() {
+  localStorage.setItem("inkstone:companion:pet-generation", current.generation);
+}
+async function openPetReceipt() {
+  const pet = await screen.findByRole("button", { name: /桌宠$/ });
+  pet.focus();
+  fireEvent.click(pet);
+  fireEvent.click(screen.getByRole("button", { name: "记录本次完成" }));
+  return pet;
+}
+test.each(["motuan", "yanzhou", "zhiwei"] as const)(
+  "a %s page-edge receipt requires consent to the edited text, records once and returns to the selection",
+  async (role) => {
+    current.settings.characterId = role;
+    enablePet();
+    const call = mocked.invoke.getMockImplementation()!;
+    let finish!: () => void;
+    mocked.invoke.mockImplementation((name, args) =>
+      name === "companion_confirm"
+        ? new Promise((resolve) => {
+            finish = () =>
+              resolve({
+                status: "counted",
+                snapshot: structuredClone(current),
+              });
+          })
+        : call(name, args),
+    );
+    const surface = petSurface();
+    render(
+      <main className="main-content">
+        <div className="editor-container">
+          <textarea aria-label="正文" defaultValue="第一行，第二行。" />
+        </div>
+        <CompanionDock {...activeDoc} surface={surface} />
+      </main>,
+    );
+    const editor = screen.getByRole("textbox", {
+      name: "正文",
+    }) as HTMLTextAreaElement;
+    const container = editor.parentElement!;
+    editor.focus();
+    editor.setSelectionRange(4, 7, "backward");
+    container.scrollTop = 96;
+    await openPetReceipt();
+    const card = await screen.findByRole("textbox", { name: "拟存经历" });
+    expect(document.activeElement).toBe(card);
+    const consent = screen.getByRole("checkbox", { name: /我确认保存/ });
+    const submit = screen.getByRole("button", { name: "确认并记录" });
+    fireEvent.click(consent);
+    fireEvent.change(card, { target: { value: "核对了结论与引文" } });
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      mocked.invoke.mock.calls.some(([name]) => name === "companion_confirm"),
+    ).toBe(false);
+    fireEvent.click(consent);
+    act(() => {
+      fireEvent.click(submit);
+      fireEvent.click(submit);
+    });
+    const writes = mocked.invoke.mock.calls.filter(
+      ([name]) => name === "companion_confirm",
+    );
+    expect(writes).toHaveLength(1);
+    expect(writes[0][1]).toEqual({
+      workspaceRoot: workspace.root,
+      input: {
+        context: { generation: current.generation, revision: current.revision },
+        token: "server-token",
+        eventId: "server-event",
+        text: "核对了结论与引文",
+        kind: "complete",
+        consent: true,
+      },
+    });
+    expect(screen.queryByText(/经历已记录/)).toBeNull();
+    editor.setSelectionRange(0, 0);
+    container.scrollTop = 0;
+    await act(async () => finish());
+    expect(await screen.findByText(/经历已记录/)).toBeTruthy();
+    expect(
+      document
+        .querySelector(`[data-companion-sprite="${role}"]`)
+        ?.getAttribute("data-state"),
+    ).toBe("milestone");
+    expect(document.activeElement).toBe(editor);
+    expect([
+      editor.selectionStart,
+      editor.selectionEnd,
+      editor.selectionDirection,
+      container.scrollTop,
+    ]).toEqual([4, 7, "backward", 96]);
+    expect(surface.onOpen).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText("本次完成经历卡")).toBeNull();
+    localStorage.clear();
+  },
+);
+test.each([
+  [{ ...activeDoc, saved: false }, "请先保存当前文档"],
+  [{ ...activeDoc, saved: false, saving: true }, "正在保存文档"],
+  [
+    { ...activeDoc, workspace: { ...workspace, managedProjectId: undefined } },
+    "仅受管理的文档空间",
+  ],
+] as const)(
+  "an ineligible edge action explains why without creating a receipt (%s)",
+  async (props, reason) => {
+    enablePet();
+    render(<CompanionDock {...props} surface={petSurface()} />);
+    await openPetReceipt();
+    expect((await screen.findByRole("alert")).textContent).toContain(reason);
+    expect(
+      mocked.invoke.mock.calls.every(([name]) => name === "companion_state"),
+    ).toBe(true);
+    localStorage.clear();
+  },
+);
+test("Escape cancels an edge preview; a late response cannot reopen the card or save anything", async () => {
+  enablePet();
+  const call = mocked.invoke.getMockImplementation()!;
+  let finish!: () => void;
+  mocked.invoke.mockImplementation((name, args) =>
+    name === "companion_preview"
+      ? new Promise((resolve) => {
+          finish = () => resolve(call(name, args));
+        })
+      : call(name, args),
+  );
+  render(<CompanionDock {...activeDoc} surface={petSurface()} />);
+  const pet = await openPetReceipt();
+  expect(await screen.findByText(/正在核对本次保存/)).toBeTruthy();
+  fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+  await act(async () => finish());
+  expect(screen.queryByLabelText("本次完成经历卡")).toBeNull();
+  expect(document.activeElement).toBe(pet);
+  expect(
+    mocked.invoke.mock.calls.some(([name]) => name === "companion_confirm"),
+  ).toBe(false);
+  localStorage.clear();
+});
+test("changing the document dismisses a consented edge preview before it can be submitted", async () => {
+  enablePet();
+  const surface = petSurface();
+  const ui = render(<CompanionDock {...activeDoc} surface={surface} />);
+  await openPetReceipt();
+  fireEvent.click(await screen.findByRole("checkbox", { name: /我确认保存/ }));
+  ui.rerender(
+    <CompanionDock {...activeDoc} documentPath="other.md" surface={surface} />,
+  );
+  expect(screen.queryByRole("button", { name: "确认并记录" })).toBeNull();
+  expect(
+    mocked.invoke.mock.calls.some(([name]) => name === "companion_confirm"),
+  ).toBe(false);
+  expect(surface.onOpen).not.toHaveBeenCalled();
+  localStorage.clear();
+});
+test.each([
+  ["duplicate", /没有重复计入/],
+  ["daily_limit", /有效经历已达上限/],
+  ["error", /请重新预览/],
+])(
+  "a %s result has its own edge notice and never displays the success pose",
+  async (result, message) => {
+    enablePet();
+    const call = mocked.invoke.getMockImplementation()!;
+    mocked.invoke.mockImplementation(async (name, args) => {
+      if (name !== "companion_confirm") return call(name, args);
+      if (result === "error")
+        throw new Error("TOKEN_EXPIRED：请重新预览这次经历。");
+      return { status: result, snapshot: structuredClone(current) };
+    });
+    render(<CompanionDock {...activeDoc} surface={petSurface()} />);
+    await openPetReceipt();
+    fireEvent.click(
+      await screen.findByRole("checkbox", { name: /我确认保存/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "确认并记录" }));
+    expect(await screen.findByText(message)).toBeTruthy();
+    expect(sprite()?.getAttribute("data-state")).toBe("idle");
+    expect(screen.queryByText(/经历已记录/)).toBeNull();
+    localStorage.clear();
+  },
+);
+
+test("a confirmed write that resolves after switching documents refreshes the ledger silently", async () => {
+  enablePet();
+  const call = mocked.invoke.getMockImplementation()!;
+  let finish!: () => void;
+  mocked.invoke.mockImplementation((name, args) =>
+    name === "companion_confirm"
+      ? new Promise((resolve) => {
+          finish = () =>
+            resolve({ status: "counted", snapshot: structuredClone(current) });
+        })
+      : call(name, args),
+  );
+  const surface = petSurface();
+  const ui = render(<CompanionDock {...activeDoc} surface={surface} />);
+  await openPetReceipt();
+  fireEvent.click(await screen.findByRole("checkbox", { name: /我确认保存/ }));
+  fireEvent.click(screen.getByRole("button", { name: "确认并记录" }));
+  ui.rerender(
+    <CompanionDock {...activeDoc} documentPath="other.md" surface={surface} />,
+  );
+  const reads = mocked.invoke.mock.calls.filter(
+    ([name]) => name === "companion_state",
+  ).length;
+  await act(async () => finish());
+  expect(
+    mocked.invoke.mock.calls.filter(([name]) => name === "companion_state"),
+  ).toHaveLength(reads + 1);
+  expect(screen.queryByText(/经历已记录/)).toBeNull();
+  expect(sprite()?.getAttribute("data-state")).toBe("idle");
+  expect(screen.queryByLabelText("本次完成经历卡")).toBeNull();
+  localStorage.clear();
+});
+
+test("a skipped chapter can be read again without sending a later chapter's locked choice", async () => {
+  current.roles.motuan = {
+    read: [0, 1, 2],
+    outcomes: { 0: "read", 1: "skipped", 2: "read" },
+    choices: { c1: "saved-branch" },
+    outfit: 2,
+  };
+  const call = mocked.invoke.getMockImplementation()!;
+  mocked.invoke.mockImplementation(async (name, args) => {
+    if (name !== "companion_story") return call(name, args);
+    current.roles.motuan!.outcomes![1] = "read";
+    return structuredClone(current);
+  });
+  render(
+    <CompanionDock {...activeDoc} surface={{ ...petSurface(), open: true }} />,
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "故事" }));
+  const chapter = screen.getByText("相识 · 已跳过").closest("article")!;
+  fireEvent.click(chapter.querySelector("button")!);
+  while (screen.queryByRole("button", { name: "继续" }))
+    fireEvent.click(screen.getByRole("button", { name: "继续" }));
+  fireEvent.click(screen.getByRole("button", { name: "读完本章" }));
+  await screen.findByText("相识 · 已读完");
+  expect(
+    mocked.invoke.mock.calls.find(([name]) => name === "companion_story")?.[1],
+  ).toMatchObject({
+    input: { characterId: "motuan", stage: 1, skipped: false, choiceId: null },
+  });
 });

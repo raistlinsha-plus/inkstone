@@ -272,6 +272,7 @@ fn story_conditions_are_distinct_from_stage_and_choices_are_not_fabricated() {
     )
     .unwrap();
     assert_eq!(role_level_for_test(&s), 1);
+    assert_eq!(s.roles["motuan"].outcomes[&1], ChapterOutcome::Skipped);
     {
         let c = open(temp.path()).unwrap();
         let mut d = load(&c).unwrap();
@@ -304,6 +305,8 @@ fn story_conditions_are_distinct_from_stage_and_choices_are_not_fabricated() {
     )
     .unwrap();
     assert!(s.roles["motuan"].choices.is_empty());
+    assert!(s.has_revision);
+    assert_eq!(s.roles["motuan"].outcomes[&2], ChapterOutcome::Skipped);
     let s = complete_story(
         temp.path(),
         StoryInput {
@@ -315,6 +318,8 @@ fn story_conditions_are_distinct_from_stage_and_choices_are_not_fabricated() {
         },
     )
     .unwrap();
+    assert_eq!(s.roles["motuan"].outcomes[&2], ChapterOutcome::Read);
+    assert_eq!(s.roles["motuan"].outcomes[&0], ChapterOutcome::Read);
     assert!(complete_story(
         temp.path(),
         StoryInput {
@@ -393,6 +398,7 @@ fn malformed_stage_order_and_orphan_cards_are_rejected_in_backups() {
         "motuan".into(),
         RoleProgress {
             read: vec![2],
+            outcomes: BTreeMap::new(),
             choices: BTreeMap::new(),
             outfit: 2,
         },
@@ -501,4 +507,49 @@ fn recent_companion_recall_requires_opt_in_current_role_space_and_source() {
     .unwrap();
     assert_eq!(removed.events, 1);
     assert!(recall(path, &ws, true).unwrap().statuses.is_empty());
+}
+
+#[test]
+fn legacy_chapters_remain_unclassified_until_finished() {
+    let temp = tempfile::tempdir().unwrap();
+    let s = enable(temp.path());
+    let connection = open(temp.path()).unwrap();
+    let mut data = serde_json::to_value(load(&connection).unwrap()).unwrap();
+    data["roles"]["motuan"] = serde_json::json!({"read":[0], "choices":{}, "outfit":0});
+    connection
+        .execute("UPDATE companion_state SET payload=?", [data.to_string()])
+        .unwrap();
+    validate_snapshot(&database_path(temp.path())).unwrap();
+    assert!(state(temp.path()).unwrap().roles["motuan"]
+        .outcomes
+        .is_empty());
+    let skipped = complete_story(
+        temp.path(),
+        StoryInput {
+            context: ctx(&s),
+            character_id: "motuan".into(),
+            stage: 0,
+            skipped: true,
+            choice_id: None,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        skipped.roles["motuan"].outcomes[&0],
+        ChapterOutcome::Skipped
+    );
+    let finished = complete_story(
+        temp.path(),
+        StoryInput {
+            context: ctx(&skipped),
+            character_id: "motuan".into(),
+            stage: 0,
+            skipped: false,
+            choice_id: None,
+        },
+    )
+    .unwrap();
+    assert_eq!(finished.roles["motuan"].outcomes[&0], ChapterOutcome::Read);
+    assert_eq!(finished.roles["motuan"].read, vec![0]);
+    assert!(!finished.has_revision);
 }

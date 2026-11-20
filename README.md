@@ -22,7 +22,7 @@ The GitHub source preview includes a source archive and SHA-256 checksum. The in
 - **Wikis with source links.** Select ready documents in one managed space, organize them into linked topics, and review changes or open the original lines. Local recall combines BM25, optional vectors and verified Wiki references. Reranking is optional.
 - **Chat with the sources you choose.** Start directly, select one local space or attach a text file. The app can add public web evidence when you authorize Brave Search in settings. Inspect this turn’s sources, continue the conversation or save a useful answer as a document.
 - **Rich content inside Markdown.** Edit JSON trees, Mermaid, mindmaps, calendars and constrained ECharts blocks in the document body, then switch back to source.
-- **A quieter companion.** Optionally enable Motuan, Yanzhou or Zhiwei. Confirm real work milestones to unlock fixed stories and stage artwork. Motuan offers a gentle-motion pilot with a static option. Companions add no separate model call.
+- **A quieter companion.** Optionally enable Motuan, Yanzhou or Zhiwei. Confirm real work milestones to unlock fixed stories and stage artwork. Each has a pixel-art companion that docks at the edge of the editor. You can record a saved piece of work from its menu and switch to a static pose. Companions add no separate model call.
 
 ![Markdown document and an inline chart](docs/assets/launch-v0.7/01-editor.png)
 
