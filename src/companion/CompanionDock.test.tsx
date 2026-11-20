@@ -419,17 +419,22 @@ async function openPetReceipt() {
   fireEvent.click(screen.getByRole("button", { name: "记录本次完成" }));
   return pet;
 }
-test("a receipt opened from the save toolbar returns to the mounted document", async () => {
+test("a receipt opened after a toolbar save returns to the mounted document", async () => {
   enablePet();
   const onResumeWriting = vi.fn();
   render(
-    <CompanionDock
-      {...activeDoc}
-      surface={{ ...petSurface(), onResumeWriting }}
-    />,
+    <>
+      <button>保存文件</button>
+      <CompanionDock
+        {...activeDoc}
+        surface={{ ...petSurface(), onResumeWriting }}
+      />
+    </>,
   );
+  screen.getByRole("button", { name: "保存文件" }).focus();
   await openPetReceipt();
-  fireEvent.click(await screen.findByRole("button", { name: "暂不记录" }));
+  await screen.findByLabelText("拟存经历");
+  fireEvent.click(screen.getByRole("button", { name: "暂不记录" }));
   expect(onResumeWriting).toHaveBeenCalledTimes(1);
   localStorage.clear();
 });
