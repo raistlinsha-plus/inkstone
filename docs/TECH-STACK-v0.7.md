@@ -1,4 +1,6 @@
-# Inkstone v0.7 当前技术栈
+# Inkstone v0.7 系列技术栈档案
+
+现行版本见 [v0.9.6 的技术栈与依赖版本](TECH-STACK.md)。以下工具版本、数据格式和验收说明属于历史交付记录。
 
 v0.7.1 沿用 React、Tauri、Rust、SQLite 与现有构建链。新增能力由现有 Rust IPC、SQLite 事务与 React 界面实现。详见 [v0.7.1 交付](DELIVERY-v0.7.1.md)。下文版本表记录 rc.4 基线。
 

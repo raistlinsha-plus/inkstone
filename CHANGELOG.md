@@ -8,6 +8,8 @@ Entries describe implementation milestones. GitHub Releases is the record of pub
 - 保存文档后可在页边预览并确认一次经历，完成或取消后继续编辑原文。
 - 墨团、砚舟和知微各有像素形象、问候和陪读姿势。文档问答就绪时同伴短暂抬头，故事里的信物随成长呈现在页边。[版本说明](docs/DELIVERY-v0.9.6.md)
 
+从上一公开标签 v0.9.3 更新时，同时包含下列 v0.9.4 和 v0.9.5 的改动。[产品与功能](docs/PRODUCT.md) · [操作手册](docs/USER-MANUAL.zh-CN.md) · [4A 架构](docs/ARCHITECTURE-4A.md) · [技术栈](docs/TECH-STACK.md)
+
 ## v0.9.5 · 首次使用与日常书写
 
 - 重复导入后可打开已有副本。逐个选取的文件部分失败后，可单独重试失败项。

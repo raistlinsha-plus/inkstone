@@ -1,43 +1,29 @@
-# Architecture and technology
+# How Inkstone works · v0.9.6
 
-Local candidate v0.7.0-rc.1; public source preview v0.6.6. Inkstone is a local desktop application; it has no required hosted document server, account service or bundled model weights. Candidate acceptance and remaining gates are recorded in [the delivery](DELIVERY-v0.7.md).
+Inkstone runs as a Tauri desktop app on Apple Silicon Macs. A **space** groups managed copies of documents imported from one or more folders. The Markdown and text files remain readable outside the app. SQLite holds the catalog, search index and feature-specific stores. Users can write, search by keyword, read published Wiki pages and use their study companion locally. They can configure providers for model-assisted tasks.
 
-| Layer | Components and responsibility |
+[中文 4A 架构](ARCHITECTURE-4A.md) · [技术栈与锁定版本](TECH-STACK.md)
+
+## Following a document through the app
+
+| What the user does | What happens |
 | --- | --- |
-| Desktop shell | Tauri 2, system macOS WebKit, native file dialogs and Keychain boundary |
-| Frontend | React 19 / TypeScript; app composition and typed IPC, document session, source/visual editor and worker-based parsing |
-| Editing and presentation | CodeMirror 6, Milkdown 7; shared Markdown content contracts; JSON trees, Mermaid, Markmap, FullCalendar and constrained ECharts |
-| Local backend | Rust: safe file writes, stable document/space identity, source updates, history, backups, indexing and remote provider calls |
-| Storage | UTF-8 document files/images/history plus SQLite catalog/index and independent assistant/companion stores; FTS5, jieba tokenization and sqlite-vec |
-| Models | User-configured OpenAI-compatible embedding/chat and Cohere-compatible reranking over HTTPS; loopback HTTP allowed |
+| Imports or edits a document | The Rust document library gives managed files stable identities and tracks their sources. The React workspace offers CodeMirror and Milkdown views of the same Markdown. Changes made in the calendar write back to the owning document. |
+| Asks about a document or space | Within the selected scope, the backend combines keyword and optional vector ranks using reciprocal rank fusion. Published Wiki topics can point to original passages. An optional reranker reorders candidates. Scope, current source versions, lexical evidence and context limits govern which passages reach generation. |
+| Opens a citation | The answer retains the source snapshot used for that turn. The reader can inspect the excerpt and, where available, open the current document. Changed sources are flagged. Generated answers still need review against the original text. |
+| Maintains a Wiki | Compilation reads documents explicitly authorized in one managed space. Review compares a proposed change with its baseline and shows claims alongside source lines. Publication and later retrieval recheck source authorization and version. When support is incomplete, the reviewer can publish verified excerpts alone. |
+| Records a milestone at the page edge | A successful changed-document save provides a short-lived receipt. The user previews a card and expressly confirms before a deduplicated experience is recorded. All three characters can respond to document Q&A activity with local animation. Motion and story progress require no model call. |
 
-A **space** is the main product unit. It can hold managed copies imported from several folders. A directory is a source or advanced direct-edit mode. The retrieval index is rebuildable derived data, not a second document truth.
+The standalone assistant also supports general questions, selected documents in one space and per-turn text attachments. With automatic web search configured and permitted for a turn, a planner examines the current question. Brave supplies discovery results. Only excerpts from retrieved public pages can enter the web evidence budget. Local hits and web candidates use separate ranking paths. [Answer runtime](../src-tauri/src/assistant_runtime.rs) · [Retrieval](../src-tauri/src/retrieval.rs) · [Wiki](../src-tauri/src/wiki.rs)
 
-```mermaid
-flowchart TB
-  UI[React workspace and editor] --> IPC[Typed Tauri IPC]
-  IPC --> DOC[Documents and spaces]
-  DOC --> FILE[UTF-8 text, images and history]
-  DOC --> CAT[SQLite catalog]
-  IPC --> RAG[Retrieval and answer orchestration]
-  RAG --> IDX[FTS5 and sqlite-vec index]
-  RAG --> GATE[Scope, hash and lexical evidence checks]
-  GATE --> CTX[Complete source context budget]
-  CTX --> API[User-configured model API]
-  API --> OUT[Markdown and chart validation]
-  OUT --> UI
-```
+## Components and data ownership
 
-Retrieval combines BM25 and vectors using RRF, then optionally reranks candidates. Relevance cannot grant evidence eligibility. Explicit comparisons can scope each source to its own document name while still requiring the common requested attributes, numeric constraints and the original two-thirds coverage threshold. Heading-only snippets are excluded. Before generation, source identity, scope and current file hashes are checked again. This remains conservative lexical support, not a semantic entailment guarantee.
+| Component | Implementation and state |
+| --- | --- |
+| Desktop and editing | Tauri 2 and macOS WebKit host React 19 and TypeScript. Shared Markdown handling feeds structured blocks for JSON, Mermaid, mind maps, calendars and constrained ECharts charts. |
+| Documents and derived data | The catalog uses schema 4. The index uses schema 3 with SQLite FTS5, jieba tokenization and sqlite-vec. Calendar schema 1 caches events from document content. |
+| Assistant and Wiki | Assistant schema 4 persists conversations, candidates, attachments and source snapshots. Wiki schema 2 persists authorization, proposals, page versions and evidence. |
+| Companion | Companion schema 1 stores story progress, confirmed experiences and pending confirmations. WebView layout preferences store the pet’s dock edge and relative height. Compact editor panes display a bookmark. [Placement](../src/companion/petPlacement.ts) · [Experience handling](../src-tauri/src/companion/mod.rs) |
+| Backup and credentials | Portable backups snapshot the catalog and present auxiliary stores. Archives with a Wiki store use format 3, other new archives use format 2. Restore previews use a new directory. Provider credentials remain in macOS Keychain. [Backup implementation](../src-tauri/src/maintenance.rs) |
 
-`src/shell` owns display components; `src/platform` owns IPC and optional layout preferences. `src-tauri/src/evidence.rs` owns lexical evidence decisions; `retrieval.rs` owns shared query/ranking/context behavior. Documents remain governed by existing session, conflict, save and recovery rules. v0.6.6 adds no catalog/index schema migration (schema 3 remains).
-
-Renderer frames and chart formats are constrained rather than arbitrary executable document code. Untrusted text and model output never authorize filesystem or external actions. See [security](../SECURITY.md) and [limits](KNOWN-LIMITATIONS.md).
-
-Default verification runs local synthetic tests, types, worker checks, builds and document checks. `desktop-e2e` is a separate test identity with system credentials disabled and only loopback model stubs permitted; production builds exclude that feature. Real service evaluations are opt-in, bounded and recorded separately. `toolchain.json` and lockfiles define verified versions.
-
-`src/assistant` owns conversation UI and streaming buffers; Rust `assistant` stores frozen space/document scope, drafts, branches, candidate answers and source snapshots in `assistant.sqlite3` (schema 1). Follow-ups reuse revalidated source identities, while the current question independently constrains requested attributes. At most six previous user questions, bounded to 4,000 characters, can enter the generation prompt; old model claims do not become evidence.
-
-`src/companion` and Rust `companion` use `companion.sqlite3` (schema 1) for opt-in settings, story progress, confirmed experiences and presentation preferences. Only a valid changed-document save can create a short-lived preview token. Explicit user confirmation persists intent before awarding deduplicated growth; retries are idempotent. Stories and experiences never become retrieval evidence, and preferences cannot change factual eligibility. Candidate art is static; final sprite animation and multi-day natural acceptance remain pending.
-
-Backup format 2 includes consistent snapshots of both stores under the maintenance write barrier, validates semantic contents and rechecks the source before publication. Format 1 remains readable and explicitly reports missing new stores. Catalog/index remain schema 3; restore still previews into a new directory. The standalone `prototypes/v0.7` demo remains a synthetic design reference.
+Embedding and chat use user-configured OpenAI-compatible services. Optional reranking uses a Cohere-compatible endpoint. API use can send queries, selected passages or authorized Wiki inputs to the configured provider. Source files, answer history, Wiki versions and the companion ledger stay under local application ownership. Feature limits, validation and distribution status are documented separately. [Known limitations](KNOWN-LIMITATIONS.md) · [Evaluation set](../evals/v0.9.1/README.md) · [macOS distribution](MACOS_RELEASE.md) · [v0.9.6 delivery](DELIVERY-v0.9.6.md)

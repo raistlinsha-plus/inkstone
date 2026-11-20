@@ -1,10 +1,12 @@
 # Inkstone roadmap
 
-The **v0.9.3 source preview** brings consistent workspace typography, a compact document question panel and a single-row editing toolbar. The public app download depends on real notarization, clean Mac acceptance and binary notice review. [Workspace changes](DELIVERY-v0.9.3.md) · [Published source previews and tags](https://github.com/raistlinsha-plus/inkstone/releases)
+The **v0.9.6 source preview** brings together claim-by-claim Wiki review, a way back to the exact writing selection after checking a source, and three optional page-edge companions. [Wiki changes](DELIVERY-v0.9.4.md) · [Writing changes](DELIVERY-v0.9.5.md) · [Companions](DELIVERY-v0.9.6.md)
 
-## Product milestones after v0.9.3
+## After v0.9.6
 
-Improving evidence retrieval for questions phrased in the user’s own words remains the first priority. Its version number will be set after evaluation. The development branch includes Wiki source review in v0.9.4, everyday writing improvements in v0.9.5 and [page-edge companions in v0.9.6](DELIVERY-v0.9.6.md). A possible v0.10.0 source release candidate follows evaluation. Public macOS installer distribution is a separate track. [中文版路线图和验收目标](ROADMAP.zh-CN.md)
+The next retrieval milestone is to answer paraphrased and multi-part questions from the selected notes. We will measure which required passages reach the model, then score answers and citations separately. User observation, native accessibility and a five-day companion study feed into the decision on a v0.10.0 source candidate. Public macOS installer distribution has a separate signing, notarization, clean-Mac and notice review track. [中文路线图和验收目标](ROADMAP.zh-CN.md)
+
+## Earlier milestones
 
 - [v0.8.0 release preparation](DELIVERY-v0.8.0.md) records verification and remaining distribution gates.
 - [v0.8.1 question workbench](DELIVERY-v0.8.1.md) introduces contextual navigation and citation-to-document return.
@@ -36,7 +38,7 @@ Improving evidence retrieval for questions phrased in the user’s own words rem
 - Opt-in, model-routed Brave Search for readable public pages. See the [v0.8.6 evaluation](../evals/v0.8.6/README.md) for live verification status.
 - Markdown documents containing JSON, Mermaid, mindmaps, calendars and constrained charts.
 - Stable document order, a separate Recent view, and explicitly confirmed permanent deletion with recovery bookkeeping.
-- Optional ink companions, fixed stories and locally stored growth records. Motuan has an opt-in pixel-and-ink motion pilot and an extra album reward for the second chapter.
+- Optional ink companions, fixed stories and locally stored growth records. Motuan, Yanzhou and Zhiwei each have a page-edge sprite. Their stories, album and confirmed experiences live in the companion workspace.
 
 ## Before a stable distribution
 
@@ -50,7 +52,7 @@ Improving evidence retrieval for questions phrased in the user’s own words rem
 - Observe first-time users completing import → question → source and Wiki scope → review → original source. Refine model setup and fallback explanations using those observations.
 - Extend the held-out answer evaluation with independently reviewed and less structured corpora. Keep source coverage, unsupported answers, unnecessary refusals, latency and model calls separate. Record search-worthiness, public-query blocks, useful webpage evidence and failure reasons before broadening the web path.
 - Improve asset sizes, startup/performance measurement and module boundaries without expanding the format surface at the same time.
-- Observe the Motuan pilot during ordinary work sessions over at least five natural usage days. Review motion, quiet settings and growth before adapting motion to the other companions.
+- Observe the three page-edge companions during ordinary work over at least five natural usage days. Track whether the sprite covers text, distracts during writing or makes people want to return.
 
 PDF/OCR, cloud collaboration, multi-space sourcing in a single turn, other operating systems and a floating desktop pet remain future ideas.
 
