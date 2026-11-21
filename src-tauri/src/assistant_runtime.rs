@@ -70,6 +70,28 @@ fn request_text(question: &str) -> (String, bool) {
     (request.to_lowercase(), quoted)
 }
 
+fn transforms_text(request: &str) -> bool {
+    [
+        "翻译",
+        "改写",
+        "润色",
+        "重写",
+        "校对",
+        "总结",
+        "概括",
+        "提炼",
+        "translate",
+        "rewrite",
+        "rephrase",
+        "proofread",
+        "summarize",
+        "summarise",
+        "paraphrase",
+    ]
+    .iter()
+    .any(|term| request.contains(term))
+}
+
 fn web_route(question: &str, access: WebAccess) -> WebRoute {
     let (request, quoted) = request_text(question);
     let has = |terms: &[&str]| terms.iter().any(|term| request.contains(term));
@@ -119,23 +141,7 @@ fn web_route(question: &str, access: WebAccess) -> WebRoute {
         "fact-check",
         "look up",
     ]);
-    let revision = has(&[
-        "翻译",
-        "改写",
-        "润色",
-        "重写",
-        "校对",
-        "总结",
-        "概括",
-        "提炼",
-        "translate",
-        "rewrite",
-        "rephrase",
-        "proofread",
-        "summarize",
-        "summarise",
-        "paraphrase",
-    ]);
+    let revision = transforms_text(&request);
     let writing = has(&["写一", "写封", "拟一", "draft a", "write a"]);
     let needs_source = revision && public_source && !quoted;
     if (revision || writing)
@@ -300,6 +306,9 @@ pub fn select_external(
     let mut remaining = remaining;
     let mut selected = Vec::new();
     for item in items {
+        if selected.len() >= 32 {
+            break;
+        }
         let citation = base + selected.len() + 1;
         let cost = item.as_prompt_with_citation(citation).chars().count();
         if cost > remaining {
@@ -462,26 +471,77 @@ fn document(
     Ok((doc, content))
 }
 
+fn original(
+    data: &std::path::Path,
+    conversation: &str,
+    m: &ExternalSource,
+) -> Option<(String, String)> {
+    match m.kind.as_str() {
+        "attachment" => m
+            .attachment_id
+            .as_deref()
+            .and_then(|id| assistant::attachments::read(data, conversation, id).ok())
+            .map(|a| (a.title, a.text)),
+        "document" => m
+            .project_id
+            .as_deref()
+            .zip(m.document_id.as_deref())
+            .and_then(|(project, id)| document(data, project, id).ok())
+            .map(|(d, text)| (d.title, text)),
+        _ => None,
+    }
+}
 fn current(data: &std::path::Path, conversation: &str, items: &[Evidence]) -> bool {
     items.iter().all(|e| {
-        let m = &e.metadata;
-        let text = match m.kind.as_str() {
-            "attachment" => m
-                .attachment_id
-                .as_deref()
-                .and_then(|id| assistant::attachments::read(data, conversation, id).ok())
-                .map(|a| a.text),
-            "document" => m
-                .project_id
-                .as_deref()
-                .zip(m.document_id.as_deref())
-                .and_then(|(project, id)| document(data, project, id).ok())
-                .map(|(_, s)| s),
-            _ => return true,
-        };
-        text.as_ref()
-            .is_some_and(|text| m.content_hash.as_deref() == Some(files::hash(text).as_str()))
+        e.metadata.kind == "web"
+            || original(data, conversation, &e.metadata).is_some_and(|(_, text)| {
+                e.metadata.content_hash.as_deref() == Some(files::hash(text).as_str())
+            })
     })
+}
+
+fn selected_passages(
+    data: &std::path::Path,
+    conversation: &str,
+    items: &[Evidence],
+) -> Result<Vec<SearchResult>, String> {
+    let mut out = Vec::new();
+    for item in items {
+        let m = &item.metadata;
+        let (title, body) =
+            original(data, conversation, m).ok_or("所选资料已删除或不属于当前范围")?;
+        let hash = files::hash(&body);
+        if m.content_hash.as_deref() != Some(&hash) {
+            return Err("所选文档或附件已变化，请重新提问".into());
+        }
+        let id = m
+            .document_id
+            .as_ref()
+            .or(m.attachment_id.as_ref())
+            .ok_or("所选资料缺少身份")?;
+        // local_item builds the coordinates from the original snippet.
+        let (start, end) =
+            m.id.strip_prefix(id)
+                .and_then(|s| s.strip_prefix(':'))
+                .and_then(|s| s.split_once('-'))
+                .and_then(|(a, b)| Some((a.parse::<usize>().ok()?, b.parse::<usize>().ok()?)))
+                .ok_or("所选资料的行号无效")?;
+        let lines = body.lines().collect::<Vec<_>>();
+        if start == 0 || end < start || end > lines.len() {
+            return Err("所选资料的行号已变化".into());
+        }
+        let mut hit = crate::candidate_reading::explicit_passage(
+            id,
+            &title,
+            &hash,
+            start,
+            end,
+            lines[start - 1..end].join("\n"),
+        );
+        hit.document_id = m.document_id.clone();
+        out.push(hit);
+    }
+    Ok(out)
 }
 
 pub fn record_web_search(trace: &mut Trace, web: &WebTurn) {
@@ -534,13 +594,14 @@ impl AnswerRoute {
 }
 
 pub async fn general(
-    app: &tauri::AppHandle,
+    app: Option<&tauri::AppHandle>,
     state: &AppState,
     started: &assistant::Started,
     request: &str,
     mode: &str,
     memory: &assistant::memory::Options,
 ) -> Result<ChatResponse, String> {
+    let generation = state.workspace_generation.load(Ordering::SeqCst);
     let config = crate::settings(state)?.chat;
     if !config.enabled {
         return Err("请在模型设置中启用问答服务".into());
@@ -608,7 +669,7 @@ pub async fn general(
                     mode != "keyword",
                     Some(mode),
                     &state.cancel_chat,
-                    Some((app, request)),
+                    app.map(|app| (app, request)),
                     Some(ws.clone()),
                 )
                 .await?;
@@ -719,10 +780,10 @@ pub async fn general(
             // A public lookup cannot resolve a missing or stale local referent.
             WebTurn::default()
         } else {
-            web(Some(app), state, &config, question, request, started.web_access).await
+            web(app, state, &config, question, request, started.web_access).await
         })
     })?;
-    let (evidence, steps, unread, mut notices, local_mode, rank_used) = local;
+    let (mut evidence, steps, unread, mut notices, local_mode, rank_used) = local;
     let mut trace = Trace {
         steps,
         unread,
@@ -764,7 +825,131 @@ pub async fn general(
     let budget = config
         .context_chars
         .saturating_sub(system.chars().count() + prompt.chars().count() + 300);
-    let external = choose_external_context(&evidence, &web.evidence, budget, &mut trace.unread);
+    // Selected text transformations need their whole input. For a factual request
+    // only the selected original sentences become evidence, just as in a scoped ask.
+    let explicit = !selection.document_ids.is_empty() || !selection.attachments.is_empty();
+    let request_body = request_text(question).0;
+    let transform = transforms_text(&request_body)
+        || ["写一", "写封", "拟一", "draft a", "write a"]
+            .iter()
+            .any(|s| request_body.contains(s));
+    let read_selected = explicit && clock.is_none() && !transform;
+    let mut review_failed = false;
+    let mut provider_reviewed = false;
+    let mut facet_refs = Vec::new();
+    if read_selected {
+        let same = || state.workspace_generation.load(Ordering::SeqCst) == generation;
+        if !same() || state.cancel_chat.load(Ordering::SeqCst) {
+            return Err("本轮候选核对已撤回".into());
+        }
+        evidence.truncate(8);
+        let passages = selected_passages(data, &started.conversation_id, &evidence)?;
+        let facets = crate::evidence_reader::split_facets(&retrieval::knowledge_query(question));
+        let reviewed = crate::candidate_reading::review(
+            state,
+            &config,
+            &facets,
+            &passages,
+            budget,
+            true,
+            || same() && current(data, &started.conversation_id, &evidence),
+        )
+        .await?;
+        trace.steps.push(reviewed.step);
+        review_failed = reviewed.warning.is_some();
+        provider_reviewed = reviewed.stats.calls > 0;
+        notices.extend(reviewed.warning);
+        let mut selected: Vec<Evidence> = Vec::new();
+        for facet in reviewed.reading.facets() {
+            let mut ids = Vec::new();
+            for q in &facet.quotes {
+                let quote = crate::candidate_reading::verified_quote(&passages[q.source_index], q)?;
+                let mut item = evidence[q.source_index].clone();
+                let m = &mut item.metadata;
+                let id = m
+                    .document_id
+                    .as_ref()
+                    .or(m.attachment_id.as_ref())
+                    .ok_or("所选资料缺少身份")?;
+                m.id = format!("{id}:{}-{}", quote.start_line, quote.end_line);
+                m.label = format!(
+                    "{} · 第 {}–{} 行",
+                    quote.title.as_deref().unwrap_or(id),
+                    quote.start_line,
+                    quote.end_line
+                );
+                // Distinguish two sentences on the same line without letting the model assign an ID.
+                let ref_key = (m.id.clone(), quote.text.clone());
+                if !selected
+                    .iter()
+                    .any(|e| e.metadata.id == m.id && e.text == quote.text)
+                {
+                    if m.kind == "document" {
+                        m.excerpt = Some(quote.text.chars().take(3000).collect());
+                    }
+                    item.text = quote.text;
+                    selected.push(item);
+                }
+                ids.push(ref_key);
+            }
+            facet_refs.push((facet.question.clone(), ids));
+        }
+        evidence = selected;
+    }
+    // Keep a table's header and selected row in the same context. If any part of
+    // a facet is omitted by budgeting, that facet has no approved citation group.
+    let note_reserve: usize = facet_refs
+        .iter()
+        .map(|(q, ids)| {
+            crate::candidate_reading::facet_note(q, &vec![32; ids.len()])
+                .chars()
+                .count()
+        })
+        .sum();
+    let mut external = choose_external_context(
+        &evidence,
+        &web.evidence,
+        budget.saturating_sub(note_reserve),
+        &mut trace.unread,
+    );
+    if read_selected {
+        let complete: Vec<_> = facet_refs
+            .iter()
+            .filter(|(_, refs)| {
+                !refs.is_empty()
+                    && refs.iter().all(|(id, text)| {
+                        external
+                            .iter()
+                            .any(|e| &e.metadata.id == id && &e.text == text)
+                    })
+            })
+            .collect();
+        external.retain(|e| {
+            e.metadata.kind == "web"
+                || complete.iter().any(|(_, refs)| {
+                    refs.iter()
+                        .any(|(id, text)| id == &e.metadata.id && text == &e.text)
+                })
+        });
+        for (i, e) in external.iter_mut().enumerate() {
+            e.metadata.citation = i + 1;
+        }
+        for (facet, refs) in facet_refs {
+            let ids: Option<Vec<_>> = refs
+                .iter()
+                .map(|(id, text)| {
+                    external
+                        .iter()
+                        .find(|e| &e.metadata.id == id && &e.text == text)
+                        .map(|e| e.metadata.citation)
+                })
+                .collect();
+            prompt.push_str(&crate::candidate_reading::facet_note(
+                &facet,
+                &ids.unwrap_or_default(),
+            ));
+        }
+    }
     let has_local = external.iter().any(|e| e.metadata.kind != "web");
     let has_web = external.iter().any(|e| e.metadata.kind == "web");
     let route = AnswerRoute::from_context(selected_scope, expect_web, has_local, has_web);
@@ -774,7 +959,9 @@ pub async fn general(
         AnswerRoute::NoLocalEvidence | AnswerRoute::NoWebEvidence
     ) {
         let text = if route == AnswerRoute::NoLocalEvidence {
-            if clock.is_some() {
+            if review_failed {
+                "候选选句服务未能完成核对，本机也未取得可回答的原句。请检查问答服务后重试。"
+            } else if clock.is_some() {
                 "没有从上一轮已核对且仍在本轮范围内的原文找到这个发车时间。请说出线路、日期或文档名后重试。"
             } else {
                 notices.push("可以补充资料、检查文档索引，或询问某一项具体信息。".into());
@@ -799,6 +986,17 @@ pub async fn general(
         prompt.push_str("\n公开资料未核验，只回答本轮已有原文支持的部分，明确指出缺少的外部证据。");
     }
     let context = external.iter().map(Evidence::as_prompt).collect::<String>();
+    if selected_scope {
+        let inputs = external
+            .iter()
+            .filter(|e| e.metadata.kind != "web")
+            .map(|e| (e.metadata.citation, e.text.as_str()))
+            .collect::<Vec<_>>();
+        let available = config.context_chars.saturating_sub(
+            system.chars().count() + context.chars().count() + prompt.chars().count() + 120,
+        );
+        crate::candidate_reading::add_calculation(question, &inputs, &mut prompt, available);
+    }
     let remaining = config.context_chars.saturating_sub(
         system.chars().count() + prompt.chars().count() + context.chars().count() + 120,
     );
@@ -807,13 +1005,20 @@ pub async fn general(
     prompt.push_str(&preferences);
     let user = format!("资料开始\n{context}\n资料结束\n\n问题：{prompt}");
     let key = crate::read_key(state, "chat", &config.base_url, &state.cancel_chat).await?;
-    if !current(data, &started.conversation_id, &external) {
+    if provider_reviewed && !crate::candidate_reading::provider_allowed(state, &config)? {
+        return Err("候选核对的传输设置已变化，已撤回本轮结果".into());
+    }
+    if (read_selected && state.workspace_generation.load(Ordering::SeqCst) != generation)
+        || !current(data, &started.conversation_id, &external)
+    {
         return Err("所选文档或附件已变化，请重新提问".into());
     }
     if state.cancel_chat.load(Ordering::SeqCst) {
         return Err("已停止生成".into());
     }
-    progress(app, request, "generating", "正在生成回答");
+    if let Some(app) = app {
+        progress(app, request, "generating", "正在生成回答");
+    }
     let output = providers::stream_chat(
         &state.client,
         &config,
@@ -821,11 +1026,16 @@ pub async fn general(
         system,
         &user,
         &state.cancel_chat,
-        Some(app),
+        app,
         request,
     )
     .await?;
-    if !current(data, &started.conversation_id, &external) {
+    if provider_reviewed && !crate::candidate_reading::provider_allowed(state, &config)? {
+        return Err("候选核对的传输设置已变化，已撤回本轮结果".into());
+    }
+    if (read_selected && state.workspace_generation.load(Ordering::SeqCst) != generation)
+        || !current(data, &started.conversation_id, &external)
+    {
         return Ok(response(
             "source_changed",
             "所选资料已变化，已撤回本轮结果。".into(),
@@ -839,6 +1049,9 @@ pub async fn general(
         ));
     }
     let finish = if state.cancel_chat.load(Ordering::SeqCst) {
+        if read_selected {
+            return Err("已停止生成，已撤回候选核对结果".into());
+        }
         "cancelled"
     } else {
         &output.finish_reason

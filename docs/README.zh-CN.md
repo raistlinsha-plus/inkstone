@@ -8,7 +8,7 @@ Inkstone 是面向 **macOS 13 及以上 Apple Silicon Mac** 的本地 Markdown �
 
 图中是 v0.9.6 编辑器和虚构的活动笔记。开启书房同伴后，保存文档可以从页边记录一次经历。
 
-1.0 候选版增加本机只读 CLI、中文问答取证改进，以及撤回 Wiki 资料前的影响预览。[候选版与验收结果](DELIVERY-v1.0.0-rc.2.md) · [外部工具接入](EXTERNAL-TOOLS.zh-CN.md)
+1.0 候选版支持按小问核对笔记原句，可选用问答模型辅助选句。另提供本机只读 CLI，以及撤回 Wiki 资料前的影响预览。[RC.3 交付与验证](DELIVERY-v1.0.0-rc.3.md) · [外部工具接入](EXTERNAL-TOOLS.zh-CN.md)
 
 ## 可以怎样使用
 

@@ -5,6 +5,7 @@ mod assistant_runtime;
 mod assistant_sources;
 mod calendar;
 mod calendar_commands;
+mod candidate_reading;
 mod companion;
 mod companion_commands;
 mod credentials;
@@ -17,6 +18,8 @@ mod eval_trace;
 #[cfg(test)]
 mod evaluation;
 #[cfg(test)]
+mod evaluation_rc3;
+#[cfg(test)]
 mod evaluation_v062;
 #[cfg(test)]
 mod evaluation_v065;
@@ -27,6 +30,7 @@ mod evaluation_v07;
 #[cfg(test)]
 mod evaluation_v086;
 mod evidence;
+mod evidence_reader;
 mod export_destination;
 pub mod external_access;
 mod files;
@@ -208,10 +212,7 @@ fn managed_sources(
     ))
 }
 fn sources_current(state: &AppState, ws: &Workspace, sources: &[SearchResult]) -> bool {
-    if !retrieval::source_versions_current(ws, sources) {
-        return false;
-    }
-    match managed_sources(&state.data_dir, ws) {
+    let authorized = match managed_sources(&state.data_dir, ws) {
         Ok(Some(documents)) => sources.iter().all(|s| {
             documents
                 .get(&s.path)
@@ -219,7 +220,8 @@ fn sources_current(state: &AppState, ws: &Workspace, sources: &[SearchResult]) -
         }),
         Ok(None) => sources.iter().all(|s| s.document_id.is_none()),
         Err(_) => false,
-    }
+    };
+    authorized && retrieval::source_versions_current(ws, sources)
 }
 #[cfg(test)]
 mod config_credential_tests {
@@ -467,6 +469,7 @@ async fn get_settings(state: State<'_, AppState>) -> Result<SettingsView, String
         None
     };
     Ok(SettingsView {
+        candidate_reading: s.candidate_reading,
         embedding: s.embedding,
         chat: s.chat,
         rerank: s.rerank,
@@ -1650,6 +1653,7 @@ async fn search_workspace(
         semantic: used,
         evidence_count,
         candidate_count,
+        strict_reader_floor: (plan.rerank && reranker.strict).then_some(reranker.min_score),
         retrieval_mode: if used { "hybrid" } else { "bm25" }.into(),
         rerank_status,
     })
@@ -1811,10 +1815,26 @@ async fn ask_pipeline(
     let budget = config.context_chars.saturating_sub(
         prompt_question.chars().count() + providers::ANSWER_SYSTEM.chars().count() + 500,
     );
-    let sources = assistant_runtime::local_first(budget, !web.evidence.is_empty(), |allowed| {
-        retrieval::generation_context(&context_workspace, &found.results, allowed, scope.is_some())
-    });
+    let reviewed = candidate_reading::scoped_context(
+        state,
+        &context_workspace,
+        scope.as_deref(),
+        retrieval_question,
+        &found,
+        followup_gate,
+        &config,
+        budget,
+        !web.evidence.is_empty(),
+        generation,
+        true,
+    )
+    .await?;
+    let sources = reviewed.sources;
+    let reader_used = reviewed.step.is_some();
+    let provider_reviewed = reviewed.stats.is_some_and(|stats| stats.calls > 0);
     let mut trace = assistant_sources::Trace::default();
+    trace.steps.extend(reviewed.step);
+
     trace
         .steps
         .push(format!("文档原文 · {} 条证据", sources.len()));
@@ -1825,7 +1845,10 @@ async fn ask_pipeline(
     let external = assistant_runtime::select_external(
         &web.evidence,
         sources.len(),
-        budget.saturating_sub(providers::chat_source_text(&sources).chars().count()),
+        budget.saturating_sub(
+            providers::chat_source_text(&sources).chars().count()
+                + reviewed.guidance.chars().count(),
+        ),
         &mut trace.unread,
     );
     let route = AnswerRoute::from_context(
@@ -1838,10 +1861,19 @@ async fn ask_pipeline(
     if route == AnswerRoute::Mixed {
         actual_mode = "mixed".into();
     }
-    let warnings = found
-        .warning
+    // Search can correctly report zero fast-path evidence before the reader
+    // verifies a sentence. Do not show that obsolete warning next to an answer.
+    let search_warning = found.warning.and_then(|warning| {
+        let lines = warning
+            .lines()
+            .filter(|line| sources.is_empty() || !line.starts_with("只找到可能相关的候选"))
+            .collect::<Vec<_>>();
+        (!lines.is_empty()).then(|| lines.join("\n"))
+    });
+    let warnings = search_warning
         .into_iter()
         .chain(web.warning)
+        .chain(reviewed.warning.clone())
         .collect::<Vec<_>>();
     if route == AnswerRoute::NoLocalEvidence {
         let mut warnings = warnings;
@@ -1851,14 +1883,53 @@ async fn ask_pipeline(
                     .into(),
             );
         }
-        return Ok(ChatResponse{external_sources:vec![],trace:Some(trace),memory: None,
-            finish_reason:"no_evidence".into(),text:"本轮没能从指定的本地资料找到足够直接的证据。可以调整资料范围、检查索引，或换一个更具体的问题。".into(),
-            sources,warning:(!warnings.is_empty()).then(||warnings.join("\n")),retrieval_mode:actual_mode,
-            rerank_status,model:String::new(),scope,chart_warnings:vec![],rejected_charts:vec![],citation_checks:vec![]});
+        let index = db::open(&context_workspace.db)?;
+        let pending = if let Some(path) = scope.as_deref() {
+            let body = files::read_text(&files::resolve(&context_workspace.root, path, false)?)?;
+            !db::keyword_complete(&index, path, &files::hash(body))
+        } else {
+            let indexed = db::paths(&index)?
+                .into_iter()
+                .collect::<std::collections::HashSet<_>>();
+            indexed.is_empty()
+                || managed_sources(&state.data_dir, &context_workspace)?.is_some_and(|docs| {
+                    docs.keys().any(|path| {
+                        !path.to_lowercase().ends_with(".json") && !indexed.contains(path)
+                    })
+                })
+        };
+        let text = if reviewed.warning.is_some() {
+            "候选选句服务未能完成核对，本机也未取得可回答的原句。请检查问答服务后重试。"
+        } else if rerank_status == "strict-unavailable" {
+            "严格重排服务未能完成筛选，请检查重排服务后重试。"
+        } else if pending {
+            "当前范围的关键词索引尚未全部就绪，已读取的原文也不足以核实。请更新索引后重试。"
+        } else {
+            "本轮指定的本地片段不足以核实这个问题。可以补充相关资料或指定文档重新提问。"
+        };
+        return Ok(ChatResponse {
+            external_sources: vec![],
+            trace: Some(trace),
+            memory: None,
+            finish_reason: "no_evidence".into(),
+            text: text.into(),
+            sources,
+            warning: (!warnings.is_empty()).then(|| warnings.join("\n")),
+            retrieval_mode: actual_mode,
+            rerank_status,
+            model: String::new(),
+            scope,
+            chart_warnings: vec![],
+            rejected_charts: vec![],
+            citation_checks: vec![],
+        });
     }
     let key = read_key(&state, "chat", &config.base_url, &state.cancel_chat).await?;
     if state.cancel_chat.load(Ordering::SeqCst) {
         return Err("已停止生成".into());
+    }
+    if provider_reviewed && !candidate_reading::provider_allowed(state, &config)? {
+        return Err("候选核对的传输设置已变化，已撤回本轮结果".into());
     }
     let current = generation == state.workspace_generation.load(Ordering::SeqCst)
         && sources_current(state, &context_workspace, &sources);
@@ -1899,6 +1970,7 @@ async fn ask_pipeline(
         );
     }
     let mut question_for_model = prompt_question.to_string();
+    question_for_model.push_str(&reviewed.guidance);
     if web.expected && external.is_empty() {
         question_for_model.push_str("\n公开资料未核验，只回答当前原文支持的部分。");
     }
@@ -1907,6 +1979,23 @@ async fn ask_pipeline(
             .iter()
             .map(assistant_sources::Evidence::as_prompt)
             .collect::<String>();
+    let inputs = sources
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (i + 1, s.text.as_str()))
+        .collect::<Vec<_>>();
+    let available = config.context_chars.saturating_sub(
+        providers::ANSWER_SYSTEM.chars().count()
+            + context.chars().count()
+            + question_for_model.chars().count()
+            + 100,
+    );
+    candidate_reading::add_calculation(
+        retrieval_question,
+        &inputs,
+        &mut question_for_model,
+        available,
+    );
     let usage = memory.map(|run| {
         let available = config.context_chars.saturating_sub(
             question_for_model.chars().count()
@@ -1936,9 +2025,15 @@ async fn ask_pipeline(
         request_id,
     )
     .await;
+    if provider_reviewed && !candidate_reading::provider_allowed(state, &config)? {
+        return Err("候选核对的传输设置已变化，已撤回本轮结果".into());
+    }
     let current = generation == state.workspace_generation.load(Ordering::SeqCst)
         && sources_current(state, &context_workspace, &sources);
     if state.cancel_chat.load(Ordering::SeqCst) {
+        if reader_used {
+            return Err("已停止生成，已撤回候选核对结果".into());
+        }
         // Persist a nonempty partial only after the same identity/hash checks
         // as a complete answer; it remains an explicitly stopped candidate.
         if let Ok(partial) = &mut output {

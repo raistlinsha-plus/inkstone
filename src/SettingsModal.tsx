@@ -98,7 +98,13 @@ export default function SettingsModal({
   const provider = form[tab === "rerank" ? "embedding" : tab];
   const update = (patch: Partial<Provider>) => {
     if (tab === "rerank") return;
-    setForm((old) => ({ ...old, [tab]: { ...old[tab], ...patch } }));
+    setForm((old) => ({
+      ...old,
+      ...(tab === "chat" && patch.baseUrl !== undefined && patch.baseUrl !== old.chat.baseUrl
+        ? { candidateReading: false }
+        : {}),
+      [tab]: { ...old[tab], ...patch },
+    }));
   };
   const updateRerank = (patch: Partial<RerankProvider>) =>
     setForm((old) => ({ ...old, rerank: { ...old.rerank, ...patch } }));
@@ -161,6 +167,7 @@ export default function SettingsModal({
     try {
       const result = await invoke<Settings>("save_settings", {
         value: {
+          candidateReading: form.candidateReading ?? false,
           embedding: form.embedding,
           chat: form.chat,
           rerank: form.rerank,
@@ -527,6 +534,25 @@ export default function SettingsModal({
                 placeholder={hasKey ? "留空保留现有密钥" : "本机服务可留空"}
               />
             </label>
+            {tab === "chat" && (
+              <div className="wide">
+                <label className="clear-key">
+                  <input
+                    type="checkbox"
+                    checked={form.candidateReading ?? false}
+                    aria-describedby="candidate-reading-help"
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setForm((old) => ({ ...old, candidateReading: checked }));
+                    }}
+                  />
+                  用问答模型核对候选原文
+                </label>
+                <small id="candidate-reading-help">
+                  本地证据不足时，每题最多额外请求一次，将本轮范围内最多 8 段候选原文发送到上方问答服务。
+                </small>
+              </div>
+            )}
             <details>
               <summary>高级参数</summary>
               <div className="advanced-fields">

@@ -411,3 +411,19 @@ test("creating a scoped external connection and revoking it preserves the separa
     false,
   );
 });
+
+test("candidate reading requires opt-in and resets when the chat endpoint changes", async () => {
+  invoke.mockResolvedValue(settings);
+  const ui = render(
+    <SettingsModal value={settings} initialTab="chat" onClose={vi.fn()} onSave={vi.fn()} />,
+  );
+  const consent = ui.getByRole("checkbox", { name: "用问答模型核对候选原文" }) as HTMLInputElement;
+  expect(consent.checked).toBe(false);
+  fireEvent.click(consent);
+  fireEvent.click(ui.getByRole("button", { name: "保存设置" }));
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith("save_settings",
+    expect.objectContaining({ value: expect.objectContaining({ candidateReading: true }) })));
+  await waitFor(() => expect(consent.disabled).toBe(false));
+  fireEvent.change(ui.getByLabelText(/服务地址 · Base URL/), { target: { value: "https://another.example/v1" } });
+  expect(consent.checked).toBe(false);
+});

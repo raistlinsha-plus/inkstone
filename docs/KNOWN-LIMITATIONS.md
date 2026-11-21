@@ -1,6 +1,8 @@
 # Known preview limitations
 
-The 1.0 development candidate frequently returns insufficient evidence on independently written Chinese questions. In a 52-question keyword-mode run, 49 stopped locally for lack of evidence, one requested clarification, and two reached the chat model. The final offline replay found candidates on all 51 searches, with evidence admitted on two. [RC.2 evaluation and release status](DELIVERY-v1.0.0-rc.2.md)
+For RC.3 the optional passage reader requires explicit opt-in. An exact quotation may still answer a different question. Review the linked passage for its subject, dates and units. [RC.3 evaluation](DELIVERY-v1.0.0-rc.3.md)
+
+The earlier RC.2 development candidate frequently returns insufficient evidence on independently written Chinese questions. In a 52-question keyword-mode run, 49 stopped locally for lack of evidence, one requested clarification, and two reached the chat model. The final offline replay found candidates on all 51 searches, with evidence admitted on two. [RC.2 evaluation and release status](DELIVERY-v1.0.0-rc.2.md)
 
 The v0.9.6 source release targets macOS 13+ on Apple Silicon. Developer ID signing, Apple notarization and installation on a clean Mac are pending for a public app download. Native Pinyin candidate confirmation, VoiceOver reading and long-running performance checks require dedicated acceptance. Synthetic-browser checks cover selected workflows with fixture IPC. [Writing and navigation](DELIVERY-v0.9.5.md) · [Published artifacts](https://github.com/raistlinsha-plus/inkstone/releases)
 

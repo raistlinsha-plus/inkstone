@@ -220,3 +220,23 @@ fn first_question_resolves_fixed_document_or_explicit_name_but_not_unsupported_p
         }));
     }
 }
+
+#[test]
+fn an_unanswered_parent_can_name_one_current_document_but_never_supply_the_fact() {
+    let data = tempfile::tempdir().unwrap();
+    let (ws, c, parent, sources) = fixture(data.path());
+    let mut s = follow(data.path(), &ws, &c, &parent, "它的容量呢？");
+    s.followup_sources = Some(vec![]);
+    s.previous_questions = vec!["青石阅读站的预算是999元吗？".into()];
+    let p = prepare(data.path(), &ws, &s).unwrap();
+    let gate = p.gate.unwrap();
+    assert_eq!(gate.sources.len(), 1);
+    assert_eq!(gate.sources[0].path, sources[0].path);
+    assert!(!p.retrieval_question.contains("999"));
+    assert!(!p.retrieval_question.contains("预算"));
+    s.previous_questions = vec!["青石阅读站和白帆读书社的预算是多少？".into()];
+    assert!(prepare(data.path(), &ws, &s)
+        .unwrap()
+        .clarification
+        .is_some());
+}

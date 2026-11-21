@@ -1,0 +1,24 @@
+[
+  {
+    "id":"D21",
+    "kind":"ambiguous",
+    "question":"那把的封条编号是什么？",
+    "previous_turn":{"user":"回声亭和回声廊各有一把备用钥匙吗？","assistant":"两处均有各自的备用钥匙。"},
+    "points":[],
+    "missing":["要先确定指回声亭还是回声廊。可问澄清，或同时列明两处各自的答案。"],
+    "gap_context":["回声亭交接簿#3","回声廊备忘#3"],
+    "skip":[{"line":"回声亭交接簿#2","reason":"晨班交接不能消解哪把备用钥匙的指代"}],
+    "wrong_values":[]
+  },
+  {
+    "id":"D22",
+    "kind":"ambiguous",
+    "question":"它那班是几点发车？",
+    "previous_turn":{"user":"砂钟搬运车和纱钟搬运车是两辆不同的车吗？","assistant":"是，两辆车各有发车记录。"},
+    "points":[],
+    "missing":["要先确定指砂钟还是纱钟。可问澄清，或同时列明两车各自的正式时刻。"],
+    "gap_context":["砂钟发车板#3","纱钟运维表#2"],
+    "skip":[{"line":"砂钟发车板#2","reason":"试排时间不能代替正式发车时间"}],
+    "wrong_values":["15:10"]
+  }
+]

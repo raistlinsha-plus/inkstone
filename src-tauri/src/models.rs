@@ -62,6 +62,7 @@ impl Default for RerankProvider {
 #[derive(Clone, Serialize, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Settings {
+    pub candidate_reading: bool,
     pub embedding: Provider,
     pub chat: Provider,
     pub rerank: RerankProvider,
@@ -70,6 +71,7 @@ pub struct Settings {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SettingsView {
+    pub candidate_reading: bool,
     pub embedding: Provider,
     pub chat: Provider,
     pub rerank: RerankProvider,
@@ -175,6 +177,8 @@ pub struct SearchResponse {
     pub warning: Option<String>,
     pub semantic: bool,
     pub evidence_count: usize,
+    #[serde(skip)]
+    pub strict_reader_floor: Option<f64>,
     pub candidate_count: usize,
     pub retrieval_mode: String,
     pub rerank_status: String,

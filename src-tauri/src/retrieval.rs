@@ -454,7 +454,12 @@ fn fence(line: &str) -> Option<(u8, usize)> {
     Some((c, n))
 }
 /// Expand inside one fenced parent block; small JSON fields should not consume six separate citations.
-fn parent_range(lines: &[&str], from: usize, to: usize, max_chars: usize) -> (usize, usize) {
+pub(crate) fn parent_range(
+    lines: &[&str],
+    from: usize,
+    to: usize,
+    max_chars: usize,
+) -> (usize, usize) {
     let mut open: Option<(usize, u8, usize)> = None;
     for (i, line) in lines.iter().enumerate() {
         if let Some((c, n)) = fence(line) {

@@ -2,6 +2,12 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v1.0.0-rc.3 · 按小问核对原句
+
+- 文档和空间问答在已有证据不足时，可重新阅读获准的候选片段。找到的原句带有来源和行号，复合问题可以分别说明哪些部分有据、哪些仍待核实。
+- 「模型与设置 → 问答模型」新增候选原文核对开关。默认关闭。开启后，每轮最多额外请求一次，发送最多 8 段、合计 4,000 个原文字符。
+- 新增 22 道合成开发题，对照原有筛选、本轮选句和直接提供标注原句三种结果。[交付与验证](docs/DELIVERY-v1.0.0-rc.3.md)
+
 ## v1.0.0-rc.2 · 中文问答与原文核对
 
 - 问到活动在特定条件下是否开放、两种活动的每场时长或哪一天的安排时，检索会结合原句的对象、单位与日期选取证据。

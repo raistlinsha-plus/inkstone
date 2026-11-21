@@ -209,6 +209,7 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
             clarification: None,
         });
     };
+    let mut recovered = Vec::new();
     // On a new conversation there is no previous source to resolve. A fixed
     // single-document range or an explicitly named current document is enough
     // to run ordinary retrieval, whose evidence checks remain unchanged.
@@ -222,19 +223,32 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
         } else {
             files::list_tree(&ws.root)?
         };
-        fn named(entries: &[FileEntry], q: &str, scope: Option<&str>) -> bool {
-            entries.iter().any(|e| {
-                if e.directory {
-                    return named(&e.children, q, scope);
+        fn named<'a>(
+            entries: &'a [FileEntry],
+            question: &str,
+            scope: Option<&str>,
+            found: &mut Vec<&'a FileEntry>,
+        ) {
+            for entry in entries {
+                if entry.directory {
+                    named(&entry.children, question, scope, found);
+                    continue;
                 }
-                let stem = Path::new(&e.name)
+                let stem = Path::new(&entry.name)
                     .file_stem()
                     .and_then(|s| s.to_str())
                     .unwrap_or("");
-                scope.is_none_or(|s| s == e.path) && stem.chars().count() >= 2 && q.contains(stem)
-            })
+                if scope.is_none_or(|s| s == entry.path)
+                    && stem.chars().count() >= 2
+                    && question.contains(stem)
+                {
+                    found.push(entry);
+                }
+            }
         }
-        if (local_pointer && started.scope.is_some()) || named(&tree, q, started.scope.as_deref()) {
+        let mut matches = Vec::new();
+        named(&tree, q, started.scope.as_deref(), &mut matches);
+        if (local_pointer && started.scope.is_some()) || !matches.is_empty() {
             return Ok(Prepared {
                 retrieval_question: [
                     "这份文档",
@@ -257,7 +271,38 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
                 clarification: None,
             });
         }
+        // A failed answer supplies no evidence. A single current document named by
+        // the parent *user* on this branch can still resolve a singular pointer.
+        if let Some(previous) = started.previous_questions.last().filter(|_| {
+            !["它们", "它俩", "这两", "这些", "那些", "哪个", "分别"]
+                .iter()
+                .any(|p| q.starts_with(p))
+        }) {
+            named(&tree, previous, started.scope.as_deref(), &mut matches);
+            if let [entry] = matches.as_slice() {
+                let docs = crate::managed_sources(data, ws)?;
+                let id = docs
+                    .as_ref()
+                    .map(|docs| {
+                        docs.get(&entry.path)
+                            .map(|(id, _)| id.clone())
+                            .ok_or("文档已移除")
+                    })
+                    .transpose()?;
+                let text = files::read_text(&files::resolve(&ws.root, &entry.path, false)?)?;
+                recovered.push(PriorSource {
+                    path: entry.path.clone(),
+                    document_id: id,
+                    hash: files::hash(text),
+                });
+            }
+        }
     }
+    let referents = if recovered.is_empty() {
+        referents
+    } else {
+        &recovered
+    };
     let clock = followup_clock(
         &started.grounded_question,
         started.previous_questions.last().map(String::as_str),
@@ -338,30 +383,33 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
         clarification: None,
     })
 }
+pub(crate) fn in_followup_range(gate: &FollowupGate, result: &SearchResult) -> bool {
+    let identity = gate.sources.iter().any(|s| {
+        s.path == result.path && s.document_id == result.document_id && s.hash == result.hash
+    });
+    let tokens = db::tokenize(&format!("{} {}", result.heading, result.text))
+        .split_whitespace()
+        .map(str::to_owned)
+        .collect::<HashSet<_>>();
+    let relevant = match gate.clock {
+        Some(canonical) => {
+            supports_clock(&result.text, canonical)
+                && gate.clock_day.is_none_or(|day| {
+                    [&result.heading, &result.text]
+                        .iter()
+                        .any(|text| crate::evidence::month_days(text).any(|seen| seen == day))
+                })
+        }
+        None => {
+            !gate.attributes.is_empty() && gate.attributes.iter().all(|term| tokens.contains(term))
+        }
+    };
+    identity && relevant
+}
+
 pub fn tighten(gate: &FollowupGate, results: &mut [SearchResult]) {
     for result in results {
-        let identity = gate.sources.iter().any(|s| {
-            s.path == result.path && s.document_id == result.document_id && s.hash == result.hash
-        });
-        let tokens = db::tokenize(&format!("{} {}", result.heading, result.text))
-            .split_whitespace()
-            .map(str::to_owned)
-            .collect::<HashSet<_>>();
-        let relevant = match gate.clock {
-            Some(canonical) => {
-                supports_clock(&result.text, canonical)
-                    && gate.clock_day.is_none_or(|day| {
-                        [&result.heading, &result.text]
-                            .iter()
-                            .any(|text| crate::evidence::month_days(text).any(|seen| seen == day))
-                    })
-            }
-            None => {
-                !gate.attributes.is_empty()
-                    && gate.attributes.iter().all(|term| tokens.contains(term))
-            }
-        };
-        result.evidence &= identity && relevant;
+        result.evidence &= in_followup_range(gate, result);
         if !result.evidence {
             result.match_kind = "candidate".into();
         }

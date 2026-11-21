@@ -2,7 +2,8 @@
 use super::*;
 use crate::credentials::CredentialReader;
 
-const PHASES: [&str; 4] = ["hybrid-40", "rerank-40", "keyword-52", "wiki"];
+const PHASES: &[&str] = &["hybrid-40", "rerank-40", "keyword-52", "wiki"];
+const READER_PHASES: &[&str] = &["keyword-52", "causal-dev", "keyword-40", "hybrid-40", "rerank-40"];
 const AUTH_SECONDS: u64 = 300;
 
 #[test]
@@ -18,13 +19,28 @@ fn live_saved_services() -> Result<(), &'static str> {
         .enable_all()
         .build()
         .map_err(|_| "runtime initialization failed")?;
+    let reader_trial = std::env::var("INKSTONE_BATCH_RC3_READER").as_deref() == Ok("1");
+    let mut phases = Vec::new();
+    if reader_trial {
+        phases.extend_from_slice(READER_PHASES);
+    } else {
+        if std::env::var("INKSTONE_BATCH_KEYWORD_BASELINE").as_deref() == Ok("1") {
+            phases.push("keyword-40");
+        }
+        phases.extend_from_slice(PHASES);
+    }
+    let config = saved_settings().map(|mut settings| {
+        // An explicit evaluator choice applies only to the synthetic fixture.
+        settings.candidate_reading = reader_trial;
+        settings
+    });
     let outcome = runtime.block_on(DEFAULT_AUTH_WAIT_SECONDS.scope(
         AUTH_SECONDS,
         run(
             &path,
-            saved_settings(),
+            config,
             CredentialReader::default(),
-            std::env::var("INKSTONE_BATCH_KEYWORD_BASELINE").as_deref() == Ok("1"),
+            &phases,
         ),
     ));
     runtime.shutdown_background();
@@ -69,6 +85,7 @@ async fn run_phase(
             )
             .await
         }
+        "causal-dev" => crate::evaluation_rc3::live_with_settings(&path, config, credentials).await,
         "wiki" => crate::wiki::run_batch_wiki(config, credentials, &path).await,
         _ => Err("unknown-batch-phase"),
     }
@@ -78,7 +95,7 @@ async fn run(
     dir: &Path,
     settings: Result<Settings, &'static str>,
     credentials: CredentialReader,
-    keyword_baseline: bool,
+    stages: &[&'static str],
 ) -> Result<(), &'static str> {
     if !dir.is_absolute() {
         return Err("use a new absolute batch report directory");
@@ -92,11 +109,6 @@ async fn run(
     directory
         .create(dir)
         .map_err(|_| "cannot create new batch report directory")?;
-    let stages: Vec<_> = keyword_baseline
-        .then_some("keyword-40")
-        .into_iter()
-        .chain(PHASES)
-        .collect();
     let mut phases: Vec<_> = stages
         .iter()
         .map(|name| json!({"name":name,"status":"not-started"}))
@@ -105,10 +117,8 @@ async fn run(
     let started = Instant::now();
     let result = async {
         let config = settings?;
-        if !config.chat.enabled || providers::validate(&config.chat).is_err()
-            || !config.embedding.enabled || providers::validate(&config.embedding).is_err()
-            || !config.rerank.enabled || providers::validate_reranker(&config.rerank).is_err() {
-            return Err("batch requires valid enabled chat, embedding and reranking services");
+        if !config.chat.enabled || providers::validate(&config.chat).is_err() {
+            return Err("batch requires a valid enabled chat service");
         }
         stage = "verify-inputs";
         independent::load_packet()?;
@@ -116,9 +126,10 @@ async fn run(
 
         let isolated = tempfile::tempdir().map_err(|_| "authorization setup failed")?;
         let auth_state = isolated_state(isolated.path(), config.clone(), credentials.clone())?;
-        eprintln!("Checking saved chat, embedding and rerank credentials in this process.");
+        let first_mode = if config.candidate_reading { "keyword" } else { "rerank" };
+        eprintln!("Checking saved service authorization for {first_mode}.");
         tokio::time::timeout(Duration::from_secs(AUTH_SECONDS),
-            check_keys(&auth_state, &config, "rerank", &mut stage, &mut Vec::new())
+            check_keys(&auth_state, &config, first_mode, &mut stage, &mut Vec::new())
         ).await.map_err(|_| "authorization-time-budget-exhausted")??;
 
         for (phase, record) in stages.iter().copied().zip(&mut phases) {
@@ -187,7 +198,7 @@ async fn offline_missing_bound_key_stops_batch_before_any_stage() {
             .unwrap();
     }
     assert_eq!(
-        run(&out, Ok(config), reader, false).await,
+        run(&out, Ok(config), reader, PHASES).await,
         Err("saved-address-bound-key-missing")
     );
     let files: Vec<_> = fs::read_dir(&out).unwrap().collect();

@@ -30,6 +30,7 @@ export const defaultRerankProvider: RerankProvider = {
   strict: false,
 };
 export interface Settings {
+  candidateReading?: boolean;
   embedding: Provider;
   chat: Provider;
   rerank: RerankProvider;

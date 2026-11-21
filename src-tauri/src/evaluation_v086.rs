@@ -158,7 +158,7 @@ fn check_requirements(f: &Fixture) {
     }
 }
 
-fn isolated_state(
+pub(crate) fn isolated_state(
     data: &Path,
     settings: Settings,
     credentials: crate::credentials::CredentialReader,
@@ -305,7 +305,11 @@ async fn embed_fixture(
     Ok(documents)
 }
 
-fn save_report(path: &Path, report: &Value, secrets: &[String]) -> Result<(), &'static str> {
+pub(crate) fn save_report(
+    path: &Path,
+    report: &Value,
+    secrets: &[String],
+) -> Result<(), &'static str> {
     let mut report = report.clone();
     fn redact(value: &mut Value, secrets: &[String]) {
         match value {
@@ -460,8 +464,25 @@ async fn offline_context(
     let budget = budget.saturating_sub(
         started.prompt_question.chars().count() + providers::ANSWER_SYSTEM.chars().count() + 500,
     );
-    let sources =
-        crate::retrieval::generation_context(ws, &found.results, budget, started.scope.is_some());
+    // Preserve retrieval-stage flags for the old evidence counts. Assemble final
+    // context through the production local reader, with provider calls disabled.
+    let reviewed = crate::candidate_reading::scoped_context(
+        state,
+        ws,
+        started.scope.as_deref(),
+        &prepared.retrieval_question,
+        &found,
+        prepared.gate.as_ref(),
+        &crate::settings(state)?.chat,
+        budget,
+        false,
+        state
+            .workspace_generation
+            .load(std::sync::atomic::Ordering::SeqCst),
+        false,
+    )
+    .await?;
+    let sources = reviewed.sources;
     Ok((
         models::ChatResponse {
             external_sources: vec![],
@@ -494,6 +515,9 @@ struct ReportTarget<'a> {
 struct OfflineQuestionStages {
     searched: usize,
     with_candidates: usize,
+    with_index_candidates: usize,
+    with_legacy_evidence: usize,
+    with_selected_quotes: usize,
     with_admitted_evidence: usize,
     with_assembled_context: usize,
     clarified_before_search: usize,
@@ -714,9 +738,13 @@ async fn run_fixture(
                         .await
                         .map(|(response, hits)| {
                             offline_stages.searched += 1;
-                            offline_stages.with_candidates += usize::from(!hits.is_empty());
-                            offline_stages.with_admitted_evidence +=
-                                usize::from(hits.iter().any(|hit| hit.evidence));
+                            let legacy = hits.iter().any(|hit| hit.evidence);
+                            let selected = response.sources.iter().any(|s| s.match_kind == "selected-quote");
+                            offline_stages.with_index_candidates += usize::from(!hits.is_empty());
+                            offline_stages.with_legacy_evidence += usize::from(legacy);
+                            offline_stages.with_selected_quotes += usize::from(selected);
+                            offline_stages.with_candidates += usize::from(!hits.is_empty() || selected);
+                            offline_stages.with_admitted_evidence += usize::from(legacy || selected);
                             offline_stages.with_assembled_context +=
                                 usize::from(!response.sources.is_empty());
                             offline_hits = Some(hits);
@@ -774,7 +802,9 @@ async fn run_fixture(
                 "requiredEvidenceStages": offline_hits.map(|hits| case.required.iter().zip(&expected_evidence).map(|(required, in_context)| {
                     let matches = |hit: &models::SearchResult| hit.path == paths[&required.document] && hit.text.contains(&required.quote);
                     json!({"document": required.document, "candidate": hits.iter().any(matches),
-                        "eligible": hits.iter().any(|hit| hit.evidence && matches(hit)), "inContext": in_context})
+                        "eligible": hits.iter().any(|hit| hit.evidence && matches(hit)),
+                        "inSelectedQuote": answer.as_ref().is_some_and(|a| a.sources.iter().any(|s| s.match_kind == "selected-quote" && matches(s))),
+                        "inContext": in_context})
                 }).collect::<Vec<_>>()),
                 "expectedEvidenceInContext":expected_evidence, "sourceDocuments":source_documents,
                 "outOfScopePath":out_of_scope_path,
@@ -824,6 +854,7 @@ async fn run_fixture(
         "version":env!("CARGO_PKG_VERSION"), "suite":suite.id,
         "fixtureSha256":fixture_hash, "rubricSha256":rubric_hash,
         "status":if result.is_ok() { "complete" } else { "incomplete" },
+        "candidateReadingEnabled": config.candidate_reading,
         "stage":stage, "error":result.as_ref().err(), "mode":mode, "live":live, "usage":trace.snapshot(),
         "models":{"chat":live.then_some(config.chat.model),"embedding":(mode != "keyword").then_some(config.embedding.model),
                   "rerank":(mode == "rerank").then_some(config.rerank.model)},

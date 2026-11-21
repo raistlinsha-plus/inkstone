@@ -294,9 +294,15 @@ pub async fn assistant_ask(
             "assistant-accepted",
             serde_json::json!({"requestId":request_id}),
         );
-        let result =
-            crate::assistant_runtime::general(&app, &state, &started, &request_id, mode, &options)
-                .await;
+        let result = crate::assistant_runtime::general(
+            Some(&app),
+            &state,
+            &started,
+            &request_id,
+            mode,
+            &options,
+        )
+        .await;
         return assistant::finish(
             &state.data_dir,
             assistant::GENERAL_OWNER,
