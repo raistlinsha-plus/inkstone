@@ -2,13 +2,13 @@
 
 Inkstone is a local-first Markdown workspace for **macOS 13+ on Apple Silicon**. Bring in project notes from different folders, build a Wiki from the ones you select, and ask questions with citations you can open at the original passage. You can save an answer as Markdown and return to the line you were editing.
 
-[Try the browser demo](https://raistlinsha-plus.github.io/inkstone/) · [中文介绍](docs/README.zh-CN.md) · [Get the v0.9.6 source](https://github.com/raistlinsha-plus/inkstone/releases/tag/v0.9.6) · [Build from source](#try-it-from-source)
+[Try the browser demo](https://raistlinsha-plus.github.io/inkstone/) · [中文介绍](docs/README.zh-CN.md) · [Get the RC.4 source prerelease](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.0.0-rc.4) · [Build from source](#try-it-from-source)
 
 ![Inkstone v0.9.6 with a Markdown reading plan and Motuan’s page-edge menu](docs/assets/v0.9.6/workspace.png)
 
 *The v0.9.6 editor with fictional project notes. The optional pixel-art companion sits in the page margin and can record a work milestone when you choose.*
 
-The 1.0 release candidate can check individual questions against the original passages in your notes. An optional setting lets your chat provider help select quotations. It also includes a read-only local CLI and a preview of Wiki history affected by source removal. [RC.4 behavior and evaluation](docs/DELIVERY-v1.0.0-rc.4.md) · [CLI guide](docs/EXTERNAL-TOOLS.zh-CN.md)
+**Trying RC.4?** Open a note and ask two things at once. Follow each citation back to the note to see which parts it answers. You can opt in to an extra quotation check by your chat provider, grant another tool read-only search in one space, or preview which Wiki versions a source withdrawal would remove. The candidate still misses supported answers. In a blind AI review, 15 of 40 test answers met all accuracy and citation criteria, the same score as RC.3. [RC.4 behavior and evaluation](docs/DELIVERY-v1.0.0-rc.4.md) · [CLI guide](docs/EXTERNAL-TOOLS.zh-CN.md)
 
 ## What you can do
 
@@ -22,7 +22,7 @@ The 1.0 release candidate can check individual questions against the original pa
 The GitHub release provides a source archive and SHA-256 checksum. The desktop interface is in Chinese. To run it on your Mac, install Apple's command-line developer tools, Node **24.14.0**, npm **11.9.0** and Rust **1.99.1**. [Pinned toolchain](toolchain.json)
 
 ```sh
-git clone --branch v0.9.6 https://github.com/raistlinsha-plus/inkstone.git
+git clone --branch v1.0.0-rc.4 https://github.com/raistlinsha-plus/inkstone.git
 cd inkstone
 npm ci --registry=https://registry.npmjs.org
 npm run desktop
@@ -43,8 +43,8 @@ If you configure and authorize Brave Search, the model can decide when public in
 | Looking for | Start here |
 | --- | --- |
 | First use and daily tasks (Chinese) | [Quickstart](docs/QUICKSTART.md) · [User manual](docs/USER-MANUAL.zh-CN.md) · [Product and features](docs/PRODUCT.md) |
-| System design and evaluation | [Architecture](docs/PUBLIC-ARCHITECTURE.md) · [Technology stack](docs/TECH-STACK.md) · [Chinese retrieval evaluation](evals/v0.9.1/README.md) |
-| What changed | [v0.9.6 companion guide](docs/DELIVERY-v0.9.6.md) · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) |
+| System design and evaluation | [Architecture](docs/PUBLIC-ARCHITECTURE.md) · [Technology stack](docs/TECH-STACK.md) · [Paired document Q&A evaluation](evals/v1.0/rc4/README.md) |
+| What changed | [RC.4 results and limitations](docs/DELIVERY-v1.0.0-rc.4.md) · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md) |
 | Trying or contributing | [Preview feedback](https://github.com/raistlinsha-plus/inkstone/discussions/11) · [Contributing](CONTRIBUTING.md) · [Known limitations](docs/KNOWN-LIMITATIONS.md) |
 
 ## License

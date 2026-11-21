@@ -1,10 +1,12 @@
 # Inkstone roadmap
 
-The **v0.9.6 source preview** brings together claim-by-claim Wiki review, a way back to the exact writing selection after checking a source, and three optional page-edge companions. [Wiki changes](DELIVERY-v0.9.4.md) · [Writing changes](DELIVERY-v0.9.5.md) · [Companions](DELIVERY-v0.9.6.md)
+The **v1.0.0-rc.4 source prerelease** is available for testing on Apple Silicon Macs. The next priority is to recover answers whose evidence reached the search results but was dropped during quotation selection, particularly on follow-ups and partially supported questions. A new blinded human review will inform the 1.0 decision. [RC.4 results](DELIVERY-v1.0.0-rc.4.md) · [1.0 release criteria](design/v1.0.zh-CN.md)
 
-## After v0.9.6
+The earlier **v0.9.6 source preview** brings together claim-by-claim Wiki review, a way back to the exact writing selection after checking a source, and three optional page-edge companions. [Wiki changes](DELIVERY-v0.9.4.md) · [Writing changes](DELIVERY-v0.9.5.md) · [Companions](DELIVERY-v0.9.6.md)
 
-The next retrieval milestone is to answer paraphrased and multi-part questions from the selected notes. We will measure which required passages reach the model, then score answers and citations separately. User observation, native accessibility and a five-day companion study feed into the decision on a v0.10.0 source candidate. Public macOS installer distribution has a separate signing, notarization, clean-Mac and notice review track. [中文路线图和验收目标](ROADMAP.zh-CN.md)
+## Validation before 1.0
+
+The next retrieval milestone is to answer paraphrased and multi-part questions from the selected notes. We will measure which required passages reach the model, then score answers and citations separately. First-use observations, native accessibility checks and a five-day companion study remain open. Public macOS installer distribution has a separate signing, notarization, clean-Mac and notice review track. [中文路线图和验收目标](ROADMAP.zh-CN.md)
 
 ## Earlier milestones
 

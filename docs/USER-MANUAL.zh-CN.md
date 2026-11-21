@@ -1,4 +1,4 @@
-# Inkstone 操作手册 · v1.0.0-rc.2
+# Inkstone 操作手册 · v1.0.0-rc.4
 
 在 Mac 上打开 Inkstone 后，可以从一篇笔记开始，提问、核对原文，再回到写到一半的位置。这份手册使用中文版界面里的按钮名称。首次从 GitHub 安装，请先看[从源码运行](QUICKSTART.md)。
 
