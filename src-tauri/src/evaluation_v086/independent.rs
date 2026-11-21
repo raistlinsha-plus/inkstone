@@ -1,8 +1,9 @@
 //! The hash-pinned public packet supplies all questions and document text.
 use super::*;
 
-const PACKET_HASH: &str = "6fd92300fede2d70bf01b4f882d048af7a1dd4513f3bb907c740c83de2ffe97f";
-const SUITE: Suite = Suite {
+pub(super) const PACKET_HASH: &str =
+    "6fd92300fede2d70bf01b4f882d048af7a1dd4513f3bb907c740c83de2ffe97f";
+pub(super) const SUITE: Suite = Suite {
     id: "v100-independent",
     env_prefix: "INKSTONE_100_INDEPENDENT",
     fixture: "",
@@ -35,7 +36,7 @@ struct PublicDocument {
     lines: Vec<String>,
 }
 
-fn load_packet() -> Result<Fixture, &'static str> {
+pub(super) fn load_packet() -> Result<Fixture, &'static str> {
     let path =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../evals/v1.0/independent/questions.json");
     let bytes = fs::read(path).map_err(|_| "missing-public-packet")?;
@@ -100,7 +101,7 @@ fn live_keyword_packet() -> Result<(), &'static str> {
         &SUITE,
         "keyword",
         config,
-        true,
+        Some(Default::default()),
         fixture,
         ReportTarget {
             path: report_path(&SUITE)?,
@@ -135,7 +136,7 @@ async fn offline_public_packet_preserves_scope_and_history() -> Result<(), &'sta
         &SUITE,
         "keyword",
         Settings::default(),
-        false,
+        None,
         fixture,
         ReportTarget {
             path: path.clone(),

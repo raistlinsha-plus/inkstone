@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { createRef } from "react";
+import { act, createRef } from "react";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
 import { answerSourceUrl } from "./content/answerSourceLink";
@@ -92,4 +92,49 @@ test("a pointer or accessibility click on headings moves focus out of the other 
       "子标题",
     );
   }
+});
+
+test("the ready notification preserves the first edit and a later external revision is applied", async () => {
+  const handleRef = createRef<EditorHandle>();
+  const props = {
+    path: "documents/first-edit.md",
+    mode: "visual" as const,
+    content: "原始段落",
+    handleRef,
+    onChange: vi.fn(),
+    onError: vi.fn(),
+  };
+  // Crepe attaches the toolbar synchronously as the visual editor becomes
+  // ready. Insert in that same tick, before React runs the ready-state effect.
+  const host = document.createElement("div");
+  const append = host.append.bind(host);
+  host.append = (...nodes) => {
+    append(...nodes);
+    handleRef.current!.insertMarkdown("新输入", { mode: "visual", head: 1 });
+  };
+  const toolbarHost = { current: host };
+  const { container, rerender } = render(
+    <TextEditor {...props} toolbarHost={toolbarHost} />,
+  );
+  await waitFor(() => expect(props.onChange).toHaveBeenCalled());
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  });
+  expect(container.querySelector(".ProseMirror")?.textContent).toContain(
+    "新输入",
+  );
+  expect(handleRef.current?.getContent()).toContain("新输入");
+  rerender(
+    <TextEditor
+      {...props}
+      toolbarHost={toolbarHost}
+      content="重新载入的资料"
+    />,
+  );
+  await waitFor(() =>
+    expect(container.querySelector(".ProseMirror")?.textContent).toBe(
+      "重新载入的资料",
+    ),
+  );
+  expect(props.onError).not.toHaveBeenCalled();
 });

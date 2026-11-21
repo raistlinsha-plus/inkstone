@@ -22,7 +22,7 @@ use tauri::{Emitter, Manager};
 
 #[cfg(test)]
 #[path = "compile/live_eval.rs"]
-mod live_eval;
+pub(super) mod live_eval;
 
 const PER_BATCH: usize = 5;
 const MAX_PAGES_PER_CALL: usize = 8;

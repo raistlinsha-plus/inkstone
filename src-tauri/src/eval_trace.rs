@@ -20,6 +20,13 @@ impl Trace {
             rows: Mutex::new(vec![]),
         })
     }
+    pub fn provider_denied(&self) -> bool {
+        self.rows
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|row| matches!(row["httpStatus"].as_u64(), Some(401 | 403)))
+    }
     pub fn snapshot(&self) -> Value {
         let rows = self.rows.lock().unwrap();
         json!({"httpAttempts":rows.len(),"maxHttpAttempts":self.limit,"maxWallSeconds":self.deadline.as_secs(),"wallMs":self.started.elapsed().as_millis(),"attempts":*rows,"providerBilledCost":null,"tokens":null})

@@ -31,3 +31,34 @@ cargo test --offline --manifest-path src-tauri/Cargo.toml --lib \
 ```
 
 报告位于 `$packet_report_dir/keyword.json`。授权超时会留下 `incomplete` 状态及失败阶段。
+
+## 在同一进程验证四个阶段
+
+桌面设置需已启用问答、向量和重排服务，并保存与各地址绑定的密钥。以下命令会实际调用这些服务，运行前请确认用量预算。在仓库根目录执行，保留该进程直至结束。
+
+```sh
+batch_parent="$(mktemp -d)"
+INKSTONE_BATCH_LIVE=1 \
+INKSTONE_EVAL_KEYCHAIN_WAIT_SECONDS=300 \
+INKSTONE_BATCH_REPORT_DIR="$batch_parent/results" \
+cargo test --offline --manifest-path src-tauri/Cargo.toml --lib \
+  evaluation_v086::batch::live_saved_services -- --ignored --exact --nocapture
+```
+
+程序在发出模型请求前核对冻结题库，最多用 300 秒依次读取三个角色的绑定凭据。请在 macOS 弹出窗口时确认相应的系统授权。四个阶段共享进程内的凭据读取器。其正常的五分钟缓存按角色和地址生效，各角色首次授权或缓存到期后，系统可能再次询问。报告目录由程序新建，密钥只在进程内使用。
+
+| 阶段 | 内容 | HTTP 请求上限 | 阶段时限 |
+|---|---|---:|---:|
+| hybrid-40 | 旧冻结集，混合检索 | 160 | 600 秒 |
+| rerank-40 | 同一冻结集，重排 | 160 | 600 秒 |
+| keyword-52 | 独立集，关键词检索 | 104 | 1200 秒 |
+| wiki | 合成资料的 Wiki 编写与刷新 | 2 | 75 秒 |
+
+已启动阶段分别写入同名 JSON。整批状态在 `$batch_parent/results/batch.json`，记录各阶段是否启动、耗时、错误和报告文件名。若系统授权缺失、仍在等待或超时，整批停止。人工评分需另外核对原文和回答。
+
+可用以下离线回归验证凭据缺失时只写一次诊断，且后续四阶段全部保持未启动。
+
+```sh
+cargo test --offline --manifest-path src-tauri/Cargo.toml --lib \
+  evaluation_v086::batch::offline_missing_bound_key_stops_batch_before_any_stage -- --exact
+```

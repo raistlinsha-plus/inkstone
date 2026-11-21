@@ -1,4 +1,5 @@
 //! Opt-in live scoring input. All content comes from the frozen synthetic fixture.
+mod batch;
 mod independent;
 
 use crate::{
@@ -89,13 +90,20 @@ struct Requirement {
     claim: String,
 }
 
-fn fixture(suite: &Suite) -> Fixture {
-    let expected: Vec<_> = suite.hashes.lines().collect();
-    assert_eq!(expected.len(), 2);
-    for (line, bytes) in expected.into_iter().zip([suite.fixture, suite.rubric]) {
-        assert_eq!(files::hash(bytes), line.split_whitespace().next().unwrap());
+fn checked_fixture(suite: &Suite) -> Result<Fixture, &'static str> {
+    let hashes: Vec<_> = suite
+        .hashes
+        .lines()
+        .filter_map(|line| line.split_whitespace().next())
+        .collect();
+    if hashes != [files::hash(suite.fixture), files::hash(suite.rubric)] {
+        return Err("unexpected-frozen-fixture-hash");
     }
-    serde_json::from_str(suite.fixture).expect("valid frozen fixture")
+    serde_json::from_str(suite.fixture).map_err(|_| "invalid-frozen-fixture")
+}
+
+fn fixture(suite: &Suite) -> Fixture {
+    checked_fixture(suite).expect("valid frozen fixture")
 }
 
 #[test]
@@ -150,9 +158,13 @@ fn check_requirements(f: &Fixture) {
     }
 }
 
-fn isolated_state(data: &Path, settings: Settings) -> Result<AppState, &'static str> {
+fn isolated_state(
+    data: &Path,
+    settings: Settings,
+    credentials: crate::credentials::CredentialReader,
+) -> Result<AppState, &'static str> {
     Ok(AppState {
-        credentials: Default::default(),
+        credentials,
         workspace: Mutex::new(None),
         workspace_generation: AtomicU64::new(0),
         settings: Mutex::new(settings),
@@ -302,7 +314,15 @@ fn save_report(path: &Path, report: &Value, secrets: &[String]) -> Result<(), &'
                     *text = text.replace(secret, "[redacted]");
                 }
             }
-            Value::Object(object) => object.values_mut().for_each(|value| redact(value, secrets)),
+            Value::Object(object) => {
+                for (mut field, mut child) in std::mem::take(object) {
+                    for secret in secrets {
+                        field = field.replace(secret, "[redacted]");
+                    }
+                    redact(&mut child, secrets);
+                    object.insert(field, child);
+                }
+            }
             Value::Array(array) => array.iter_mut().for_each(|value| redact(value, secrets)),
             _ => {}
         }
@@ -328,6 +348,10 @@ pub(crate) fn saved_settings() -> Result<Settings, &'static str> {
     Ok(config.settings)
 }
 
+// A batch gets one bounded interactive authorization window by default. Standalone tests
+// keep their existing wait policy, even when the test harness runs other tests concurrently.
+tokio::task_local! { static DEFAULT_AUTH_WAIT_SECONDS: u64; }
+
 pub(crate) async fn saved_key(
     state: &AppState,
     role: &str,
@@ -338,7 +362,11 @@ pub(crate) async fn saved_key(
     let wait = std::env::var("INKSTONE_EVAL_KEYCHAIN_WAIT_SECONDS")
         .ok()
         .and_then(|s| s.parse::<u64>().ok())
-        .unwrap_or(0)
+        .unwrap_or_else(|| {
+            DEFAULT_AUTH_WAIT_SECONDS
+                .try_with(|wait| *wait)
+                .unwrap_or(0)
+        })
         .min(300);
     let deadline = std::time::Instant::now() + Duration::from_secs(wait);
     loop {
@@ -477,7 +505,7 @@ async fn grounded_holdout(
         suite,
         mode,
         config,
-        live,
+        live.then(crate::credentials::CredentialReader::default),
         fixture(suite),
         ReportTarget {
             path: report_path(suite)?,
@@ -488,14 +516,52 @@ async fn grounded_holdout(
     .await
 }
 
+fn remember_for_redaction(keys: &mut Vec<String>, key: &str) {
+    if !keys.iter().any(|seen| seen == key) {
+        keys.push(key.to_owned());
+    }
+}
+
+async fn check_keys(
+    state: &AppState,
+    config: &Settings,
+    mode: &str,
+    stage: &mut &'static str,
+    redactions: &mut Vec<String>,
+) -> Result<(), &'static str> {
+    for (role, address, label, needed) in [
+        ("chat", &config.chat.base_url, "read-chat-key", true),
+        (
+            "embedding",
+            &config.embedding.base_url,
+            "read-embedding-key",
+            mode != "keyword",
+        ),
+        (
+            "rerank",
+            &config.rerank.endpoint,
+            "read-rerank-key",
+            mode == "rerank",
+        ),
+    ] {
+        if needed {
+            *stage = label;
+            let key = saved_key(state, role, address).await?;
+            remember_for_redaction(redactions, &key);
+        }
+    }
+    Ok(())
+}
+
 async fn run_fixture(
     suite: &Suite,
     mode: &str,
     config: Settings,
-    live: bool,
+    credentials: Option<crate::credentials::CredentialReader>,
     fixture: Fixture,
     target: ReportTarget<'_>,
 ) -> Result<(), &'static str> {
+    let live = credentials.is_some();
     let ReportTarget {
         path,
         fixture_hash,
@@ -518,25 +584,21 @@ async fn run_fixture(
         return Err("configure saved embedding and reranking services to run rerank mode");
     }
     let data = tempfile::tempdir().map_err(|_| "isolation setup failed")?;
-    let state = isolated_state(data.path(), config.clone())?;
+    let state = isolated_state(data.path(), config.clone(), credentials.unwrap_or_default())?;
     let trace = eval_trace::Trace::new(suite.max_requests, suite.max_seconds);
     let mut keys = Vec::new();
     let mut rows = Vec::new();
     let mut stage = "setup";
     let operation = async {
         if live {
-            stage = "read-chat-key";
-            keys.push(saved_key(&state, "chat", &config.chat.base_url).await?);
+            check_keys(&state, &config, mode, &mut stage, &mut keys).await?;
         }
         let vectors = if mode != "keyword" {
             stage = "read-embedding-key";
-            keys.push(saved_key(&state, "embedding", &config.embedding.base_url).await?);
-            if mode == "rerank" {
-                stage = "read-rerank-key";
-                keys.push(saved_key(&state, "rerank", &config.rerank.endpoint).await?);
-            }
+            let key = saved_key(&state, "embedding", &config.embedding.base_url).await?;
+            remember_for_redaction(&mut keys, &key);
             stage = "embed-fixture";
-            Some(embed_fixture(&state, &fixture, &config.embedding, &keys[1]).await?)
+            Some(embed_fixture(&state, &fixture, &config.embedding, &key).await?)
         } else {
             None
         };
@@ -549,6 +611,10 @@ async fn run_fixture(
         .map_err(|_| "fixture-index-failed")?;
         let mut conversations = HashMap::new();
         for case in &fixture.cases {
+            if live {
+                // An expired entry must go through the OS reader before another model turn.
+                check_keys(&state, &config, mode, &mut stage, &mut keys).await?;
+            }
             stage = "evaluate-question";
             let FixtureWorkspace {
                 workspace: ws,
@@ -642,6 +708,9 @@ async fn run_fixture(
                     Err(error) if error == crate::credentials::PENDING => {
                         (None, None, Some("keychain-authorization-pending"))
                     }
+                    Err(error) if error.contains("钥匙串") => {
+                        (None, None, Some("keychain-read-failed"))
+                    }
                     Err(_) => (None, None, Some("answer-pipeline-error")),
                 }
             };
@@ -697,11 +766,19 @@ async fn run_fixture(
             let conversation = assistant::finish(data.path(), &owner, &started, outcome, false)
                 .map_err(|_| "fixture-save-answer-failed")?;
             conversations.insert(conversation_key.clone(), conversation);
-            if failure == Some("keychain-authorization-pending") {
-                return Err("keychain-authorization-pending");
+            if let Some(reason @ ("keychain-authorization-pending" | "keychain-read-failed")) =
+                failure
+            {
+                return Err(reason);
+            }
+            if trace.provider_denied() {
+                return Err("provider-authorization-denied");
             }
         }
         stage = "finished";
+        if rows.iter().any(|row| !row["failure"].is_null()) {
+            return Err("one-or-more-answer-pipeline-errors");
+        }
         Ok::<_, &'static str>(())
     };
     let result = eval_trace::TRACE
@@ -710,7 +787,19 @@ async fn run_fixture(
             tokio::time::timeout(Duration::from_secs(suite.max_seconds), operation),
         )
         .await
-        .unwrap_or(Err("wall-time-budget-exhausted"));
+        .unwrap_or_else(|_| {
+            Err(if stage.starts_with("read-") {
+                "authorization-time-budget-exhausted"
+            } else {
+                "wall-time-budget-exhausted"
+            })
+        });
+    // Index preparation can also be the first HTTP request rejected by the provider.
+    let result = if trace.provider_denied() {
+        Err("provider-authorization-denied")
+    } else {
+        result
+    };
     let report = json!({
         "version":env!("CARGO_PKG_VERSION"), "suite":suite.id,
         "fixtureSha256":fixture_hash, "rubricSha256":rubric_hash,

@@ -2,6 +2,8 @@
 mod claim_review;
 mod compile;
 #[cfg(test)]
+pub(crate) use compile::live_eval::run_batch_wiki;
+#[cfg(test)]
 mod eval;
 mod review_compare;
 mod store;
