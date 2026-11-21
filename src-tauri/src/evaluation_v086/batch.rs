@@ -19,9 +19,12 @@ fn live_saved_services() -> Result<(), &'static str> {
         .enable_all()
         .build()
         .map_err(|_| "runtime initialization failed")?;
-    let reader_trial = std::env::var("INKSTONE_BATCH_RC3_READER").as_deref() == Ok("1");
+    let selection = std::env::var("INKSTONE_BATCH_RC3_READER").unwrap_or_default();
+    let reader_trial = matches!(selection.as_str(), "1" | "confirm");
     let mut phases = Vec::new();
-    if reader_trial {
+    if selection == "confirm" {
+        phases.extend_from_slice(&["keyword-52", "keyword-40"]);
+    } else if reader_trial {
         phases.extend_from_slice(READER_PHASES);
     } else {
         if std::env::var("INKSTONE_BATCH_KEYWORD_BASELINE").as_deref() == Ok("1") {

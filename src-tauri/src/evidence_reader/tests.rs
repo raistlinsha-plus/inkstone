@@ -38,10 +38,40 @@ fn partial_compound_points_to_exact_sentence_and_line() {
     );
     assert_eq!(quote.text, "云杉书屋营业至 19:30。");
     assert!(read.facets()[1].quotes.is_empty());
+    assert!(read.model_request().is_none());
+}
+
+#[test]
+fn one_reviewable_facet_keeps_the_whole_pending_packet_and_original_ids() {
+    let hits = [source(
+        "a.md",
+        1,
+        "云杉书屋营业至 19:30。灯塔讲座安排另行通知。",
+    )];
+    let mut read = prepare_facets(
+        &[
+            "云杉书屋几点打烊？".to_string(),
+            "钟楼展演几点开场？".to_string(),
+            "灯塔讲座几点开始？".to_string(),
+        ],
+        &hits,
+        4000,
+    );
     let request: Value = serde_json::from_str(&read.model_request().unwrap()).unwrap();
-    assert_eq!(request["facets"].as_array().unwrap().len(), 1);
-    assert_eq!(request["facets"][0]["id"], 2);
-    assert!(!request.to_string().contains("a.md"));
+    assert_eq!(
+        request,
+        json!({
+            "facets":[{"id":2,"question":"钟楼展演几点开场？"},{"id":3,"question":"灯塔讲座几点开始？"}],
+            "sentences":[{"id":1,"passage":1,"text":"云杉书屋营业至 19:30。"},{"id":2,"passage":1,"text":"灯塔讲座安排另行通知。"}]
+        })
+    );
+    read.apply_model(
+        &json!({"selections":[{"facet":2,"sentences":[2]},{"facet":3,"sentences":[2]}]}),
+    )
+    .unwrap();
+    assert_eq!(read.facets()[0].quotes[0].text, "云杉书屋营业至 19:30。");
+    assert!(read.facets()[1].quotes.is_empty());
+    assert_eq!(read.facets()[2].quotes[0].text, "灯塔讲座安排另行通知。");
 }
 
 #[test]
@@ -64,7 +94,8 @@ fn preserves_conditions_units_and_actions_even_if_model_selects_otherwise() {
         let hits = [source("a", 1, text)];
         let mut read = prepare(question, &hits, 4000);
         assert!(read.facets()[0].quotes.is_empty(), "{question}");
-        if read.model_request().is_some() {
+        assert!(read.model_request().is_none());
+        if !read.sentences.is_empty() {
             read.apply_model(&json!({"selections":[{"facet":1,"sentences":[1]}]}))
                 .unwrap();
             assert!(read.facets()[0].quotes.is_empty(), "{question} - {text}");
@@ -122,14 +153,15 @@ fn capped_packet_is_deduplicated_and_keeps_complete_unicode_sentences() {
             source(
                 &i.to_string(),
                 1,
-                &format!("灯塔{i}。{}", "晨光。".repeat(600)),
+                &format!("灯塔讲座安排另行通知。灯塔{i}。{}", "晨光。".repeat(600)),
             )
         })
         .collect();
     let dup = hits[1].clone();
     hits[0] = dup;
     for budget in [0, 12, 3999, 7000] {
-        let read = prepare("何时开灯？", &hits, budget);
+        let read = prepare("灯塔讲座几点开始？", &hits, budget);
+        assert_eq!(read.model_request().is_some(), budget > 0);
         assert!(read.source_chars() <= budget.min(4000));
         assert!(read.passage_count() <= 7);
         if let Some(request) = read.model_request() {
@@ -264,7 +296,8 @@ fn record_identity_is_whole_and_a_second_clause_cannot_disown_the_value() {
     ] {
         let mut read = prepare("棕石的刻度是多少米？", &[source("r", 1, text)], 4000);
         assert!(read.facets()[0].quotes.is_empty(), "{text}");
-        if read.model_request().is_some() {
+        assert!(read.model_request().is_none());
+        if !read.sentences.is_empty() {
             read.apply_model(&json!({"selections":[{"facet":1,"sentences":[1]}]}))
                 .unwrap();
             assert!(read.facets()[0].quotes.is_empty(), "{text}");

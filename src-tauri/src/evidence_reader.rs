@@ -55,6 +55,10 @@ impl Sentence {
         }
     }
 
+    fn selectable_for(&self, question: &BoundQuestion) -> bool {
+        self.support(question) != binding::Support::Absent
+    }
+
     fn support(&self, query: &BoundQuestion) -> binding::Support {
         if let Some(record) = query.record.as_ref().filter(|r| r.applies_to(self)) {
             return record.support(self);
@@ -377,16 +381,21 @@ impl Reading {
         if self.applied || self.sentences.is_empty() || self.facets.len() > MAX_FACETS {
             return None;
         }
-        let facets: Vec<_> = self
+        let pending = self
             .facets
             .iter()
             .enumerate()
-            .filter(|(_, f)| f.quotes.is_empty())
-            .map(|(i, f)| json!({"id":i+1,"question":f.question}))
-            .collect();
-        if facets.is_empty() {
+            .filter(|(_, f)| f.quotes.is_empty());
+        if !pending.clone().any(|(i, _)| {
+            self.sentences
+                .iter()
+                .any(|s| s.selectable_for(&self.questions[i]))
+        }) {
             return None;
         }
+        let facets: Vec<_> = pending
+            .map(|(i, f)| json!({"id":i+1,"question":f.question}))
+            .collect();
         let sentences: Vec<_> = self
             .sentences
             .iter()
@@ -452,7 +461,7 @@ impl Reading {
                 if !ids.insert(id) {
                     return Err(invalid());
                 }
-                if sentence.support(&self.questions[idx]) != binding::Support::Absent {
+                if sentence.selectable_for(&self.questions[idx]) {
                     sentence.push_quotes(&mut quotes);
                 }
             }

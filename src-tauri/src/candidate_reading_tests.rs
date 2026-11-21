@@ -141,7 +141,7 @@ async fn scoped_unindexed_short_file_answers_one_facet_without_sending_candidate
 
 fn selected_turn(data: &Path, question: &str, attachment: bool) -> (assistant::Started, String) {
     let c = assistant::create(data, assistant::GENERAL_OWNER, None, "通用".into(), None).unwrap();
-    let body = "# 通知\n云杉书屋营业至 19:30。\n合成干扰行。";
+    let body = "# 通知\n云杉书屋营业至 19:30。\n灯塔讲座安排另行通知。合成干扰行。";
     let (selection, id) = if attachment {
         let id = uuid::Uuid::new_v4().to_string();
         let conn = rusqlite::Connection::open(data.join("assistant.sqlite3")).unwrap();
@@ -218,11 +218,38 @@ async fn explicit_facts_send_a_verified_line_and_transformations_keep_selected_t
 }
 
 #[tokio::test]
+async fn authorized_unanswerable_selected_file_skips_all_http_requests() {
+    let data = tempfile::tempdir().unwrap();
+    let (state, listener) = setup(data.path(), true);
+    // A mistaken dispatch gets a connection refusal immediately and is counted by
+    // the transport trace. A local refusal has no model service warning.
+    drop(listener);
+    let (turn, _) = selected_turn(data.path(), "钟楼展演几点开场？", false);
+    let trace = crate::eval_trace::Trace::new(1, 10);
+    let answer = crate::eval_trace::TRACE
+        .scope(
+            trace.clone(),
+            assistant_runtime::general(None, &state, &turn, "q", "keyword", &Default::default()),
+        )
+        .await
+        .unwrap();
+    assert_eq!(answer.finish_reason, "no_evidence");
+    assert!(answer.external_sources.is_empty());
+    assert_eq!(trace.snapshot()["httpAttempts"], 0);
+    assert!(answer
+        .trace
+        .unwrap()
+        .steps
+        .iter()
+        .any(|s| s.contains("额外请求 0 次")));
+}
+
+#[tokio::test]
 async fn changed_consent_document_attachment_or_workspace_discards_in_flight_review() {
     for change in ["consent", "document", "attachment", "workspace", "cancel"] {
         let data = tempfile::tempdir().unwrap();
         let (state, listener) = setup(data.path(), true);
-        let (turn, id) = selected_turn(data.path(), "钟楼展演几点开场？", change == "attachment");
+        let (turn, id) = selected_turn(data.path(), "灯塔讲座几点开始？", change == "attachment");
         let mutate = state.clone();
         let server = serve(
             listener,
@@ -258,7 +285,7 @@ async fn changed_consent_document_attachment_or_workspace_discards_in_flight_rev
 async fn an_unavailable_reader_makes_one_http_attempt_then_reports_service_failure() {
     let data = tempfile::tempdir().unwrap();
     let (state, listener) = setup(data.path(), true);
-    let (turn, _) = selected_turn(data.path(), "钟楼展演几点开场？", false);
+    let (turn, _) = selected_turn(data.path(), "灯塔讲座几点开始？", false);
     let trace = crate::eval_trace::Trace::new(4, 15);
     let server = serve(listener, 503, "temporarily unavailable", || {});
     let response = crate::eval_trace::TRACE

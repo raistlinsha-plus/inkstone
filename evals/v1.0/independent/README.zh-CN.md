@@ -66,3 +66,5 @@ cargo test --offline --manifest-path src-tauri/Cargo.toml --lib \
 ```
 
 RC.3 的对照批次在上述批处理环境中加设 `INKSTONE_BATCH_RC3_READER=1`，并指定新的绝对报告目录。评测只为隔离的合成资料启用模型选句，先运行独立 52 题，再运行开发集三臂以及旧 40 题的关键词、混合、重排对照。使用日常服务配置和钥匙串授权，按阶段记录实际请求。用户的应用设置不随评测变更。[三臂协议与评分](../rc3/README.md)
+
+费用与质量复验可使用 `INKSTONE_BATCH_RC3_READER=confirm`。同一进程仅运行独立 52 题与关键词 40 题，记录每题 HTTP 请求和阶段结果，适合核对减少无效选句请求的修订。
