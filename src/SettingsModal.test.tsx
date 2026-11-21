@@ -365,3 +365,49 @@ test("workbench appearance applies immediately and persists independently of mod
     localStorage.removeItem("inkstone:appearance");
   }
 });
+
+test("creating a scoped external connection and revoking it preserves the separate model form", async () => {
+  let grants: { id: string; name: string; space: string }[] = [];
+  invoke.mockImplementation(async (command, args) => {
+    if (command === "external_grants") return grants;
+    if (command === "external_grant_create") {
+      grants = [{ id: "grant", name: args.name, space: args.space }];
+      return "synthetic-credential";
+    }
+    if (command === "external_grant_revoke") {
+      grants = [];
+    }
+  });
+  const ui = render(
+    <SettingsModal
+      value={settings}
+      projects={[{ id: "s", title: "计划" }]}
+      onClose={vi.fn()}
+      onSave={vi.fn()}
+    />,
+  );
+  fireEvent.click(ui.getByRole("button", { name: "外部工具" }));
+  await ui.findByText("尚无连接。");
+  expect(
+    (ui.getByRole("button", { name: "创建只读连接" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
+  fireEvent.change(ui.getByLabelText("工具名称"), {
+    target: { value: "周报" },
+  });
+  fireEvent.change(ui.getByLabelText("允许读取的空间"), {
+    target: { value: "s" },
+  });
+  fireEvent.click(ui.getByRole("button", { name: "创建只读连接" }));
+  expect(
+    ((await ui.findByLabelText("连接凭据")) as HTMLInputElement).value,
+  ).toBe("synthetic-credential");
+  fireEvent.click(await ui.findByRole("button", { name: "撤销 周报" }));
+  await waitFor(() => expect(ui.queryByLabelText("连接凭据")).toBeNull());
+  expect(invoke).toHaveBeenCalledWith("external_grant_revoke", { id: "grant" });
+  fireEvent.click(ui.getByRole("button", { name: "完成" }));
+  expect(ui.getByRole("tab", { name: /向量化模型/ })).toBeTruthy();
+  expect(invoke.mock.calls.some(([key]) => key === "save_settings")).toBe(
+    false,
+  );
+});

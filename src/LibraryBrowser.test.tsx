@@ -12,11 +12,15 @@ const api = vi.hoisted(() => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: api.invoke }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ save: vi.fn() }));
 import LibraryBrowser from "./LibraryBrowser";
+import type { LibraryDocument } from "./library";
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
 });
-function renderLibrary(refresh: () => Promise<void>) {
+function renderLibrary(
+  refresh: () => Promise<void>,
+  documents: LibraryDocument[] = [],
+) {
   const onProject = vi.fn(),
     onError = vi.fn(),
     onMutationBusy = vi.fn();
@@ -25,7 +29,7 @@ function renderLibrary(refresh: () => Promise<void>) {
       compact
       view={{
         projects: [{ id: "s1", title: "旧空间" }],
-        documents: [],
+        documents,
         pendingImports: [],
       }}
       projectId="s1"
@@ -154,10 +158,61 @@ test("the workbench scopes recent documents, pinning and type views without repe
   fireEvent.click(screen.getByRole("button", { name: "置顶" }));
   expect(screen.queryByText("report.json")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "文档操作 guide.md" }));
-  fireEvent.click(screen.getByRole("button", { name: "取消置顶" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "取消置顶" }));
   await waitFor(() => expect(pin).toHaveBeenCalledWith("m", false));
   fireEvent.click(screen.getByRole("button", { name: "全部资料" }));
   fireEvent.click(screen.getByRole("button", { name: "JSON" }));
   expect(screen.queryByText("guide.md")).toBeNull();
   expect(screen.getByText("report.json")).toBeTruthy();
+});
+
+test("document actions dismiss on the first outside click or key without stealing the new focus or clearing a rename", async () => {
+  const doc = (id: string) => ({
+    id,
+    title: id + ".md",
+    path: id + ".md",
+    projectId: "s1",
+    status: "ready" as const,
+    source: "",
+    updated: 1,
+    opened: 1,
+  });
+  renderLibrary(async () => {}, [doc("one"), doc("two")]);
+  const one = screen.getByRole("button", { name: "文档操作 one.md" });
+  const two = screen.getByRole("button", { name: "文档操作 two.md" });
+  const search = screen.getByRole("textbox", { name: "查找文档" });
+  fireEvent.click(one);
+  expect(screen.getByRole("menu")).toBeTruthy();
+  fireEvent.pointerMove(search);
+  expect(screen.getByRole("menu")).toBeTruthy();
+  fireEvent.pointerDown(search);
+  expect(screen.queryByRole("menu")).toBeNull();
+  act(() => search.focus());
+  fireEvent.click(search);
+  fireEvent.change(search, { target: { value: "o" } });
+  expect(document.activeElement).toBe(search);
+  fireEvent.click(one);
+  fireEvent.pointerDown(two);
+  fireEvent.click(two);
+  expect(screen.getByRole("menu", { name: "two.md的操作" })).toBeTruthy();
+  expect(one.getAttribute("aria-expanded")).toBe("false");
+  const rename = screen.getByRole("menuitem", { name: "重命名标题" });
+  expect(document.activeElement).toBe(rename);
+  fireEvent.keyDown(rename, { key: "ArrowUp" });
+  expect(document.activeElement?.textContent).toBe("移到回收站");
+  fireEvent.keyDown(document.activeElement!, {
+    key: "Escape",
+    isComposing: true,
+  });
+  expect(screen.getByRole("menu")).toBeTruthy();
+  fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+  expect(screen.queryByRole("menu")).toBeNull();
+  expect(document.activeElement).toBe(two);
+  fireEvent.keyDown(two, { key: "ArrowUp" });
+  fireEvent.click(screen.getByRole("menuitem", { name: "重命名标题" }));
+  const draft = screen.getByRole("textbox", { name: "新文档标题" });
+  expect(document.activeElement).toBe(draft);
+  fireEvent.change(draft, { target: { value: "草稿" } });
+  fireEvent.pointerDown(search);
+  expect((draft as HTMLInputElement).value).toBe("草稿");
 });

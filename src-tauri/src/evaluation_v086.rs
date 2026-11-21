@@ -1,4 +1,6 @@
 //! Opt-in live scoring input. All content comes from the frozen synthetic fixture.
+mod independent;
+
 use crate::{
     assistant, assistant_sources::WebAccess, db, documents, eval_trace, files, library, models,
     providers, AppState, Settings,
@@ -318,12 +320,45 @@ fn save_report(path: &Path, report: &Value, secrets: &[String]) -> Result<(), &'
     file.write_all(&bytes).map_err(|_| "report-write-failed")
 }
 
-async fn saved_key(state: &AppState, role: &str, address: &str) -> Result<String, &'static str> {
-    match crate::read_key(state, role, address, &state.cancel_chat).await {
-        Ok(Some(key)) if !key.trim().is_empty() => Ok(key),
-        Err(error) if error == crate::credentials::PENDING => Err("keychain-authorization-pending"),
-        Err(_) => Err("keychain-read-failed"),
-        _ => Err("saved-address-bound-key-missing"),
+pub(crate) fn saved_settings() -> Result<Settings, &'static str> {
+    let path = PathBuf::from(std::env::var_os("HOME").ok_or("missing home directory")?)
+        .join("Library/Application Support/local.inkstone.desktop/settings.json");
+    let bytes = fs::read(path).map_err(|_| "saved settings are unavailable")?;
+    let (config, _) = crate::decode_saved_config(&bytes).ok_or("saved settings are invalid")?;
+    Ok(config.settings)
+}
+
+pub(crate) async fn saved_key(
+    state: &AppState,
+    role: &str,
+    address: &str,
+) -> Result<String, &'static str> {
+    // Explicit live runs can leave an OS authorization prompt open for the tester.
+    // Polling observes the same in-flight keychain request; interactive desktop reads keep their usual timeout.
+    let wait = std::env::var("INKSTONE_EVAL_KEYCHAIN_WAIT_SECONDS")
+        .ok()
+        .and_then(|s| s.parse::<u64>().ok())
+        .unwrap_or(0)
+        .min(300);
+    let deadline = std::time::Instant::now() + Duration::from_secs(wait);
+    loop {
+        match crate::read_key(state, role, address, &state.cancel_chat).await {
+            Err(error)
+                if error == crate::credentials::PENDING && std::time::Instant::now() < deadline =>
+            {
+                tokio::time::sleep(Duration::from_millis(500)).await;
+            }
+            value => {
+                return match value {
+                    Ok(Some(key)) if !key.trim().is_empty() => Ok(key),
+                    Err(error) if error == crate::credentials::PENDING => {
+                        Err("keychain-authorization-pending")
+                    }
+                    Err(_) => Err("keychain-read-failed"),
+                    _ => Err("saved-address-bound-key-missing"),
+                }
+            }
+        }
     }
 }
 
@@ -350,15 +385,12 @@ fn run_live(suite: &Suite) -> Result<(), &'static str> {
     if !matches!(mode.as_str(), "keyword" | "hybrid" | "rerank") {
         return Err("choose keyword, hybrid or rerank");
     }
-    let settings_path = PathBuf::from(std::env::var_os("HOME").ok_or("missing home directory")?)
-        .join("Library/Application Support/local.inkstone.desktop/settings.json");
-    let bytes = fs::read(settings_path).map_err(|_| "saved settings are unavailable")?;
-    let (config, _) = crate::decode_saved_config(&bytes).ok_or("saved settings are invalid")?;
+    let config = saved_settings()?;
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .map_err(|_| "runtime initialization failed")?;
-    let result = runtime.block_on(grounded_holdout(suite, &mode, config.settings, true));
+    let result = runtime.block_on(grounded_holdout(suite, &mode, config, true));
     // A timed-out macOS system authorization may still own the native
     // credential thread. This explicit test must report without waiting on it.
     runtime.shutdown_background();
@@ -383,7 +415,7 @@ async fn offline_context(
     started: &assistant::Started,
     prepared: &assistant::grounding::Prepared,
     budget: usize,
-) -> Result<models::ChatResponse, String> {
+) -> Result<(models::ChatResponse, Vec<models::SearchResult>), String> {
     let mut found = crate::search_inner(
         state,
         &prepared.retrieval_question,
@@ -402,22 +434,37 @@ async fn offline_context(
     );
     let sources =
         crate::retrieval::generation_context(ws, &found.results, budget, started.scope.is_some());
-    Ok(models::ChatResponse {
-        external_sources: vec![],
-        trace: None,
-        memory: None,
-        finish_reason: "offline_evidence_only".into(),
-        text: String::new(),
-        sources,
-        warning: found.warning,
-        retrieval_mode: found.retrieval_mode,
-        rerank_status: found.rerank_status,
-        model: String::new(),
-        scope: started.scope.clone(),
-        chart_warnings: vec![],
-        rejected_charts: vec![],
-        citation_checks: vec![],
-    })
+    Ok((
+        models::ChatResponse {
+            external_sources: vec![],
+            trace: None,
+            memory: None,
+            finish_reason: "offline_evidence_only".into(),
+            text: String::new(),
+            sources,
+            warning: found.warning,
+            retrieval_mode: found.retrieval_mode,
+            rerank_status: found.rerank_status,
+            model: String::new(),
+            scope: started.scope.clone(),
+            chart_warnings: vec![],
+            rejected_charts: vec![],
+            citation_checks: vec![],
+        },
+        found.results,
+    ))
+}
+
+struct ReportTarget<'a> {
+    path: PathBuf,
+    fixture_hash: &'a str,
+    rubric_hash: Option<&'a str>,
+}
+
+fn report_path(suite: &Suite) -> Result<PathBuf, &'static str> {
+    std::env::var_os(format!("{}_REPORT", suite.env_prefix))
+        .map(PathBuf::from)
+        .ok_or("report path required")
 }
 
 async fn grounded_holdout(
@@ -426,9 +473,34 @@ async fn grounded_holdout(
     config: Settings,
     live: bool,
 ) -> Result<(), &'static str> {
-    let path = PathBuf::from(
-        std::env::var_os(format!("{}_REPORT", suite.env_prefix)).ok_or("report path required")?,
-    );
+    run_fixture(
+        suite,
+        mode,
+        config,
+        live,
+        fixture(suite),
+        ReportTarget {
+            path: report_path(suite)?,
+            fixture_hash: &files::hash(suite.fixture),
+            rubric_hash: Some(&files::hash(suite.rubric)),
+        },
+    )
+    .await
+}
+
+async fn run_fixture(
+    suite: &Suite,
+    mode: &str,
+    config: Settings,
+    live: bool,
+    fixture: Fixture,
+    target: ReportTarget<'_>,
+) -> Result<(), &'static str> {
+    let ReportTarget {
+        path,
+        fixture_hash,
+        rubric_hash,
+    } = target;
     if !path.is_absolute() || path.exists() {
         return Err("use an unused absolute report path");
     }
@@ -447,7 +519,6 @@ async fn grounded_holdout(
     }
     let data = tempfile::tempdir().map_err(|_| "isolation setup failed")?;
     let state = isolated_state(data.path(), config.clone())?;
-    let fixture = fixture(suite);
     let trace = eval_trace::Trace::new(suite.max_requests, suite.max_seconds);
     let mut keys = Vec::new();
     let mut rows = Vec::new();
@@ -519,8 +590,25 @@ async fn grounded_holdout(
                 .unwrap_or_default();
             let prepared = assistant::grounding::prepare(data.path(), ws, &started)
                 .map_err(|_| "fixture-grounding-prepare-failed")?;
+            let mut offline_hits = None;
             let (answer, clarification, failure) = if let Some(text) = prepared.clarification {
-                (None, Some(text), None)
+                let response = models::ChatResponse {
+                    external_sources: vec![],
+                    trace: None,
+                    memory: None,
+                    finish_reason: "no_evidence".into(),
+                    text: text.clone(),
+                    sources: vec![],
+                    warning: Some("追问需要明确当前对象或指标，未调用模型。".into()),
+                    retrieval_mode: "none".into(),
+                    rerank_status: "not-requested".into(),
+                    model: String::new(),
+                    scope: started.scope.clone(),
+                    chart_warnings: vec![],
+                    rejected_charts: vec![],
+                    citation_checks: vec![],
+                };
+                (Some(response), Some(text), None)
             } else {
                 let result = if live {
                     crate::ask_pipeline(
@@ -544,6 +632,10 @@ async fn grounded_holdout(
                 } else {
                     offline_context(&state, ws, &started, &prepared, config.chat.context_chars)
                         .await
+                        .map(|(response, hits)| {
+                            offline_hits = Some(hits);
+                            response
+                        })
                 };
                 match result {
                     Ok(response) => (Some(response), None, None),
@@ -584,8 +676,17 @@ async fn grounded_holdout(
                     .collect::<Vec<_>>()
             });
             rows.push(json!({
-                "id":case.id, "expected":case.expected,"elapsedMs":start.elapsed().as_millis(),
+                "id":case.id, "expected":case.expected, "question":case.question,
+                "workspaceDocuments":paths, "selectedDocuments":case.documents, "scope":started.scope,
+                "retrievalQuestion":prepared.retrieval_question,"promptQuestion":started.prompt_question,
+                "previousQuestions":started.previous_questions, "previousAnswer":started.previous_answer,
+                "elapsedMs":start.elapsed().as_millis(),
                 "httpAttempts":trace.snapshot()["httpAttempts"].as_u64().unwrap_or_default() - before,
+                "requiredEvidenceStages": offline_hits.map(|hits| case.required.iter().zip(&expected_evidence).map(|(required, in_context)| {
+                    let matches = |hit: &models::SearchResult| hit.path == paths[&required.document] && hit.text.contains(&required.quote);
+                    json!({"document": required.document, "candidate": hits.iter().any(matches),
+                        "eligible": hits.iter().any(|hit| hit.evidence && matches(hit)), "inContext": in_context})
+                }).collect::<Vec<_>>()),
                 "expectedEvidenceInContext":expected_evidence, "sourceDocuments":source_documents,
                 "outOfScopePath":out_of_scope_path,
                 "clarification":clarification, "failure":failure, "response":answer
@@ -612,7 +713,7 @@ async fn grounded_holdout(
         .unwrap_or(Err("wall-time-budget-exhausted"));
     let report = json!({
         "version":env!("CARGO_PKG_VERSION"), "suite":suite.id,
-        "fixtureSha256":files::hash(suite.fixture), "rubricSha256":files::hash(suite.rubric),
+        "fixtureSha256":fixture_hash, "rubricSha256":rubric_hash,
         "status":if result.is_ok() { "complete" } else { "incomplete" },
         "stage":stage, "error":result.as_ref().err(), "mode":mode, "live":live, "usage":trace.snapshot(),
         "models":{"chat":live.then_some(config.chat.model),"embedding":(mode != "keyword").then_some(config.embedding.model),

@@ -10,6 +10,8 @@ import {
   type Settings,
 } from "./types";
 import ModalDialog from "./ModalDialog";
+import type { LibraryProject } from "./library";
+import ExternalToolsDialog from "./ExternalToolsDialog";
 type Tab = "embedding" | "chat" | "rerank";
 type SavedKeySource = "embedding" | "chat";
 function serviceOrigin(address: string): string | null {
@@ -36,6 +38,7 @@ export default function SettingsModal({
   onClose,
   onSave,
   onWebSearch,
+  projects,
 }: {
   value: Settings;
   initialTab?: Tab;
@@ -43,6 +46,7 @@ export default function SettingsModal({
   onClose: () => void;
   onSave: (settings: Settings) => void;
   onWebSearch?: () => void;
+  projects?: LibraryProject[];
 }) {
   const [form, setForm] = useState<Settings>(() => ({
     ...structuredClone(value),
@@ -60,6 +64,7 @@ export default function SettingsModal({
   });
   const [tab, setTab] = useState<Tab>(chatSetupOnly ? "chat" : initialTab);
   const [busy, setBusy] = useState("");
+  const [externalOpen, setExternalOpen] = useState(false);
   const [appearance, setAppearanceChoice] = useState(getAppearance);
   const testGeneration = useRef(0);
   const [message, setMessage] = useState("");
@@ -176,6 +181,7 @@ export default function SettingsModal({
     }
   }
   return (
+    <>
     <ModalDialog
       label="模型设置"
       className="settings-modal"
@@ -201,6 +207,11 @@ export default function SettingsModal({
           : "文件与索引保存在本机。按需要连接自己的 API，也可以使用本地服务。"}
       </p>
       {!chatSetupOnly && <div className="settings-utilities">
+        {projects && (
+          <button type="button" className="button small" disabled={!!busy} onClick={() => setExternalOpen(true)}>
+            外部工具
+          </button>
+        )}
         {onWebSearch && (
           <button
             type="button"
@@ -639,5 +650,9 @@ export default function SettingsModal({
         </button>
       </div>
     </ModalDialog>
+    {externalOpen && projects && (
+      <ExternalToolsDialog projects={projects} onClose={() => setExternalOpen(false)} />
+    )}
+    </>
   );
 }

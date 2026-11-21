@@ -99,9 +99,7 @@ test("export defaults to the current branch and explicitly switches to all recor
     />,
   );
   fireEvent.click(screen.getByLabelText("管理当前会话"));
-  fireEvent.click(
-    screen.getByRole("button", { name: "导出会话" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "导出会话" }));
   await screen.findByRole("dialog", { name: "导出问答会话" });
   expect(
     (screen.getByRole("textbox", { name: "Markdown" }) as HTMLTextAreaElement)
@@ -137,7 +135,9 @@ test("document questions share one header while named and archived threads keep 
     conversation: null,
     workspaceKey: "space",
   } as unknown as AssistantController;
-  const { rerender } = render(<ConversationHeader {...common} controller={controller} />);
+  const { rerender } = render(
+    <ConversationHeader {...common} controller={controller} />,
+  );
   expect(screen.queryByText("新会话")).toBeNull();
   expect(screen.getByRole("button", { name: "会话历史" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "新建会话" })).toBeTruthy();
@@ -147,10 +147,60 @@ test("document questions share one header while named and archived threads keep 
   expect(onExpand).toHaveBeenCalledOnce();
   expect(more.closest("details")?.open).toBe(false);
   expect(document.activeElement).toBe(more);
-  rerender(<ConversationHeader {...common} controller={{
-    ...controller,
-    conversation: { title: "春季读书会", archived: true, turns: [] },
-  } as unknown as AssistantController} />);
+  rerender(
+    <ConversationHeader
+      {...common}
+      controller={
+        {
+          ...controller,
+          conversation: { title: "春季读书会", archived: true, turns: [] },
+        } as unknown as AssistantController
+      }
+    />,
+  );
   expect(screen.getByText("春季读书会")).toBeTruthy();
   expect(screen.getByText("已归档")).toBeTruthy();
+});
+
+test("conversation actions dismiss on non-focusable space and keep edited titles through backdrop clicks", () => {
+  const controller = {
+    conversation: { id: "c", title: "一次对话" },
+    workspaceKey: "s",
+  } as unknown as AssistantController;
+  render(
+    <>
+      <div data-testid="outside">正文</div>
+      <ConversationHeader
+        controller={controller}
+        disabled={false}
+        expanded={false}
+        onExpand={vi.fn()}
+        onNew={vi.fn()}
+        onActivate={vi.fn()}
+        onError={vi.fn()}
+      />
+    </>,
+  );
+  const trigger = screen.getByLabelText("管理当前会话");
+  const details = trigger.closest("details")!;
+  fireEvent.click(trigger);
+  fireEvent.pointerDown(screen.getByTestId("outside"));
+  expect(details.open).toBe(false);
+  fireEvent.keyDown(trigger, { key: "ArrowUp" });
+  expect(document.activeElement?.textContent).toBe("删除会话…");
+  fireEvent.keyDown(document.activeElement!, {
+    key: "Escape",
+    isComposing: true,
+  });
+  expect(details.open).toBe(true);
+  fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+  expect(details.open).toBe(false);
+  expect(document.activeElement).toBe(trigger);
+  fireEvent.keyDown(trigger, { key: "Enter" });
+  fireEvent.click(screen.getByRole("button", { name: "重命名会话" }));
+  const title = screen.getByRole("textbox", { name: "会话标题" });
+  fireEvent.change(title, { target: { value: "编辑中的标题" } });
+  fireEvent.mouseDown(screen.getByRole("dialog").parentElement!);
+  expect((title as HTMLInputElement).value).toBe("编辑中的标题");
+  expect(screen.getByRole("dialog")).toBeTruthy();
 });

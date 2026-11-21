@@ -8,6 +8,8 @@ Inkstone 是面向 **macOS 13 及以上 Apple Silicon Mac** 的本地 Markdown �
 
 图中是 v0.9.6 编辑器和虚构的活动笔记。开启书房同伴后，保存文档可以从页边记录一次经历。
 
+1.0 候选版增加本机只读 CLI、中文问答取证改进，以及撤回 Wiki 资料前的影响预览。[候选版与验收结果](DELIVERY-v1.0.0-rc.1.md) · [外部工具接入](EXTERNAL-TOOLS.zh-CN.md)
+
 ## 可以怎样使用
 
 - **把资料放在一起，保留原件。** 从不同目录复制导入 Markdown、TXT、JSON、Mermaid 文件到同一空间。用正文、源码或分栏模式写作，在正文插入表格、JSON 树、Mermaid、脑图、日程和数据图表。原件有变化时可比较差异，也可导出空间。

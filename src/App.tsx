@@ -1,3 +1,4 @@
+import { dismissDetailsOnOutside, dismissOnOutside, focusMenuButton } from "./platform/menu";
 import { imeBoundary, isImeEvent } from "./platform/ime";
 import { isTauri } from "@tauri-apps/api/core";
 import { appVersion } from "./version";
@@ -504,6 +505,19 @@ export default function App() {
   const [nameBusy, setNameBusy] = useState(false);
   const nameMutation = useRef<PendingMutation | null>(null);
   const [fileMenu, setFileMenu] = useState(false);
+  const fileMenuRoot = useRef<HTMLDivElement>(null);
+  const fileTrigger = useRef<HTMLButtonElement>(null);
+  const fileMenuEntry = useRef("Home");
+  useEffect(() => {
+    const menu = fileMenuRoot.current;
+    const trigger = fileTrigger.current;
+    if (!fileMenu || !menu || !trigger) return;
+    focusMenuButton(menu, fileMenuEntry.current);
+    return dismissOnOutside(
+      (event) => event.composedPath().includes(menu) || event.composedPath().includes(trigger),
+      () => setFileMenu(false),
+    );
+  }, [fileMenu]);
   const [welcome, setWelcome] = useState(true);
   const visibleDocument = !welcome && !calendarOpen ? document : null;
   const isExampleSpace =
@@ -1626,6 +1640,7 @@ export default function App() {
   function nameAction(action: "new" | "rename" | "copy") {
     if (navigationBlocked()) return;
     ++openSequence.current;
+    if (fileMenu) fileTrigger.current?.focus({ preventScroll: true });
     setFileMenu(false);
     setNameError("");
     setFileName(
@@ -2924,13 +2939,14 @@ export default function App() {
       </label>
       <details
         className="assistant-composer-options"
+        ref={dismissDetailsOnOutside}
         data-preferences-skipped={skipPreferences || undefined}
         onBlur={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget))
             event.currentTarget.open = false;
         }}
         onKeyDown={(event) => {
-          if (event.key !== "Escape" || !event.currentTarget.open) return;
+          if (isImeEvent(event.nativeEvent) || event.key !== "Escape" || !event.currentTarget.open) return;
           event.stopPropagation();
           event.currentTarget.open = false;
           event.currentTarget.querySelector("summary")?.focus();
@@ -3619,20 +3635,47 @@ export default function App() {
                   </button>
                   <button
                     className="icon-button"
+                    ref={fileTrigger}
                     aria-label="文件操作"
-                    onClick={() => setFileMenu(!fileMenu)}
+                    aria-haspopup="menu"
+                    aria-expanded={fileMenu}
+                    onKeyDown={(e) => {
+                      if (isImeEvent(e.nativeEvent) || !["ArrowUp", "ArrowDown"].includes(e.key)) return;
+                      e.preventDefault();
+                      fileMenuEntry.current = e.key;
+                      setFileMenu(true);
+                    }}
+                    onClick={() => {
+                      fileMenuEntry.current = "Home";
+                      setFileMenu(!fileMenu);
+                    }}
                   >
                     <MoreHorizontal size={18} />
                   </button>
                   {fileMenu && (
-                    <div className="dropdown">
+                    <div
+                      className="dropdown" role="menu" aria-label="文件操作" ref={fileMenuRoot}
+                      onKeyDown={(e) => {
+                        if (isImeEvent(e.nativeEvent)) return;
+                        if (["Escape", "Tab"].includes(e.key)) {
+                          if (e.key === "Escape") e.preventDefault();
+                          e.stopPropagation();
+                          fileTrigger.current?.focus({ preventScroll: true });
+                          setFileMenu(false);
+                        } else if (["ArrowUp", "ArrowDown", "Home", "End"].includes(e.key)) {
+                          e.preventDefault();
+                          focusMenuButton(e.currentTarget, e.key);
+                        }
+                      }}
+                    >
                       <button
+                        role="menuitem" tabIndex={-1}
                         disabled={busy}
                         onClick={() => nameAction("rename")}
                       >
                         重命名文件
                       </button>
-                      <button onClick={() => nameAction("copy")}>
+                      <button role="menuitem" tabIndex={-1} onClick={() => nameAction("copy")}>
                         另存为新文件
                       </button>
                     </div>
@@ -4397,6 +4440,7 @@ export default function App() {
       )}
       {settingsOpen && settings && (
         <SettingsModal
+          projects={libraryView.projects}
           initialTab={settingsFromFirstUse ? "chat" : undefined}
           chatSetupOnly={settingsFromFirstUse}
           onWebSearch={() => {
@@ -4852,6 +4896,7 @@ export default function App() {
           label="文件名称"
           className="name-modal"
           busy={nameBusy}
+          dismissOnBackdrop={false}
           onClose={closeNameDialog}
         >
           <form

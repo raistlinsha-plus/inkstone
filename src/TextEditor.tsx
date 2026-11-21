@@ -818,6 +818,7 @@ export default function TextEditor({
               const options = dropdown.querySelectorAll<HTMLButtonElement>(
                 ".top-bar-heading-option",
               );
+              for (const option of options) option.tabIndex = -1;
               const target =
                 headingEntryKey === "ArrowUp"
                   ? options[options.length - 1]
@@ -902,13 +903,14 @@ export default function TextEditor({
             );
             focusAfterAction(button);
           }
-          if (event.key === "Escape") {
-            event.preventDefault();
+          const headingOpen = bar.querySelector(".top-bar-heading-dropdown");
+          if (event.key === "Escape" || (event.key === "Tab" && headingOpen)) {
+            if (event.key === "Escape") event.preventDefault();
             event.stopPropagation();
             const selected = bar.querySelector<HTMLButtonElement>(
               ".top-bar-heading-button",
             );
-            if (bar.querySelector(".top-bar-heading-dropdown")) {
+            if (headingOpen) {
               selected?.dispatchEvent(
                 new PointerEvent("pointerdown", {
                   bubbles: true,

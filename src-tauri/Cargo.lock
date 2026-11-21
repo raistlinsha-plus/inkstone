@@ -1674,7 +1674,7 @@ dependencies = [
 
 [[package]]
 name = "inkstone"
-version = "0.9.6"
+version = "1.0.0-rc.1"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -1701,6 +1701,15 @@ dependencies = [
  "uuid",
  "walkdir",
  "zip",
+]
+
+[[package]]
+name = "inkstone-cli"
+version = "0.1.0"
+dependencies = [
+ "dirs",
+ "inkstone",
+ "serde_json",
 ]
 
 [[package]]

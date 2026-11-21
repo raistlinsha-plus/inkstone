@@ -108,7 +108,7 @@ try {
     .getByRole("button", { name: "文档操作 复盘.md", exact: true })
     .click();
   await sidebar
-    .getByRole("button", { name: "移到回收站", exact: true })
+    .getByRole("menuitem", { name: "移到回收站", exact: true })
     .click();
   await sidebar.getByRole("button", { name: "回收站", exact: true }).click();
   await shot("02-trash-1440");

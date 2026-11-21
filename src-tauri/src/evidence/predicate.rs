@@ -88,7 +88,7 @@ fn clean_subject(subject: &str, fact: Fact<'_>) -> String {
     compact
 }
 
-fn clock_index(text: &str) -> Option<usize> {
+pub(super) fn clock_index(text: &str) -> Option<usize> {
     text.match_indices([':', '：']).find_map(|(i, colon)| {
         let left = text[..i]
             .bytes()

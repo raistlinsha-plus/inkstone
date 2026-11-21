@@ -5,6 +5,7 @@ use crate::{
 };
 use std::{collections::HashSet, path::Path};
 
+mod facets;
 mod predicate;
 pub(crate) mod wiki_alias;
 
@@ -294,6 +295,19 @@ fn subquestion_terms(query: &str) -> (Vec<String>, Vec<Subquestion<'_>>) {
 // every query term. Unannounced or explicitly inapplicable values cannot fill it.
 fn requested_value(query: &str, body: &str) -> bool {
     let query = query.trim().trim_end_matches(['？', '?', '。', '.']);
+    if (query.contains("多少") || query.contains("多少钱")) && query.contains("押金") {
+        return body
+            .lines()
+            .filter(|s| !s.trim_start().starts_with('#'))
+            .flat_map(|s| s.split(['。', '；', ';']))
+            .any(|s| {
+                s.contains("押金")
+                    && ((s.contains('元') && s.chars().any(|c| c.is_ascii_digit()))
+                        || ["免收", "无需", "未公布", "未确定", "不收"]
+                            .iter()
+                            .any(|word| s.contains(word)))
+            });
+    }
     let Some(prefix) = [
         "多少分贝",
         "多少分钟",
@@ -520,6 +534,11 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
     let predicate = (names.is_empty() && attributed.is_none() && subquestions.is_empty())
         .then(|| predicate::Request::parse(&query))
         .flatten();
+    let facets = (names.is_empty()
+        && attributed.is_none()
+        && subquestions.is_empty()
+        && predicate.is_none())
+    .then(|| facets::Request::parse(&query, results));
     let mut requested_years = years(&query);
     let year = requested_years
         .next()
@@ -600,6 +619,7 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
             && year.is_none_or(|year| years(&text).any(|seen| seen == year))
             && day.is_none_or(|day| month_days(&text).any(|seen| seen == day))
             && (supported
+                || (!wiki && facets.as_ref().is_some_and(|facets| facets.supports(r)))
                 || original_alias_anchor
                 || (!wiki
                     && predicate.as_ref().is_some_and(|request| {
@@ -762,6 +782,43 @@ mod tests {
         assert_eq!(hits.map(|hit| hit.evidence), [true, true, false]);
     }
 
+    #[test]
+    fn alternative_source_labels_need_distinct_documents_and_a_matching_fact() {
+        let mut hits = [
+            hit("楼宇联合巡检排班表", "周五注销窗口于17:30关闭。"),
+            hit("前厅维修公告", "周五注销窗口于15:00关闭。"),
+            hit("前厅访客手册", "周五注销窗口于22:30关闭。"),
+        ];
+        let q = "周五注销窗口关闭时间，巡检排班表和维修公告有出入吗？";
+        let request = facets::Request::parse(q, &hits);
+        assert!(request.supports(&hits[0]) && request.supports(&hits[1]));
+        assert!(!request.supports(&hits[2]));
+        hits[2].title = hits[0].title.clone();
+        let ambiguous = facets::Request::parse(q, &hits);
+        assert!(hits.iter().all(|hit| !ambiguous.supports(hit)));
+    }
+    #[test]
+    fn subquestion_clock_requires_time_and_preserves_the_day() {
+        let hits = [
+            hit("培训简章", "周三签收回执，办理时限为48小时。"),
+            hit("培训通知", "周四签收回执截止时间为17:00。"),
+            hit("培训指南", "周三签收回执截止时间为19:20。"),
+        ];
+        let request = facets::Request::parse("周三签收回执几点截止？设备去哪里领取？", &hits);
+        assert!(request.supports(&hits[2]));
+        assert!(!request.supports(&hits[0]) && !request.supports(&hits[1]));
+        let conditional = facets::Request::parse("如果有登记，周三签收回执几点截止？", &hits);
+        assert!(!conditional.supports(&hits[2]));
+    }
+    #[test]
+    fn deposit_needs_a_matching_value_in_a_factual_sentence() {
+        let mut hits = [
+            hit("器材预约押金", "每天可预约3次。"),
+            hit("器材预约押金", "器材预约押金为30元。"),
+        ];
+        mark("预约器材要交多少押金？", &mut hits);
+        assert!(!hits[0].evidence && hits[1].evidence);
+    }
     #[test]
     fn calendar_guard_treats_mixed_and_chinese_dates_as_the_same_day() {
         assert_eq!(

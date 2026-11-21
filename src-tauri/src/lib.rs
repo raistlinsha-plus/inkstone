@@ -28,6 +28,7 @@ mod evaluation_v07;
 mod evaluation_v086;
 mod evidence;
 mod export_destination;
+pub mod external_access;
 mod files;
 mod library;
 mod library_commands;
@@ -773,6 +774,12 @@ struct WorkspaceView {
     warning: Option<String>,
     managed_project_id: Option<String>,
 }
+fn workspace_index_path(data: &std::path::Path, root: &std::path::Path) -> PathBuf {
+    data.join("workspaces").join(format!(
+        "{}.sqlite3",
+        files::hash(root.to_string_lossy().as_bytes())
+    ))
+}
 #[tauri::command]
 async fn open_workspace(state: State<'_, AppState>, root: String) -> Result<WorkspaceView, String> {
     #[cfg(feature = "desktop-e2e")]
@@ -793,10 +800,7 @@ async fn open_workspace(state: State<'_, AppState>, root: String) -> Result<Work
     let db_dir = state.data_dir.join("workspaces");
     fs::create_dir_all(&db_dir).map_err(|e| e.to_string())?;
     let ws = Workspace {
-        db: db_dir.join(format!(
-            "{}.sqlite3",
-            files::hash(root.to_string_lossy().as_bytes())
-        )),
+        db: workspace_index_path(&state.data_dir, &root),
         root,
     };
     let profile = providers::fingerprint(&settings(&state)?.embedding);
@@ -2611,6 +2615,9 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            external_access::grants::external_grants,
+            external_access::grants::external_grant_create,
+            external_access::grants::external_grant_revoke,
             calendar_commands::calendar_list,
             calendar_commands::calendar_save,
             calendar_commands::export_calendar_ics,
@@ -2690,6 +2697,7 @@ pub fn run() {
             web_retrieval::test_web_search_connection,
             wiki::wiki_status,
             wiki::wiki_set_policy,
+            wiki::wiki_removal_impact,
             wiki::wiki_compile,
             wiki::wiki_cancel,
             wiki::wiki_review,

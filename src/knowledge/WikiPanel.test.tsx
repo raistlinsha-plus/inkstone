@@ -257,6 +257,14 @@ test("shows generation-base deltas and continues to the next pending proposal on
   };
   const candidate = {
     ...page,
+    refs: [
+      {
+        ...page.refs[0],
+        quote: "手册改为 96 小时。",
+        startLine: 3,
+        endLine: 3,
+      },
+    ],
     reviewComparison: {
       baseRevision: 1,
       currentRevision: 1,
@@ -299,6 +307,11 @@ test("shows generation-base deltas and continues to the next pending proposal on
   expect(delta.getByText("旧指南.md").closest("li")?.textContent).toContain(
     "移除引用",
   );
+  const quotes = within(
+    await panel.findByRole("region", { name: "原文摘录变化" }),
+  );
+  expect(quotes.getByText("第 2 行 · 手册为 72 小时。")).toBeTruthy();
+  expect(quotes.getByText("第 3 行 · 手册改为 96 小时。")).toBeTruthy();
   fireEvent.click(panel.getByRole("button", { name: "发布改动" }));
   const next = await panel.findByRole("button", { name: "审阅下一项" });
   expect(

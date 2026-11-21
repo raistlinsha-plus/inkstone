@@ -1218,6 +1218,14 @@ mod tests {
                 _ => store::publish(&conn, &space, &proposal).unwrap(),
             }
         }
+        let impact = store::removal_impact(&conn, &space, &[doc.id.as_str()]).unwrap();
+        assert_eq!((impact.pages, impact.revisions, impact.pending), (1, 2, 1));
+        let tx = conn.unchecked_transaction().unwrap();
+        store::reject(&tx, &space, "pending").unwrap();
+        let after = store::removal_impact(&tx, &space, &[doc.id.as_str()]).unwrap();
+        assert_ne!(impact.token, after.token);
+        assert_eq!(after.pending, 0);
+        tx.rollback().unwrap();
         drop(conn);
         let live_wiki_path = data.path().join("wiki.sqlite3");
         let legacy_wiki = std::fs::read(&live_wiki_path).unwrap();

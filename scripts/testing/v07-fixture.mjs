@@ -98,7 +98,11 @@ export function installV07Fixture({
       reducedMotion: false,
     });
     base.companion.settings.characterId = companionCharacter;
-    base.companion.roles[companionCharacter] = { read: [0, 1], choices: {}, outfit: 1 };
+    base.companion.roles[companionCharacter] = {
+      read: [0, 1],
+      choices: {},
+      outfit: 1,
+    };
   }
   let store;
   try {
@@ -208,6 +212,20 @@ export function installV07Fixture({
     sourceCount: 1,
     stale: false,
   };
+  function removalImpact(ids) {
+    const removesSource =
+      wiki.policy.documentIds.includes("doc-1") && !ids.includes("doc-1");
+    const pages = removesSource ? wiki.pages.length : 0;
+    const pending = removesSource
+      ? wiki.changes.filter((c) => c.status === "pending").length
+      : 0;
+    return {
+      pages,
+      revisions: pages,
+      pending,
+      token: [wiki.policy.revision, pages, pending].join("-"),
+    };
+  }
   const wikiRef = () => ({ ...source(), quote: source().text });
   async function invoke(command, args = {}) {
     window.__INKSTONE_QA_CALLS__.push({ command, args: clone(args) });
@@ -359,8 +377,18 @@ export function installV07Fixture({
     if (command === "calendar_list")
       return {
         documents: store.documents
-          .filter((d) => d.projectId === args.projectId && d.status === "ready" && /\.md$/i.test(d.path))
-          .map((d) => ({ documentId: d.id, title: d.title, path: d.path, ...store.files[d.path] })),
+          .filter(
+            (d) =>
+              d.projectId === args.projectId &&
+              d.status === "ready" &&
+              /\.md$/i.test(d.path),
+          )
+          .map((d) => ({
+            documentId: d.id,
+            title: d.title,
+            path: d.path,
+            ...store.files[d.path],
+          })),
         warnings: [],
       };
     if (command === "workspace_index_status")
@@ -468,10 +496,28 @@ export function installV07Fixture({
       return clone(d);
     }
     if (command === "wiki_status") return clone(wiki);
+    if (command === "wiki_removal_impact") {
+      if (args.expectedRevision !== wiki.policy.revision)
+        throw Error("旧的 Wiki 范围");
+      return removalImpact(args.documentIds);
+    }
     if (command === "wiki_set_policy") {
       if (args.input.expectedRevision !== wiki.policy.revision)
         throw Error("旧的 Wiki 范围");
-      const { expectedRevision, ...policy } = args.input;
+      const { expectedRevision, removalToken, ...policy } = args.input;
+      if (
+        wiki.policy.documentIds.some((id) => !policy.documentIds.includes(id))
+      ) {
+        const impact = removalImpact(policy.documentIds);
+        if (removalToken !== impact.token) throw Error("请重新查看清除范围");
+        if (
+          wiki.policy.documentIds.includes("doc-1") &&
+          !policy.documentIds.includes("doc-1")
+        ) {
+          wiki.pages = [];
+          wiki.changes = [];
+        }
+      }
       wiki.policy = { ...policy, revision: expectedRevision + 1 };
       return clone(wiki);
     }
@@ -637,9 +683,13 @@ export function installV07Fixture({
         persist();
         send("assistant-accepted", { requestId: args.requestId });
         const selectedDocument = isolatedOnboarding
-          ? store.documents.find((doc) => args.sources?.documentIds?.includes(doc.id))
+          ? store.documents.find((doc) =>
+              args.sources?.documentIds?.includes(doc.id),
+            )
           : store.documents[0];
-        const selectedSource = selectedDocument ? source(selectedDocument) : null;
+        const selectedSource = selectedDocument
+          ? source(selectedDocument)
+          : null;
         const insufficient = /满意|更好/.test(t.question),
           text = offlineOnboarding
             ? "## 计划开展四场活动\n\n3 场在社区阅览室举行，1 场在河畔公园举行。[1]"

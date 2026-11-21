@@ -1,3 +1,4 @@
+import { dismissOnOutside } from "./platform/menu";
 import { isImeEvent } from "./platform/ime";
 import {
   useEffect,
@@ -134,12 +135,9 @@ export default function Editor({
         ].focus();
       pendingInsertFocus.current = null;
     }
-    const outside = (event: PointerEvent) => {
-      if (!insertRoot.current?.contains(event.target as Node))
-        setInsertOpen(false);
-    };
-    document.addEventListener("pointerdown", outside, true);
-    return () => document.removeEventListener("pointerdown", outside, true);
+    const root = insertRoot.current;
+    if (!root) return;
+    return dismissOnOutside((event) => event.composedPath().includes(root), () => setInsertOpen(false));
   }, [insertOpen]);
   const kind = documentKind(path);
   const publish = () => {
@@ -226,11 +224,11 @@ export default function Editor({
         if (
           insertOpen &&
           !isImeEvent(event.nativeEvent) &&
-          ["Escape", "ArrowDown", "ArrowUp"].includes(event.key)
+          ["Escape", "Tab", "ArrowDown", "ArrowUp"].includes(event.key)
         ) {
-          event.preventDefault();
+          if (event.key !== "Tab") event.preventDefault();
           event.stopPropagation();
-          if (event.key === "Escape") {
+          if (event.key === "Escape" || event.key === "Tab") {
             setInsertOpen(false);
             insertButton.current?.focus();
           } else {
@@ -359,6 +357,7 @@ export default function Editor({
                       key={command.id}
                       type="button"
                       role="menuitem"
+                      tabIndex={-1}
                       disabled={!actualVisual && command.id === "clear"}
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => {

@@ -8,6 +8,8 @@ Inkstone is a local-first Markdown workspace for **macOS 13+ on Apple Silicon**.
 
 *The v0.9.6 editor with fictional project notes. The optional pixel-art companion sits in the page margin and can record a work milestone when you choose.*
 
+The 1.0 release candidate adds a read-only local CLI, Chinese evidence retrieval changes and a preview of the Wiki history affected when you remove a source. [Candidate notes](docs/DELIVERY-v1.0.0-rc.1.md) · [CLI guide](docs/EXTERNAL-TOOLS.zh-CN.md)
+
 ## What you can do
 
 - **Keep your own documents.** Copy-import Markdown, TXT, JSON or Mermaid files into a space. Edit the copies, compare later changes with the originals, and export your work. Use source and rich editing side by side for tables, JSON trees, diagrams, mindmaps, calendar entries and constrained ECharts charts.

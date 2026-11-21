@@ -98,7 +98,13 @@ async fn compile_phase(
         return Err("模型没有产出可发布的 Wiki 候选".into());
     }
     for change in &pending {
-        publish_checked(&tx, &state.data_dir, ws, space, &plan.policy, change)?;
+        let action = if change.content.summary_issues().is_empty() {
+            "publish"
+        } else {
+            record["excerptOnlyPublication"] = json!(true);
+            "publish-excerpts"
+        };
+        super::super::apply_review(&tx, &state.data_dir, ws, space, &change.id, action)?;
     }
     tx.commit().map_err(error)?;
     record["publishedByFixture"] = json!(store::pages(&db, space)?
@@ -126,23 +132,43 @@ fn redact(value: &mut Value, secret: &str) {
     }
 }
 
-#[tokio::test]
+#[test]
 #[ignore = "explicit compatible endpoint, synthetic data, at most two billed attempts"]
-async fn real_wiki_compile_and_refresh_smoke() -> Result<(), String> {
+fn real_wiki_compile_and_refresh_smoke() -> Result<(), String> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(error)?;
+    let result = runtime.block_on(check_live_wiki());
+    // An outstanding macOS authorization dialog can outlive the bounded waiting period.
+    runtime.shutdown_background();
+    result
+}
+
+async fn check_live_wiki() -> Result<(), String> {
     if std::env::var("INKSTONE_WIKI_EVAL").as_deref() != Ok("1") {
         return Err("设置 INKSTONE_WIKI_EVAL=1 以运行显式 Wiki 模型评测".into());
     }
-    let provider = Provider {
-        enabled: true,
-        base_url: std::env::var("INKSTONE_ANSWER_EVAL_BASE_URL").map_err(|_| "缺少评测服务地址")?,
-        model: std::env::var("INKSTONE_ANSWER_EVAL_MODEL").map_err(|_| "缺少评测模型")?,
-        context_chars: 4200,
-        ..Default::default()
+    let use_saved = std::env::var("INKSTONE_WIKI_EVAL_SAVED").as_deref() == Ok("1");
+    if use_saved && cfg!(feature = "desktop-e2e") {
+        return Err("隔离桌面测试不使用系统凭据".into());
+    }
+    let provider = if use_saved {
+        crate::evaluation_v086::saved_settings()?.chat
+    } else {
+        Provider {
+            enabled: true,
+            base_url: std::env::var("INKSTONE_ANSWER_EVAL_BASE_URL")
+                .map_err(|_| "缺少评测服务地址")?,
+            model: std::env::var("INKSTONE_ANSWER_EVAL_MODEL").map_err(|_| "缺少评测模型")?,
+            context_chars: 4200,
+            ..Default::default()
+        }
     };
+    if !provider.enabled {
+        return Err("请先启用问答模型".into());
+    }
     providers::validate(&provider)?;
-    let key = std::env::var("INKSTONE_ANSWER_EVAL_API_KEY")
-        .ok()
-        .filter(|key| !key.trim().is_empty());
     let report =
         PathBuf::from(std::env::var_os("INKSTONE_WIKI_EVAL_REPORT").ok_or("缺少评测报告路径")?);
     if !report.is_absolute() {
@@ -175,13 +201,28 @@ async fn real_wiki_compile_and_refresh_smoke() -> Result<(), String> {
     };
     store::save_policy(&store::write(data.path())?, &space, &policy)?;
     let state = state(data.path(), &ws, provider.clone())?;
+    let key = if use_saved {
+        match crate::evaluation_v086::saved_key(&state, "chat", &provider.base_url).await {
+            Ok(key) => Some(key),
+            Err(reason) => {
+                let failure = json!({"schema": 1, "completed": false, "stage": "read-chat-key", "error": reason,
+                    "keychainAccessed": true, "syntheticSourcesOnly": true, "trace": {"httpAttempts": 0}});
+                serde_json::to_writer_pretty(report, &failure).map_err(error)?;
+                return Err(reason.into());
+            }
+        }
+    } else {
+        std::env::var("INKSTONE_ANSWER_EVAL_API_KEY")
+            .ok()
+            .filter(|s| !s.trim().is_empty())
+    };
     let trace = Trace::new(2, 75);
     let mut result = json!({
         "schema": 1,
         "fixtureSha256": files::hash([OLD, NEW, OTHER].join("\n")),
         "model": provider.model,
         "syntheticSourcesOnly": true,
-        "keychainAccessed": false,
+        "keychainAccessed": use_saved,
         "inputBudgetChars": provider.context_chars,
         "maxOutputTokensPerRequest": 3000,
         "initial": {},
@@ -225,7 +266,29 @@ async fn real_wiki_compile_and_refresh_smoke() -> Result<(), String> {
                     key.as_deref(),
                     &mut result["refresh"],
                 )
-                .await
+                .await?;
+                let mut db = store::write(data.path())?;
+                let tx = db.transaction().map_err(error)?;
+                let removed = [manual.id.as_str()];
+                let impact = store::removal_impact(&tx, &space, &removed)?;
+                store::purge_derived(&tx, &space, &removed)?;
+                let mut restricted = policy.clone();
+                restricted.document_ids = vec![notice.id.clone()];
+                restricted.revision += 1;
+                store::save_policy(&tx, &space, &restricted)?;
+                tx.commit().map_err(error)?;
+                drop(db);
+                let recalled = super::super::recall(data.path(), &ws, "普通工单", None)?;
+                if impact.pages == 0
+                    || recalled.iter().any(|hit| hit.path == manual.path)
+                    || !ws.root.join(&manual.path).is_file()
+                {
+                    return Err("撤权后重新打开 Wiki 或查询出处失败".into());
+                }
+                result["revocation"] = json!({"affected": impact, "reopened": true,
+                    "remainingTopics": store::pages(&store::read(data.path())?, &space)?.len(),
+                    "revokedSourceInRecall": false, "originalPreserved": true});
+                Ok::<(), String>(())
             }),
         )
         .await

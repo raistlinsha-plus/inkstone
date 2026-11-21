@@ -116,10 +116,11 @@ const stages = [
   {
     id: "rust",
     command: join(homedir(), ".cargo/bin/cargo"),
-    args: ["test", "--locked", "--lib", "--bins"],
+    args: ["test", "--locked", "--workspace", "--lib", "--bins", "--tests", "--features", "inkstone-cli/isolated-fixture"],
     cwd: join(root, "src-tauri"),
     inputs: [
       "src-tauri/src",
+      "src-tauri/cli",
       "src-tauri/Cargo.toml",
       "src-tauri/Cargo.lock",
       "src-tauri/build.rs",
