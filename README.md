@@ -8,7 +8,7 @@ Inkstone is a local-first Markdown workspace for **macOS 13+ on Apple Silicon**.
 
 *The v0.9.6 editor with fictional project notes. The optional pixel-art companion sits in the page margin and can record a work milestone when you choose.*
 
-The 1.0 release candidate adds a read-only local CLI, Chinese evidence retrieval changes and a preview of the Wiki history affected when you remove a source. [Candidate notes](docs/DELIVERY-v1.0.0-rc.1.md) · [CLI guide](docs/EXTERNAL-TOOLS.zh-CN.md)
+The 1.0 release candidate adds a read-only local CLI, Chinese evidence retrieval changes and a preview of the Wiki history affected when you remove a source. [Candidate notes](docs/DELIVERY-v1.0.0-rc.2.md) · [CLI guide](docs/EXTERNAL-TOOLS.zh-CN.md)
 
 ## What you can do
 

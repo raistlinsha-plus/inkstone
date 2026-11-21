@@ -706,7 +706,15 @@ pub fn lexical_scored(
     query: &str,
     scope: Option<&str>,
 ) -> Result<Vec<RankedHit>, String> {
-    let terms = query_terms(query)
+    let mut tokens = query_terms(query);
+    for alias in crate::evidence::lexical_aliases(query) {
+        for token in query_terms(&alias) {
+            if !tokens.contains(&token) {
+                tokens.push(token);
+            }
+        }
+    }
+    let terms = tokens
         .iter()
         .map(|s| format!("\"{}\"", s.replace('"', "\"\"")))
         .collect::<Vec<_>>()

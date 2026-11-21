@@ -143,6 +143,72 @@ async fn compile_phase(
     Ok(())
 }
 
+// Only current, readable page references can satisfy an expected fact. A copy
+// of the sentence from the wrong document or a stale version does not count.
+fn cites_line(refs: &[Original], id: &str, text: &str, line: usize) -> bool {
+    let expected = text.lines().nth(line - 1).expect("fixed fixture line");
+    let hash = files::hash(text);
+    refs.iter().any(|r| {
+        r.document_id == id
+            && r.hash == hash
+            && r.start_line <= line
+            && line <= r.end_line
+            && r.quote.lines().nth(line - r.start_line) == Some(expected)
+    })
+}
+
+fn assess_published(
+    data: &Path,
+    ws: &Workspace,
+    space: &str,
+    manual: &str,
+    notice: &str,
+    text: &str,
+) -> Result<Value, String> {
+    let pages = status(data, ws, space)?.pages;
+    let mut refs = Vec::new();
+    for item in pages.into_iter().filter(|item| !item.stale) {
+        let page = super::super::read_page(data, ws, space, item.id, None)?;
+        refs.extend(page.refs);
+    }
+    let manual_deadline = cites_line(&refs, manual, text, 2);
+    let notice_deadline = cites_line(&refs, notice, OTHER, 2);
+    let incident_deadline = cites_line(&refs, manual, text, 3);
+    Ok(
+        json!({"manualOrdinaryRule": manual_deadline, "noticeOrdinaryRule": notice_deadline,
+        "incidentRule": incident_deadline, "allExpectedFactsCited": manual_deadline && notice_deadline && incident_deadline}),
+    )
+}
+
+#[test]
+fn wiki_smoke_credits_the_current_document_version_and_exact_source_line() {
+    let make = |doc: &str, body: &str, start_line, end_line, quote: &str| Original {
+        document_id: doc.into(),
+        title: MANUAL.into(),
+        path: "fictional.md".into(),
+        start_line,
+        end_line,
+        quote: quote.into(),
+        hash: files::hash(body),
+    };
+    let refs = vec![make(
+        "manual",
+        NEW,
+        2,
+        3,
+        &NEW.lines().skip(1).collect::<Vec<_>>().join("\n"),
+    )];
+    assert!(cites_line(&refs, "manual", NEW, 3));
+    assert!(!cites_line(&refs, "manual", OLD, 3));
+    assert!(!cites_line(&refs, "notice", NEW, 3));
+    assert!(!cites_line(
+        &[make("manual", NEW, 2, 2, OTHER.lines().nth(1).unwrap())],
+        "manual",
+        NEW,
+        2
+    ));
+}
+
 fn redact(value: &mut Value, secret: &str) {
     match value {
         Value::String(text) => *text = text.replace(secret, "[redacted]"),
@@ -213,6 +279,8 @@ fn credential_error(reason: &str) -> Option<&'static str> {
     }
 }
 
+const WIKI_MISSING_EVIDENCE: &str = "wiki-expected-evidence-not-verified";
+
 pub(crate) async fn run_batch_wiki(
     config: crate::Settings,
     credentials: CredentialReader,
@@ -223,7 +291,10 @@ pub(crate) async fn run_batch_wiki(
     }
     run_wiki(config.chat, credentials, path, KeySource::BatchSaved)
         .await
-        .map_err(|reason| credential_error(&reason).unwrap_or("wiki-evaluation-incomplete"))
+        .map_err(|reason| match reason.as_str() {
+            WIKI_MISSING_EVIDENCE => WIKI_MISSING_EVIDENCE,
+            other => credential_error(other).unwrap_or("wiki-evaluation-incomplete"),
+        })
 }
 
 async fn run_wiki(
@@ -319,11 +390,20 @@ async fn run_wiki(
                     &mut result["initial"],
                 )
                 .await?;
+                result["initial"]["evidenceCheck"] = assess_published(data.path(), &ws, &space, &manual.id, &notice.id, OLD)?;
+                let dependent: HashSet<_> = store::pages(&store::read(data.path())?, &space)?
+                    .into_iter()
+                    .filter(|(_, _, content)| content.inputs.iter().any(|input| input.document_id == manual.id)
+                        || content.originals().any(|reference| reference.document_id == manual.id))
+                    .map(|(id, _, _)| id)
+                    .collect();
                 files::write_atomic(&ws.root.join(&manual.path), NEW.as_bytes())?;
                 let before = status(data.path(), &ws, &space)?.pages;
-                let stale_metadata_cleared = before
-                    .iter()
-                    .all(|page| page.stale && page.summary.is_empty());
+                let stale_metadata_cleared = !dependent.is_empty()
+                    && dependent.iter().all(|id| before.iter().any(|page|
+                        &page.id == id && page.stale && page.summary.is_empty()))
+                    && before.iter().filter(|page| !dependent.contains(&page.id)).all(|page| !page.stale);
+                result["refresh"]["affectedPageCount"] = json!(dependent.len());
                 result["refresh"]["beforeRecompile"] = json!(before);
                 result["refresh"]["staleMetadataCleared"] = json!(stale_metadata_cleared);
                 if !stale_metadata_cleared {
@@ -339,6 +419,10 @@ async fn run_wiki(
                     &mut result["refresh"],
                 )
                 .await?;
+                result["refresh"]["evidenceCheck"] = assess_published(data.path(), &ws, &space, &manual.id, &notice.id, NEW)?;
+                let query = "普通工单初次响应";
+                let hits_before = super::super::recall(data.path(), &ws, query, None)?;
+                let visible_before = hits_before.iter().any(|hit| hit.path == manual.path);
                 let mut db = store::write(data.path())?;
                 let tx = db.transaction().map_err(error)?;
                 result["stage"] = json!("revocation");
@@ -351,7 +435,7 @@ async fn run_wiki(
                 store::save_policy(&tx, &space, &restricted)?;
                 tx.commit().map_err(error)?;
                 drop(db);
-                let recalled = super::super::recall(data.path(), &ws, "普通工单", None)?;
+                let recalled = super::super::recall(data.path(), &ws, query, None)?;
                 if impact.pages == 0
                     || recalled.iter().any(|hit| hit.path == manual.path)
                     || !ws.root.join(&manual.path).is_file()
@@ -360,7 +444,7 @@ async fn run_wiki(
                 }
                 result["revocation"] = json!({"affected": impact, "reopened": true,
                     "remainingTopics": store::pages(&store::read(data.path())?, &space)?.len(),
-                    "revokedSourceInRecall": false, "originalPreserved": true});
+                    "sourceFoundBeforeRevocation": visible_before, "revokedSourceInRecall": false, "originalPreserved": true});
                 Ok::<(), String>(())
             }),
         )
@@ -381,10 +465,20 @@ async fn run_wiki(
     }
     result["trace"] = trace.snapshot();
     result["completed"] = json!(outcome.is_ok());
+    let outcome = outcome.and_then(|()| {
+        let passed = result["initial"]["evidenceCheck"]["allExpectedFactsCited"] == true
+            && result["refresh"]["evidenceCheck"]["allExpectedFactsCited"] == true
+            && result["revocation"]["sourceFoundBeforeRevocation"] == true;
+        result["evidenceAndRevocationPassed"] = json!(passed);
+        result["stage"] = json!("finished");
+        if passed {
+            Ok(())
+        } else {
+            Err(WIKI_MISSING_EVIDENCE)
+        }
+    });
     if let Err(reason) = &outcome {
         result["error"] = json!(reason);
-    } else {
-        result["stage"] = json!("finished");
     }
     serde_json::to_writer_pretty(report, &result).map_err(|_| "Wiki 评测报告保存失败")?;
     outcome.map_err(str::to_owned)

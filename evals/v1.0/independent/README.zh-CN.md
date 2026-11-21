@@ -32,7 +32,7 @@ cargo test --offline --manifest-path src-tauri/Cargo.toml --lib \
 
 报告位于 `$packet_report_dir/keyword.json`。授权超时会留下 `incomplete` 状态及失败阶段。
 
-## 在同一进程验证四个阶段
+## 在同一进程验证问答和 Wiki
 
 桌面设置需已启用问答、向量和重排服务，并保存与各地址绑定的密钥。以下命令会实际调用这些服务，运行前请确认用量预算。在仓库根目录执行，保留该进程直至结束。
 
@@ -53,6 +53,8 @@ cargo test --offline --manifest-path src-tauri/Cargo.toml --lib \
 | rerank-40 | 同一冻结集，重排 | 160 | 600 秒 |
 | keyword-52 | 独立集，关键词检索 | 104 | 1200 秒 |
 | wiki | 合成资料的 Wiki 编写与刷新 | 2 | 75 秒 |
+
+如需在同一程序中比较三种模式，在这次运行的环境里加上 `INKSTONE_BATCH_KEYWORD_BASELINE=1`。它会在上述阶段之前增加 keyword-40，使用同一已冻结的 40 题，最多 160 次 HTTP 请求，时限 600 秒。
 
 已启动阶段分别写入同名 JSON。整批状态在 `$batch_parent/results/batch.json`，记录各阶段是否启动、耗时、错误和报告文件名。若系统授权缺失、仍在等待或超时，整批停止。人工评分需另外核对原文和回答。
 

@@ -152,6 +152,16 @@ async fn offline_public_packet_preserves_scope_and_history() -> Result<(), &'sta
     assert_eq!(report["live"], false);
     let records = report["records"].as_array().unwrap();
     assert_eq!(records.len(), scope_and_history.len());
+    let stages = &report["offlineQuestionStages"];
+    let counts = &stages["questions"];
+    let count = |stage: &str| counts[stage].as_u64().expect("missing stage count");
+    assert_eq!(
+        count("searched") + count("clarifiedBeforeSearch"),
+        records.len() as u64
+    );
+    assert!(count("withCandidates") <= count("searched"));
+    assert!(count("withAdmittedEvidence") <= count("withCandidates"));
+    assert!(count("withAssembledContext") <= count("withAdmittedEvidence"));
     let mut histories: HashMap<String, Vec<String>> = HashMap::new();
     let mut followups = 0;
     for (row, (id, docs, root, question)) in records.iter().zip(scope_and_history) {
@@ -181,5 +191,6 @@ async fn offline_public_packet_preserves_scope_and_history() -> Result<(), &'sta
         history.push(question);
     }
     assert_eq!(followups, 7);
+    println!("{stages}");
     Ok(())
 }

@@ -128,48 +128,60 @@ fn attributed_paths(a: &str, b: &str, results: &[SearchResult]) -> Option<[Strin
     let paths = [identify(a)?, identify(b)?];
     (paths[0] != paths[1]).then_some(paths)
 }
+fn typed_question(question: &str) -> bool {
+    super::availability::Availability::parse(question).is_some()
+        || super::per_unit::Request::parse(question).is_some()
+}
+
 impl Request {
+    pub(super) fn has_typed_clause(&self) -> bool {
+        self.0.iter().any(|facet| typed_question(&facet.question))
+    }
+
     pub(super) fn parse(query: &str, results: &[SearchResult]) -> Self {
         // A split after a scope, a conditional or an exclusion must not make
         // the rest of the question searchable on its own.
-        if !has(
-            query,
-            &[
-                "？",
-                "?",
-                "几点",
-                "何时",
-                "多久",
-                "在哪",
-                "哪里",
-                "多少",
-                "是否",
-                "什么时候",
-            ],
-        ) || has(
-            query,
-            &[
-                "只看",
-                "只查",
-                "仅看",
-                "只用",
-                "仅用",
-                "只根据",
-                "仅根据",
-                "限定",
-                "排除",
-                "不包括",
-                "除了",
-                "不要",
-                "如果",
-                "假如",
-                "只要",
-                "除非",
-                "前者",
-                "后者",
-                "其中",
-            ],
-        ) {
+        if !typed_question(query)
+            && !has(
+                query,
+                &[
+                    "？",
+                    "?",
+                    "几点",
+                    "何时",
+                    "多久",
+                    "在哪",
+                    "哪里",
+                    "多少",
+                    "是否",
+                    "什么时候",
+                ],
+            )
+            || has(
+                query,
+                &[
+                    "只看",
+                    "只查",
+                    "仅看",
+                    "只用",
+                    "仅用",
+                    "只根据",
+                    "仅根据",
+                    "限定",
+                    "排除",
+                    "不包括",
+                    "除了",
+                    "不要",
+                    "如果",
+                    "假如",
+                    "只要",
+                    "除非",
+                    "前者",
+                    "后者",
+                    "其中",
+                ],
+            )
+        {
             return Self(vec![]);
         }
         let parts: Vec<_> = query
@@ -229,12 +241,9 @@ impl Request {
                     .is_none_or(|paths| paths.contains(&hit.path))
             })
             .any(|facet| {
-                body.lines()
-                    .filter(|line| !line.trim_start().starts_with('#'))
-                    .flat_map(|line| line.split(['。', '！', '？']))
-                    .any(|line| {
-                        facet.supports(hit.title.as_deref().unwrap_or(&hit.heading), line.trim())
-                    })
+                super::statements(&body).any(|line| {
+                    facet.supports(hit.title.as_deref().unwrap_or(&hit.heading), line.trim())
+                })
             })
     }
 }
@@ -242,6 +251,12 @@ impl Request {
 impl Facet {
     fn supports(&self, title: &str, line: &str) -> bool {
         let q = self.question.as_str();
+        if let Some(availability) = super::availability::Availability::parse(q) {
+            return !super::provisional(line) && availability.supports(line);
+        }
+        if let Some(duration) = super::per_unit::Request::parse(q) {
+            return !super::provisional(line) && duration.supports(title, line);
+        }
         if line.is_empty() || self.anchors.is_empty() || !requested_value(q, line) {
             return false;
         }

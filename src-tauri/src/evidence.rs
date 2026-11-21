@@ -5,9 +5,56 @@ use crate::{
 };
 use std::{collections::HashSet, path::Path};
 
+mod availability;
+mod dated_clock;
 mod facets;
+mod per_unit;
 mod predicate;
 pub(crate) mod wiki_alias;
+
+pub(crate) fn lexical_aliases(query: &str) -> Vec<String> {
+    query
+        .split(['？', '?', '；', ';'])
+        .filter_map(availability::Availability::parse)
+        .filter_map(|request| request.lexical_alias())
+        .collect()
+}
+
+fn statements(text: &str) -> impl Iterator<Item = &str> {
+    text.lines()
+        .filter(|line| !line.trim_start().starts_with('#'))
+        .flat_map(|line| line.split_inclusive(['。', '！', '？', '!', '?']))
+        .map(str::trim)
+        .filter(|line| !line.ends_with(['？', '?']))
+        .map(|line| line.trim_end_matches(['。', '！', '!']).trim())
+}
+
+fn provisional(text: &str) -> bool {
+    [
+        "草案",
+        "提案",
+        "未生效",
+        "征求意见",
+        "拟议",
+        "待确认",
+        "未确认",
+        "待核实",
+        "未核实",
+        "尚不确定",
+        "尚未确定",
+        "可能",
+        "假设",
+        "假如",
+        "如果",
+        "是否",
+        "仅供讨论",
+        "提议",
+        "撤回",
+        "作废",
+    ]
+    .iter()
+    .any(|word| text.contains(word))
+}
 
 fn terms(query: &str) -> Vec<String> {
     db::query_terms(query)
@@ -384,27 +431,33 @@ fn years(text: &str) -> impl Iterator<Item = &str> {
     })
 }
 
+fn date_number(text: &str) -> Option<u8> {
+    let digit = |s: &str| {
+        let c = s.chars().next()?;
+        (s.chars().count() == 1)
+            .then(|| {
+                "一二三四五六七八九"
+                    .chars()
+                    .position(|d| d == c)
+                    .map(|i| i as u8 + 1)
+            })
+            .flatten()
+    };
+    if let Ok(number) = text.parse::<u8>() {
+        return Some(number);
+    }
+    if let Some((tens, ones)) = text.split_once('十') {
+        return Some(
+            if tens.is_empty() { 1 } else { digit(tens)? } * 10
+                + if ones.is_empty() { 0 } else { digit(ones)? },
+        );
+    }
+    digit(text)
+}
+
 pub(crate) fn month_days(text: &str) -> impl Iterator<Item = (u8, u8)> + '_ {
     const DIGITS: &str = "一二三四五六七八九";
     let numeral = |c: char| c.is_ascii_digit() || c == '十' || DIGITS.contains(c);
-    fn date_number(text: &str) -> Option<u8> {
-        let digit = |s: &str| {
-            let c = s.chars().next()?;
-            (s.chars().count() == 1)
-                .then(|| DIGITS.chars().position(|d| d == c).map(|i| i as u8 + 1))
-                .flatten()
-        };
-        if let Ok(number) = text.parse::<u8>() {
-            return Some(number);
-        }
-        if let Some((tens, ones)) = text.split_once('十') {
-            return Some(
-                if tens.is_empty() { 1 } else { digit(tens)? } * 10
-                    + if ones.is_empty() { 0 } else { digit(ones)? },
-            );
-        }
-        digit(text)
-    }
     text.match_indices('月').filter_map(move |(at, label)| {
         let prefix = text[..at].trim_end();
         let month = date_number(prefix.rsplit(|c| !numeral(c)).next()?)?;
@@ -539,6 +592,10 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
         && subquestions.is_empty()
         && predicate.is_none())
     .then(|| facets::Request::parse(&query, results));
+    let clock = dated_clock::Request::parse(&query);
+    let typed = facets
+        .as_ref()
+        .is_some_and(facets::Request::has_typed_clause);
     let mut requested_years = years(&query);
     let year = requested_years
         .next()
@@ -614,17 +671,28 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
         } else {
             ordinary && requested_value(&query, &r.text)
         };
-        r.evidence = (r.bm25_rank.is_some() || wiki)
-            && has_body
-            && year.is_none_or(|year| years(&text).any(|seen| seen == year))
-            && day.is_none_or(|day| month_days(&text).any(|seen| seen == day))
-            && (supported
-                || (!wiki && facets.as_ref().is_some_and(|facets| facets.supports(r)))
+        let facet_support = (!wiki || original_alias_anchor)
+            && facets.as_ref().is_some_and(|request| request.supports(r));
+        let admitted = if let Some(request) = &clock {
+            request.supports(r.title.as_deref().unwrap_or(""), &r.heading, &r.text)
+        } else if typed {
+            // A matching question, title or topic cannot substitute for a
+            // statement of this predicate, including for an anchored Wiki hit.
+            facet_support
+        } else {
+            supported
+                || facet_support
                 || original_alias_anchor
                 || (!wiki
                     && predicate.as_ref().is_some_and(|request| {
                         request.supports(r.title.as_deref(), &r.heading, &r.text)
-                    })));
+                    }))
+        };
+        r.evidence = (r.bm25_rank.is_some() || wiki)
+            && has_body
+            && year.is_none_or(|year| years(&text).any(|seen| seen == year))
+            && day.is_none_or(|day| month_days(&text).any(|seen| seen == day))
+            && admitted;
         r.match_kind = if wiki {
             "wiki"
         } else if r.evidence {
@@ -810,6 +878,84 @@ mod tests {
         let conditional = facets::Request::parse("如果有登记，周三签收回执几点截止？", &hits);
         assert!(!conditional.supports(&hits[2]));
     }
+    #[test]
+    fn conditional_opening_requires_the_same_condition_and_a_declared_status() {
+        let q = "下雪还开吗？周六航班何时起飞？";
+        let request = facets::Request::parse(q, &[]);
+        assert!(lexical_aliases(q).contains(&"雪天".to_string()));
+        assert!(request.supports(&hit("游客中心", "雪天仍然营业。")));
+        assert!(request.supports(&hit("游客中心", "下雪时暂停开放。")));
+        assert!(!request.supports(&hit("游客中心", "暴雪天仍然营业。")));
+        assert!(!request.supports(&hit("游客中心", "雪天停车位仍然开放。")));
+        assert!(!request.supports(&hit("游客中心", "雪天营业时间另行通知。")));
+        assert!(!request.supports(&hit("游客中心", "周六航班起飞前确认通道仍开放。")));
+    }
+
+    #[test]
+    fn compared_session_durations_bind_the_subject_weekday_and_unit() {
+        let q = "周二常规演奏和新讲座每场多久？";
+        let request = facets::Request::parse(q, &[]);
+        assert!(request.supports(&hit("常规演奏排班", "周二每场最长为90分钟。")));
+        assert!(request.supports(&hit("场馆简讯", "新增周二讲座，每场安排45分钟。")));
+        assert!(!request.supports(&hit("常规演奏排班", "周一每场最长为90分钟。")));
+        assert!(!request.supports(&hit("常规演奏排班", "周二每场可预约，提前90分钟入场。")));
+        assert!(!request.supports(&hit("常规演奏排班", "周二每轮最长为90分钟。")));
+        assert!(!request.supports(&hit("参观排班", "周二每场最长为90分钟。")));
+        assert!(!request.supports(&hit("讲座", "周二原有讲座每场最长为90分钟。")));
+    }
+
+    #[test]
+    fn typed_requests_reject_questions_and_qualified_drafts_through_mark() {
+        for query in [
+            "下雪还开吗？",
+            "下雪还开吗",
+            "下雪还开吗？周六航班何时起飞？",
+        ] {
+            let mut hits = [
+                hit("下雪还开吗", "下雪还开吗？"),
+                hit("下雪还开吗", "雪天照常营业？"),
+                hit("下雪还开吗", "雪天照常营业，仅为草案，尚未确认。"),
+                hit("下雪还开吗", "雪天照常营业。"),
+            ];
+            mark(query, &mut hits);
+            assert_eq!(
+                hits.map(|h| h.evidence),
+                [false, false, false, true],
+                "{query}"
+            );
+        }
+        let q = "周二常规演奏和新讲座每场多久";
+        let mut hits = [
+            hit(q, q),
+            hit(q, "周二每场最长为90分钟？"),
+            hit(q, "周二每轮最长为90分钟。"),
+            hit(q, "周二观影每场最长为90分钟。"),
+            hit("常规演奏", "周二每场45分钟，仅作提案，尚未生效。"),
+            hit("常规演奏和新讲座排班", "周二每场为90分钟。"),
+            hit("常规演奏和新讲座排班", "周二常规演奏每场为90分钟。"),
+            hit("常规演奏排班", "周二每场最长为90分钟。"),
+        ];
+        mark(q, &mut hits);
+        assert_eq!(
+            hits.map(|h| h.evidence),
+            [false, false, false, false, false, false, true, true]
+        );
+    }
+
+    #[test]
+    fn dated_clock_excludes_superseded_month_and_binds_time_to_action() {
+        let mut hits = [
+            hit("九月通知", "9月6日东区车库于18:45关闭。"),
+            hit("8月记录", "9月6日东区车库于17:45关闭。"),
+            hit("九月通知", "9月7日东区车库于16:45关闭。"),
+            hit("九月通知", "9月6日东区车库于16:45开放。"),
+            hit("九月通知", "9月6日东区车库关闭，接驳车于16:45出发。"),
+        ];
+        mark("九月六号东区车库几点关，不要八月记录。", &mut hits);
+        assert_eq!(hits.map(|h| h.evidence), [true, false, false, false, false]);
+        assert!(dated_clock::Request::parse("只看南站九月六号东区车库几点关？").is_none());
+    }
+
     #[test]
     fn deposit_needs_a_matching_value_in_a_factual_sentence() {
         let mut hits = [

@@ -489,6 +489,16 @@ struct ReportTarget<'a> {
     rubric_hash: Option<&'a str>,
 }
 
+#[derive(Default, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OfflineQuestionStages {
+    searched: usize,
+    with_candidates: usize,
+    with_admitted_evidence: usize,
+    with_assembled_context: usize,
+    clarified_before_search: usize,
+}
+
 fn report_path(suite: &Suite) -> Result<PathBuf, &'static str> {
     std::env::var_os(format!("{}_REPORT", suite.env_prefix))
         .map(PathBuf::from)
@@ -588,6 +598,7 @@ async fn run_fixture(
     let trace = eval_trace::Trace::new(suite.max_requests, suite.max_seconds);
     let mut keys = Vec::new();
     let mut rows = Vec::new();
+    let mut offline_stages = OfflineQuestionStages::default();
     let mut stage = "setup";
     let operation = async {
         if live {
@@ -658,6 +669,9 @@ async fn run_fixture(
                 .map_err(|_| "fixture-grounding-prepare-failed")?;
             let mut offline_hits = None;
             let (answer, clarification, failure) = if let Some(text) = prepared.clarification {
+                if !live {
+                    offline_stages.clarified_before_search += 1;
+                }
                 let response = models::ChatResponse {
                     external_sources: vec![],
                     trace: None,
@@ -699,6 +713,12 @@ async fn run_fixture(
                     offline_context(&state, ws, &started, &prepared, config.chat.context_chars)
                         .await
                         .map(|(response, hits)| {
+                            offline_stages.searched += 1;
+                            offline_stages.with_candidates += usize::from(!hits.is_empty());
+                            offline_stages.with_admitted_evidence +=
+                                usize::from(hits.iter().any(|hit| hit.evidence));
+                            offline_stages.with_assembled_context +=
+                                usize::from(!response.sources.is_empty());
                             offline_hits = Some(hits);
                             response
                         })
@@ -800,7 +820,7 @@ async fn run_fixture(
     } else {
         result
     };
-    let report = json!({
+    let mut report = json!({
         "version":env!("CARGO_PKG_VERSION"), "suite":suite.id,
         "fixtureSha256":fixture_hash, "rubricSha256":rubric_hash,
         "status":if result.is_ok() { "complete" } else { "incomplete" },
@@ -810,6 +830,14 @@ async fn run_fixture(
         "syntheticOnly":true,"independentFixtureAuthor":true,"externalBlindReview":false,
         "manualReview":null,"records":rows
     });
+    if !live {
+        report["offlineQuestionStages"] = json!({
+            "fixtureSha256": fixture_hash,
+            "contextChars": config.chat.context_chars,
+            "httpAttempts": report["usage"]["httpAttempts"],
+            "questions": offline_stages,
+        });
+    }
     save_report(&path, &report, &keys)?;
     result
 }

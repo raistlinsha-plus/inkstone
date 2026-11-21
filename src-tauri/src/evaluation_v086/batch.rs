@@ -20,7 +20,12 @@ fn live_saved_services() -> Result<(), &'static str> {
         .map_err(|_| "runtime initialization failed")?;
     let outcome = runtime.block_on(DEFAULT_AUTH_WAIT_SECONDS.scope(
         AUTH_SECONDS,
-        run(&path, saved_settings(), CredentialReader::default()),
+        run(
+            &path,
+            saved_settings(),
+            CredentialReader::default(),
+            std::env::var("INKSTONE_BATCH_KEYWORD_BASELINE").as_deref() == Ok("1"),
+        ),
     ));
     runtime.shutdown_background();
     outcome
@@ -33,12 +38,8 @@ async fn run_phase(
     path: PathBuf,
 ) -> Result<(), &'static str> {
     match phase {
-        "hybrid-40" | "rerank-40" => {
-            let mode = if phase == "hybrid-40" {
-                "hybrid"
-            } else {
-                "rerank"
-            };
+        "keyword-40" | "hybrid-40" | "rerank-40" => {
+            let (mode, _) = phase.split_once('-').ok_or("unknown-batch-phase")?;
             run_fixture(
                 &EXTENDED,
                 mode,
@@ -77,6 +78,7 @@ async fn run(
     dir: &Path,
     settings: Result<Settings, &'static str>,
     credentials: CredentialReader,
+    keyword_baseline: bool,
 ) -> Result<(), &'static str> {
     if !dir.is_absolute() {
         return Err("use a new absolute batch report directory");
@@ -90,7 +92,15 @@ async fn run(
     directory
         .create(dir)
         .map_err(|_| "cannot create new batch report directory")?;
-    let mut phases = PHASES.map(|name| json!({"name":name,"status":"not-started"}));
+    let stages: Vec<_> = keyword_baseline
+        .then_some("keyword-40")
+        .into_iter()
+        .chain(PHASES)
+        .collect();
+    let mut phases: Vec<_> = stages
+        .iter()
+        .map(|name| json!({"name":name,"status":"not-started"}))
+        .collect();
     let mut stage = "settings";
     let started = Instant::now();
     let result = async {
@@ -111,7 +121,7 @@ async fn run(
             check_keys(&auth_state, &config, "rerank", &mut stage, &mut Vec::new())
         ).await.map_err(|_| "authorization-time-budget-exhausted")??;
 
-        for (phase, record) in PHASES.iter().copied().zip(&mut phases) {
+        for (phase, record) in stages.iter().copied().zip(&mut phases) {
             stage = phase;
             eprintln!("Starting {phase}");
             let file = format!("{phase}.json");
@@ -177,7 +187,7 @@ async fn offline_missing_bound_key_stops_batch_before_any_stage() {
             .unwrap();
     }
     assert_eq!(
-        run(&out, Ok(config), reader).await,
+        run(&out, Ok(config), reader, false).await,
         Err("saved-address-bound-key-missing")
     );
     let files: Vec<_> = fs::read_dir(&out).unwrap().collect();
