@@ -20,9 +20,12 @@ fn live_saved_services() -> Result<(), &'static str> {
         .build()
         .map_err(|_| "runtime initialization failed")?;
     let selection = std::env::var("INKSTONE_BATCH_RC3_READER").unwrap_or_default();
-    let reader_trial = matches!(selection.as_str(), "1" | "confirm");
+    let rc4 = std::env::var("INKSTONE_BATCH_RC4_READER").as_deref() == Ok("1");
+    let reader_trial = rc4 || matches!(selection.as_str(), "1" | "confirm");
     let mut phases = Vec::new();
-    if selection == "confirm" {
+    if rc4 {
+        phases.extend_from_slice(&["rc4-blind", "keyword-52", "keyword-40"]);
+    } else if selection == "confirm" {
         phases.extend_from_slice(&["keyword-52", "keyword-40"]);
     } else if reader_trial {
         phases.extend_from_slice(READER_PHASES);
@@ -88,6 +91,7 @@ async fn run_phase(
             )
             .await
         }
+        "rc4-blind" => super::rc4::live_with_settings(&path, config, credentials).await,
         "causal-dev" => crate::evaluation_rc3::live_with_settings(&path, config, credentials).await,
         "wiki" => crate::wiki::run_batch_wiki(config, credentials, &path).await,
         _ => Err("unknown-batch-phase"),

@@ -1,6 +1,8 @@
 //! Opt-in live scoring input. All content comes from the frozen synthetic fixture.
 mod batch;
 mod independent;
+#[path = "evaluation_rc4.rs"]
+pub(crate) mod rc4;
 
 use crate::{
     assistant, assistant_sources::WebAccess, db, documents, eval_trace, files, library, models,
@@ -792,6 +794,12 @@ async fn run_fixture(
                     })
                     .collect::<Vec<_>>()
             });
+            let ranked = offline_hits.as_ref().map(|hits| {
+                let mut ranked: Vec<_> = hits.iter().filter(|hit| hit.bm25_rank.is_some()).collect();
+                ranked.sort_by_key(|hit| (hit.bm25_rank, hit.id));
+                ranked.truncate(8);
+                ranked
+            });
             rows.push(json!({
                 "id":case.id, "expected":case.expected, "question":case.question,
                 "workspaceDocuments":paths, "selectedDocuments":case.documents, "scope":started.scope,
@@ -799,9 +807,11 @@ async fn run_fixture(
                 "previousQuestions":started.previous_questions, "previousAnswer":started.previous_answer,
                 "elapsedMs":start.elapsed().as_millis(),
                 "httpAttempts":trace.snapshot()["httpAttempts"].as_u64().unwrap_or_default() - before,
-                "requiredEvidenceStages": offline_hits.map(|hits| case.required.iter().zip(&expected_evidence).map(|(required, in_context)| {
+                "rc4Candidates": offline_hits.as_ref().filter(|_| suite.id == "rc4-blind").map(|hits| rc4::candidate_snapshot(hits, paths)),
+                "requiredEvidenceStages": offline_hits.as_ref().map(|hits| case.required.iter().zip(&expected_evidence).map(|(required, in_context)| {
                     let matches = |hit: &models::SearchResult| hit.path == paths[&required.document] && hit.text.contains(&required.quote);
                     json!({"document": required.document, "candidate": hits.iter().any(matches),
+                        "top8": ranked.as_ref().is_some_and(|ranked| ranked.iter().any(|hit| matches(hit))),
                         "eligible": hits.iter().any(|hit| hit.evidence && matches(hit)),
                         "inSelectedQuote": answer.as_ref().is_some_and(|a| a.sources.iter().any(|s| s.match_kind == "selected-quote" && matches(s))),
                         "inContext": in_context})
