@@ -2,6 +2,8 @@
 mod claim_review;
 mod compile;
 #[cfg(test)]
+pub(crate) use compile::live_eval::run_batch_wiki;
+#[cfg(test)]
 mod eval;
 mod review_compare;
 mod store;
@@ -57,6 +59,7 @@ struct Policy {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct PolicyInput {
     expected_revision: i64,
+    removal_token: Option<String>,
     enabled: bool,
     paused: bool,
     automatic: bool,
@@ -564,6 +567,35 @@ pub(crate) fn wiki_status(state: State<'_, AppState>) -> Result<Status, String> 
     Ok(view)
 }
 
+fn removed_sources<'a>(policy: &'a Policy, retained: &[String]) -> Vec<&'a str> {
+    policy
+        .document_ids
+        .iter()
+        .filter(|id| !retained.contains(id))
+        .map(String::as_str)
+        .collect()
+}
+
+#[tauri::command]
+pub(crate) fn wiki_removal_impact(
+    state: State<'_, AppState>,
+    project_id: String,
+    expected_revision: i64,
+    document_ids: Vec<String>,
+) -> Result<store::RemovalImpact, String> {
+    let (_, space) = active(&state)?;
+    if space != project_id || document_ids.len() > MAX_SOURCES {
+        return Err("资料范围已变化，请重新打开 Wiki。".into());
+    }
+    let mut db = store::read(&state.data_dir)?;
+    let tx = db.transaction().map_err(error)?;
+    let current = store::policy(&tx, &space)?;
+    if current.revision != expected_revision {
+        return Err("Wiki 设置已变化，请重新载入配置。".into());
+    }
+    store::removal_impact(&tx, &space, &removed_sources(&current, &document_ids))
+}
+
 #[tauri::command]
 pub(crate) fn wiki_set_policy(
     app: tauri::AppHandle,
@@ -617,12 +649,13 @@ pub(crate) fn wiki_set_policy(
         document_ids: ids,
         provider_fingerprint: fingerprint,
     };
-    let removed = previous
-        .document_ids
-        .iter()
-        .filter(|id| !policy.document_ids.contains(id))
-        .map(String::as_str)
-        .collect::<Vec<_>>();
+    let removed = removed_sources(&previous, &policy.document_ids);
+    if !removed.is_empty() {
+        let impact = store::removal_impact(&tx, &space, &removed)?;
+        if input.removal_token.as_deref() != Some(&impact.token) {
+            return Err("清除范围已变化，请重新查看影响后确认。".into());
+        }
+    }
     store::purge_derived(&tx, &space, &removed)?;
     store::save_policy(&tx, &space, &policy)?;
     tx.commit().map_err(error)?;

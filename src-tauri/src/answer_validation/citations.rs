@@ -25,6 +25,7 @@ struct Clause {
     text: String,
     citations: Vec<usize>,
     first_reference: Option<String>,
+    is_question: bool,
 }
 
 fn markdown_clauses(markdown: &str) -> Vec<Clause> {
@@ -90,6 +91,13 @@ fn markdown_clauses(markdown: &str) -> Vec<Clause> {
     result
 }
 
+pub(crate) fn cited_numbers(markdown: &str) -> HashSet<usize> {
+    markdown_clauses(markdown)
+        .into_iter()
+        .flat_map(|clause| clause.citations)
+        .collect()
+}
+
 fn take_citation(tail: &str) -> Option<(usize, usize)> {
     let body = tail.strip_prefix('[')?;
     let end = body.bytes().take(20).position(|c| c == b']')?;
@@ -131,6 +139,7 @@ fn clauses(text: &str) -> Vec<Clause> {
             if matches!(c, '。' | '！' | '？' | '；' | '!' | '?' | ';')
                 || c == '.' && chars.peek().is_none_or(|(_, next)| !next.is_ascii_digit())
             {
+                current.is_question |= matches!(c, '？' | '?');
                 boundary = true;
                 continue;
             }
@@ -532,6 +541,178 @@ fn polarity_status(claim: &(String, String, bool), evidence: &[&str]) -> Option<
     }
 }
 
+// A retrieval miss describes the supplied excerpts. A statement about what a
+// document omits needs its own evidence, even when the claim has no numbers.
+fn documentary_absence(statement: &str) -> bool {
+    let lower = statement.to_ascii_lowercase();
+    // A categorical statement can also omit the verb, e.g. “全文没有地址”.
+    if [
+        "全文", "资料", "材料", "档案", "报告", "记录", "文件", "原文", "文档",
+    ]
+    .iter()
+    .any(|scope| {
+        lower.match_indices(scope).any(|(at, matched)| {
+            let rest = lower[at + matched.len()..].trim_start();
+            let predicate = rest.strip_prefix(['中', '里']).unwrap_or(rest).trim_start();
+            ["没有", "均无", "都没有", "未见", "不存在"]
+                .iter()
+                .any(|p| predicate.starts_with(p))
+                || predicate
+                    .strip_prefix('无')
+                    .is_some_and(|tail| !tail.starts_with(['法', '须', '需', '论']))
+        })
+    }) {
+        return true;
+    }
+    [
+        "未记录",
+        "没有记录",
+        "未记载",
+        "没有记载",
+        "未提及",
+        "没有提及",
+        "未注明",
+        "没有注明",
+        "未说明",
+        "没有说明",
+        "未填写",
+        "未公布",
+        "未披露",
+        "未给出",
+        "未提供",
+        "没有提供",
+        "未列明",
+        "没有相关记录",
+        "not recorded",
+        "not documented",
+        "not specified",
+        "not provided",
+        "does not mention",
+        "do not mention",
+        "no record of",
+    ]
+    .iter()
+    .any(|marker| {
+        lower.match_indices(marker).any(|(at, _)| {
+            let prefix = lower[..at].trim().trim_end_matches(['，', ',']).trim_end();
+            // Only exempt a clause whose grammatical subject is the excerpt itself.
+            // Merely mentioning the search before a claim about a document is insufficient.
+            let prefix = prefix.strip_prefix('在').unwrap_or(prefix);
+            let prefix = prefix.strip_suffix('中').unwrap_or(prefix);
+            ![
+                "本次提供的片段",
+                "当前片段",
+                "已检索到的片段",
+                "所引片段",
+                "the supplied excerpt",
+                "the supplied excerpts",
+                "the available excerpt",
+                "the available excerpts",
+            ]
+            .contains(&prefix)
+        })
+    })
+}
+
+// Preserve qualifications in both the answer and source. Stripping an actual
+// subject or condition here would let unrelated omissions support one another.
+fn attributed_statement(text: &str) -> &str {
+    let literal = [
+        "原文写明",
+        "原文明确写明",
+        "原文注明",
+        "原文记载",
+        "原文明示",
+    ]
+    .iter()
+    .find_map(|prefix| text.trim().strip_prefix(prefix))
+    .unwrap_or(text);
+    literal.trim_matches(|c: char| {
+        c.is_whitespace() || matches!(c, '：' | ':' | '“' | '”' | '"' | '，' | ',')
+    })
+}
+
+fn derivation(statement: &str) -> bool {
+    let lower = statement.to_ascii_lowercase();
+    [
+        "推算",
+        "计算得",
+        "相差",
+        "差值为",
+        "差额为",
+        "合计为",
+        "derived from",
+        "calculated from",
+        "difference between",
+    ]
+    .iter()
+    .any(|marker| lower.contains(marker))
+}
+
+const MULTIPLE_SOURCES: &[&str] = &[
+    "两份资料",
+    "两份材料",
+    "两份记录",
+    "两个来源",
+    "两份报告",
+    "多个来源",
+    "both sources",
+    "two sources",
+    "both reports",
+    "two reports",
+];
+
+// A narrow attribution can introduce a proposition that is separately stated
+// in each source. Never remove conditions, subjects, or qualifiers to match it.
+fn explicit_conclusion(statement: &str) -> &str {
+    let text = attributed_statement(statement);
+    let Some(rest) = ["从", "根据", "基于"]
+        .iter()
+        .find_map(|p| text.strip_prefix(p))
+    else {
+        return text;
+    };
+    let Some(rest) = MULTIPLE_SOURCES.iter().find_map(|p| rest.strip_prefix(p)) else {
+        return text;
+    };
+    ["可推算出", "推算出", "可计算得出", "计算得出"]
+        .iter()
+        .find_map(|p| rest.strip_prefix(p))
+        .map(attributed_statement)
+        .filter(|conclusion| !conclusion.is_empty())
+        .unwrap_or(text)
+}
+
+fn literal_support(
+    claim: &str,
+    joint_claim: bool,
+    citations: &[usize],
+    sources: &[SearchResult],
+    source_clauses: &[Vec<Clause>],
+) -> bool {
+    let in_source = |number: &usize| {
+        source_clauses[number - 1]
+            .iter()
+            .any(|source| attributed_statement(&source.text).eq_ignore_ascii_case(claim))
+    };
+    if !joint_claim {
+        return citations.iter().any(in_source);
+    }
+    // Several chunks of the same document do not establish independent agreement.
+    let documents: HashSet<_> = citations
+        .iter()
+        .filter_map(|number| {
+            let source = &sources[number - 1];
+            if source.path.is_empty() {
+                source.title.as_deref().filter(|s| !s.trim().is_empty())
+            } else {
+                Some(source.path.as_str())
+            }
+        })
+        .collect();
+    documents.len() >= 2 && citations.iter().all(in_source)
+}
+
 pub(crate) fn audit_citations(
     answer: &str,
     finish: &str,
@@ -542,13 +723,26 @@ pub(crate) fn audit_citations(
     }
     let source_clauses = sources
         .iter()
-        .map(|source| markdown_clauses(&source.text))
+        .map(|source| {
+            markdown_clauses(&source.text)
+                .into_iter()
+                .filter(|clause| !clause.is_question && !clause.text.trim().is_empty())
+                .collect::<Vec<_>>()
+        })
         .collect::<Vec<_>>();
     markdown_clauses(answer)
         .into_iter()
         .filter_map(|clause| {
-            let quantities = quantity_atoms(&clause.text, false);
-            let polarity = words(&clause.text);
+            let absence = !clause.is_question && documentary_absence(&clause.text);
+            let derived = !clause.is_question && derivation(&clause.text);
+            let claim = if derived {
+                explicit_conclusion(&clause.text)
+            } else {
+                attributed_statement(&clause.text)
+            };
+            let value_text = if derived { claim } else { &clause.text };
+            let quantities = quantity_atoms(value_text, false);
+            let polarity = words(value_text);
             let citations = clause
                 .citations
                 .iter()
@@ -564,9 +758,21 @@ pub(crate) fn audit_citations(
                 || citations.len() < clause.citations.len()
                 || clause.text.trim().is_empty()
             {
-                (!quantities.is_empty() || polarity.is_some() || !clause.citations.is_empty())
-                    .then_some(Status::Unverified)
+                (!quantities.is_empty()
+                    || polarity.is_some()
+                    || absence
+                    || derived
+                    || !clause.citations.is_empty())
+                .then_some(Status::Unverified)
             } else {
+                let scope_check = if absence || derived {
+                    let lower = clause.text.to_ascii_lowercase();
+                    let joint_claim = MULTIPLE_SOURCES.iter().any(|p| lower.contains(p));
+                    (!literal_support(claim, joint_claim, &citations, sources, &source_clauses))
+                        .then_some(Status::Unverified)
+                } else {
+                    None
+                };
                 quantities
                     .iter()
                     .filter_map(|(prefix, value, _)| {
@@ -577,6 +783,7 @@ pub(crate) fn audit_citations(
                             .as_ref()
                             .and_then(|claim| polarity_status(claim, &evidence)),
                     )
+                    .chain(scope_check)
                     .max_by_key(|status| *status == Status::Conflict)
             }?;
             let excerpt = if clause.text.trim().is_empty() {
@@ -711,16 +918,18 @@ pub(crate) fn audit_wiki_summary<'a>(
 mod tests {
     use super::*;
 
+    fn source(index: usize, text: &str) -> SearchResult {
+        serde_json::from_value(serde_json::json!({
+            "id":index+1,"path":format!("rule-{index}.md"),"text":text,"heading":"","startLine":1,"endLine":1,
+            "hash":"h","score":1.0,"evidence":true,"matchKind":"keyword"
+        })).unwrap()
+    }
+
     fn check(answer: &str, sources: &[&str]) -> Vec<CitationCheck> {
         let sources = sources
             .iter()
-            .map(|text| {
-                serde_json::from_value(serde_json::json!({
-                    "id":1,"path":"rule.md","text":text,"heading":"","startLine":1,"endLine":1,
-                    "hash":"h","score":1.0,"evidence":true,"matchKind":"keyword"
-                }))
-                .unwrap()
-            })
+            .enumerate()
+            .map(|(index, text)| source(index, text))
             .collect::<Vec<_>>();
         audit_citations(answer, "stop", &sources)
     }
@@ -803,6 +1012,98 @@ mod tests {
         }
         assert_eq!(check("[1]", &["发布已完成。"])[0].excerpt, "[1]");
         assert!(check("配置示例里的 `[S1]` 保持原样。", &["发布已完成。"]).is_empty());
+    }
+
+    #[test]
+    fn a_search_miss_cannot_establish_what_a_document_omits() {
+        let sources = ["入场时间已确认。", "接洽人未注明。", "签收人未注明。"];
+        for (answer, refs) in [
+            ("签收人未注明。", vec![]),
+            ("签收人未注明[1]。", vec![1]),
+            ("签收人未注明[2]。", vec![2]),
+            ("全文没有签收人信息[3]。", vec![3]),
+            ("资料中没有相关信息[1]。", vec![1]),
+            ("报告中无收款方信息。", vec![]),
+            ("提供的文件里没有会议地点[1]。", vec![1]),
+            ("根据当前片段，整份档案没有记载签收人[3]。", vec![3]),
+            ("客席人数未披露。签收人未注明[3]。", vec![]),
+        ] {
+            let checks = check(answer, &sources);
+            assert_eq!(checks.len(), 1, "{answer}");
+            assert_eq!(checks[0].citations, refs, "{answer}");
+            assert_eq!(checks[0].status, Status::Unverified, "{answer}");
+        }
+        for answer in [
+            "签收人未注明[3]。",
+            "原文写明：“签收人未注明”[3]。",
+            "本次提供的片段不足以核实签收人。",
+            "当前片段未提供签收人信息。",
+            "在当前片段中未提供签收人信息。",
+            "资料中无法核实收款方信息。",
+            "The supplied excerpts do not mention the author.",
+        ] {
+            assert!(check(answer, &sources).is_empty(), "{answer}");
+        }
+        for source in [
+            "签收人未注明？",
+            "实习生签收人未注明。",
+            "如果签收人未注明，则联系管理员。",
+        ] {
+            let checks = check("签收人未注明[1]。", &[source]);
+            assert_eq!(checks.len(), 1, "{source}");
+            assert_eq!(checks[0].status, Status::Unverified);
+        }
+        assert!(check("试译：签收人未注明。", &[]).is_empty());
+    }
+
+    #[test]
+    fn a_derived_conclusion_needs_its_own_adjacent_sources() {
+        let sources = [
+            "蓝组用时为50分钟。蓝组先入场。",
+            "红组用时为40分钟。蓝组先入场。",
+        ];
+        let inputs = "蓝组用时为50分钟[1]，红组用时为40分钟[2]。";
+        for result in [
+            "从两份记录推算出相同的入场次序。",
+            "从两份记录推算出相同的入场次序[1]。",
+            "从两份记录推算出相同的入场次序[1][2]。",
+        ] {
+            let checks = check(&format!("{inputs}{result}"), &sources);
+            assert_eq!(checks.len(), 1, "{result}");
+            assert_eq!(checks[0].status, Status::Unverified);
+            assert!(checks[0].excerpt.contains("入场次序"));
+        }
+        assert!(check(
+            &format!("{inputs}从两份记录推算出蓝组先入场[1][2]。"),
+            &sources
+        )
+        .is_empty());
+        for evidence in [
+            ["仓库已经开门。", "灯具已经更换。"],
+            ["蓝组先入场。", "灯具已经更换。"],
+            ["蓝组先入场。", "蓝组先入场？"],
+            ["蓝组先入场。", "仅在周末蓝组先入场。"],
+        ] {
+            let checks = check("从两份记录推算出蓝组先入场[1][2]。", &evidence);
+            assert_eq!(checks.len(), 1, "{evidence:?}");
+            assert_eq!(checks[0].status, Status::Unverified);
+        }
+        let first = source(0, "蓝组先入场。");
+        let mut second = source(1, "蓝组先入场。");
+        second.path.clone_from(&first.path);
+        let checks = audit_citations(
+            "从两份记录推算出蓝组先入场[1][2]。",
+            "stop",
+            &[first, second],
+        );
+        assert_eq!(checks.len(), 1);
+        assert_eq!(checks[0].status, Status::Unverified);
+        let checks = check("可推算出水运先抵达[1]。", &["旅客已经登机。"]);
+        assert_eq!(checks.len(), 1);
+        assert_eq!(checks[0].status, Status::Unverified);
+        let checks = check("蓝组用时为50分钟，红组用时为40分钟[1]。", &sources);
+        assert_eq!(checks.len(), 1);
+        assert_eq!(checks[0].status, Status::Unverified);
     }
 
     #[test]

@@ -11,6 +11,8 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
+import { isImeEvent } from "../platform/ime";
+import { dismissDetailsOnOutside, focusMenuButton } from "../platform/menu";
 import ModalDialog from "../ModalDialog";
 import {
   branchTurns,
@@ -70,7 +72,6 @@ export function ConversationHeader({
   const [hasMore, setHasMore] = useState(false);
   const [searchError, setSearchError] = useState("");
   const searchSequence = useRef(0);
-  const moreActions = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     const sequence = ++searchSequence.current;
     if (dialog !== "history") return;
@@ -229,34 +230,41 @@ export function ConversationHeader({
           )}
           {(c || dock) && (
             <details
-              ref={moreActions}
+              ref={dismissDetailsOnOutside}
               className="assistant-manage"
               onKeyDown={(event) => {
-                if (event.key !== "Escape" || !event.currentTarget.open) return;
-                event.stopPropagation();
-                event.currentTarget.open = false;
-                event.currentTarget.querySelector("summary")?.focus();
-              }}
-              onBlur={(event) => {
-                if (!event.currentTarget.contains(event.relatedTarget))
-                  event.currentTarget.open = false;
+                if (isImeEvent(event.nativeEvent)) return;
+                const details = event.currentTarget;
+                const summary = details.querySelector("summary");
+                const fromTrigger = event.target === summary;
+                const openWithKeyboard = fromTrigger && !details.open &&
+                  ["Enter", " ", "ArrowDown", "ArrowUp"].includes(event.key);
+                if (openWithKeyboard || (details.open && ["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key))) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  details.open = true;
+                  focusMenuButton(details, event.key);
+                } else if (details.open && ["Escape", "Tab"].includes(event.key)) {
+                  if (event.key === "Escape") event.preventDefault();
+                  event.stopPropagation();
+                  details.open = false;
+                  summary?.focus({ preventScroll: true });
+                }
               }}
             >
               <summary
                 aria-label={dock ? "更多会话操作" : "管理当前会话"}
                 title={dock ? "更多会话操作" : "管理当前会话"}
+                onClick={(e) => e.currentTarget.focus({ preventScroll: true })}
               >
                 <MoreHorizontal size={16} />
               </summary>
               <div
                 onClick={(event) => {
-                  if (
-                    !(event.target as Element).closest("button") ||
-                    !moreActions.current
-                  )
-                    return;
-                  moreActions.current.open = false;
-                  moreActions.current.querySelector("summary")?.focus();
+                  const details = event.currentTarget.closest("details");
+                  if (!details || !(event.target as Element).closest("button")) return;
+                  details.open = false;
+                  details.querySelector("summary")?.focus();
                 }}
               >
                 {dock && !expanded && expandAction}
@@ -376,6 +384,7 @@ export function ConversationHeader({
           }
           className="assistant-history-dialog"
           busy={working}
+          dismissOnBackdrop={dialog !== "rename" || title === c?.title}
           onClose={() => setDialog(null)}
         >
           <div className="modal-heading">

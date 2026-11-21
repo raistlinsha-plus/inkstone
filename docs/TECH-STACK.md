@@ -1,6 +1,8 @@
-# Inkstone 技术栈 · v0.9.6
+# Inkstone 技术栈 · v1.0.0-rc.4
 
 开发目标为 macOS 13 及以上版本、Apple Silicon。桌面包使用系统 WebKit。Node、npm、Rust 和 Apple 命令行开发工具用于从源代码构建。仓库固定 Node 24.14.0、npm 11.9.0、Rust 1.99.1，目标为 `aarch64-apple-darwin`。[工具链](../toolchain.json) · [桌面配置](../src-tauri/tauri.conf.json)
+
+CLI 是同一 Cargo workspace 中的独立二进制，复用 Rust 的本地关键词检索和版本核对。CLI 协议版本为 1；桌面设置管理外部工具的授权，存储凭据摘要。[构建和使用](EXTERNAL-TOOLS.zh-CN.md)
 
 ## 主要组件
 
@@ -25,6 +27,7 @@
 | OpenAI 兼容 embeddings | 用户建立向量索引或执行语义检索 | 选定文档的分块，或本轮查询 |
 | Cohere 兼容 rerank | 检索配置启用重排时 | 查询及候选片段 |
 | OpenAI 兼容 chat | 生成回答、整理已授权 Wiki 或规划公开查询 | 按任务选择问题、上下文、原文证据或获准整理的资料。联网规划使用当前问题 |
+| 同一问答服务的候选原文核对 | 用户单独开启，且本机筛选仍需核对小问时 | 每轮最多一次请求，最多 8 段、合计 4,000 个原文字符，以及对应小问和必要标题 |
 | Brave Search | 授权自动联网，且本轮计划需要公开资料时 | 经过检查的公开查询词。随后读取可访问的公开 HTTPS 网页以取得原文 |
 
 服务凭据由系统钥匙串保存。远程端点要求 HTTPS，本机回环模型端点可用 HTTP。模型由用户选择，服务费用和模型质量随所选服务而变。使用本地关键词检索无需配置这些服务。[提供方适配](../src-tauri/src/providers.rs) · [网页检索](../src-tauri/src/web_retrieval.rs)

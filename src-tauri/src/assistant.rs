@@ -617,11 +617,23 @@ fn prior_questions(
     c: &Connection,
     conversation: &str,
     leaf: Option<&str>,
+    selected: Option<&Selection>,
 ) -> Result<Vec<String>, String> {
     let mut cursor = leaf.map(str::to_string);
     let mut out = Vec::new();
     let mut chars = 0;
     while let Some(id) = cursor {
+        if let Some(selected) = selected {
+            let mut prior = attachments::selection(c, &id)?.unwrap_or_default();
+            let mut current = selected.clone();
+            prior.document_ids.sort();
+            prior.attachments.sort();
+            current.document_ids.sort();
+            current.attachments.sort();
+            if prior != current {
+                break;
+            }
+        }
         owned_turn(c, conversation, &id)?;
         let (parent, question): (Option<String>, String) = c
             .query_row(
@@ -771,8 +783,7 @@ pub fn begin_with_sources(
         tx.execute("INSERT INTO turns(id,conversation_id,parent_turn_id,question,created_at,web_access) VALUES(?,?,?,?,?,?)",params![turn,id,parent,question,time,access.stored()]).map_err(err)?;
         (turn, question, parent.map(str::to_string), access)
     };
-    let history = prior_questions(&tx, id, parent.as_deref())?;
-    let clock = grounding::followup_clock(&question, history.last().map(String::as_str));
+    let history;
     let mut sources = None;
     let mut previous_answer = None;
     let mut previous_local_sources = Vec::new();
@@ -805,7 +816,8 @@ pub fn begin_with_sources(
             )
             .map_err(err)?;
         }
-        if let Some(parent) = &parent {
+        history = prior_questions(&tx, id, parent.as_deref(), Some(&selection))?;
+        if let Some(parent) = parent.as_ref().filter(|_| !history.is_empty()) {
             let response = tx.query_row(
                 "SELECT c.response FROM turns t JOIN candidates c ON c.id=t.selected_candidate_id
                    WHERE t.id=? AND c.status='complete'",
@@ -817,17 +829,7 @@ pub fn begin_with_sources(
                 previous_answer = response["text"]
                     .as_str()
                     .map(|v| v.chars().take(1200).collect());
-                if !selection.is_empty()
-                    && clock.is_some()
-                    && attachments::selection(&tx, parent)?.is_some_and(|mut prior| {
-                        let mut current = selection.clone();
-                        prior.document_ids.sort();
-                        prior.attachments.sort();
-                        current.document_ids.sort();
-                        current.attachments.sort();
-                        prior == current
-                    })
-                {
+                if !selection.is_empty() {
                     previous_local_sources = response["externalSources"]
                         .as_array()
                         .into_iter()
@@ -841,7 +843,10 @@ pub fn begin_with_sources(
             }
         }
         sources = Some(selection);
+    } else {
+        history = prior_questions(&tx, id, parent.as_deref(), None)?;
     }
+    let clock = grounding::followup_clock(&question, history.last().map(String::as_str));
     let (grounded_question, prompt_question) = queries(&question, &history);
     let followup_sources = if grounding::is_followup(&question, parent.is_some()) || clock.is_some()
     {

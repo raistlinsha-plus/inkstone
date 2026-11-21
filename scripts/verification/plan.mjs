@@ -42,6 +42,7 @@ export function affected(paths) {
       )
     )
       add = ["frontend", "types", "build"];
+    else if (path.startsWith("src-tauri/cli/")) add = ["rust", "docs"];
     else if (/^src-tauri\/src\//.test(path))
       add = ["rust", "frontend", "types"];
     else if (path.startsWith("evals/")) add = ["rust", "docs"];

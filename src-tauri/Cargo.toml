@@ -1,6 +1,6 @@
 [package]
 name = "inkstone"
-version = "0.9.6"
+version = "1.0.0-rc.4"
 description = "Local Markdown editor and personal knowledge base"
 edition = "2021"
 license = "Apache-2.0"
@@ -50,3 +50,8 @@ tauri = { version = "2", features = ["test"] }
 [profile.dev]
 debug = 0
 incremental = true
+
+[workspace]
+members = ["cli"]
+default-members = ["."]
+resolver = "2"

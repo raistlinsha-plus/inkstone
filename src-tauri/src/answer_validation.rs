@@ -7,7 +7,7 @@ use serde_json::Value;
 use std::ops::Range;
 
 mod citations;
-pub(crate) use citations::{audit_citations, CitationCheck};
+pub(crate) use citations::{audit_citations, cited_numbers, CitationCheck};
 pub(crate) use citations::{audit_wiki_summary, SummaryIssue};
 
 #[derive(Default)]

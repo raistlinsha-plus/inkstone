@@ -51,7 +51,7 @@ fn presentation_payload(clause: &str, formats: &[&str]) -> Option<String> {
 pub fn knowledge_query(question: &str) -> String {
     let mut kept = Vec::new();
     let mut changed = false;
-    for raw in query_clauses(question) {
+    for (separator, raw) in query_clauses(question) {
         let clause = raw.trim();
         if clause.is_empty() {
             continue;
@@ -63,6 +63,11 @@ pub fn knowledge_query(question: &str) -> String {
                 | "请附来源"
                 | "附引用"
                 | "注明来源"
+                | "请注明来源"
+                | "请注明出处"
+                | "请附上出处"
+                | "请引用原文"
+                | "请给出出处"
                 | "请标明来源"
                 | "带来源"
                 | "请附引用"
@@ -108,7 +113,7 @@ pub fn knowledge_query(question: &str) -> String {
         if has_format {
             if let Some(payload) = presentation_payload(clause, &format_words) {
                 changed = true;
-                kept.push(payload);
+                kept.push((separator, payload));
                 continue;
             }
             let mut residue = clause.to_string();
@@ -168,9 +173,15 @@ pub fn knowledge_query(question: &str) -> String {
                 continue;
             }
         }
-        kept.push(clause.to_string());
+        kept.push((separator, clause.to_string()));
     }
-    let query = kept.join("，");
+    let mut query = String::new();
+    for (separator, text) in kept {
+        if !query.is_empty() {
+            query.push(separator);
+        }
+        query.push_str(&text);
+    }
     // A question about formatting itself must never turn into an empty query.
     if !changed || query.trim().is_empty() {
         question.trim().into()
@@ -179,8 +190,9 @@ pub fn knowledge_query(question: &str) -> String {
     }
 }
 
-fn query_clauses(question: &str) -> Vec<&str> {
+fn query_clauses(question: &str) -> Vec<(char, &str)> {
     let mut clauses = Vec::new();
+    let mut separator = '，';
     let mut start = 0;
     let mut depth = 0usize;
     let mut quote = None;
@@ -212,13 +224,14 @@ fn query_clauses(question: &str) -> Vec<&str> {
             && chars[index - 1].1.is_ascii_digit();
         if depth == 0
             && !numeric_comma
-            && matches!(ch, '，' | ',' | '；' | ';' | '\n' | '。' | '？')
+            && matches!(ch, '，' | ',' | '；' | ';' | '\n' | '。' | '？' | '?')
         {
-            clauses.push(&question[start..byte]);
+            clauses.push((separator, &question[start..byte]));
+            separator = ch;
             start = byte + ch.len_utf8();
         }
     }
-    clauses.push(&question[start..]);
+    clauses.push((separator, &question[start..]));
     clauses
 }
 
@@ -441,7 +454,12 @@ fn fence(line: &str) -> Option<(u8, usize)> {
     Some((c, n))
 }
 /// Expand inside one fenced parent block; small JSON fields should not consume six separate citations.
-fn parent_range(lines: &[&str], from: usize, to: usize, max_chars: usize) -> (usize, usize) {
+pub(crate) fn parent_range(
+    lines: &[&str],
+    from: usize,
+    to: usize,
+    max_chars: usize,
+) -> (usize, usize) {
     let mut open: Option<(usize, u8, usize)> = None;
     for (i, line) in lines.iter().enumerate() {
         if let Some((c, n)) = fence(line) {
@@ -681,6 +699,10 @@ mod tests {
         ] {
             assert_eq!(knowledge_query(text), text);
         }
+        assert_eq!(
+            knowledge_query("几点开始？在哪里登记？请注明出处。"),
+            "几点开始？在哪里登记"
+        );
         let original="2026-10-29 和田项目 RAG-102 收入1,200万元，最多取2025与2026年度，请用 Markdown 表格和 chart 比较，附来源。";
         let query = knowledge_query(original);
         for entity in [

@@ -1,0 +1,716 @@
+[
+  {
+    "id": "D01",
+    "kind": "answerable",
+    "question": "回声亭晨班的钥匙由谁保管？",
+    "previous_turn": null,
+    "points": [
+      {
+        "point": "保管人",
+        "accept_any_line": [
+          "回声亭交接簿#2"
+        ],
+        "value_variants": [
+          "纸鸢"
+        ]
+      }
+    ],
+    "missing": [],
+    "skip": [
+      {
+        "line": "回声廊备忘#2",
+        "reason": "地点是回声廊"
+      }
+    ],
+    "wrong_values": [
+      "流泉"
+    ],
+    "gap_context": []
+  },
+  {
+    "id": "D02",
+    "kind": "answerable",
+    "question": "回声亭备用钥匙的封条编号和颜色是什么？",
+    "previous_turn": null,
+    "points": [
+      {
+        "point": "编号",
+        "accept_any_line": [
+          "回声亭交接簿#3"
+        ],
+        "value_variants": [
+          "EH-61"
+        ]
+      },
+      {
+        "point": "颜色",
+        "accept_any_line": [
+          "回声亭交接簿#3"
+        ],
+        "value_variants": [
+          "青灰"
+        ]
+      }
+    ],
+    "missing": [],
+    "skip": [
+      {
+        "line": "回声廊备忘#3",
+        "reason": "回声廊的封条"
+      }
+    ],
+    "wrong_values": [
+      "EL-81",
+      "赭红"
+    ],
+    "gap_context": []
+  },
+  {
+    "id": "D03",
+    "kind": "partial",
+    "question": "回声亭夜间照明的色温是多少，采购花了多少贝？",
+    "previous_turn": null,
+    "points": [
+      {
+        "point": "色温",
+        "accept_any_line": [
+          "回声亭交接簿#4"
+        ],
+        "value_variants": [
+          "2700",
+          "2,700"
+        ]
+      }
+    ],
+    "missing": [
+      "回声亭照明采购金额"
+    ],
+    "skip": [
+      {
+        "line": "回声廊备忘#4",
+        "reason": "采购总额属于回声廊"
+      }
+    ],
+    "wrong_values": [
+      "460"
+    ],
+    "gap_context": [
+      "回声亭交接簿#4"
+    ]
+  },
+  {
+    "id": "D04",
+    "kind": "unanswerable",
+    "question": "回声亭访客章存放在哪个柜？",
+    "previous_turn": null,
+    "points": [],
+    "missing": [
+      "回声亭访客章柜位"
+    ],
+    "skip": [
+      {
+        "line": "回声亭交接簿#5",
+        "reason": "只排除了铜片的用途"
+      },
+      {
+        "line": "回声廊备忘#6",
+        "reason": "西柜存的是回声廊访客章"
+      }
+    ],
+    "wrong_values": [
+      "西柜"
+    ],
+    "gap_context": []
+  },
+  {
+    "id": "D05",
+    "kind": "answerable",
+    "question": "潮页交付样册使用什么装订线，穿几个孔？",
+    "previous_turn": null,
+    "points": [
+      {
+        "point": "线",
+        "accept_any_line": [
+          "潮页制本单#2"
+        ],
+        "value_variants": [
+          "麻白棉线"
+        ]
+      },
+      {
+        "point": "孔数",
+        "accept_any_line": [
+          "潮页制本单#2"
+        ],
+        "value_variants": [
+          "四孔",
+          "4孔",
+          "四个孔",
+          "4个孔"
+        ]
+      }
+    ],
+    "missing": [],
+    "skip": [
+      {
+        "line": "潮页制本单#6",
+        "reason": "紫绳是旧试印本的陈列件"
+      },
+      {
+        "line": "潮签打样单#2",
+        "reason": "潮签是另一种样册"
+      }
+    ],
+    "wrong_values": [
+      "靛蓝",
+      "六孔"
+    ],
+    "gap_context": []
+  },
+  {
+    "id": "D06",
+    "kind": "answerable",
+    "question": "潮页样册盒上盖什么印，最后送往哪个库？",
+    "previous_turn": null,
+    "points": [
+      {
+        "point": "印记",
+        "accept_any_line": [
+          "潮页制本单#3"
+        ],
+        "value_variants": [
+          "双环"
+        ]
+      },
+      {
+        "point": "交付地",
+        "accept_any_line": [
+          "潮页制本单#3"
+        ],
+        "value_variants": [
+          "柳堤"
+        ]
+      }
+    ],
+    "missing": [],
+    "skip": [
+      {
+        "line": "潮签打样单#3",
+        "reason": "属于潮签"
+      }
+    ],
+    "wrong_values": [
+      "燕形",
+      "白沙"
+    ],
+    "gap_context": []
+  },
+  {
+    "id": "D07",
+    "kind": "partial",
+    "question": "潮页样册封底的验收编号和承运人分别是什么？",
+    "previous_turn": null,
+    "points": [
+      {
+        "point": "编号",
+        "accept_any_line": [
+          "潮页制本单#5"
+        ],
+        "value_variants": [
+          "HJ-407"
+        ]
+      }
+    ],
+    "missing": [
+      "潮页承运人"
+    ],
+    "skip": [
+      {
+        "line": "潮签打样单#4",
+        "reason": "纸舟承运潮签"
+      },
+      {
+        "line": "潮签打样单#5",
+        "reason": "潮签封底编号"
+      }
+    ],
+    "wrong_values": [
+      "HX-704",
+      "纸舟"
+    ],
+    "gap_context": [
+      "潮页制本单#4"
+    ]
+  },
+  {
+    "id": "D08",
+    "kind": "conflict",
+    "question": "关于 PM-5 箱里纸月投影片的总数，甲乙两组分别报了多少？目前能定一个最终数字吗？",
+    "previous_turn": null,
+    "points": [
+      {
+        "point": "甲组数量",
+        "accept_any_line": [
+          "纸月点收甲#2"
+        ],
+        "value_variants": [
+          "37",
+          "三十七"
+        ]
+      },
+      {
+        "point": "乙组数量",
+        "accept_any_line": [
+          "纸月点收乙#2"
+        ],
+        "value_variants": [
+          "39",
+          "三十九"
+        ]
+      },
+      {
+        "point": "记录尚待复核",
+        "accept_any_line": [
+          "纸月点收乙#3"
+        ],
+        "value_variants": [
+          "未复核",
+          "待复核",
+          "未确认",
+          "不能确定",
+          "无法确定",
+          "未统一",
+          "尚未",
+          "不一致",
+          "有分歧",
+          "冲突"
+        ]
+      }
+    ],
+    "missing": [
+      "最终确认的片数"
+    ],
+    "skip": [
+      {
+        "line": "纸月点收甲#5",
+        "reason": "旁听席纸牌不计入投影片"
+      }
+    ],
+    "wrong_values": [],
+    "gap_context": [
+      "纸月点收乙#3"
+    ]
+  },
+  {
+    "id": "D09",
+    "kind": "answerable",
+    "question": "纸月投影片箱盖用什么颜色的垫布？",
+    "previous_turn": null,
+    "points": [
+      {
+        "point": "颜色",
+        "accept_any_line": [
+          "纸月点收甲#4",
+          "纸月点收乙#4"
+        ],
+        "value_variants": [
+          "墨绿"
+        ]
+      }
+    ],
+    "missing": [],
+    "skip": [
+      {
+        "line": "纸月点收甲#2",
+        "reason": "片数无关"
+      }
+    ],
+    "wrong_values": [],
+    "gap_context": []
+  },
+  {
+    "id": "D10",
+    "kind": "unanswerable",
+    "question": "纸月放映机由谁保管？",
+    "previous_turn": null,
+    "points": [],
+    "missing": [
+      "放映机保管人"
+    ],
+    "skip": [
+      {
+        "line": "纸月点收乙#5",
+        "reason": "只知道乙组不负责，无法推出正面答案"
+      }
+    ],
+    "wrong_values": [],
+    "gap_context": [
+      "纸月点收乙#5"
+    ]
+  },
+  {
+    "id": "D11",
+    "kind": "answerable",
+    "question": "按砂钟正式表，车在哪天几点发车，停在哪站？",
+    "previous_turn": null,
+    "points": [
+      {
+        "point": "星期",
+        "accept_any_line": [
+          "砂钟发车板#3"
+        ],
+        "value_variants": [
+          "周四",
+          "星期四",
+          "礼拜四"
+        ]
+      },
+      {
+        "point": "时刻",
+        "accept_any_line": [
+          "砂钟发车板#3"
+        ],
+        "value_variants": [
+          "16:25",
+          "16：25"
+        ]
+      },
+      {
+        "point": "站点",
+        "accept_any_line": [
+          "砂钟发车板#3"
+        ],
+        "value_variants": [
+          "苇湾"
+        ]
+      }
+    ],
+    "missing": [],
+    "skip": [
+      {
+        "line": "砂钟发车板#2",
+        "reason": "试排表只供训练"
+      },
+      {
+        "line": "纱钟运维表#2",
+        "reason": "纱钟是另一辆车"
+      }
+    ],
+    "wrong_values": [
+      "16:35",
+      "芦湾"
+    ],
+    "gap_context": []
+  },
+  {
+    "id": "D12",
+    "kind": "partial",
+    "question": "砂钟搬运车退票要去哪个窗口，一趟最多载多少人？",
+    "previous_turn": null,
+    "points": [
+      {
+        "point": "窗口",
+        "accept_any_line": [
+          "砂钟发车板#4"
+        ],
+        "value_variants": [
+          "S-19"
+        ]
+      }
+    ],
+    "missing": [
+      "砂钟搬运车载客上限"
+    ],
+    "skip": [
+      {
+        "line": "纱钟运维表#4",
+        "reason": "上限属于纱钟"
+      },
+      {
+        "line": "纱钟运维表#3",
+        "reason": "另一辆车的窗口"
+      }
+    ],
+    "wrong_values": [
+      "Y-91",
+      "18 人",
+      "18人"
+    ],
+    "gap_context": [
+      "砂钟发车板#6"
+    ]
+  },
+  {
+    "id": "D13",
+    "kind": "unanswerable",
+    "question": "砂钟搬运车允许乘客线上退票吗？",
+    "previous_turn": null,
+    "points": [],
+    "missing": [
+      "砂钟线上退票政策"
+    ],
+    "skip": [
+      {
+        "line": "砂钟发车板#4",
+        "reason": "窗口开放信息无法判定线上政策"
+      },
+      {
+        "line": "纱钟运维表#5",
+        "reason": "只允许现场办理的是纱钟"
+      }
+    ],
+    "wrong_values": [],
+    "gap_context": []
+  },
+  {
+    "id": "D14",
+    "kind": "followup",
+    "question": "那封条编号是多少？",
+    "previous_turn": {
+      "user": "回声廊备用钥匙封条是什么颜色？",
+      "assistant": "是赭红色。"
+    },
+    "points": [
+      {
+        "point": "封条编号",
+        "accept_any_line": [
+          "回声廊备忘#3"
+        ],
+        "value_variants": [
+          "EL-81"
+        ]
+      }
+    ],
+    "missing": [],
+    "skip": [
+      {
+        "line": "回声亭交接簿#3",
+        "reason": "前文说的是廊，不是亭"
+      }
+    ],
+    "wrong_values": [
+      "EH-61"
+    ],
+    "gap_context": []
+  },
+  {
+    "id": "D15",
+    "kind": "followup",
+    "question": "那个盒子要送到哪个库？",
+    "previous_turn": {
+      "user": "潮签样册交付盒上的印是什么样？",
+      "assistant": "是燕形印。"
+    },
+    "points": [
+      {
+        "point": "交付地",
+        "accept_any_line": [
+          "潮签打样单#3"
+        ],
+        "value_variants": [
+          "白沙"
+        ]
+      }
+    ],
+    "missing": [],
+    "skip": [
+      {
+        "line": "潮页制本单#3",
+        "reason": "前文说的是潮签"
+      }
+    ],
+    "wrong_values": [
+      "柳堤"
+    ],
+    "gap_context": []
+  },
+  {
+    "id": "D16",
+    "kind": "followup",
+    "question": "它周几开放？",
+    "previous_turn": {
+      "user": "砂钟搬运车的退票窗口号是什么？",
+      "assistant": "窗口号是 S-19。"
+    },
+    "points": [
+      {
+        "point": "开放日",
+        "accept_any_line": [
+          "砂钟发车板#4"
+        ],
+        "value_variants": [
+          "周一",
+          "星期一",
+          "礼拜一"
+        ]
+      }
+    ],
+    "missing": [],
+    "skip": [
+      {
+        "line": "纱钟运维表#3",
+        "reason": "前文说的是砂钟退票窗口"
+      }
+    ],
+    "wrong_values": [
+      "周日",
+      "星期日"
+    ],
+    "gap_context": []
+  },
+  {
+    "id": "D17",
+    "kind": "answerable",
+    "question": "砂钟的正式车票靠什么标记识别，潮页交付盒又用什么印？",
+    "previous_turn": null,
+    "points": [
+      {
+        "point": "车票标记",
+        "accept_any_line": [
+          "砂钟发车板#5"
+        ],
+        "value_variants": [
+          "压纹树叶",
+          "树叶压纹"
+        ]
+      },
+      {
+        "point": "盒印",
+        "accept_any_line": [
+          "潮页制本单#3"
+        ],
+        "value_variants": [
+          "双环"
+        ]
+      }
+    ],
+    "missing": [],
+    "skip": [
+      {
+        "line": "潮签打样单#3",
+        "reason": "潮签盒印属于其他样册"
+      }
+    ],
+    "wrong_values": [
+      "燕形"
+    ],
+    "gap_context": []
+  },
+  {
+    "id": "D18",
+    "kind": "answerable",
+    "question": "回声亭和回声廊晨班交接各在周几、几点？",
+    "previous_turn": null,
+    "points": [
+      {
+        "point": "回声亭星期",
+        "accept_any_line": [
+          "回声亭交接簿#2"
+        ],
+        "value_variants": [
+          "周三",
+          "星期三"
+        ]
+      },
+      {
+        "point": "回声亭时刻",
+        "accept_any_line": [
+          "回声亭交接簿#2"
+        ],
+        "value_variants": [
+          "08:40",
+          "08：40",
+          "8:40"
+        ]
+      },
+      {
+        "point": "回声廊星期",
+        "accept_any_line": [
+          "回声廊备忘#2"
+        ],
+        "value_variants": [
+          "周二",
+          "星期二"
+        ]
+      },
+      {
+        "point": "回声廊时刻",
+        "accept_any_line": [
+          "回声廊备忘#2"
+        ],
+        "value_variants": [
+          "08:20",
+          "08：20",
+          "8:20"
+        ]
+      }
+    ],
+    "missing": [],
+    "skip": [
+      {
+        "line": "回声廊备忘#5",
+        "reason": "巡查时间不等于交接时间"
+      }
+    ],
+    "wrong_values": [],
+    "gap_context": []
+  },
+  {
+    "id": "D19",
+    "kind": "unanswerable",
+    "question": "潮签样册的定价是多少贝？",
+    "previous_turn": null,
+    "points": [],
+    "missing": [
+      "潮签定价"
+    ],
+    "skip": [
+      {
+        "line": "潮签打样单#4",
+        "reason": "有运单编号，没有定价"
+      },
+      {
+        "line": "回声廊备忘#4",
+        "reason": "照明预算并非样册定价"
+      }
+    ],
+    "wrong_values": [
+      "460"
+    ],
+    "gap_context": []
+  },
+  {
+    "id": "D20",
+    "kind": "partial",
+    "question": "回声亭平面图是谁描边的，下一次巡查确定是哪天？",
+    "previous_turn": null,
+    "points": [
+      {
+        "point": "描边者",
+        "accept_any_line": [
+          "回声亭交接簿#7"
+        ],
+        "value_variants": [
+          "青禾"
+        ]
+      }
+    ],
+    "missing": [
+      "回声亭确定的巡查日"
+    ],
+    "skip": [
+      {
+        "line": "回声廊备忘#5",
+        "reason": "回声廊的固定巡查时间"
+      },
+      {
+        "line": "回声亭交接簿#6",
+        "reason": "只有建议，不能把它当作确定日期"
+      }
+    ],
+    "wrong_values": [],
+    "gap_context": [
+      "回声亭交接簿#6"
+    ]
+  }
+]

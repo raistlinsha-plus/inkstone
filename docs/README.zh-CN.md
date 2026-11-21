@@ -2,11 +2,13 @@
 
 Inkstone 是面向 **macOS 13 及以上 Apple Silicon Mac** 的本地 Markdown 工作台。把分散在不同目录的项目笔记导入一个空间，选出几篇整理成 Wiki，或直接问「原来计划几场，实际办了几场？」。点回答里的引用就能核对原句，把有用的结论保存成文档后，还能回到刚才写到的位置。
 
-[浏览器交互演示](https://raistlinsha-plus.github.io/inkstone/) · [English](../README.md) · [获取 v0.9.6 源码](https://github.com/raistlinsha-plus/inkstone/releases/tag/v0.9.6) · [操作手册](USER-MANUAL.zh-CN.md)
+[浏览器交互演示](https://raistlinsha-plus.github.io/inkstone/) · [English](../README.md) · [获取 RC.4 源码预发布版](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.0.0-rc.4) · [操作手册](USER-MANUAL.zh-CN.md)
 
 ![v0.9.6 编辑器中的 Markdown 阅读活动方案，以及正文页边的墨团菜单](assets/v0.9.6/workspace.png)
 
 图中是 v0.9.6 编辑器和虚构的活动笔记。开启书房同伴后，保存文档可以从页边记录一次经历。
+
+**试用 RC.4** 时，可以打开一篇笔记，一次问两件事，然后逐条点开引用，看看原文能回答哪一项。你也可以启用模型辅助选句，授权其他工具只读搜索一个空间，或在撤回 Wiki 来源前查看受影响的版本。这一版仍会漏答有原文依据的问题。独立 AI 盲评中，40 道目标题有 15 道同时满足作答与引用要求，与 RC.3 持平。[RC.4 交付与验证](DELIVERY-v1.0.0-rc.4.md) · [外部工具接入](EXTERNAL-TOOLS.zh-CN.md)
 
 ## 可以怎样使用
 
@@ -20,7 +22,7 @@ Inkstone 是面向 **macOS 13 及以上 Apple Silicon Mac** 的本地 Markdown �
 GitHub 提供源码归档和 SHA-256 校验文件。在 Mac 上准备 Apple 命令行开发工具、Node **24.14.0**、npm **11.9.0** 和 Rust **1.99.1**，然后运行下面的命令。[工具版本](../toolchain.json)
 
 ```sh
-git clone --branch v0.9.6 https://github.com/raistlinsha-plus/inkstone.git
+git clone --branch v1.0.0-rc.4 https://github.com/raistlinsha-plus/inkstone.git
 cd inkstone
 npm ci --registry=https://registry.npmjs.org
 npm run desktop
@@ -41,8 +43,8 @@ npm run desktop
 | 想了解什么 | 阅读入口 |
 | --- | --- |
 | 入门与日常操作 | [快速开始](QUICKSTART.md) · [用户操作手册](USER-MANUAL.zh-CN.md) · [产品与功能总览](PRODUCT.md) |
-| 实现与评测 | [4A 架构](ARCHITECTURE-4A.md) · [技术栈](TECH-STACK.md) · [中文检索评测](../evals/v0.9.1/README.md) |
-| 版本进展 | [v0.9.6 书房同伴](DELIVERY-v0.9.6.md) · [变更日志](../CHANGELOG.md) · [路线图](ROADMAP.zh-CN.md) |
+| 实现与评测 | [4A 架构](ARCHITECTURE-4A.md) · [技术栈](TECH-STACK.md) · [文档问答配对评测](../evals/v1.0/rc4/README.md) |
+| 版本进展 | [RC.4 实测结果与限制](DELIVERY-v1.0.0-rc.4.md) · [变更日志](../CHANGELOG.md) · [路线图](ROADMAP.zh-CN.md) |
 | 反馈与贡献 | [试用交流](https://github.com/raistlinsha-plus/inkstone/discussions/11) · [贡献指南](../CONTRIBUTING.md) · [已知限制](KNOWN-LIMITATIONS.md) |
 
 Inkstone 源码采用 Apache-2.0，上游组件保留各自许可，其中包含未修改的 MPL-2.0 组件。二进制分发所需的许可文本与美术来源复核进度可在项目中查阅。[许可证](../LICENSE) · [第三方清单](../THIRD_PARTY_NOTICES.md) · [角色素材说明](../src/companion/assets/README.md)

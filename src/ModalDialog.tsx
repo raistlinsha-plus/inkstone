@@ -57,6 +57,7 @@ export default function ModalDialog({
   label,
   onClose,
   busy = false,
+  dismissOnBackdrop = true,
   className = "",
   backdropClassName = "",
   returnFocus,
@@ -65,6 +66,7 @@ export default function ModalDialog({
   label: string;
   onClose: () => void;
   busy?: boolean;
+  dismissOnBackdrop?: boolean;
   className?: string;
   backdropClassName?: string;
   returnFocus?: HTMLElement;
@@ -146,7 +148,7 @@ export default function ModalDialog({
     <div
       className={`modal-backdrop ${backdropClassName}`}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !busy) onClose();
+        if (event.target === event.currentTarget && !busy && dismissOnBackdrop) onClose();
       }}
     >
       <section

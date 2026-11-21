@@ -5,8 +5,56 @@ use crate::{
 };
 use std::{collections::HashSet, path::Path};
 
+mod availability;
+mod dated_clock;
+mod facets;
+mod per_unit;
 mod predicate;
 pub(crate) mod wiki_alias;
+
+pub(crate) fn lexical_aliases(query: &str) -> Vec<String> {
+    query
+        .split(['？', '?', '；', ';'])
+        .filter_map(availability::Availability::parse)
+        .filter_map(|request| request.lexical_alias())
+        .collect()
+}
+
+fn statements(text: &str) -> impl Iterator<Item = &str> {
+    text.lines()
+        .filter(|line| !line.trim_start().starts_with('#'))
+        .flat_map(|line| line.split_inclusive(['。', '！', '？', '!', '?']))
+        .map(str::trim)
+        .filter(|line| !line.ends_with(['？', '?']))
+        .map(|line| line.trim_end_matches(['。', '！', '!']).trim())
+}
+
+fn provisional(text: &str) -> bool {
+    [
+        "草案",
+        "提案",
+        "未生效",
+        "征求意见",
+        "拟议",
+        "待确认",
+        "未确认",
+        "待核实",
+        "未核实",
+        "尚不确定",
+        "尚未确定",
+        "可能",
+        "假设",
+        "假如",
+        "如果",
+        "是否",
+        "仅供讨论",
+        "提议",
+        "撤回",
+        "作废",
+    ]
+    .iter()
+    .any(|word| text.contains(word))
+}
 
 fn terms(query: &str) -> Vec<String> {
     db::query_terms(query)
@@ -183,6 +231,150 @@ enum DurationFact {
     Resolution,
 }
 
+fn duration_subject(question: &str) -> Option<(&str, DurationFact)> {
+    let resolution = [
+        "应该多久处理完",
+        "需要多久处理完",
+        "多久能处理完",
+        "多久处理完",
+        "多久处置完",
+    ]
+    .iter()
+    .find_map(|ending| question.strip_suffix(ending))
+    .map(|subject| (subject, DurationFact::Resolution));
+    resolution.or_else(|| {
+        [
+            "确认收到的时限是多少",
+            "确认收到的期限是多少",
+            "多久必须确认收到",
+        ]
+        .iter()
+        .find_map(|ending| question.strip_suffix(ending))
+        .map(|subject| (subject, DurationFact::Confirmation))
+    })
+}
+
+fn normalized_day_question(q: &str) -> Option<String> {
+    let day = crate::assistant::grounding::weekday(q)?;
+    q.starts_with(day)
+        .then(|| q.replacen(&format!("{day}，"), day, 1))
+}
+
+pub(crate) fn has_bound_intro(question: &str, sentence: &str) -> bool {
+    if let Some((intro, _)) = question.split_once(['，', ',']) {
+        let subject = intro
+            .strip_suffix('里')
+            .or_else(|| intro.strip_suffix('中'));
+        if let Some((context, assertion)) = sentence.split_once(['，', ',']) {
+            if subject.is_some_and(|s| s.chars().count() >= 2 && context.contains(s))
+                && context.trim_end().ends_with(['里', '中'])
+                && !assertion.contains(['，', ','])
+            {
+                return true;
+            }
+        }
+    }
+    let q = question.trim_end_matches(['？', '?']);
+    let normal = normalized_day_question(q);
+    per_unit::Request::parse(normal.as_deref().unwrap_or(q)).is_some()
+}
+
+// Compact notebook entries sometimes omit 是 or 为 between a named field
+// and its measurement. Accept only the complete subject and field followed
+// immediately by one finite value, with the requested unit when supplied.
+fn measured_field(question: &str, clause: &str) -> bool {
+    let Some((left, unit)) = question.rsplit_once("是多少") else {
+        return false;
+    };
+    let Some((owner, field)) = left.rsplit_once('的') else {
+        return false;
+    };
+    if [owner, field]
+        .iter()
+        .any(|s| s.chars().count() < 2 || !s.chars().all(char::is_alphanumeric))
+    {
+        return false;
+    }
+    let Some(rest) = clause.trim().strip_prefix(owner) else {
+        return false;
+    };
+    let rest = ["只登记", "已登记", "记录的", "登记的", "记录", "登记", "的"]
+        .iter()
+        .find_map(|p| rest.strip_prefix(p))
+        .unwrap_or(rest);
+    let Some(value) = rest.strip_prefix(field) else {
+        return false;
+    };
+    let value = value.trim_start_matches([' ', '为', '是', '：', ':', '=']);
+    let digits = value
+        .find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-')
+        .unwrap_or(value.len());
+    if !value[..digits].parse::<f64>().is_ok_and(f64::is_finite) {
+        return false;
+    }
+    let stated = value[digits..].trim();
+    if !unit.is_empty() {
+        return stated == unit;
+    }
+    // The whole remainder must be a unit, never a qualifier such as “旧值”.
+    stated.is_empty()
+        || [
+            "K", "°C", "℃", "m", "cm", "mm", "kg", "g", "Hz", "kHz", "MHz", "V", "A", "W", "kW",
+            "%", "元", "米", "千克", "公斤", "分钟", "小时", "次", "个", "份", "台", "件",
+        ]
+        .contains(&stated)
+}
+
+/// Reuse the typed evidence gates on a single current source assertion. This
+/// intentionally omits the broad passage-level keyword threshold.
+pub(crate) fn supports_typed_assertion(
+    question: &str,
+    hit: &SearchResult,
+    assertion: &str,
+) -> bool {
+    let mut q = question.trim().trim_end_matches(['？', '?', '。']);
+    let text = assertion
+        .trim_end_matches(['。', '；', ';', '！', '!'])
+        .trim();
+    if text.is_empty() || text.contains(['?', '？']) {
+        return false;
+    }
+    if let Some((intro, rest)) = q.split_once(['，', ',']) {
+        if let Some(subject) = intro
+            .strip_suffix('里')
+            .or_else(|| intro.strip_suffix('中'))
+        {
+            if ![assertion, &hit.heading, hit.title.as_deref().unwrap_or("")]
+                .iter()
+                .any(|part| part.contains(subject))
+            {
+                return false;
+            }
+            q = rest.trim();
+        }
+    }
+    if !provisional(text) && !text.contains(['，', ',']) && measured_field(q, text) {
+        return true;
+    }
+    let normal = normalized_day_question(q);
+    let q = normal.as_deref().unwrap_or(q);
+    if let Some((subject, duration)) = duration_subject(q) {
+        let words = terms(subject);
+        return !words.is_empty() && supports_duration(duration, &words, text);
+    }
+    if let Some(request) = availability::Availability::parse(q) {
+        return !provisional(text) && request.supports(text);
+    }
+    if let Some(request) = per_unit::Request::parse(q) {
+        return !provisional(text) && request.supports(hit.title.as_deref().unwrap_or(""), text);
+    }
+    if let Some(request) = dated_clock::Request::parse(q) {
+        return request.supports(hit.title.as_deref().unwrap_or(""), &hit.heading, text);
+    }
+    predicate::Request::parse(q)
+        .is_some_and(|r| r.supports(hit.title.as_deref(), &hit.heading, text))
+}
+
 fn subquestion_terms(query: &str) -> (Vec<String>, Vec<Subquestion<'_>>) {
     // An introductory qualifier applies to every following question. Only
     // peel a simple qualifier with no embedded scope instruction.
@@ -216,26 +408,7 @@ fn subquestion_terms(query: &str) -> (Vec<String>, Vec<Subquestion<'_>>) {
         .map(|question| {
             // Refuse to split statements or a clause with a trailing side
             // constraint. Each accepted clause is a standalone question.
-            let resolution = [
-                "应该多久处理完",
-                "需要多久处理完",
-                "多久能处理完",
-                "多久处理完",
-                "多久处置完",
-            ]
-            .iter()
-            .find_map(|ending| question.strip_suffix(ending))
-            .map(|subject| (subject, DurationFact::Resolution));
-            let duration = resolution.or_else(|| {
-                [
-                    "确认收到的时限是多少",
-                    "确认收到的期限是多少",
-                    "多久必须确认收到",
-                ]
-                .iter()
-                .find_map(|ending| question.strip_suffix(ending))
-                .map(|subject| (subject, DurationFact::Confirmation))
-            });
+            let duration = duration_subject(question);
             let clause = duration
                 .map(|(subject, _)| subject)
                 .or_else(|| {
@@ -294,6 +467,19 @@ fn subquestion_terms(query: &str) -> (Vec<String>, Vec<Subquestion<'_>>) {
 // every query term. Unannounced or explicitly inapplicable values cannot fill it.
 fn requested_value(query: &str, body: &str) -> bool {
     let query = query.trim().trim_end_matches(['？', '?', '。', '.']);
+    if (query.contains("多少") || query.contains("多少钱")) && query.contains("押金") {
+        return body
+            .lines()
+            .filter(|s| !s.trim_start().starts_with('#'))
+            .flat_map(|s| s.split(['。', '；', ';']))
+            .any(|s| {
+                s.contains("押金")
+                    && ((s.contains('元') && s.chars().any(|c| c.is_ascii_digit()))
+                        || ["免收", "无需", "未公布", "未确定", "不收"]
+                            .iter()
+                            .any(|word| s.contains(word)))
+            });
+    }
     let Some(prefix) = [
         "多少分贝",
         "多少分钟",
@@ -370,27 +556,33 @@ fn years(text: &str) -> impl Iterator<Item = &str> {
     })
 }
 
+pub(crate) fn date_number(text: &str) -> Option<u8> {
+    let digit = |s: &str| {
+        let c = s.chars().next()?;
+        (s.chars().count() == 1)
+            .then(|| {
+                "一二三四五六七八九"
+                    .chars()
+                    .position(|d| d == c)
+                    .map(|i| i as u8 + 1)
+            })
+            .flatten()
+    };
+    if let Ok(number) = text.parse::<u8>() {
+        return Some(number);
+    }
+    if let Some((tens, ones)) = text.split_once('十') {
+        return Some(
+            if tens.is_empty() { 1 } else { digit(tens)? } * 10
+                + if ones.is_empty() { 0 } else { digit(ones)? },
+        );
+    }
+    digit(text)
+}
+
 pub(crate) fn month_days(text: &str) -> impl Iterator<Item = (u8, u8)> + '_ {
     const DIGITS: &str = "一二三四五六七八九";
     let numeral = |c: char| c.is_ascii_digit() || c == '十' || DIGITS.contains(c);
-    fn date_number(text: &str) -> Option<u8> {
-        let digit = |s: &str| {
-            let c = s.chars().next()?;
-            (s.chars().count() == 1)
-                .then(|| DIGITS.chars().position(|d| d == c).map(|i| i as u8 + 1))
-                .flatten()
-        };
-        if let Ok(number) = text.parse::<u8>() {
-            return Some(number);
-        }
-        if let Some((tens, ones)) = text.split_once('十') {
-            return Some(
-                if tens.is_empty() { 1 } else { digit(tens)? } * 10
-                    + if ones.is_empty() { 0 } else { digit(ones)? },
-            );
-        }
-        digit(text)
-    }
     text.match_indices('月').filter_map(move |(at, label)| {
         let prefix = text[..at].trim_end();
         let month = date_number(prefix.rsplit(|c| !numeral(c)).next()?)?;
@@ -520,6 +712,15 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
     let predicate = (names.is_empty() && attributed.is_none() && subquestions.is_empty())
         .then(|| predicate::Request::parse(&query))
         .flatten();
+    let facets = (names.is_empty()
+        && attributed.is_none()
+        && subquestions.is_empty()
+        && predicate.is_none())
+    .then(|| facets::Request::parse(&query, results));
+    let clock = dated_clock::Request::parse(&query);
+    let typed = facets
+        .as_ref()
+        .is_some_and(facets::Request::has_typed_clause);
     let mut requested_years = years(&query);
     let year = requested_years
         .next()
@@ -595,16 +796,28 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
         } else {
             ordinary && requested_value(&query, &r.text)
         };
-        r.evidence = (r.bm25_rank.is_some() || wiki)
-            && has_body
-            && year.is_none_or(|year| years(&text).any(|seen| seen == year))
-            && day.is_none_or(|day| month_days(&text).any(|seen| seen == day))
-            && (supported
+        let facet_support = (!wiki || original_alias_anchor)
+            && facets.as_ref().is_some_and(|request| request.supports(r));
+        let admitted = if let Some(request) = &clock {
+            request.supports(r.title.as_deref().unwrap_or(""), &r.heading, &r.text)
+        } else if typed {
+            // A matching question, title or topic cannot substitute for a
+            // statement of this predicate, including for an anchored Wiki hit.
+            facet_support
+        } else {
+            supported
+                || facet_support
                 || original_alias_anchor
                 || (!wiki
                     && predicate.as_ref().is_some_and(|request| {
                         request.supports(r.title.as_deref(), &r.heading, &r.text)
-                    })));
+                    }))
+        };
+        r.evidence = (r.bm25_rank.is_some() || wiki)
+            && has_body
+            && year.is_none_or(|year| years(&text).any(|seen| seen == year))
+            && day.is_none_or(|day| month_days(&text).any(|seen| seen == day))
+            && admitted;
         r.match_kind = if wiki {
             "wiki"
         } else if r.evidence {
@@ -762,6 +975,121 @@ mod tests {
         assert_eq!(hits.map(|hit| hit.evidence), [true, true, false]);
     }
 
+    #[test]
+    fn alternative_source_labels_need_distinct_documents_and_a_matching_fact() {
+        let mut hits = [
+            hit("楼宇联合巡检排班表", "周五注销窗口于17:30关闭。"),
+            hit("前厅维修公告", "周五注销窗口于15:00关闭。"),
+            hit("前厅访客手册", "周五注销窗口于22:30关闭。"),
+        ];
+        let q = "周五注销窗口关闭时间，巡检排班表和维修公告有出入吗？";
+        let request = facets::Request::parse(q, &hits);
+        assert!(request.supports(&hits[0]) && request.supports(&hits[1]));
+        assert!(!request.supports(&hits[2]));
+        hits[2].title = hits[0].title.clone();
+        let ambiguous = facets::Request::parse(q, &hits);
+        assert!(hits.iter().all(|hit| !ambiguous.supports(hit)));
+    }
+    #[test]
+    fn subquestion_clock_requires_time_and_preserves_the_day() {
+        let hits = [
+            hit("培训简章", "周三签收回执，办理时限为48小时。"),
+            hit("培训通知", "周四签收回执截止时间为17:00。"),
+            hit("培训指南", "周三签收回执截止时间为19:20。"),
+        ];
+        let request = facets::Request::parse("周三签收回执几点截止？设备去哪里领取？", &hits);
+        assert!(request.supports(&hits[2]));
+        assert!(!request.supports(&hits[0]) && !request.supports(&hits[1]));
+        let conditional = facets::Request::parse("如果有登记，周三签收回执几点截止？", &hits);
+        assert!(!conditional.supports(&hits[2]));
+    }
+    #[test]
+    fn conditional_opening_requires_the_same_condition_and_a_declared_status() {
+        let q = "下雪还开吗？周六航班何时起飞？";
+        let request = facets::Request::parse(q, &[]);
+        assert!(lexical_aliases(q).contains(&"雪天".to_string()));
+        assert!(request.supports(&hit("游客中心", "雪天仍然营业。")));
+        assert!(request.supports(&hit("游客中心", "下雪时暂停开放。")));
+        assert!(!request.supports(&hit("游客中心", "暴雪天仍然营业。")));
+        assert!(!request.supports(&hit("游客中心", "雪天停车位仍然开放。")));
+        assert!(!request.supports(&hit("游客中心", "雪天营业时间另行通知。")));
+        assert!(!request.supports(&hit("游客中心", "周六航班起飞前确认通道仍开放。")));
+    }
+
+    #[test]
+    fn compared_session_durations_bind_the_subject_weekday_and_unit() {
+        let q = "周二常规演奏和新讲座每场多久？";
+        let request = facets::Request::parse(q, &[]);
+        assert!(request.supports(&hit("常规演奏排班", "周二每场最长为90分钟。")));
+        assert!(request.supports(&hit("场馆简讯", "新增周二讲座，每场安排45分钟。")));
+        assert!(!request.supports(&hit("常规演奏排班", "周一每场最长为90分钟。")));
+        assert!(!request.supports(&hit("常规演奏排班", "周二每场可预约，提前90分钟入场。")));
+        assert!(!request.supports(&hit("常规演奏排班", "周二每轮最长为90分钟。")));
+        assert!(!request.supports(&hit("参观排班", "周二每场最长为90分钟。")));
+        assert!(!request.supports(&hit("讲座", "周二原有讲座每场最长为90分钟。")));
+    }
+
+    #[test]
+    fn typed_requests_reject_questions_and_qualified_drafts_through_mark() {
+        for query in [
+            "下雪还开吗？",
+            "下雪还开吗",
+            "下雪还开吗？周六航班何时起飞？",
+        ] {
+            let mut hits = [
+                hit("下雪还开吗", "下雪还开吗？"),
+                hit("下雪还开吗", "雪天照常营业？"),
+                hit("下雪还开吗", "雪天照常营业，仅为草案，尚未确认。"),
+                hit("下雪还开吗", "雪天照常营业。"),
+            ];
+            mark(query, &mut hits);
+            assert_eq!(
+                hits.map(|h| h.evidence),
+                [false, false, false, true],
+                "{query}"
+            );
+        }
+        let q = "周二常规演奏和新讲座每场多久";
+        let mut hits = [
+            hit(q, q),
+            hit(q, "周二每场最长为90分钟？"),
+            hit(q, "周二每轮最长为90分钟。"),
+            hit(q, "周二观影每场最长为90分钟。"),
+            hit("常规演奏", "周二每场45分钟，仅作提案，尚未生效。"),
+            hit("常规演奏和新讲座排班", "周二每场为90分钟。"),
+            hit("常规演奏和新讲座排班", "周二常规演奏每场为90分钟。"),
+            hit("常规演奏排班", "周二每场最长为90分钟。"),
+        ];
+        mark(q, &mut hits);
+        assert_eq!(
+            hits.map(|h| h.evidence),
+            [false, false, false, false, false, false, true, true]
+        );
+    }
+
+    #[test]
+    fn dated_clock_excludes_superseded_month_and_binds_time_to_action() {
+        let mut hits = [
+            hit("九月通知", "9月6日东区车库于18:45关闭。"),
+            hit("8月记录", "9月6日东区车库于17:45关闭。"),
+            hit("九月通知", "9月7日东区车库于16:45关闭。"),
+            hit("九月通知", "9月6日东区车库于16:45开放。"),
+            hit("九月通知", "9月6日东区车库关闭，接驳车于16:45出发。"),
+        ];
+        mark("九月六号东区车库几点关，不要八月记录。", &mut hits);
+        assert_eq!(hits.map(|h| h.evidence), [true, false, false, false, false]);
+        assert!(dated_clock::Request::parse("只看南站九月六号东区车库几点关？").is_none());
+    }
+
+    #[test]
+    fn deposit_needs_a_matching_value_in_a_factual_sentence() {
+        let mut hits = [
+            hit("器材预约押金", "每天可预约3次。"),
+            hit("器材预约押金", "器材预约押金为30元。"),
+        ];
+        mark("预约器材要交多少押金？", &mut hits);
+        assert!(!hits[0].evidence && hits[1].evidence);
+    }
     #[test]
     fn calendar_guard_treats_mixed_and_chinese_dates_as_the_same_day() {
         assert_eq!(

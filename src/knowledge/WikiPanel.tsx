@@ -23,6 +23,12 @@ interface WikiPolicy {
   topic: string;
   documentIds: string[];
 }
+interface RemovalImpact {
+  pages: number;
+  revisions: number;
+  pending: number;
+  token: string;
+}
 interface WikiSummary {
   id: string;
   title: string;
@@ -150,6 +156,7 @@ export default function WikiPanel({
 }) {
   const [status, setStatus] = useState<WikiStatus>();
   const [policy, setPolicy] = useState<WikiPolicy>();
+  const [removalImpact, setRemovalImpact] = useState<RemovalImpact>();
   const [page, setPage] = useState<WikiPage>();
   const [change, setChange] = useState<WikiChange>();
   const [baseline, setBaseline] = useState<WikiPage>();
@@ -183,6 +190,7 @@ export default function WikiPanel({
     setStatus(next);
     if (!dirty.current || resetPolicy) {
       setPolicy(next.policy);
+      setRemovalImpact(undefined);
       dirty.current = false;
     }
   }, []);
@@ -295,15 +303,32 @@ export default function WikiPanel({
 
   function patch(value: Partial<WikiPolicy>) {
     dirty.current = true;
+    setRemovalImpact(undefined);
     setPolicy((old) => old && { ...old, ...value });
   }
 
   async function save() {
     if (!policy) return;
     const { revision: expectedRevision, ...settings } = policy;
+    if (removingDocuments && !removalImpact) {
+      await run("正在查看影响", async () => {
+        const impact = await invoke<RemovalImpact>("wiki_removal_impact", {
+          projectId,
+          expectedRevision,
+          documentIds: policy.documentIds,
+        });
+        if (active.current) setRemovalImpact(impact);
+      });
+      return;
+    }
     await run("保存中", async () => {
+      setRemovalImpact(undefined);
       const next = await invoke<WikiStatus>("wiki_set_policy", {
-        input: { expectedRevision, ...settings },
+        input: {
+          expectedRevision,
+          ...settings,
+          removalToken: removalImpact?.token,
+        },
       });
       if (!active.current) return;
       if (removingDocuments) {
@@ -827,8 +852,10 @@ export default function WikiPanel({
           </div>
           {removingDocuments && (
             <p className="panel-warning" role="status">
-              保存后，依赖已移除资料的 Wiki
-              页面、历史和待审阅改动将被永久清除。原始文档会保留，可用剩余资料重新整理。
+              {removalImpact
+                ? `确认后将清除 ${removalImpact.pages} 个主题、${removalImpact.revisions} 个已发布版本及 ${removalImpact.pending} 个待审改动。相关变更历史也将清除。`
+                : "移出资料会清除依赖它的 Wiki 内容。保存前可查看影响范围。"}
+              原始文档会保留，可用剩余资料重新整理。
             </p>
           )}
           <div className="modal-actions">
@@ -849,7 +876,11 @@ export default function WikiPanel({
               }
               onClick={() => void save()}
             >
-              {removingDocuments ? "保存并清除受影响的 Wiki" : "保存范围与维护"}
+              {removingDocuments
+                ? removalImpact
+                  ? "确认保存并清除"
+                  : "查看清除范围"
+                : "保存范围与维护"}
             </button>
           </div>
         </div>
@@ -970,6 +1001,14 @@ export default function WikiPanel({
                   compact={!!page.claimReviews?.length}
                 />
               )}
+              {selectedChange.status === "pending" &&
+                comparison?.baseAvailable &&
+                !baseOutdated &&
+                baseline?.revision === comparison.baseRevision &&
+                baseline &&
+                !page.stale && (
+                  <WikiChangedQuotes previous={baseline} current={page} />
+                )}
               {selectedChange.status === "pending" &&
                 !!summaryIssues.length && (
                   <WikiSummaryWarning
@@ -1183,6 +1222,63 @@ function WikiReviewChanges({
           {!sources.length && <p>引用资料无变化</p>}
         </>
       )}
+    </section>
+  );
+}
+
+function WikiChangedQuotes({
+  previous,
+  current,
+}: {
+  previous: WikiPage;
+  current: WikiPage;
+}) {
+  // Historical line numbers belong to the old revision. The backend only includes
+  // historical excerpts when the document is still authorized and readable.
+  const before = [
+    ...previous.refs,
+    ...(previous.historicalSources ?? []).flatMap((ref) =>
+      ref.excerpt ? [{ ...ref, quote: ref.excerpt }] : [],
+    ),
+  ];
+  const ids = [...new Set(current.refs.map((ref) => ref.documentId))];
+  const groups = ids.flatMap((id) => {
+    const old = before.filter((ref) => ref.documentId === id);
+    const next = current.refs.filter((ref) => ref.documentId === id);
+    const removed = old.filter(
+      (ref) => !next.some((row) => row.quote === ref.quote),
+    );
+    const added = next.filter(
+      (ref) => !old.some((row) => row.quote === ref.quote),
+    );
+    return removed.length && added.length
+      ? [{ id, title: next[0].title, removed, added }]
+      : [];
+  });
+  if (!groups.length) return null;
+  return (
+    <section aria-label="原文摘录变化" className="wiki-review-changes">
+      <h3>原文摘录变化</h3>
+      {groups.map(({ id, title, removed, added }) => (
+        <div key={id}>
+          <strong>{title}</strong>
+          <dl className="wiki-conclusion-diff">
+            {[
+              { label: "上版引用", refs: removed },
+              { label: "本次引用", refs: added },
+            ].map(({ label, refs }) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                {refs.map((ref, i) => (
+                  <dd key={i}>
+                    {sourceLines(ref)} · {ref.quote}
+                  </dd>
+                ))}
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
     </section>
   );
 }

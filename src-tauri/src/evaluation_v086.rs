@@ -1,4 +1,9 @@
 //! Opt-in live scoring input. All content comes from the frozen synthetic fixture.
+mod batch;
+mod independent;
+#[path = "evaluation_rc4.rs"]
+pub(crate) mod rc4;
+
 use crate::{
     assistant, assistant_sources::WebAccess, db, documents, eval_trace, files, library, models,
     providers, AppState, Settings,
@@ -87,13 +92,20 @@ struct Requirement {
     claim: String,
 }
 
-fn fixture(suite: &Suite) -> Fixture {
-    let expected: Vec<_> = suite.hashes.lines().collect();
-    assert_eq!(expected.len(), 2);
-    for (line, bytes) in expected.into_iter().zip([suite.fixture, suite.rubric]) {
-        assert_eq!(files::hash(bytes), line.split_whitespace().next().unwrap());
+fn checked_fixture(suite: &Suite) -> Result<Fixture, &'static str> {
+    let hashes: Vec<_> = suite
+        .hashes
+        .lines()
+        .filter_map(|line| line.split_whitespace().next())
+        .collect();
+    if hashes != [files::hash(suite.fixture), files::hash(suite.rubric)] {
+        return Err("unexpected-frozen-fixture-hash");
     }
-    serde_json::from_str(suite.fixture).expect("valid frozen fixture")
+    serde_json::from_str(suite.fixture).map_err(|_| "invalid-frozen-fixture")
+}
+
+fn fixture(suite: &Suite) -> Fixture {
+    checked_fixture(suite).expect("valid frozen fixture")
 }
 
 #[test]
@@ -148,9 +160,13 @@ fn check_requirements(f: &Fixture) {
     }
 }
 
-fn isolated_state(data: &Path, settings: Settings) -> Result<AppState, &'static str> {
+pub(crate) fn isolated_state(
+    data: &Path,
+    settings: Settings,
+    credentials: crate::credentials::CredentialReader,
+) -> Result<AppState, &'static str> {
     Ok(AppState {
-        credentials: Default::default(),
+        credentials,
         workspace: Mutex::new(None),
         workspace_generation: AtomicU64::new(0),
         settings: Mutex::new(settings),
@@ -291,7 +307,11 @@ async fn embed_fixture(
     Ok(documents)
 }
 
-fn save_report(path: &Path, report: &Value, secrets: &[String]) -> Result<(), &'static str> {
+pub(crate) fn save_report(
+    path: &Path,
+    report: &Value,
+    secrets: &[String],
+) -> Result<(), &'static str> {
     let mut report = report.clone();
     fn redact(value: &mut Value, secrets: &[String]) {
         match value {
@@ -300,7 +320,15 @@ fn save_report(path: &Path, report: &Value, secrets: &[String]) -> Result<(), &'
                     *text = text.replace(secret, "[redacted]");
                 }
             }
-            Value::Object(object) => object.values_mut().for_each(|value| redact(value, secrets)),
+            Value::Object(object) => {
+                for (mut field, mut child) in std::mem::take(object) {
+                    for secret in secrets {
+                        field = field.replace(secret, "[redacted]");
+                    }
+                    redact(&mut child, secrets);
+                    object.insert(field, child);
+                }
+            }
             Value::Array(array) => array.iter_mut().for_each(|value| redact(value, secrets)),
             _ => {}
         }
@@ -318,12 +346,53 @@ fn save_report(path: &Path, report: &Value, secrets: &[String]) -> Result<(), &'
     file.write_all(&bytes).map_err(|_| "report-write-failed")
 }
 
-async fn saved_key(state: &AppState, role: &str, address: &str) -> Result<String, &'static str> {
-    match crate::read_key(state, role, address, &state.cancel_chat).await {
-        Ok(Some(key)) if !key.trim().is_empty() => Ok(key),
-        Err(error) if error == crate::credentials::PENDING => Err("keychain-authorization-pending"),
-        Err(_) => Err("keychain-read-failed"),
-        _ => Err("saved-address-bound-key-missing"),
+pub(crate) fn saved_settings() -> Result<Settings, &'static str> {
+    let path = PathBuf::from(std::env::var_os("HOME").ok_or("missing home directory")?)
+        .join("Library/Application Support/local.inkstone.desktop/settings.json");
+    let bytes = fs::read(path).map_err(|_| "saved settings are unavailable")?;
+    let (config, _) = crate::decode_saved_config(&bytes).ok_or("saved settings are invalid")?;
+    Ok(config.settings)
+}
+
+// A batch gets one bounded interactive authorization window by default. Standalone tests
+// keep their existing wait policy, even when the test harness runs other tests concurrently.
+tokio::task_local! { static DEFAULT_AUTH_WAIT_SECONDS: u64; }
+
+pub(crate) async fn saved_key(
+    state: &AppState,
+    role: &str,
+    address: &str,
+) -> Result<String, &'static str> {
+    // Explicit live runs can leave an OS authorization prompt open for the tester.
+    // Polling observes the same in-flight keychain request; interactive desktop reads keep their usual timeout.
+    let wait = std::env::var("INKSTONE_EVAL_KEYCHAIN_WAIT_SECONDS")
+        .ok()
+        .and_then(|s| s.parse::<u64>().ok())
+        .unwrap_or_else(|| {
+            DEFAULT_AUTH_WAIT_SECONDS
+                .try_with(|wait| *wait)
+                .unwrap_or(0)
+        })
+        .min(300);
+    let deadline = std::time::Instant::now() + Duration::from_secs(wait);
+    loop {
+        match crate::read_key(state, role, address, &state.cancel_chat).await {
+            Err(error)
+                if error == crate::credentials::PENDING && std::time::Instant::now() < deadline =>
+            {
+                tokio::time::sleep(Duration::from_millis(500)).await;
+            }
+            value => {
+                return match value {
+                    Ok(Some(key)) if !key.trim().is_empty() => Ok(key),
+                    Err(error) if error == crate::credentials::PENDING => {
+                        Err("keychain-authorization-pending")
+                    }
+                    Err(_) => Err("keychain-read-failed"),
+                    _ => Err("saved-address-bound-key-missing"),
+                }
+            }
+        }
     }
 }
 
@@ -350,15 +419,12 @@ fn run_live(suite: &Suite) -> Result<(), &'static str> {
     if !matches!(mode.as_str(), "keyword" | "hybrid" | "rerank") {
         return Err("choose keyword, hybrid or rerank");
     }
-    let settings_path = PathBuf::from(std::env::var_os("HOME").ok_or("missing home directory")?)
-        .join("Library/Application Support/local.inkstone.desktop/settings.json");
-    let bytes = fs::read(settings_path).map_err(|_| "saved settings are unavailable")?;
-    let (config, _) = crate::decode_saved_config(&bytes).ok_or("saved settings are invalid")?;
+    let config = saved_settings()?;
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .map_err(|_| "runtime initialization failed")?;
-    let result = runtime.block_on(grounded_holdout(suite, &mode, config.settings, true));
+    let result = runtime.block_on(grounded_holdout(suite, &mode, config, true));
     // A timed-out macOS system authorization may still own the native
     // credential thread. This explicit test must report without waiting on it.
     runtime.shutdown_background();
@@ -383,7 +449,7 @@ async fn offline_context(
     started: &assistant::Started,
     prepared: &assistant::grounding::Prepared,
     budget: usize,
-) -> Result<models::ChatResponse, String> {
+) -> Result<(models::ChatResponse, Vec<models::SearchResult>), String> {
     let mut found = crate::search_inner(
         state,
         &prepared.retrieval_question,
@@ -400,24 +466,70 @@ async fn offline_context(
     let budget = budget.saturating_sub(
         started.prompt_question.chars().count() + providers::ANSWER_SYSTEM.chars().count() + 500,
     );
-    let sources =
-        crate::retrieval::generation_context(ws, &found.results, budget, started.scope.is_some());
-    Ok(models::ChatResponse {
-        external_sources: vec![],
-        trace: None,
-        memory: None,
-        finish_reason: "offline_evidence_only".into(),
-        text: String::new(),
-        sources,
-        warning: found.warning,
-        retrieval_mode: found.retrieval_mode,
-        rerank_status: found.rerank_status,
-        model: String::new(),
-        scope: started.scope.clone(),
-        chart_warnings: vec![],
-        rejected_charts: vec![],
-        citation_checks: vec![],
-    })
+    // Preserve retrieval-stage flags for the old evidence counts. Assemble final
+    // context through the production local reader, with provider calls disabled.
+    let reviewed = crate::candidate_reading::scoped_context(
+        state,
+        ws,
+        started.scope.as_deref(),
+        &prepared.retrieval_question,
+        &found,
+        prepared.gate.as_ref(),
+        &crate::settings(state)?.chat,
+        budget,
+        false,
+        state
+            .workspace_generation
+            .load(std::sync::atomic::Ordering::SeqCst),
+        false,
+        assistant::grounding::day_pointer(&started.grounded_question).is_none(),
+    )
+    .await?;
+    let sources = reviewed.sources;
+    Ok((
+        models::ChatResponse {
+            external_sources: vec![],
+            trace: None,
+            memory: None,
+            finish_reason: "offline_evidence_only".into(),
+            text: String::new(),
+            sources,
+            warning: found.warning,
+            retrieval_mode: found.retrieval_mode,
+            rerank_status: found.rerank_status,
+            model: String::new(),
+            scope: started.scope.clone(),
+            chart_warnings: vec![],
+            rejected_charts: vec![],
+            citation_checks: vec![],
+        },
+        found.results,
+    ))
+}
+
+struct ReportTarget<'a> {
+    path: PathBuf,
+    fixture_hash: &'a str,
+    rubric_hash: Option<&'a str>,
+}
+
+#[derive(Default, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OfflineQuestionStages {
+    searched: usize,
+    with_candidates: usize,
+    with_index_candidates: usize,
+    with_legacy_evidence: usize,
+    with_selected_quotes: usize,
+    with_admitted_evidence: usize,
+    with_assembled_context: usize,
+    clarified_before_search: usize,
+}
+
+fn report_path(suite: &Suite) -> Result<PathBuf, &'static str> {
+    std::env::var_os(format!("{}_REPORT", suite.env_prefix))
+        .map(PathBuf::from)
+        .ok_or("report path required")
 }
 
 async fn grounded_holdout(
@@ -426,9 +538,72 @@ async fn grounded_holdout(
     config: Settings,
     live: bool,
 ) -> Result<(), &'static str> {
-    let path = PathBuf::from(
-        std::env::var_os(format!("{}_REPORT", suite.env_prefix)).ok_or("report path required")?,
-    );
+    run_fixture(
+        suite,
+        mode,
+        config,
+        live.then(crate::credentials::CredentialReader::default),
+        fixture(suite),
+        ReportTarget {
+            path: report_path(suite)?,
+            fixture_hash: &files::hash(suite.fixture),
+            rubric_hash: Some(&files::hash(suite.rubric)),
+        },
+    )
+    .await
+}
+
+fn remember_for_redaction(keys: &mut Vec<String>, key: &str) {
+    if !keys.iter().any(|seen| seen == key) {
+        keys.push(key.to_owned());
+    }
+}
+
+async fn check_keys(
+    state: &AppState,
+    config: &Settings,
+    mode: &str,
+    stage: &mut &'static str,
+    redactions: &mut Vec<String>,
+) -> Result<(), &'static str> {
+    for (role, address, label, needed) in [
+        ("chat", &config.chat.base_url, "read-chat-key", true),
+        (
+            "embedding",
+            &config.embedding.base_url,
+            "read-embedding-key",
+            mode != "keyword",
+        ),
+        (
+            "rerank",
+            &config.rerank.endpoint,
+            "read-rerank-key",
+            mode == "rerank",
+        ),
+    ] {
+        if needed {
+            *stage = label;
+            let key = saved_key(state, role, address).await?;
+            remember_for_redaction(redactions, &key);
+        }
+    }
+    Ok(())
+}
+
+async fn run_fixture(
+    suite: &Suite,
+    mode: &str,
+    config: Settings,
+    credentials: Option<crate::credentials::CredentialReader>,
+    fixture: Fixture,
+    target: ReportTarget<'_>,
+) -> Result<(), &'static str> {
+    let live = credentials.is_some();
+    let ReportTarget {
+        path,
+        fixture_hash,
+        rubric_hash,
+    } = target;
     if !path.is_absolute() || path.exists() {
         return Err("use an unused absolute report path");
     }
@@ -446,26 +621,22 @@ async fn grounded_holdout(
         return Err("configure saved embedding and reranking services to run rerank mode");
     }
     let data = tempfile::tempdir().map_err(|_| "isolation setup failed")?;
-    let state = isolated_state(data.path(), config.clone())?;
-    let fixture = fixture(suite);
+    let state = isolated_state(data.path(), config.clone(), credentials.unwrap_or_default())?;
     let trace = eval_trace::Trace::new(suite.max_requests, suite.max_seconds);
     let mut keys = Vec::new();
     let mut rows = Vec::new();
+    let mut offline_stages = OfflineQuestionStages::default();
     let mut stage = "setup";
     let operation = async {
         if live {
-            stage = "read-chat-key";
-            keys.push(saved_key(&state, "chat", &config.chat.base_url).await?);
+            check_keys(&state, &config, mode, &mut stage, &mut keys).await?;
         }
         let vectors = if mode != "keyword" {
             stage = "read-embedding-key";
-            keys.push(saved_key(&state, "embedding", &config.embedding.base_url).await?);
-            if mode == "rerank" {
-                stage = "read-rerank-key";
-                keys.push(saved_key(&state, "rerank", &config.rerank.endpoint).await?);
-            }
+            let key = saved_key(&state, "embedding", &config.embedding.base_url).await?;
+            remember_for_redaction(&mut keys, &key);
             stage = "embed-fixture";
-            Some(embed_fixture(&state, &fixture, &config.embedding, &keys[1]).await?)
+            Some(embed_fixture(&state, &fixture, &config.embedding, &key).await?)
         } else {
             None
         };
@@ -478,6 +649,10 @@ async fn grounded_holdout(
         .map_err(|_| "fixture-index-failed")?;
         let mut conversations = HashMap::new();
         for case in &fixture.cases {
+            if live {
+                // An expired entry must go through the OS reader before another model turn.
+                check_keys(&state, &config, mode, &mut stage, &mut keys).await?;
+            }
             stage = "evaluate-question";
             let FixtureWorkspace {
                 workspace: ws,
@@ -519,8 +694,28 @@ async fn grounded_holdout(
                 .unwrap_or_default();
             let prepared = assistant::grounding::prepare(data.path(), ws, &started)
                 .map_err(|_| "fixture-grounding-prepare-failed")?;
+            let mut offline_hits = None;
             let (answer, clarification, failure) = if let Some(text) = prepared.clarification {
-                (None, Some(text), None)
+                if !live {
+                    offline_stages.clarified_before_search += 1;
+                }
+                let response = models::ChatResponse {
+                    external_sources: vec![],
+                    trace: None,
+                    memory: None,
+                    finish_reason: "no_evidence".into(),
+                    text: text.clone(),
+                    sources: vec![],
+                    warning: Some("追问需要明确当前对象或指标，未调用模型。".into()),
+                    retrieval_mode: "none".into(),
+                    rerank_status: "not-requested".into(),
+                    model: String::new(),
+                    scope: started.scope.clone(),
+                    chart_warnings: vec![],
+                    rejected_charts: vec![],
+                    citation_checks: vec![],
+                };
+                (Some(response), Some(text), None)
             } else {
                 let result = if live {
                     crate::ask_pipeline(
@@ -544,11 +739,33 @@ async fn grounded_holdout(
                 } else {
                     offline_context(&state, ws, &started, &prepared, config.chat.context_chars)
                         .await
+                        .map(|(response, hits)| {
+                            offline_stages.searched += 1;
+                            let legacy = hits.iter().any(|hit| hit.evidence);
+                            let selected = response
+                                .sources
+                                .iter()
+                                .any(|s| s.match_kind == "selected-quote");
+                            offline_stages.with_index_candidates += usize::from(!hits.is_empty());
+                            offline_stages.with_legacy_evidence += usize::from(legacy);
+                            offline_stages.with_selected_quotes += usize::from(selected);
+                            offline_stages.with_candidates +=
+                                usize::from(!hits.is_empty() || selected);
+                            offline_stages.with_admitted_evidence +=
+                                usize::from(legacy || selected);
+                            offline_stages.with_assembled_context +=
+                                usize::from(!response.sources.is_empty());
+                            offline_hits = Some(hits);
+                            response
+                        })
                 };
                 match result {
                     Ok(response) => (Some(response), None, None),
                     Err(error) if error == crate::credentials::PENDING => {
                         (None, None, Some("keychain-authorization-pending"))
+                    }
+                    Err(error) if error.contains("钥匙串") => {
+                        (None, None, Some("keychain-read-failed"))
                     }
                     Err(_) => (None, None, Some("answer-pipeline-error")),
                 }
@@ -583,9 +800,29 @@ async fn grounded_holdout(
                     })
                     .collect::<Vec<_>>()
             });
+            let ranked = offline_hits.as_ref().map(|hits| {
+                let mut ranked: Vec<_> =
+                    hits.iter().filter(|hit| hit.bm25_rank.is_some()).collect();
+                ranked.sort_by_key(|hit| (hit.bm25_rank, hit.id));
+                ranked.truncate(8);
+                ranked
+            });
             rows.push(json!({
-                "id":case.id, "expected":case.expected,"elapsedMs":start.elapsed().as_millis(),
+                "id":case.id, "expected":case.expected, "question":case.question,
+                "workspaceDocuments":paths, "selectedDocuments":case.documents, "scope":started.scope,
+                "retrievalQuestion":prepared.retrieval_question,"promptQuestion":started.prompt_question,
+                "previousQuestions":started.previous_questions, "previousAnswer":started.previous_answer,
+                "elapsedMs":start.elapsed().as_millis(),
                 "httpAttempts":trace.snapshot()["httpAttempts"].as_u64().unwrap_or_default() - before,
+                "rc4Candidates": offline_hits.as_ref().filter(|_| suite.id == "rc4-blind").map(|hits| rc4::candidate_snapshot(hits, paths)),
+                "requiredEvidenceStages": offline_hits.as_ref().map(|hits| case.required.iter().zip(&expected_evidence).map(|(required, in_context)| {
+                    let matches = |hit: &models::SearchResult| hit.path == paths[&required.document] && hit.text.contains(&required.quote);
+                    json!({"document": required.document, "candidate": hits.iter().any(matches),
+                        "top8": ranked.as_ref().is_some_and(|ranked| ranked.iter().any(|hit| matches(hit))),
+                        "eligible": hits.iter().any(|hit| hit.evidence && matches(hit)),
+                        "inSelectedQuote": answer.as_ref().is_some_and(|a| a.sources.iter().any(|s| s.match_kind == "selected-quote" && matches(s))),
+                        "inContext": in_context})
+                }).collect::<Vec<_>>()),
                 "expectedEvidenceInContext":expected_evidence, "sourceDocuments":source_documents,
                 "outOfScopePath":out_of_scope_path,
                 "clarification":clarification, "failure":failure, "response":answer
@@ -596,11 +833,19 @@ async fn grounded_holdout(
             let conversation = assistant::finish(data.path(), &owner, &started, outcome, false)
                 .map_err(|_| "fixture-save-answer-failed")?;
             conversations.insert(conversation_key.clone(), conversation);
-            if failure == Some("keychain-authorization-pending") {
-                return Err("keychain-authorization-pending");
+            if let Some(reason @ ("keychain-authorization-pending" | "keychain-read-failed")) =
+                failure
+            {
+                return Err(reason);
+            }
+            if trace.provider_denied() {
+                return Err("provider-authorization-denied");
             }
         }
         stage = "finished";
+        if rows.iter().any(|row| !row["failure"].is_null()) {
+            return Err("one-or-more-answer-pipeline-errors");
+        }
         Ok::<_, &'static str>(())
     };
     let result = eval_trace::TRACE
@@ -609,17 +854,38 @@ async fn grounded_holdout(
             tokio::time::timeout(Duration::from_secs(suite.max_seconds), operation),
         )
         .await
-        .unwrap_or(Err("wall-time-budget-exhausted"));
-    let report = json!({
+        .unwrap_or_else(|_| {
+            Err(if stage.starts_with("read-") {
+                "authorization-time-budget-exhausted"
+            } else {
+                "wall-time-budget-exhausted"
+            })
+        });
+    // Index preparation can also be the first HTTP request rejected by the provider.
+    let result = if trace.provider_denied() {
+        Err("provider-authorization-denied")
+    } else {
+        result
+    };
+    let mut report = json!({
         "version":env!("CARGO_PKG_VERSION"), "suite":suite.id,
-        "fixtureSha256":files::hash(suite.fixture), "rubricSha256":files::hash(suite.rubric),
+        "fixtureSha256":fixture_hash, "rubricSha256":rubric_hash,
         "status":if result.is_ok() { "complete" } else { "incomplete" },
+        "candidateReadingEnabled": config.candidate_reading,
         "stage":stage, "error":result.as_ref().err(), "mode":mode, "live":live, "usage":trace.snapshot(),
         "models":{"chat":live.then_some(config.chat.model),"embedding":(mode != "keyword").then_some(config.embedding.model),
                   "rerank":(mode == "rerank").then_some(config.rerank.model)},
         "syntheticOnly":true,"independentFixtureAuthor":true,"externalBlindReview":false,
         "manualReview":null,"records":rows
     });
+    if !live {
+        report["offlineQuestionStages"] = json!({
+            "fixtureSha256": fixture_hash,
+            "contextChars": config.chat.context_chars,
+            "httpAttempts": report["usage"]["httpAttempts"],
+            "questions": offline_stages,
+        });
+    }
     save_report(&path, &report, &keys)?;
     result
 }

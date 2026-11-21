@@ -500,6 +500,65 @@ pub(super) fn coverage(
     Ok(("pending", 0))
 }
 
+const READ_DOCUMENT: &str = "EXISTS (SELECT 1 FROM json_each(payload,'$.inputs') i WHERE json_extract(i.value,'$.documentId') IN (SELECT value FROM json_each(?2)))";
+
+fn affected_pages(tx: &Connection, space: &str, documents: &str) -> Result<Vec<String>, String> {
+    let mut stmt = tx
+        .prepare(&format!(
+            "SELECT DISTINCT page FROM revisions WHERE space=?1 AND {READ_DOCUMENT} ORDER BY page"
+        ))
+        .map_err(error)?;
+    let rows = stmt
+        .query_map(params![space, documents], |r| r.get(0))
+        .map_err(error)?;
+    rows.collect::<Result<_, _>>().map_err(error)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RemovalImpact {
+    pub(super) pages: usize,
+    pub(super) revisions: usize,
+    pub(super) pending: usize,
+    pub(super) token: String,
+}
+
+pub(super) fn removal_impact(
+    tx: &Connection,
+    space: &str,
+    removed: &[&str],
+) -> Result<RemovalImpact, String> {
+    let documents = encode(&removed)?;
+    let pages = affected_pages(tx, space, &documents)?;
+    let page_ids = encode(&pages)?;
+    let mut stmt = tx.prepare("SELECT page,revision FROM revisions WHERE space=?1 AND page IN (SELECT value FROM json_each(?2)) ORDER BY page,revision").map_err(error)?;
+    let revisions = stmt
+        .query_map(params![space, page_ids], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+        })
+        .map_err(error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(error)?;
+    let mut stmt = tx.prepare(&format!("SELECT id,status FROM changes WHERE space=?1 AND (page IN (SELECT value FROM json_each(?3)) OR {READ_DOCUMENT}) ORDER BY id")).map_err(error)?;
+    let changes = stmt
+        .query_map(params![space, documents, page_ids], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+        })
+        .map_err(error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(error)?;
+    let token = crate::files::hash(encode(&(space, removed, &revisions, &changes))?);
+    Ok(RemovalImpact {
+        pages: pages.len(),
+        revisions: revisions.len(),
+        pending: changes
+            .iter()
+            .filter(|(_, status)| status == "pending")
+            .count(),
+        token,
+    })
+}
+
 pub(super) fn purge_derived(
     tx: &Connection,
     space: &str,
@@ -509,18 +568,7 @@ pub(super) fn purge_derived(
         return Ok(());
     }
     let documents = encode(&documents)?;
-    const READ_DOCUMENT: &str = "EXISTS (SELECT 1 FROM json_each(payload,'$.inputs') i WHERE json_extract(i.value,'$.documentId') IN (SELECT value FROM json_each(?2)))";
-    let affected_pages = {
-        let mut stmt = tx
-            .prepare(&format!(
-                "SELECT DISTINCT page FROM revisions WHERE space=?1 AND {READ_DOCUMENT}"
-            ))
-            .map_err(error)?;
-        let rows = stmt
-            .query_map(params![space, documents], |r| r.get::<_, String>(0))
-            .map_err(error)?;
-        rows.collect::<Result<Vec<_>, _>>().map_err(error)?
-    };
+    let affected_pages = affected_pages(tx, space, &documents)?;
     // A synthesized page can paraphrase the deleted source anywhere. Do not preserve its history
     // or expose another revision of it silently. Unrelated pages remain available.
     for page in &affected_pages {

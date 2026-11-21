@@ -10,6 +10,8 @@ import {
   type Settings,
 } from "./types";
 import ModalDialog from "./ModalDialog";
+import type { LibraryProject } from "./library";
+import ExternalToolsDialog from "./ExternalToolsDialog";
 type Tab = "embedding" | "chat" | "rerank";
 type SavedKeySource = "embedding" | "chat";
 function serviceOrigin(address: string): string | null {
@@ -36,6 +38,7 @@ export default function SettingsModal({
   onClose,
   onSave,
   onWebSearch,
+  projects,
 }: {
   value: Settings;
   initialTab?: Tab;
@@ -43,6 +46,7 @@ export default function SettingsModal({
   onClose: () => void;
   onSave: (settings: Settings) => void;
   onWebSearch?: () => void;
+  projects?: LibraryProject[];
 }) {
   const [form, setForm] = useState<Settings>(() => ({
     ...structuredClone(value),
@@ -60,6 +64,7 @@ export default function SettingsModal({
   });
   const [tab, setTab] = useState<Tab>(chatSetupOnly ? "chat" : initialTab);
   const [busy, setBusy] = useState("");
+  const [externalOpen, setExternalOpen] = useState(false);
   const [appearance, setAppearanceChoice] = useState(getAppearance);
   const testGeneration = useRef(0);
   const [message, setMessage] = useState("");
@@ -93,7 +98,13 @@ export default function SettingsModal({
   const provider = form[tab === "rerank" ? "embedding" : tab];
   const update = (patch: Partial<Provider>) => {
     if (tab === "rerank") return;
-    setForm((old) => ({ ...old, [tab]: { ...old[tab], ...patch } }));
+    setForm((old) => ({
+      ...old,
+      ...(tab === "chat" && patch.baseUrl !== undefined && patch.baseUrl !== old.chat.baseUrl
+        ? { candidateReading: false }
+        : {}),
+      [tab]: { ...old[tab], ...patch },
+    }));
   };
   const updateRerank = (patch: Partial<RerankProvider>) =>
     setForm((old) => ({ ...old, rerank: { ...old.rerank, ...patch } }));
@@ -156,6 +167,7 @@ export default function SettingsModal({
     try {
       const result = await invoke<Settings>("save_settings", {
         value: {
+          candidateReading: form.candidateReading ?? false,
           embedding: form.embedding,
           chat: form.chat,
           rerank: form.rerank,
@@ -176,6 +188,7 @@ export default function SettingsModal({
     }
   }
   return (
+    <>
     <ModalDialog
       label="模型设置"
       className="settings-modal"
@@ -201,6 +214,11 @@ export default function SettingsModal({
           : "文件与索引保存在本机。按需要连接自己的 API，也可以使用本地服务。"}
       </p>
       {!chatSetupOnly && <div className="settings-utilities">
+        {projects && (
+          <button type="button" className="button small" disabled={!!busy} onClick={() => setExternalOpen(true)}>
+            外部工具
+          </button>
+        )}
         {onWebSearch && (
           <button
             type="button"
@@ -516,6 +534,25 @@ export default function SettingsModal({
                 placeholder={hasKey ? "留空保留现有密钥" : "本机服务可留空"}
               />
             </label>
+            {tab === "chat" && (
+              <div className="wide">
+                <label className="clear-key">
+                  <input
+                    type="checkbox"
+                    checked={form.candidateReading ?? false}
+                    aria-describedby="candidate-reading-help"
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setForm((old) => ({ ...old, candidateReading: checked }));
+                    }}
+                  />
+                  用问答模型核对候选原文
+                </label>
+                <small id="candidate-reading-help">
+                  本机取证不足时，可把小问与所选资料的标题、原句发给上方问答服务核对。每题最多增加一次请求，最多 8 段、合计 4,000 个原文字符。
+                </small>
+              </div>
+            )}
             <details>
               <summary>高级参数</summary>
               <div className="advanced-fields">
@@ -639,5 +676,9 @@ export default function SettingsModal({
         </button>
       </div>
     </ModalDialog>
+    {externalOpen && projects && (
+      <ExternalToolsDialog projects={projects} onClose={() => setExternalOpen(false)} />
+    )}
+    </>
   );
 }

@@ -1,3 +1,4 @@
+import { dismissOnOutside, focusMenuButton } from "./platform/menu";
 import { isImeEvent } from "./platform/ime";
 import {
   Fragment,
@@ -124,6 +125,7 @@ export default function LibraryBrowser({
   }
   useEffect(() => {
     setTab("all");
+    setMenu("");
     setQuery("");
     anchor.current = null;
   }, [projectId]);
@@ -132,6 +134,41 @@ export default function LibraryBrowser({
   const [trashDetail, setTrashDetail] = useState<LibraryDocument | null>(null);
   const [pinSaving, setPinSaving] = useState("");
   const menuTrigger = useRef<HTMLButtonElement | null>(null);
+  const popup = useRef<HTMLDivElement>(null);
+  const entryKey = useRef("Home");
+  useLayoutEffect(() => {
+    if (!menu || !popup.current || !menuTrigger.current) return;
+    const panel = popup.current;
+    const trigger = menuTrigger.current;
+    const anchor = trigger.getBoundingClientRect();
+    const gap = 4;
+    const margin = 8;
+    const above = anchor.top - gap - margin;
+    const below = window.innerHeight - anchor.bottom - gap - margin;
+    const placeAbove = below < panel.offsetHeight && above > below;
+    panel.style.left = Math.max(margin, Math.min(
+      window.innerWidth - panel.offsetWidth - margin, anchor.right - panel.offsetWidth,
+    )) + "px";
+    if (placeAbove) panel.style.bottom = window.innerHeight - anchor.top + gap + "px";
+    else panel.style.top = anchor.bottom + gap + "px";
+    panel.style.maxHeight = Math.max(0, placeAbove ? above : below) + "px";
+    focusMenuButton(panel, entryKey.current);
+    const close = () => setMenu("");
+    const unwatch = dismissOnOutside(
+      (event) => event.composedPath().includes(panel) || event.composedPath().includes(trigger),
+      close,
+    );
+    const onScroll = (event: Event) => {
+      if (event.target instanceof Node && event.target.contains(trigger)) close();
+    };
+    window.addEventListener("resize", close);
+    document.addEventListener("scroll", onScroll, true);
+    return () => {
+      unwatch();
+      window.removeEventListener("resize", close);
+      document.removeEventListener("scroll", onScroll, true);
+    };
+  }, [menu]);
   const pendingImports = view.pendingImports.filter(
     (t) => t.projectId === projectId,
   );
@@ -148,6 +185,8 @@ export default function LibraryBrowser({
   const readyDocuments = compact
     ? []
     : view.documents.filter((doc) => doc.projectId === projectId && doc.status === "ready");
+  const showingFirstUse = !compact && !!firstUseGuide && readyDocuments.length === 0;
+  const filtered = Boolean(query || (!compact && typeFilter !== "all"));
   const order = docs.map((d) => d.id).join("|") + preferences.pinnedCollapsed;
   useLayoutEffect(() => {
     const list = listRef.current,
@@ -172,7 +211,6 @@ export default function LibraryBrowser({
         documentId: d?.id ?? null,
         bundle,
       });
-      setMenu("");
     } catch (e) {
       onError(e);
     }
@@ -183,17 +221,17 @@ export default function LibraryBrowser({
       aria-label={compact ? "文档库侧栏" : "我的文档"}
       onKeyDown={(e) => {
         if (isImeEvent(e.nativeEvent)) return;
-        if (e.key === "Escape" && (menu || rename || adding)) {
+        if (menu && (e.key === "Escape" || e.key === "Tab")) {
+          if (e.key === "Escape") e.preventDefault();
           e.stopPropagation();
+          menuTrigger.current?.focus({ preventScroll: true });
           setMenu("");
+        } else if (e.key === "Escape" && (rename || adding)) {
+          e.stopPropagation();
           setRename(null);
           setAdding(false);
           menuTrigger.current?.focus();
         }
-      }}
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null))
-          setMenu("");
       }}
     >
       {!compact && (
@@ -210,9 +248,11 @@ export default function LibraryBrowser({
             <button className="button primary" disabled={busy} onClick={onNew}>
               <Plus size={15} /> 新建文档
             </button>
-            <button className="button" disabled={busy} onClick={() => onImport()}>
-              <Upload size={15} /> 导入文档
-            </button>
+            {!showingFirstUse && (
+              <button className="button" disabled={busy} onClick={() => onImport()}>
+                <Upload size={15} /> 导入文档
+              </button>
+            )}
           </div>
         </header>
       )}
@@ -595,8 +635,16 @@ export default function LibraryBrowser({
                     <button
                       aria-label={"文档操作 " + d.title}
                       aria-expanded={menu === d.id}
-                      aria-haspopup="true"
+                      aria-haspopup="menu"
+                      onKeyDown={(e) => {
+                        if (isImeEvent(e.nativeEvent) || !["ArrowDown", "ArrowUp"].includes(e.key)) return;
+                        e.preventDefault();
+                        entryKey.current = e.key;
+                        menuTrigger.current = e.currentTarget;
+                        setMenu(d.id);
+                      }}
                       onClick={(e) => {
+                        entryKey.current = "Home";
                         menuTrigger.current = e.currentTarget;
                         setMenu(menu === d.id ? "" : d.id);
                       }}
@@ -607,18 +655,29 @@ export default function LibraryBrowser({
                   {menu === d.id && (
                     <div
                       className="library-doc-menu"
-                      role="group"
+                      ref={popup}
+                      role="menu"
+                      onKeyDown={(e) => {
+                        if (isImeEvent(e.nativeEvent) || !["ArrowUp", "ArrowDown", "Home", "End"].includes(e.key)) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        focusMenuButton(e.currentTarget, e.key);
+                      }}
+                      onClick={(e) => {
+                        if (!(e.target as HTMLElement).closest("button")) return;
+                        menuTrigger.current?.focus({ preventScroll: true });
+                        setMenu("");
+                      }}
                       aria-label={d.title + "的操作"}
                     >
                       {onPin && (
-                        <button
+                        <button role="menuitem" tabIndex={-1}
                           disabled={busy || !!pinSaving}
                           onClick={() =>
                             void (async () => {
                               setPinSaving(d.id);
                               try {
                                 await onPin(d.id, !pins.includes(d.id));
-                                setMenu("");
                               } catch (e) {
                                 onError(e);
                               } finally {
@@ -632,12 +691,11 @@ export default function LibraryBrowser({
                         </button>
                       )}
                       {d.source && (
-                        <button
+                        <button role="menuitem" tabIndex={-1}
                           disabled={busy}
                           onClick={() =>
                             void (async () => {
                               if (!(await onBeforeAction())) return;
-                              setMenu("");
                               setRelink(d);
                             })().catch(onError)
                           }
@@ -646,22 +704,20 @@ export default function LibraryBrowser({
                           重新关联链接
                         </button>
                       )}
-                      <button
+                      <button role="menuitem" tabIndex={-1}
                         onClick={() => {
                           setRename(d);
                           setTitle(d.title);
-                          setMenu("");
                         }}
                       >
                         重命名标题
                       </button>
                       {d.source && (
-                        <button
+                        <button role="menuitem" tabIndex={-1}
                           disabled={busy}
                           onClick={() =>
                             void (async () => {
                               if (!(await onBeforeAction())) return;
-                              setMenu("");
                               setReview({ document: d, tab: "source" });
                             })().catch(onError)
                           }
@@ -670,12 +726,11 @@ export default function LibraryBrowser({
                           检查来源更新
                         </button>
                       )}
-                      <button
+                      <button role="menuitem" tabIndex={-1}
                         disabled={busy}
                         onClick={() =>
                           void (async () => {
                             if (!(await onBeforeAction())) return;
-                            setMenu("");
                             setReview({ document: d, tab: "history" });
                           })().catch(onError)
                         }
@@ -683,16 +738,15 @@ export default function LibraryBrowser({
                         <History size={14} />
                         历史版本
                       </button>
-                      <button onClick={() => void exportDoc(d, false)}>
+                      <button role="menuitem" tabIndex={-1} onClick={() => void exportDoc(d, false)}>
                         导出文件
                       </button>
-                      <button onClick={() => void exportDoc(d, true)}>
+                      <button role="menuitem" tabIndex={-1} onClick={() => void exportDoc(d, true)}>
                         导出含附件包
                       </button>
-                      <button
+                      <button role="menuitem" tabIndex={-1}
                         onClick={() =>
                           void onTrash(d, false)
-                            .then(() => setMenu(""))
                             .catch(onError)
                         }
                       >
@@ -708,10 +762,12 @@ export default function LibraryBrowser({
         ) : (
           <div className="library-empty">
             <FileText size={25} />
-            <p>{tab === "trash" ? "回收站为空" : "还没有匹配的文档"}</p>
-            {tab !== "trash" && (
+            <p>{filtered ? "没有匹配的文档" : tab === "trash" ? "回收站为空" : tab === "recent" ? "还没有最近打开的文档" : tab === "pinned" ? "还没有置顶文档" : "空间里还没有文档"}</p>
+            {filtered ? (
+              <button onClick={() => { setQuery(""); setTypeFilter("all"); }}>清除筛选</button>
+            ) : tab === "all" && !showingFirstUse && (
               <button disabled={busy} onClick={() => onImport()}>
-                导入本地文件，或新建一篇文档
+                导入本地文件
               </button>
             )}
           </div>

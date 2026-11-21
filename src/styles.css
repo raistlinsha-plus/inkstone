@@ -2465,9 +2465,10 @@ a {
   font-size: 12px;
 }
 .library-doc-menu {
-  position: absolute;
-  right: 0;
-  top: 42px;
+  position: fixed;
+  max-width: calc(100vw - 16px);
+  overflow: auto;
+  overscroll-behavior: contain;
   z-index: 30;
   display: flex;
   flex-direction: column;

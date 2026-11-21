@@ -1557,6 +1557,12 @@ test("first Wiki setup guides explicitly scoped compilation, review, publication
     coverage: [] as { documentId: string; title: string; status: string }[],
   };
   overrides.set("wiki_status", () => status);
+  overrides.set("wiki_removal_impact", () => ({
+    pages: 1,
+    revisions: 2,
+    pending: 0,
+    token: "sample-impact",
+  }));
   overrides.set("wiki_set_policy", ({ input }) => {
     const { expectedRevision, ...policy } = input;
     status = {
@@ -1620,8 +1626,12 @@ test("first Wiki setup guides explicitly scoped compilation, review, publication
   const coverageDetails = coverage.closest("details")!;
   expect(coverageDetails.open).toBe(true);
   const coverageItems = within(coverageDetails);
-  expect(coverageItems.getByText("a.md").closest("li")?.textContent).toContain("已找到原文引用");
-  expect(coverageItems.getByText("b.md").closest("li")?.textContent).toContain("本次未引用，可重试");
+  expect(coverageItems.getByText("a.md").closest("li")?.textContent).toContain(
+    "已找到原文引用",
+  );
+  expect(coverageItems.getByText("b.md").closest("li")?.textContent).toContain(
+    "本次未引用，可重试",
+  );
   const review = within(panel.getByRole("group", { name: "Wiki 审阅操作" }));
   fireEvent.click(review.getByRole("button", { name: "发布改动" }));
   await waitFor(() =>
@@ -1654,12 +1664,13 @@ test("first Wiki setup guides explicitly scoped compilation, review, publication
   );
   fireEvent.click(reopened.getByRole("button", { name: "资料范围" }));
   fireEvent.click(await reopened.findByRole("checkbox", { name: "b.md" }));
+  const saves = calls("wiki_set_policy").length;
+  fireEvent.click(reopened.getByRole("button", { name: "查看清除范围" }));
   expect(
-    reopened.getByText(/Wiki 页面、历史和待审阅改动将被永久清除/),
+    await reopened.findByText(/1 个主题、2 个已发布版本及 0 个待审改动/),
   ).toBeTruthy();
-  fireEvent.click(
-    reopened.getByRole("button", { name: "保存并清除受影响的 Wiki" }),
-  );
+  expect(calls("wiki_set_policy")).toHaveLength(saves);
+  fireEvent.click(reopened.getByRole("button", { name: "确认保存并清除" }));
   await waitFor(() =>
     expect(calls("wiki_set_policy").at(-1)?.[1].input.documentIds).toEqual([
       "a.md",
@@ -2409,4 +2420,28 @@ test("exit preserves the latest single-document draft scope without starting gen
   expect(calls("quit_app")).toHaveLength(1);
   expect(mockConversation.draft).toBe("单文档的未发送问题");
   expect(mockConversation.scope).toBe("a.md");
+});
+
+test("file actions close on first outside click and filename edits survive a backdrop click", async () => {
+  await boot();
+  await openDocument("a.md");
+  const trigger = screen.getByRole("button", { name: "文件操作" });
+  const editor = screen.getByLabelText("测试正文");
+  fireEvent.click(trigger);
+  fireEvent.pointerDown(editor);
+  act(() => editor.focus());
+  expect(screen.queryByRole("menu", { name: "文件操作" })).toBeNull();
+  expect(document.activeElement).toBe(editor);
+  fireEvent.keyDown(trigger, { key: "ArrowDown" });
+  const rename = screen.getByRole("menuitem", { name: "重命名文件" });
+  expect(document.activeElement).toBe(rename);
+  fireEvent.click(rename);
+  const dialog = await screen.findByRole("dialog", { name: "文件名称" });
+  const filename = within(dialog).getByRole("textbox");
+  fireEvent.change(filename, { target: { value: "新的名字.md" } });
+  fireEvent.mouseDown(dialog.parentElement!);
+  expect(screen.getByRole("dialog", { name: "文件名称" })).toBe(dialog);
+  expect((filename as HTMLInputElement).value).toBe("新的名字.md");
+  fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+  expect(screen.queryByRole("dialog", { name: "文件名称" })).toBeNull();
 });

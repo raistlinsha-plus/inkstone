@@ -163,6 +163,7 @@ export default function TextEditor({
     onOpenAnswerSource,
   };
   const applying = useRef(false);
+  const appliedContent = useRef(content);
   const adapter = useRef(new RichMarkdownAdapter(content));
   const callback = useRef(onChange);
   const source = useRef<EditorView | null>(null);
@@ -310,6 +311,7 @@ export default function TextEditor({
   const publishStructure = useRef<(structure: boolean) => void>(() => {});
   useEffect(() => {
     if (!root.current) return;
+    appliedContent.current = content;
     if (mode === "source") {
       const view = new EditorView({
         parent: root.current,
@@ -818,6 +820,7 @@ export default function TextEditor({
               const options = dropdown.querySelectorAll<HTMLButtonElement>(
                 ".top-bar-heading-option",
               );
+              for (const option of options) option.tabIndex = -1;
               const target =
                 headingEntryKey === "ArrowUp"
                   ? options[options.length - 1]
@@ -902,13 +905,14 @@ export default function TextEditor({
             );
             focusAfterAction(button);
           }
-          if (event.key === "Escape") {
-            event.preventDefault();
+          const headingOpen = bar.querySelector(".top-bar-heading-dropdown");
+          if (event.key === "Escape" || (event.key === "Tab" && headingOpen)) {
+            if (event.key === "Escape") event.preventDefault();
             event.stopPropagation();
             const selected = bar.querySelector<HTMLButtonElement>(
               ".top-bar-heading-button",
             );
-            if (bar.querySelector(".top-bar-heading-dropdown")) {
+            if (headingOpen) {
               selected?.dispatchEvent(
                 new PointerEvent("pointerdown", {
                   bubbles: true,
@@ -970,7 +974,13 @@ export default function TextEditor({
     };
   }, [mode, path]);
   useEffect(() => {
-    if (readCurrent.current() === content) return;
+    // Crepe's ready notification can arrive after the first edit and before its
+    // Markdown listener publishes. Reapply only a new prop from the parent.
+    if (appliedContent.current === content) return;
+    if (readCurrent.current() === content) {
+      appliedContent.current = content;
+      return;
+    }
     const view = source.current;
     applying.current = true;
     if (view) {
@@ -982,6 +992,7 @@ export default function TextEditor({
         changes: { from: 0, to: view.state.doc.length, insert: content },
         selection: { anchor },
       });
+      appliedContent.current = content;
       applying.current = false;
     } else if (visual.current && visual.current.editor.status === "Created") {
       try {
@@ -1001,6 +1012,7 @@ export default function TextEditor({
               .setMeta("addToHistory", false),
           );
         });
+        appliedContent.current = content;
       } catch (error) {
         latest.current.onError(String(error));
       } finally {

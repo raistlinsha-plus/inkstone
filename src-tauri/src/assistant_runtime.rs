@@ -70,6 +70,28 @@ fn request_text(question: &str) -> (String, bool) {
     (request.to_lowercase(), quoted)
 }
 
+fn transforms_text(request: &str) -> bool {
+    [
+        "翻译",
+        "改写",
+        "润色",
+        "重写",
+        "校对",
+        "总结",
+        "概括",
+        "提炼",
+        "translate",
+        "rewrite",
+        "rephrase",
+        "proofread",
+        "summarize",
+        "summarise",
+        "paraphrase",
+    ]
+    .iter()
+    .any(|term| request.contains(term))
+}
+
 fn web_route(question: &str, access: WebAccess) -> WebRoute {
     let (request, quoted) = request_text(question);
     let has = |terms: &[&str]| terms.iter().any(|term| request.contains(term));
@@ -119,23 +141,7 @@ fn web_route(question: &str, access: WebAccess) -> WebRoute {
         "fact-check",
         "look up",
     ]);
-    let revision = has(&[
-        "翻译",
-        "改写",
-        "润色",
-        "重写",
-        "校对",
-        "总结",
-        "概括",
-        "提炼",
-        "translate",
-        "rewrite",
-        "rephrase",
-        "proofread",
-        "summarize",
-        "summarise",
-        "paraphrase",
-    ]);
+    let revision = transforms_text(&request);
     let writing = has(&["写一", "写封", "拟一", "draft a", "write a"]);
     let needs_source = revision && public_source && !quoted;
     if (revision || writing)
@@ -300,6 +306,9 @@ pub fn select_external(
     let mut remaining = remaining;
     let mut selected = Vec::new();
     for item in items {
+        if selected.len() >= 32 {
+            break;
+        }
         let citation = base + selected.len() + 1;
         let cost = item.as_prompt_with_citation(citation).chars().count();
         if cost > remaining {
@@ -419,6 +428,21 @@ fn prior_local_source_matches(
     })
 }
 
+fn local_label(title: &str, start: usize, end: usize) -> String {
+    format!("{title} · 第 {start}–{end} 行")
+}
+
+// These coordinates are assigned by local_item or the verified quote reader.
+fn local_range(m: &ExternalSource) -> Option<(&str, usize, usize)> {
+    let id = match m.kind.as_str() {
+        "document" => m.document_id.as_deref()?,
+        "attachment" => m.attachment_id.as_deref()?,
+        _ => return None,
+    };
+    let (start, end) = m.id.strip_prefix(id)?.strip_prefix(':')?.split_once('-')?;
+    Some((id, start.parse().ok()?, end.parse().ok()?))
+}
+
 fn local_item(
     kind: &str,
     id: &str,
@@ -433,7 +457,7 @@ fn local_item(
         metadata: ExternalSource {
             id: format!("{id}:{start}-{end}"),
             kind: kind.into(),
-            label: format!("{title} · 第 {start}–{end} 行"),
+            label: local_label(title, start, end),
             citation: 0,
             url: None,
             excerpt,
@@ -462,26 +486,85 @@ fn document(
     Ok((doc, content))
 }
 
+fn original(
+    data: &std::path::Path,
+    conversation: &str,
+    m: &ExternalSource,
+) -> Option<(String, String)> {
+    match m.kind.as_str() {
+        "attachment" => m
+            .attachment_id
+            .as_deref()
+            .and_then(|id| assistant::attachments::read(data, conversation, id).ok())
+            .map(|a| (a.title, a.text)),
+        "document" => m
+            .project_id
+            .as_deref()
+            .zip(m.document_id.as_deref())
+            .and_then(|(project, id)| document(data, project, id).ok())
+            .map(|(d, text)| (d.title, text)),
+        _ => None,
+    }
+}
 fn current(data: &std::path::Path, conversation: &str, items: &[Evidence]) -> bool {
     items.iter().all(|e| {
-        let m = &e.metadata;
-        let text = match m.kind.as_str() {
-            "attachment" => m
-                .attachment_id
-                .as_deref()
-                .and_then(|id| assistant::attachments::read(data, conversation, id).ok())
-                .map(|a| a.text),
-            "document" => m
-                .project_id
-                .as_deref()
-                .zip(m.document_id.as_deref())
-                .and_then(|(project, id)| document(data, project, id).ok())
-                .map(|(_, s)| s),
-            _ => return true,
-        };
-        text.as_ref()
-            .is_some_and(|text| m.content_hash.as_deref() == Some(files::hash(text).as_str()))
+        e.metadata.kind == "web"
+            || original(data, conversation, &e.metadata).is_some_and(|(title, text)| {
+                e.metadata.content_hash.as_deref() == Some(files::hash(text).as_str())
+                    && local_range(&e.metadata).is_some_and(|(_, start, end)| {
+                        e.metadata.label == local_label(&title, start, end)
+                    })
+            })
     })
+}
+
+fn selected_passages(
+    data: &std::path::Path,
+    conversation: &str,
+    items: &[Evidence],
+    single_selected: bool,
+    ranked: &[SearchResult],
+) -> Result<Vec<SearchResult>, String> {
+    let mut out = Vec::new();
+    for item in items {
+        let m = &item.metadata;
+        let (title, body) =
+            original(data, conversation, m).ok_or("所选资料已删除或不属于当前范围")?;
+        let hash = files::hash(&body);
+        if m.content_hash.as_deref() != Some(&hash) {
+            return Err("所选文档或附件已变化，请重新提问".into());
+        }
+        let (id, start, end) = local_range(m).ok_or("所选资料的身份或行号无效")?;
+        if m.label != local_label(&title, start, end) {
+            return Err("所选资料的标题已变化，请重新提问".into());
+        }
+        let lines = body.lines().collect::<Vec<_>>();
+        if start == 0 || end < start || end > lines.len() {
+            return Err("所选资料的行号已变化".into());
+        }
+        let mut hit = crate::candidate_reading::explicit_passage(
+            id,
+            &title,
+            &hash,
+            start,
+            end,
+            lines[start - 1..end].join("\n"),
+        );
+        hit.document_id = m.document_id.clone();
+        if !single_selected {
+            hit.match_kind = "candidate".into();
+        }
+        if let Some(original) = ranked.iter().find(|r| {
+            r.document_id == hit.document_id
+                && r.hash == hit.hash
+                && r.start_line == start
+                && r.end_line == end
+        }) {
+            hit.heading = original.heading.clone();
+        }
+        out.push(hit);
+    }
+    Ok(out)
 }
 
 pub fn record_web_search(trace: &mut Trace, web: &WebTurn) {
@@ -534,19 +617,45 @@ impl AnswerRoute {
 }
 
 pub async fn general(
-    app: &tauri::AppHandle,
+    app: Option<&tauri::AppHandle>,
     state: &AppState,
     started: &assistant::Started,
     request: &str,
     mode: &str,
     memory: &assistant::memory::Options,
 ) -> Result<ChatResponse, String> {
+    let generation = state.workspace_generation.load(Ordering::SeqCst);
     let config = crate::settings(state)?.chat;
     if !config.enabled {
         return Err("请在模型设置中启用问答服务".into());
     }
     let selection = started.sources.as_ref().ok_or("本轮资料范围未保存")?;
-    let question = started.grounded_question.as_str();
+    let day_query = if selection.is_empty() {
+        None
+    } else {
+        assistant::grounding::weekday_question(
+            &started.grounded_question,
+            &started.previous_questions,
+        )
+    };
+    if let Some(Err(message)) = &day_query {
+        return Ok(response(
+            "no_evidence",
+            message.clone(),
+            "",
+            vec![],
+            Trace {
+                route: "no-evidence".into(),
+                ..Default::default()
+            },
+            vec![],
+            None,
+            "none",
+            "not-requested",
+        ));
+    }
+    let resolved_day = day_query.as_ref().and_then(|r| r.as_ref().ok());
+    let question = resolved_day.map_or(started.grounded_question.as_str(), String::as_str);
     let data = &state.data_dir;
     let project = selection.project_id.as_deref();
     let clock = (!selection.is_empty())
@@ -570,12 +679,28 @@ pub async fn general(
                 return Vec::new();
             }
             clock_snippets(clock, title, content)
+        } else if resolved_day.is_some()
+            && !started.previous_local_sources.is_empty()
+            && !prior_local_source_matches(&started.previous_local_sources, id, project, content)
+        {
+            Vec::new()
         } else {
             snippets(question, title, content)
         }
     };
+    let explicit = !selection.document_ids.is_empty() || !selection.attachments.is_empty();
+    let request_body = request_text(question).0;
+    let transform = transforms_text(&request_body)
+        || ["写一", "写封", "拟一", "draft a", "write a"]
+            .iter()
+            .any(|s| request_body.contains(s));
+    let factual = clock.is_none() && !transform;
+    let facets = crate::evidence_reader::split_facets(&retrieval::knowledge_query(question));
     let local_search = async {
         let mut items = Vec::new();
+        let mut read_selected = explicit && factual;
+        let mut ranked = Vec::new();
+        let mut related = Vec::new();
         let mut steps = Vec::new();
         let mut unread = Vec::new();
         let mut notices = Vec::new();
@@ -608,21 +733,70 @@ pub async fn general(
                     mode != "keyword",
                     Some(mode),
                     &state.cancel_chat,
-                    Some((app, request)),
+                    app.map(|app| (app, request)),
                     Some(ws.clone()),
                 )
                 .await?;
                 mode_used = found.retrieval_mode.clone();
                 rank_used = found.rerank_status.clone();
-                if let Some(warning) = found.warning {
-                    notices.push(warning);
+                if let Some(warning) = &found.warning {
+                    notices.push(warning.clone());
                 }
-                let results = retrieval::generation_context(
+                let mut results = crate::candidate_reading::fast_context(
                     &ws,
-                    &found.results,
+                    &found,
                     config.context_chars / 2,
-                    false,
+                    None,
+                    None,
                 );
+                if factual
+                    && (explicit
+                        || facets.len() > 1
+                        || assistant::grounding::weekday(question).is_some()
+                        || results.is_empty())
+                {
+                    results = crate::candidate_reading::workspace_candidates(
+                        state, &ws, None, &found, None,
+                    )?;
+                    if resolved_day.is_some() && !started.previous_local_sources.is_empty() {
+                        results.retain(|hit| {
+                            started.previous_local_sources.iter().any(|source| {
+                                source.project_id.as_deref() == Some(project)
+                                    && source.document_id == hit.document_id
+                                    && source.content_hash.as_deref() == Some(&hit.hash)
+                            })
+                        });
+                    }
+                    if resolved_day.is_none() && started.followup_sources.is_none() {
+                        for hit in crate::candidate_reading::related_originals(
+                            &ws,
+                            &found,
+                            config.context_chars / 2,
+                            None,
+                            None,
+                            question,
+                        ) {
+                            if let Some(id) = &hit.document_id {
+                                let (doc, content) = document(data, project, id)?;
+                                if hit.title.as_deref() != Some(&doc.title)
+                                    || files::hash(&content) != hit.hash
+                                {
+                                    return Err("索引原文或标题已变化，请重新提问".into());
+                                }
+                                related.push(local_item(
+                                    "document",
+                                    id,
+                                    &doc.title,
+                                    Some(project),
+                                    &content,
+                                    (hit.text, hit.start_line, hit.end_line),
+                                ));
+                            }
+                        }
+                    }
+                    ranked = found.results.clone();
+                    read_selected = true;
+                }
                 if results.iter().any(|r| r.match_kind.contains("wiki")) {
                     steps.push("Wiki · 按主题定位原文片段".into());
                 }
@@ -632,7 +806,7 @@ pub async fn general(
                     .filter_map(|r| r.document_id.as_ref())
                     .collect::<HashSet<_>>()
                     .len();
-                steps.push(format!("空间原文 · 已取证 {found_docs} 篇"));
+                steps.push(format!("空间原文 · 已读 {found_docs} 篇"));
                 if found_docs < total {
                     unread.push(format!(
                         "空间内另有 {} 篇未进入本轮证据",
@@ -698,6 +872,7 @@ pub async fn general(
             }
         }
         // Make the first excerpt of every selected input compete before second excerpts.
+        let ranked_items = std::mem::take(&mut items);
         let mut second = Vec::new();
         for group in source_pool {
             for (index, item) in group.into_iter().enumerate() {
@@ -708,21 +883,42 @@ pub async fn general(
                 }
             }
         }
+        items.extend(ranked_items);
         items.extend(second);
-        Ok::<_, String>((items, steps, unread, notices, mode_used, rank_used))
+        Ok::<_, String>((
+            items,
+            steps,
+            unread,
+            notices,
+            mode_used,
+            rank_used,
+            read_selected,
+            ranked,
+            related,
+        ))
     };
     // Check explicit files and attachment ownership before starting the web
     // planner. Whole-space retrieval can still run concurrently afterwards.
     let (local, web) = tokio::try_join!(biased; local_search, async {
-        Ok::<_, String>(if clock.is_some() {
+        Ok::<_, String>(if clock.is_some() || resolved_day.is_some() {
             // This continuation refers to a previously verified local schedule.
             // A public lookup cannot resolve a missing or stale local referent.
             WebTurn::default()
         } else {
-            web(Some(app), state, &config, question, request, started.web_access).await
+            web(app, state, &config, question, request, started.web_access).await
         })
     })?;
-    let (evidence, steps, unread, mut notices, local_mode, rank_used) = local;
+    let (
+        mut evidence,
+        steps,
+        unread,
+        mut notices,
+        local_mode,
+        rank_used,
+        read_selected,
+        ranked,
+        related,
+    ) = local;
     let mut trace = Trace {
         steps,
         unread,
@@ -741,7 +937,9 @@ pub async fn general(
         GENERAL_SYSTEM
     };
     let mut prompt = if grounded {
-        started.prompt_question.clone()
+        // Only current originals and the resolved current question may inform
+        // this grounded turn, including when the user changed the selection.
+        question.to_owned()
     } else {
         let original = serde_json::to_string(question).unwrap_or_default();
         let prior = started
@@ -764,9 +962,159 @@ pub async fn general(
     let budget = config
         .context_chars
         .saturating_sub(system.chars().count() + prompt.chars().count() + 300);
-    let external = choose_external_context(&evidence, &web.evidence, budget, &mut trace.unread);
+    // Selected text transformations need their whole input. For a factual request
+    // only the selected original sentences become evidence, just as in a scoped ask.
+    let mut review_failed = false;
+    let mut provider_reviewed = false;
+    let mut facet_refs = Vec::new();
+    let mut used_related = false;
+    let mut coverage = crate::candidate_reading::FacetCoverage::default();
+    if read_selected {
+        let same = || state.workspace_generation.load(Ordering::SeqCst) == generation;
+        if !same() || state.cancel_chat.load(Ordering::SeqCst) {
+            return Err("本轮候选核对已撤回".into());
+        }
+        evidence.truncate(8);
+        let single_selected = selection.document_ids.len() + selection.attachments.len() == 1
+            && !(selection.project_id.is_some() && selection.document_ids.is_empty());
+        let passages = selected_passages(
+            data,
+            &started.conversation_id,
+            &evidence,
+            single_selected,
+            &ranked,
+        )?;
+        let reviewed = crate::candidate_reading::review(
+            state,
+            &config,
+            &facets,
+            &passages,
+            &ranked,
+            budget,
+            true,
+            || same() && current(data, &started.conversation_id, &evidence),
+        )
+        .await?;
+        trace.steps.push(reviewed.step);
+        review_failed = reviewed.warning.is_some();
+        provider_reviewed = reviewed.stats.calls > 0;
+        notices.extend(reviewed.warning);
+        let mut selected: Vec<Evidence> = Vec::new();
+        for facet in reviewed.reading.facets() {
+            let mut ids = Vec::new();
+            for q in &facet.quotes {
+                let quote = crate::candidate_reading::verified_quote(&passages[q.source_index], q)?;
+                let mut item = evidence[q.source_index].clone();
+                let m = &mut item.metadata;
+                let id = m
+                    .document_id
+                    .as_ref()
+                    .or(m.attachment_id.as_ref())
+                    .ok_or("所选资料缺少身份")?;
+                m.id = format!("{id}:{}-{}", quote.start_line, quote.end_line);
+                m.label = local_label(
+                    quote.title.as_deref().unwrap_or(id),
+                    quote.start_line,
+                    quote.end_line,
+                );
+                // Distinguish two sentences on the same line without letting the model assign an ID.
+                let ref_key = (m.id.clone(), quote.text.clone());
+                if !selected
+                    .iter()
+                    .any(|e| e.metadata.id == m.id && e.text == quote.text)
+                {
+                    if m.kind == "document" {
+                        m.excerpt = Some(quote.text.chars().take(3000).collect());
+                    }
+                    item.text = quote.text;
+                    selected.push(item);
+                }
+                ids.push(ref_key);
+            }
+            facet_refs.push((facet.question.clone(), ids));
+        }
+        if selected.is_empty() && !related.is_empty() {
+            used_related = true;
+            facet_refs.clear();
+            trace
+                .steps
+                .push(crate::candidate_reading::RELATED_STATUS.into());
+            notices.push(crate::candidate_reading::RELATED_STATUS.into());
+            prompt.push('\n');
+            prompt.push_str(crate::candidate_reading::RELATED_NOTE);
+            evidence = related;
+        } else {
+            evidence = selected;
+        }
+    }
+    // Keep a table's header and selected row in the same context. If any part of
+    // a facet is omitted by budgeting, that facet has no approved citation group.
+    let note_reserve: usize = facet_refs
+        .iter()
+        .map(|(q, ids)| {
+            crate::candidate_reading::facet_note(q, &vec![32; ids.len()])
+                .chars()
+                .count()
+        })
+        .sum::<usize>()
+        + if used_related {
+            crate::candidate_reading::RELATED_NOTE.chars().count() + 1
+        } else {
+            0
+        };
+    let mut external = choose_external_context(
+        &evidence,
+        &web.evidence,
+        budget.saturating_sub(note_reserve),
+        &mut trace.unread,
+    );
+    if read_selected && !used_related {
+        let complete: Vec<_> = facet_refs
+            .iter()
+            .filter(|(_, refs)| {
+                !refs.is_empty()
+                    && refs.iter().all(|(id, text)| {
+                        external
+                            .iter()
+                            .any(|e| &e.metadata.id == id && &e.text == text)
+                    })
+            })
+            .collect();
+        external.retain(|e| {
+            e.metadata.kind == "web"
+                || complete.iter().any(|(_, refs)| {
+                    refs.iter()
+                        .any(|(id, text)| id == &e.metadata.id && text == &e.text)
+                })
+        });
+        for (i, e) in external.iter_mut().enumerate() {
+            e.metadata.citation = i + 1;
+        }
+        for (facet, refs) in facet_refs {
+            let ids: Option<Vec<_>> = refs
+                .iter()
+                .map(|(id, text)| {
+                    external
+                        .iter()
+                        .find(|e| &e.metadata.id == id && &e.text == text)
+                        .map(|e| e.metadata.citation)
+                })
+                .collect();
+            let ids = ids.unwrap_or_default();
+            prompt.push_str(&crate::candidate_reading::facet_note(&facet, &ids));
+            coverage.0.push((facet, ids));
+        }
+    }
     let has_local = external.iter().any(|e| e.metadata.kind != "web");
     let has_web = external.iter().any(|e| e.metadata.kind == "web");
+    if read_selected && has_local {
+        notices = notices
+            .iter()
+            .flat_map(|n| n.lines())
+            .filter(|line| !line.starts_with("只找到可能相关的候选"))
+            .map(str::to_owned)
+            .collect();
+    }
     let route = AnswerRoute::from_context(selected_scope, expect_web, has_local, has_web);
     trace.route = route.as_str().into();
     if matches!(
@@ -774,7 +1122,9 @@ pub async fn general(
         AnswerRoute::NoLocalEvidence | AnswerRoute::NoWebEvidence
     ) {
         let text = if route == AnswerRoute::NoLocalEvidence {
-            if clock.is_some() {
+            if review_failed {
+                "候选选句服务未能完成核对，本机也未取得可回答的原句。请检查问答服务后重试。"
+            } else if clock.is_some() {
                 "没有从上一轮已核对且仍在本轮范围内的原文找到这个发车时间。请说出线路、日期或文档名后重试。"
             } else {
                 notices.push("可以补充资料、检查文档索引，或询问某一项具体信息。".into());
@@ -783,9 +1133,11 @@ pub async fn general(
         } else {
             "本轮未取得足够的网页证据，暂时无法核实请求。"
         };
+        let mut text = text.to_owned();
+        coverage.note_missing(&mut text);
         return Ok(response(
             "no_evidence",
-            text.into(),
+            text,
             "",
             vec![],
             trace,
@@ -799,6 +1151,17 @@ pub async fn general(
         prompt.push_str("\n公开资料未核验，只回答本轮已有原文支持的部分，明确指出缺少的外部证据。");
     }
     let context = external.iter().map(Evidence::as_prompt).collect::<String>();
+    if selected_scope {
+        let inputs = external
+            .iter()
+            .filter(|e| e.metadata.kind != "web")
+            .map(|e| (e.metadata.citation, e.text.as_str()))
+            .collect::<Vec<_>>();
+        let available = config.context_chars.saturating_sub(
+            system.chars().count() + context.chars().count() + prompt.chars().count() + 120,
+        );
+        crate::candidate_reading::add_calculation(question, &inputs, &mut prompt, available);
+    }
     let remaining = config.context_chars.saturating_sub(
         system.chars().count() + prompt.chars().count() + context.chars().count() + 120,
     );
@@ -806,26 +1169,61 @@ pub async fn general(
         assistant::memory::compose(data, assistant::GENERAL_OWNER, None, memory, remaining);
     prompt.push_str(&preferences);
     let user = format!("资料开始\n{context}\n资料结束\n\n问题：{prompt}");
-    let key = crate::read_key(state, "chat", &config.base_url, &state.cancel_chat).await?;
-    if !current(data, &started.conversation_id, &external) {
+    let partial = if !has_web {
+        coverage.partial_text(|id| external.get(id - 1).map(|e| e.text.clone()))
+    } else {
+        None
+    };
+    let key = if partial.is_none() {
+        crate::read_key(state, "chat", &config.base_url, &state.cancel_chat).await?
+    } else {
+        None
+    };
+    if provider_reviewed && !crate::candidate_reading::provider_allowed(state, &config)? {
+        return Err("候选核对的传输设置已变化，已撤回本轮结果".into());
+    }
+    if (read_selected && state.workspace_generation.load(Ordering::SeqCst) != generation)
+        || !current(data, &started.conversation_id, &external)
+    {
         return Err("所选文档或附件已变化，请重新提问".into());
     }
     if state.cancel_chat.load(Ordering::SeqCst) {
         return Err("已停止生成".into());
     }
-    progress(app, request, "generating", "正在生成回答");
-    let output = providers::stream_chat(
+    if let Some(text) = partial {
+        trace.steps.push("按小问列出已核实原句及待核实项".into());
+        return Ok(response(
+            "stop",
+            text,
+            "",
+            external,
+            trace,
+            notices,
+            None,
+            &local_mode,
+            &rank_used,
+        ));
+    }
+    if let Some(app) = app {
+        progress(app, request, "generating", "正在生成回答");
+    }
+    let mut output = providers::stream_chat(
         &state.client,
         &config,
         key.as_deref(),
         system,
         &user,
         &state.cancel_chat,
-        Some(app),
+        app,
         request,
     )
     .await?;
-    if !current(data, &started.conversation_id, &external) {
+    if provider_reviewed && !crate::candidate_reading::provider_allowed(state, &config)? {
+        return Err("候选核对的传输设置已变化，已撤回本轮结果".into());
+    }
+    if (read_selected && state.workspace_generation.load(Ordering::SeqCst) != generation)
+        || !current(data, &started.conversation_id, &external)
+    {
         return Ok(response(
             "source_changed",
             "所选资料已变化，已撤回本轮结果。".into(),
@@ -839,10 +1237,18 @@ pub async fn general(
         ));
     }
     let finish = if state.cancel_chat.load(Ordering::SeqCst) {
+        if read_selected {
+            return Err("已停止生成，已撤回候选核对结果".into());
+        }
         "cancelled"
     } else {
         &output.finish_reason
     };
+    if finish == "stop" {
+        coverage.complete_text(&mut output.text, |id| {
+            external.get(id - 1).map(|e| e.text.clone())
+        });
+    }
     Ok(response(
         finish,
         output.text,

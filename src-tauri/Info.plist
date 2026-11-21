@@ -3,8 +3,8 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleShortVersionString</key>
-  <string>0.9.6</string>
+  <string>1.0.0</string>
   <key>InkstoneReleaseVersion</key>
-  <string>0.9.6</string>
+  <string>1.0.0-rc.4</string>
 </dict>
 </plist>
