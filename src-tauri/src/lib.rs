@@ -214,9 +214,9 @@ fn managed_sources(
 fn sources_current(state: &AppState, ws: &Workspace, sources: &[SearchResult]) -> bool {
     let authorized = match managed_sources(&state.data_dir, ws) {
         Ok(Some(documents)) => sources.iter().all(|s| {
-            documents
-                .get(&s.path)
-                .is_some_and(|(id, _)| s.document_id.as_ref() == Some(id))
+            documents.get(&s.path).is_some_and(|(id, title)| {
+                s.document_id.as_ref() == Some(id) && s.title.as_ref().is_none_or(|t| t == title)
+            })
         }),
         Ok(None) => sources.iter().all(|s| s.document_id.is_none()),
         Err(_) => false,
@@ -1774,6 +1774,13 @@ async fn ask_pipeline(
     use assistant_runtime::AnswerRoute;
 
     let generation = state.workspace_generation.load(Ordering::SeqCst);
+    let weekday_continuation = followup_gate.is_some_and(|gate| gate.recheck_weekday)
+        || web_question.is_some_and(|q| assistant::grounding::day_pointer(q).is_some());
+    let prompt_question = if weekday_continuation {
+        retrieval_question
+    } else {
+        prompt_question
+    };
     let config = settings(&state)?.chat;
     if !config.enabled {
         return Err("请在模型设置中启用问答服务".into());
@@ -1789,7 +1796,7 @@ async fn ask_pipeline(
             app.map(|app| (app, request_id))
         ),
         async {
-            match web_question {
+            match web_question.filter(|_| !weekday_continuation) {
                 Some(question) => {
                     assistant_runtime::web(app, state, &config, question, request_id, web_access)
                         .await
@@ -1827,6 +1834,7 @@ async fn ask_pipeline(
         !web.evidence.is_empty(),
         generation,
         true,
+        !weekday_continuation,
     )
     .await?;
     let sources = reviewed.sources;
@@ -1907,12 +1915,14 @@ async fn ask_pipeline(
         } else {
             "本轮指定的本地片段不足以核实这个问题。可以补充相关资料或指定文档重新提问。"
         };
+        let mut text = text.to_owned();
+        reviewed.coverage.note_missing(&mut text);
         return Ok(ChatResponse {
             external_sources: vec![],
             trace: Some(trace),
             memory: None,
             finish_reason: "no_evidence".into(),
-            text: text.into(),
+            text,
             sources,
             warning: (!warnings.is_empty()).then(|| warnings.join("\n")),
             retrieval_mode: actual_mode,
@@ -1924,7 +1934,18 @@ async fn ask_pipeline(
             citation_checks: vec![],
         });
     }
-    let key = read_key(&state, "chat", &config.base_url, &state.cancel_chat).await?;
+    let partial = if external.is_empty() {
+        reviewed
+            .coverage
+            .partial_text(|id| sources.get(id - 1).map(|s| s.text.clone()))
+    } else {
+        None
+    };
+    let key = if partial.is_none() {
+        read_key(&state, "chat", &config.base_url, &state.cancel_chat).await?
+    } else {
+        None
+    };
     if state.cancel_chat.load(Ordering::SeqCst) {
         return Err("已停止生成".into());
     }
@@ -1952,6 +1973,26 @@ async fn ask_pipeline(
             chart_warnings: vec![],
             rejected_charts: vec![],
             citation_checks: vec![],
+        });
+    }
+    if let Some(text) = partial {
+        trace.steps.push("按小问列出已核实原句及待核实项".into());
+        let citation_checks = answer_validation::audit_citations(&text, "stop", &sources);
+        return Ok(ChatResponse {
+            external_sources: vec![],
+            trace: Some(trace),
+            memory: None,
+            finish_reason: "stop".into(),
+            text,
+            sources,
+            warning: (!warnings.is_empty()).then(|| warnings.join("\n")),
+            retrieval_mode: actual_mode,
+            rerank_status,
+            model: String::new(),
+            scope,
+            chart_warnings: vec![],
+            rejected_charts: vec![],
+            citation_checks,
         });
     }
     if let Some(app) = app {
@@ -2043,7 +2084,12 @@ async fn ask_pipeline(
     if !current {
         return Ok(ChatResponse { external_sources: vec![], trace: None, memory: None, finish_reason: "source_changed".into(), text: "生成期间所用资料发生变化或已被移除，已撤回过期答案和引用。请重新提问以核对最新原文。".into(), sources: vec![], warning: Some("原文已变化，请勿使用生成期间显示的旧内容。".into()), retrieval_mode:actual_mode, rerank_status, model:config.model.clone(), scope,chart_warnings:vec![],rejected_charts:vec![],citation_checks:vec![] });
     }
-    let output = output?;
+    let mut output = output?;
+    if output.finish_reason == "stop" {
+        reviewed.coverage.complete_text(&mut output.text, |id| {
+            sources.get(id - 1).map(|s| s.text.clone())
+        });
+    }
     let chart_sources = sources
         .iter()
         .cloned()

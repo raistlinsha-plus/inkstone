@@ -549,7 +549,7 @@ export default function SettingsModal({
                   用问答模型核对候选原文
                 </label>
                 <small id="candidate-reading-help">
-                  本地证据不足时，每题最多额外请求一次，将本轮范围内最多 8 段候选原文发送到上方问答服务。
+                  本机取证不足时，可把小问与所选资料的标题、原句发给上方问答服务核对。每题最多增加一次请求，最多 8 段、合计 4,000 个原文字符。
                 </small>
               </div>
             )}

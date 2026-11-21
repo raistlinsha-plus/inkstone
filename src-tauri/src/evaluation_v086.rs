@@ -482,6 +482,7 @@ async fn offline_context(
             .workspace_generation
             .load(std::sync::atomic::Ordering::SeqCst),
         false,
+        assistant::grounding::day_pointer(&started.grounded_question).is_none(),
     )
     .await?;
     let sources = reviewed.sources;
@@ -741,12 +742,17 @@ async fn run_fixture(
                         .map(|(response, hits)| {
                             offline_stages.searched += 1;
                             let legacy = hits.iter().any(|hit| hit.evidence);
-                            let selected = response.sources.iter().any(|s| s.match_kind == "selected-quote");
+                            let selected = response
+                                .sources
+                                .iter()
+                                .any(|s| s.match_kind == "selected-quote");
                             offline_stages.with_index_candidates += usize::from(!hits.is_empty());
                             offline_stages.with_legacy_evidence += usize::from(legacy);
                             offline_stages.with_selected_quotes += usize::from(selected);
-                            offline_stages.with_candidates += usize::from(!hits.is_empty() || selected);
-                            offline_stages.with_admitted_evidence += usize::from(legacy || selected);
+                            offline_stages.with_candidates +=
+                                usize::from(!hits.is_empty() || selected);
+                            offline_stages.with_admitted_evidence +=
+                                usize::from(legacy || selected);
                             offline_stages.with_assembled_context +=
                                 usize::from(!response.sources.is_empty());
                             offline_hits = Some(hits);
@@ -795,7 +801,8 @@ async fn run_fixture(
                     .collect::<Vec<_>>()
             });
             let ranked = offline_hits.as_ref().map(|hits| {
-                let mut ranked: Vec<_> = hits.iter().filter(|hit| hit.bm25_rank.is_some()).collect();
+                let mut ranked: Vec<_> =
+                    hits.iter().filter(|hit| hit.bm25_rank.is_some()).collect();
                 ranked.sort_by_key(|hit| (hit.bm25_rank, hit.id));
                 ranked.truncate(8);
                 ranked

@@ -229,12 +229,22 @@ async fn dev_row(
         false,
         0,
         key.is_some(),
+        true,
     )
     .await
     .map_err(|_| "synthetic-scoped-context-failed")?;
     let read_ms = reader_start.elapsed().as_millis();
-    let read_status = if context.warning.is_some() {
+    let read_status = if context.warning.as_deref().is_some_and(|w| {
+        w.lines()
+            .any(|line| line != crate::candidate_reading::RELATED_STATUS)
+    }) {
         "service-fallback"
+    } else if context
+        .sources
+        .iter()
+        .any(|s| s.match_kind == "related-original")
+    {
+        "related-original"
     } else if context.step.is_none() {
         "fast-path"
     } else if key.is_none() {

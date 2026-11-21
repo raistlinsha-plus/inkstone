@@ -275,11 +275,59 @@ impl Request {
 
     // A named slot, table row, or explicit parallel record has its own structural owner.
     // Falling back to token containment here could turn "飞梭二型" into "飞梭".
+    pub(super) fn conflicting_field_owner(&self, text: &str) -> bool {
+        let Self::Fields { owners, fields, .. } = self else {
+            return false;
+        };
+        text.split(['，', ',', '；', ';', '。']).any(|clause| {
+            let Some((owner, rest)) = clause.trim().split_once('的') else {
+                return false;
+            };
+            atom(owner)
+                && fields.iter().any(|f| rest.starts_with(f))
+                && !owners.iter().any(|o| o == owner)
+        })
+    }
+
     pub(super) fn applies_to(&self, sentence: &Sentence) -> bool {
         matches!(self, Self::Parallel { .. })
             || sentence.header.is_some()
-            || sentence.section.is_some()
+            || sentence.section_field()
             || declaration(&sentence.row.text).is_some_and(|(k, _)| k.contains('的'))
+    }
+
+    // Do not let semantic matching weaken structural ownership, units, or
+    // turn an extended label ("重量复核办法") into the requested label ("重量").
+    pub(super) fn blocks_semantic(&self, s: &Sentence) -> bool {
+        let Self::Fields {
+            owners,
+            fields,
+            unit,
+            ..
+        } = self
+        else {
+            return true;
+        };
+        if !self.applies_to(s) {
+            return false;
+        }
+        let Some((key, value)) = declaration(&s.row.text) else {
+            return true;
+        };
+        let (owner, field) = if let Some((owner, field)) = key.split_once('的') {
+            (label(owner), field)
+        } else if let Some(heading) = &s.section {
+            (label(heading.text.trim_start_matches('#')), key)
+        } else {
+            return true;
+        };
+        !owners.iter().any(|v| v == owner)
+            || fields
+                .iter()
+                .any(|f| field != f && field.contains(f.as_str()))
+            || unit.as_ref().is_some_and(|u| !numeric_with_unit(value, u))
+            || !usable(value)
+            || value.contains(['，', ','])
     }
 
     pub(super) fn support(&self, sentence: &Sentence) -> Support {

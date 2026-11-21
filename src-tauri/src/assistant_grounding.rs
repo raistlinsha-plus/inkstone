@@ -18,6 +18,7 @@ pub struct FollowupGate {
     pub attributes: Vec<String>,
     pub clock: Option<&'static str>,
     pub clock_day: Option<(u8, u8)>,
+    pub recheck_weekday: bool,
 }
 #[derive(Clone, Debug)]
 pub struct Prepared {
@@ -25,6 +26,98 @@ pub struct Prepared {
     pub gate: Option<FollowupGate>,
     pub clarification: Option<String>,
 }
+pub(crate) fn weekday(text: &str) -> Option<&str> {
+    ["星期", "礼拜", "周"]
+        .into_iter()
+        .flat_map(|prefix| {
+            text.match_indices(prefix).filter_map(move |(at, _)| {
+                let end = at + prefix.len();
+                let day = text[end..].chars().next()?;
+                "一二三四五六日天"
+                    .contains(day)
+                    .then(|| &text[at..end + day.len_utf8()])
+            })
+        })
+        .next()
+}
+
+pub(crate) fn day_pointer(question: &str) -> Option<&str> {
+    let q = question.trim().trim_end_matches(['？', '?']);
+    let q = q
+        .strip_prefix("那么")
+        .or_else(|| q.strip_prefix('那'))
+        .unwrap_or(q);
+    let day = q.trim().strip_suffix('呢')?.trim();
+    (weekday(day) == Some(day)).then_some(day)
+}
+
+/// A new weekday replaces a condition on the previous *user question*. No
+/// previous model claim or citation text participates in constructing it.
+pub(crate) fn weekday_question(
+    question: &str,
+    history: &[String],
+) -> Option<Result<String, String>> {
+    let new_day = day_pointer(question)?;
+    let previous = history.iter().rev().find(|q| day_pointer(q).is_none());
+    if let Some(previous) = previous {
+        let facets =
+            crate::evidence_reader::split_facets(&crate::retrieval::knowledge_query(previous));
+        if facets.len() > 1 {
+            let labels = facets
+                .iter()
+                .map(|f| {
+                    let q = f.trim_end_matches(['？', '?']);
+                    weekday(q).map_or_else(|| q.to_string(), |old| q.replacen(old, new_day, 1))
+                })
+                .collect::<Vec<_>>();
+            return Some(Err(format!(
+                "想核对{new_day}的哪一项？{}",
+                labels.join("，还是")
+            )));
+        }
+    }
+    let resolve = || {
+        let query = crate::retrieval::knowledge_query(previous?);
+        let q = query.trim().trim_end_matches(['？', '?', '。']);
+        if q.chars().count() > 160
+            || q.contains([
+                '？', '?', '；', ';', '，', ',', '、', '和', '与', '及', '：', ':',
+            ])
+            || q.chars().any(|c| c.is_ascii_digit())
+            || q.contains('月')
+            || ["它", "其中", "哪个", "分别", "各自", "如果", "还是", "或者"]
+                .iter()
+                .any(|p| q.contains(p))
+            || ![
+                "几点",
+                "什么时候",
+                "是否",
+                "多少",
+                "多久",
+                "何时",
+                "哪里",
+                "吗",
+            ]
+            .iter()
+            .any(|p| q.contains(p))
+        {
+            return None;
+        }
+        if let Some(old_day) = weekday(q) {
+            let (before, after) = q.split_once(old_day)?;
+            if weekday(before).is_some() || weekday(after).is_some() {
+                return None;
+            }
+            Some(format!("{before}{new_day}{after}？"))
+        } else {
+            Some(format!("{new_day}{q}？"))
+        }
+    };
+    Some(
+        resolve().ok_or_else(|| format!("想核对{new_day}哪个对象的哪一项？请指明要继续查的内容。")),
+    )
+}
+
 pub fn is_followup(question: &str, has_parent: bool) -> bool {
     let q = question.trim_start();
     let pointer = [
@@ -49,7 +142,9 @@ pub fn is_followup(question: &str, has_parent: bool) -> bool {
     let continuation = ["分别", "再问", "再比较", "再列", "再给", "再解释", "再看"]
         .iter()
         .any(|p| q.starts_with(p));
-    pointer || (has_parent && (continuation || followup_clock(q, None).is_some()))
+    pointer
+        || day_pointer(q).is_some()
+        || (has_parent && (continuation || followup_clock(q, None).is_some()))
 }
 
 /// Resolve a bounded, explicit service-time paraphrase without treating an
@@ -209,6 +304,18 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
             clarification: None,
         });
     };
+    let day_query = match weekday_question(&started.grounded_question, &started.previous_questions)
+    {
+        Some(Ok(q)) => Some(q),
+        Some(Err(message)) => {
+            return Ok(Prepared {
+                retrieval_question: started.grounded_question.clone(),
+                gate: None,
+                clarification: Some(message),
+            })
+        }
+        None => None,
+    };
     let mut recovered = Vec::new();
     // On a new conversation there is no previous source to resolve. A fixed
     // single-document range or an explicitly named current document is enough
@@ -318,7 +425,16 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
             clarification: Some(message.into()),
         })
     };
-    if referents.is_empty() || referents.len() > 4 || terms.is_empty() {
+    if referents.is_empty() {
+        if let Some(q) = &day_query {
+            return Ok(Prepared {
+                retrieval_question: q.clone(),
+                gate: None,
+                clarification: None,
+            });
+        }
+    }
+    if referents.is_empty() || referents.len() > 4 || (terms.is_empty() && day_query.is_none()) {
         return clarify("请明确要继续核对的文档和指标；上一轮问题或回答不能替代本轮资料依据。");
     }
     let managed = library::project_at_root(data, &ws.root);
@@ -373,12 +489,15 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
     // Names assist recall only. Strict attributes below are solely the CURRENT question.
     let operator = if names.len() > 1 { "比较" } else { "在" };
     Ok(Prepared {
-        retrieval_question: format!("{operator} {} {}", names.join("与"), terms.join(" ")),
+        retrieval_question: day_query
+            .clone()
+            .unwrap_or_else(|| format!("{operator} {} {}", names.join("与"), terms.join(" "))),
         gate: Some(FollowupGate {
             sources,
             attributes: terms,
             clock,
             clock_day: clock.and_then(|_| prior_clock_day(started)),
+            recheck_weekday: day_query.is_some(),
         }),
         clarification: None,
     })
@@ -387,6 +506,10 @@ pub(crate) fn in_followup_range(gate: &FollowupGate, result: &SearchResult) -> b
     let identity = gate.sources.iter().any(|s| {
         s.path == result.path && s.document_id == result.document_id && s.hash == result.hash
     });
+    if gate.recheck_weekday {
+        // The reader will bind the new weekday, object and predicate within each sentence.
+        return identity;
+    }
     let tokens = db::tokenize(&format!("{} {}", result.heading, result.text))
         .split_whitespace()
         .map(str::to_owned)
@@ -409,7 +532,7 @@ pub(crate) fn in_followup_range(gate: &FollowupGate, result: &SearchResult) -> b
 
 pub fn tighten(gate: &FollowupGate, results: &mut [SearchResult]) {
     for result in results {
-        result.evidence &= in_followup_range(gate, result);
+        result.evidence &= !gate.recheck_weekday && in_followup_range(gate, result);
         if !result.evidence {
             result.match_kind = "candidate".into();
         }

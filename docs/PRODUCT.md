@@ -1,6 +1,6 @@
 # Inkstone 砚台 · 产品与功能总览
 
-本文涵盖 **v0.9.6** 与开发候选版 **v1.0.0-rc.3**，面向 macOS 13 及以上的 Apple Silicon Mac。Inkstone 适合经常整理项目笔记、写作时需要回到出处的人。文档保存在本机，可以直接写 Markdown，也可以用自己的模型 API 从选定笔记中提问、整理 Wiki。
+本文涵盖 **v0.9.6** 与开发候选版 **v1.0.0-rc.4**，面向 macOS 13 及以上的 Apple Silicon Mac。Inkstone 适合经常整理项目笔记、写作时需要回到出处的人。文档保存在本机，可以直接写 Markdown，也可以用自己的模型 API 从选定笔记中提问、整理 Wiki。
 
 ## 从两份笔记开始
 

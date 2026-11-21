@@ -91,6 +91,13 @@ fn markdown_clauses(markdown: &str) -> Vec<Clause> {
     result
 }
 
+pub(crate) fn cited_numbers(markdown: &str) -> HashSet<usize> {
+    markdown_clauses(markdown)
+        .into_iter()
+        .flat_map(|clause| clause.citations)
+        .collect()
+}
+
 fn take_citation(tail: &str) -> Option<(usize, usize)> {
     let body = tail.strip_prefix('[')?;
     let end = body.bytes().take(20).position(|c| c == b']')?;

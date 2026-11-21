@@ -32,6 +32,12 @@ pub(super) fn speculative(text: &str) -> bool {
             "未生效",
             "征求意见",
             "作废",
+            "已废止",
+            "已废弃",
+            "已停用",
+            "已失效",
+            "已取消",
+            "暂定",
             "已撤回",
             "仅供讨论",
             "据猜测",
@@ -73,6 +79,9 @@ pub(super) fn independent(text: &str) -> bool {
             "吗",
             "怎么",
             "如何",
+            "怎样",
+            "啥",
+            "咋",
             "when",
             "where",
             "who",
@@ -154,7 +163,7 @@ fn normalize(text: &str) -> String {
     lower
 }
 
-fn clock(text: &str) -> bool {
+pub(super) fn clock(text: &str) -> bool {
     text.match_indices([':', '：', '时', '点'])
         .any(|(at, separator)| {
             let digits = text[..at]
@@ -188,6 +197,19 @@ const UNPUBLISHED: &[&str] = &[
     "未发布",
 ];
 pub(super) const UNITS: &[&str] = &[
+    "毫克",
+    "微克",
+    "微米",
+    "纳米",
+    "千克",
+    "公斤",
+    "毫升",
+    "毫米",
+    "厘米",
+    "千米",
+    "公里",
+    "毫秒",
+    "秒",
     "工作日",
     "小时",
     "分钟",
@@ -214,6 +236,15 @@ pub(super) const UNITS: &[&str] = &[
 fn quantified(text: &str, units: &[&str]) -> bool {
     units.iter().any(|unit| {
         text.match_indices(unit).any(|(at, _)| {
+            // A metric prefix can itself be a Chinese numeral (千克, 千米).
+            // Match the complete unit attached to the number.
+            if UNITS.iter().any(|other| {
+                other.len() > unit.len()
+                    && other.ends_with(unit)
+                    && text[..at + unit.len()].ends_with(other)
+            }) {
+                return false;
+            }
             text[..at]
                 .trim_end()
                 .chars()
@@ -520,21 +551,214 @@ impl Question {
         }
     }
 
-    pub(super) fn prose(&self, text: &str) -> Support {
-        if !self.valid {
+    fn affirmative_required(&self, clause: &str) -> bool {
+        self.kind != Value::Permission
+            && clause.contains(['不', '没', '未', '勿', '别', '无'])
+            && crate::db::segmenter().tag(clause, true).iter().any(|part| {
+                ["不", "没", "未", "勿", "无", "禁止", "严禁", "别"].contains(&part.word)
+                    || part.word.starts_with(['不', '没', '未', '勿', '无'])
+                        && part.tag.starts_with(['v', 'd'])
+            })
+    }
+
+    // Explicit semantic conflicts also exclude a legacy search hit from
+    // ordinary model context. Unknown values can themselves be evidence.
+    pub(super) fn conflicts_with_original(&self, text: &str) -> bool {
+        let line = normalize(text);
+        if !self.phrase.is_empty()
+            && line.match_indices(&self.phrase).any(|(at, name)| {
+                let tail = line[at + name.len()..].trim_start();
+                let rest = tail.trim_start_matches(|c: char| {
+                    c.is_ascii_digit() || "一二三四五六七八九十".contains(c)
+                });
+                rest != tail
+                    && rest
+                        .trim_start()
+                        .starts_with(['号', '型', '代', '班', '组', '期', '馆', '室'])
+            })
+        {
+            return true;
+        }
+        if let Some(relation) = self.relation {
+            let named_other = line.split(['，', ',', '；', ';', '。']).any(|clause| {
+                let Some(before) = relation
+                    .facts
+                    .iter()
+                    .filter_map(|label| clause.split_once(label).map(|p| p.0))
+                    .min_by_key(|p| p.len())
+                else {
+                    return false;
+                };
+                let subject = before.trim().trim_end_matches(['的', '在', '于']);
+                self.phrase.chars().count() >= 2
+                    && subject.chars().count() >= 2
+                    && subject.chars().all(char::is_alphabetic)
+                    && !self.phrase.contains(subject)
+                    && !subject.contains(&self.phrase)
+                    && crate::db::segmenter()
+                        .tag(subject, true)
+                        .iter()
+                        .all(|p| p.tag.starts_with('n'))
+            });
+            if named_other {
+                return true;
+            }
+        }
+        // For a fact question, a denied action is not an affirmative value.
+        // A question about permission or an explicit “未公布” retains its natural polarity.
+        let relevant = self.relation.is_some_and(|r| has(&line, r.facts))
+            || self.anchors.iter().any(|a| line.contains(a));
+        relevant
+            && self.kind != Value::Permission
+            && !has(&line, UNPUBLISHED)
+            && has(
+                &line,
+                &[
+                    "并非",
+                    "并不",
+                    "并未",
+                    "不是",
+                    "不会",
+                    "不代表",
+                    "无关",
+                    "未生效",
+                    "不得",
+                    "禁止",
+                    "从未",
+                    "不在",
+                    "没有",
+                ],
+            )
+    }
+
+    // A verified span still has to supply the sort of value the user asked
+    // for. This guard does not require a known synonym for the predicate.
+    pub(super) fn semantic_value(&self, clause: &str, value: &str) -> bool {
+        let line = normalize(clause);
+        if self.unit.is_some_and(|u| !quantified(value, &[u])) {
+            return false;
+        }
+        if !has(clause, UNPUBLISHED) && self.affirmative_required(&line) {
+            return false;
+        }
+        if self.kind != Value::Permission
+            && has(
+                &line,
+                &[
+                    "并非",
+                    "并不",
+                    "不会",
+                    "不再",
+                    "未曾",
+                    "并未",
+                    "不是",
+                    "没有",
+                    "未在",
+                    "不应",
+                    "不能",
+                    "禁止",
+                    "不得",
+                    "无需",
+                    "从未",
+                    "无关",
+                    "不代表",
+                    "未生效",
+                ],
+            )
+        {
+            return false;
+        }
+        if let Some(relation) = self.relation {
+            let inverse = match relation.query {
+                ["关闭"] => Some("开放"),
+                ["开放"] => Some("关闭"),
+                ["开始"] => Some("结束"),
+                ["结束"] => Some("开始"),
+                ["首班"] => Some("末班"),
+                ["末班"] => Some("首班"),
+                _ => None,
+            };
+            if inverse.is_some_and(|other| line.contains(other) && !has(&line, relation.facts))
+                || relation.query == ["开放"]
+                    && has(&line, &["开放至", "开放到", "营业至", "营业到"])
+            {
+                return false;
+            }
+        }
+        let normalized = normalize(value);
+        match self.kind {
+            Value::Clock => {
+                clock(&normalized)
+                    || (has(value, UNPUBLISHED) && has(&line, &["时间", "安排", "日程"]))
+            }
+            Value::Date => {
+                crate::evidence::month_days(value).next().is_some()
+                    || ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+                        .iter()
+                        .any(|day| normalized.contains(day))
+            }
+            Value::Duration => quantified(
+                value,
+                &["分钟", "小时", "秒钟", "秒", "天", "工作日", "周", "个月"],
+            ),
+            Value::Quantity => {
+                quantified(value, UNITS)
+                    || self.unit.is_none() && value.chars().any(|c| c.is_ascii_digit())
+            }
+            Value::Money => quantified(value, &["元"]) || has(value, &["免费", "免收"]),
+            Value::Place => {
+                !(has(&normalized, &["在周", "每周", "在工作日", "在节假日"]) || clock(value))
+            }
+            Value::Person => !clock(value) && !value.contains(|c: char| c.is_ascii_digit()),
+            Value::Field | Value::Permission => true,
+        }
+    }
+
+    pub(super) fn heading_field(&self, heading: &str, row: &str) -> Support {
+        let Some((label, _)) = row.split_once(['：', ':', '=']) else {
+            return Support::Absent;
+        };
+        let label = normalize(label.trim());
+        let action = label
+            .strip_suffix("时间")
+            .or_else(|| label.strip_suffix("时刻"))
+            .unwrap_or(&label);
+        if !self.relation.is_some_and(|r| r.facts.contains(&action)) {
             return Support::Absent;
         }
-        let line = normalize(text);
-        // Prevent subject/predicate/value from being assembled across different
-        // clauses, e.g. "阅览室 18:00 开门，展厅 20:00 关闭".
-        line.split(['，', ',', '；', ';'])
-            .map(|clause| self.clause(clause))
-            .max()
-            .unwrap_or(Support::Absent)
+        self.prose_clause(&format!("{heading} {row}"))
+    }
+
+    pub(super) fn prose_clause(&self, text: &str) -> Support {
+        if self.valid {
+            self.clause(&normalize(text))
+        } else {
+            Support::Absent
+        }
     }
 
     fn clause(&self, clause: &str) -> Support {
         if self.anchors.iter().any(|a| !clause.contains(a)) {
+            return Support::Absent;
+        }
+        // A name followed by a model or branch number identifies another
+        // object even when all the query terms and the predicate are present.
+        if !self.phrase.is_empty()
+            && clause.contains(&self.phrase)
+            && clause.match_indices(&self.phrase).all(|(at, _)| {
+                let tail = clause[at + self.phrase.len()..].trim_start();
+                let digits = tail.trim_start_matches(|c: char| {
+                    c.is_ascii_digit() || "一二三四五六七八九十".contains(c)
+                });
+                digits != tail
+                    && digits
+                        .trim_start()
+                        .starts_with(['号', '型', '代', '班', '组', '期', '馆', '室'])
+            })
+        {
+            return Support::Absent;
+        }
+        if !has(clause, UNPUBLISHED) && self.affirmative_required(clause) {
             return Support::Absent;
         }
         let relation = self.relation.is_none_or(|rel| has(clause, rel.facts));

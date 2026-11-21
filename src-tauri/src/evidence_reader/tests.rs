@@ -340,3 +340,279 @@ fn enumerated_named_fields_preserve_the_missing_slot() {
     assert_eq!(r.facets()[0].quotes[1].text, "刻度：四档");
     assert!(r.facets()[1].quotes.is_empty());
 }
+
+fn claim(subject: &str, predicate: &str, value: &str) -> Value {
+    json!({"selections":[{"facet":1,"sentences":[{"id":1,"subject":subject,"predicate":predicate,"value":value}]}]})
+}
+
+#[test]
+fn semantic_read_can_resolve_novel_predicates_only_from_bound_verbatim_spans() {
+    let hits = [source(
+        "local/private.md",
+        7,
+        "霜灯站把捡到的雨具寄存在蓝木箱。",
+    )];
+    let question = "霜灯站遗失的伞应该去哪里领？";
+    let mut read = prepare(question, &hits, 4000);
+    assert!(read.facets()[0].quotes.is_empty());
+    assert!(read.model_request().is_some());
+    read.apply_model(&claim("霜灯站", "寄存在", "蓝木箱"))
+        .unwrap();
+    assert_eq!(read.facets()[0].quotes[0].text, hits[0].text);
+    assert_eq!(read.facets()[0].quotes[0].start_line, 7);
+    for wrong in [
+        claim("霜灯", "寄存在", "蓝木箱"),
+        claim("霜灯站", "领取处", "蓝木箱"),
+        claim("霜灯站", "寄存在", "门卫室"),
+        json!({"selections":[{"facet":1,"sentences":[1]}]}),
+    ] {
+        let mut read = prepare(question, &hits, 4000);
+        read.apply_model(&wrong).unwrap();
+        assert!(read.facets()[0].quotes.is_empty());
+    }
+}
+
+#[test]
+fn whole_section_can_bind_a_paraphrased_label_and_keeps_its_citation() {
+    let hits = [source(
+        "private/heading",
+        14,
+        "# 纹绢样张\n避潮诀窍：装入封口袋\n# 纹绢样张二号\n避潮诀窍：放在玻璃柜",
+    )];
+    let question = "关于纹绢样张，防潮措施是什么？";
+    let mut read = prepare(question, &hits, 4000);
+    let packet = read.model_request().unwrap();
+    assert!(!packet.contains("private/heading"));
+    read.apply_model(&json!({"selections":[{"facet":1,"sentences":[
+        {"id":1,"subject":"纹绢样张","predicate":"避潮诀窍","value":"装入封口袋"},
+        {"id":2,"subject":"纹绢样张","predicate":"避潮诀窍","value":"放在玻璃柜"}
+    ]}]}))
+    .unwrap();
+    assert_eq!(
+        read.facets()[0]
+            .quotes
+            .iter()
+            .map(|q| q.start_line)
+            .collect::<Vec<_>>(),
+        [14, 15]
+    );
+}
+
+#[test]
+fn scope_ellipsis_requires_an_explicit_document_and_a_matching_clause() {
+    let mut hit = source("p", 5, "先用软刷扫掉碎屑，然后用湿布擦拭表面。");
+    let q = "这份笔记建议怎么清理表面？";
+    let mut read = prepare(q, &[hit.clone()], 4000);
+    assert!(read.model_request().is_none());
+    hit.match_kind = "scoped-original".into();
+    read = prepare(q, &[hit.clone()], 4000);
+    assert!(read.model_request().is_some());
+    read.apply_model(&claim("", "擦拭", "湿布")).unwrap();
+    assert_eq!(read.facets()[0].quotes[0].start_line, 5);
+    let mut cross = prepare(q, &[hit], 4000);
+    cross.apply_model(&claim("", "擦拭", "软刷")).unwrap();
+    assert!(cross.facets()[0].quotes.is_empty());
+}
+
+#[test]
+fn shared_weekday_is_required_for_each_independent_answer() {
+    let hit = source("p", 1, "鹭羽社周六营业至 18:30。长石馆周日 16:10 关闭。");
+    let read = prepare("只看周六，鹭羽社几点打烊，长石馆几点关门？", &[hit], 4000);
+    assert_eq!(read.facets().len(), 2);
+    assert!(read.facets().iter().all(|f| f.question.contains("周六")));
+    assert_eq!(read.facets()[0].quotes[0].text, "鹭羽社周六营业至 18:30。");
+    assert!(read.facets()[1].quotes.is_empty());
+    assert!(read.model_request().is_none());
+}
+
+#[test]
+fn local_procedure_requires_an_explicit_action_with_its_steps() {
+    let hit = source("p", 1, "星野组整理图册时先夹入无酸衬纸。");
+    let read = prepare("星野组怎么整理图册？", &[hit], 4000);
+    assert_eq!(
+        read.facets()[0].quotes[0].text,
+        "星野组整理图册时先夹入无酸衬纸。"
+    );
+}
+
+#[test]
+fn registered_dates_versions_units_and_denials_reject_an_unreliable_model() {
+    for (q, original, subject, predicate, value) in [
+        (
+            "桐漆板应该刷多少毫升？",
+            "桐漆板的封层耗用 4 升。",
+            "桐漆板",
+            "耗用",
+            "4 升",
+        ),
+        (
+            "桐漆板周六该怎么包装？",
+            "桐漆板周日用牛皮纸缠紧。",
+            "桐漆板",
+            "缠紧",
+            "牛皮纸",
+        ),
+        (
+            "桐漆板 2027-04-11 怎么包装？",
+            "桐漆板 2027-04-12 用牛皮纸缠紧。",
+            "桐漆板",
+            "缠紧",
+            "牛皮纸",
+        ),
+        (
+            "桐漆板 v1 怎么包装？",
+            "桐漆板 v10 用牛皮纸缠紧。",
+            "桐漆板",
+            "缠紧",
+            "牛皮纸",
+        ),
+        (
+            "桐漆板怎么包装？",
+            "桐漆板不得用牛皮纸缠紧。",
+            "桐漆板",
+            "缠紧",
+            "牛皮纸",
+        ),
+        (
+            "桐漆板怎么包装？",
+            "桐漆板二号用牛皮纸缠紧。",
+            "桐漆板",
+            "缠紧",
+            "牛皮纸",
+        ),
+        (
+            "桐漆板怎么包装？",
+            "# 桐漆板\n桐漆板二号的包材：牛皮纸",
+            "桐漆板",
+            "包材",
+            "牛皮纸",
+        ),
+    ] {
+        let mut read = prepare(q, &[source("p", 1, original)], 4000);
+        assert!(read.facets()[0].quotes.is_empty(), "{original}");
+        assert!(read.model_request().is_none(), "{original}");
+        read.apply_model(&claim(subject, predicate, value)).unwrap();
+        assert!(read.facets()[0].quotes.is_empty(), "{original}");
+    }
+}
+
+#[test]
+fn leading_weekday_can_bind_the_heading_of_an_explicit_deferred_time() {
+    let r = prepare(
+        "周六阅览室几点关，讲座几点开始？",
+        &[source(
+            "p",
+            11,
+            "# 周六\n阅览室 18:00 关闭。讲座开始时间另行通知。",
+        )],
+        4000,
+    );
+    assert_eq!(r.facets().len(), 2);
+    assert!(r
+        .facets()
+        .iter()
+        .all(|f| f.question.contains("周六") && f.quotes.len() == 2));
+    assert_eq!(r.facets()[1].quotes[1].text, "讲座开始时间另行通知。");
+    let r = prepare(
+        "周六阅览室几点关，周日讲座几点开始？",
+        &[source(
+            "p",
+            11,
+            "阅览室周六 18:00 关闭。讲座周日 14:20 开始。",
+        )],
+        4000,
+    );
+    assert_eq!(r.facets()[1].quotes[0].text, "讲座周日 14:20 开始。");
+}
+
+#[test]
+fn named_scope_title_is_only_in_packet_if_repeated_in_question() {
+    let mut hit = source("p", 8, "先用清水冲洗表面。");
+    hit.match_kind = "scoped-original".into();
+    hit.title = Some("云木工序.md".into());
+    let mut read = prepare("《云木工序》怎么清理？", &[hit.clone()], 4000);
+    let packet = read.model_request().unwrap();
+    assert!(packet.contains("scopeTitle"));
+    read.apply_model(&claim("云木工序", "冲洗", "清水"))
+        .unwrap();
+    assert_eq!(read.facets()[0].quotes[0].text, "先用清水冲洗表面。");
+    let read = prepare("这份笔记建议怎么清理表面？", &[hit], 4000);
+    assert!(!read.model_request().unwrap().contains("云木工序"));
+}
+
+#[test]
+fn explicit_display_title_is_budgeted_once_and_cannot_be_an_internal_locator() {
+    let body = "先用清水冲洗表面。然后用细布擦净。";
+    let mut hit = source("p", 2, body);
+    hit.title = Some("云木工序.md".into());
+    hit.match_kind = "scoped-original".into();
+    let q = "《云木工序》怎么清理？";
+    let n = body.chars().count() + 4;
+    let r = prepare(q, &[hit.clone()], n);
+    let packet: Value = serde_json::from_str(&r.model_request().unwrap()).unwrap();
+    assert_eq!(packet["scopeTitles"], json!({"云木工序":[1]}));
+    assert_eq!(r.source_chars(), n);
+    assert!(prepare(q, &[hit.clone()], n - 1).source_chars() < n);
+    for title in [
+        "relative/private.md",
+        "/Users/x/note.md",
+        r"D:\private\note",
+        "页_00000000-0000-0000-0000-000000000010.md",
+    ] {
+        hit.title = Some(title.into());
+        let q = format!("这份笔记建议怎么清理？{title}");
+        let r = prepare_facets(&[q], &[hit.clone()], 4000);
+        assert!(r.scope_titles.is_empty(), "{title}");
+    }
+}
+
+#[test]
+fn local_schedule_binds_a_whole_heading_and_bare_action_field() {
+    let hit = source(
+        "p",
+        1,
+        "# 罗纹厅\n关闭时间：18:20\n售票口关闭时间：17:50\n# 罗纹厅二号\n关闭时间：20:40",
+    );
+    let r = prepare("罗纹厅几点打烊？", &[hit], 4000);
+    assert_eq!(
+        r.facets()[0]
+            .quotes
+            .iter()
+            .map(|q| q.start_line)
+            .collect::<Vec<_>>(),
+        [1, 2]
+    );
+}
+
+#[test]
+fn numeric_prefixes_are_part_of_the_unit_and_numbered_variants_keep_their_name() {
+    for (q, text, subject, predicate, value) in [
+        (
+            "绿锦组需要多少克？",
+            "绿锦组需要 3 千克。",
+            "绿锦组",
+            "需要",
+            "3 千克",
+        ),
+        (
+            "绿锦组需要多少毫克？",
+            "绿锦组需要 3 克。",
+            "绿锦组",
+            "需要",
+            "3 克",
+        ),
+        (
+            "穗蓝馆几点关闭？",
+            "穗蓝馆二号于 18:30 关闭。",
+            "穗蓝馆",
+            "关闭",
+            "18:30",
+        ),
+    ] {
+        let mut read = prepare(q, &[source("p", 1, text)], 4000);
+        assert!(read.facets()[0].quotes.is_empty(), "{text}");
+        assert!(read.model_request().is_none(), "{text}");
+        read.apply_model(&claim(subject, predicate, value)).unwrap();
+        assert!(read.facets()[0].quotes.is_empty(), "{text}");
+    }
+}

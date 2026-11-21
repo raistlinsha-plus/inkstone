@@ -248,10 +248,13 @@ pub fn delete_document_if_hash(
     tx.commit().map_err(|e| e.to_string())?;
     Ok(matches)
 }
-pub fn tokenize(text: &str) -> String {
+pub(crate) fn segmenter() -> &'static jieba_rs::Jieba {
     static JIEBA: std::sync::OnceLock<jieba_rs::Jieba> = std::sync::OnceLock::new();
-    JIEBA
-        .get_or_init(jieba_rs::Jieba::new)
+    JIEBA.get_or_init(jieba_rs::Jieba::new)
+}
+
+pub fn tokenize(text: &str) -> String {
+    segmenter()
         .cut_for_search(text, true)
         .into_iter()
         .filter(|s| s.chars().any(char::is_alphanumeric))

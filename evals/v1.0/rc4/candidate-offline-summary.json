@@ -1,0 +1,347 @@
+{
+  "version": "1.0.0-rc.4",
+  "fixtureSha256": "82ad39942669040f9aabdd704935f71a451a23d7a2845e97b30ae636a1132038",
+  "rubricSha256": "946d28ddb306fd2df2120d334a6fbf1decfbea3b2602616eb6cfa14df9be2225",
+  "labelSha256": "8932b7c5fb8fe9ca8f704f7dde82afcb5afdcd779f6004350714200133c11fe5",
+  "live": false,
+  "httpAttempts": 0,
+  "httpAttemptsByStage": {},
+  "turnMsP50": 40.5,
+  "turnMsP95": 92,
+  "finish": {
+    "no_evidence": 8,
+    "offline_evidence_only": 42
+  },
+  "evidence": {
+    "all": {
+      "turns": 50,
+      "prematureClarifications": 8,
+      "scopeEscapes": 0,
+      "stages": {
+        "sources": {
+          "measuredTurns": 50,
+          "turnsWithAnyPassage": 12,
+          "answerableTurns": 43,
+          "turnsWithAnyDirectSupport": 9,
+          "turnsWithAllAvailablePoints": 9,
+          "availablePoints": 63,
+          "coveredPoints": 15,
+          "turnsWithLabelledDistractor": 12
+        },
+        "selectedQuotes": {
+          "measuredTurns": 50,
+          "turnsWithAnyPassage": 0,
+          "answerableTurns": 43,
+          "turnsWithAnyDirectSupport": 0,
+          "turnsWithAllAvailablePoints": 0,
+          "availablePoints": 63,
+          "coveredPoints": 0,
+          "turnsWithLabelledDistractor": 0
+        },
+        "top8": {
+          "measuredTurns": 50,
+          "turnsWithAnyPassage": 42,
+          "answerableTurns": 43,
+          "turnsWithAnyDirectSupport": 35,
+          "turnsWithAllAvailablePoints": 35,
+          "availablePoints": 63,
+          "coveredPoints": 54,
+          "turnsWithLabelledDistractor": 38
+        },
+        "admitted": {
+          "measuredTurns": 50,
+          "turnsWithAnyPassage": 14,
+          "answerableTurns": 43,
+          "turnsWithAnyDirectSupport": 13,
+          "turnsWithAllAvailablePoints": 13,
+          "availablePoints": 63,
+          "coveredPoints": 21,
+          "turnsWithLabelledDistractor": 14
+        }
+      }
+    },
+    "setup": {
+      "turns": 10,
+      "prematureClarifications": 6,
+      "scopeEscapes": 0,
+      "stages": {
+        "sources": {
+          "measuredTurns": 10,
+          "turnsWithAnyPassage": 0,
+          "answerableTurns": 10,
+          "turnsWithAnyDirectSupport": 0,
+          "turnsWithAllAvailablePoints": 0,
+          "availablePoints": 10,
+          "coveredPoints": 0,
+          "turnsWithLabelledDistractor": 0
+        },
+        "selectedQuotes": {
+          "measuredTurns": 10,
+          "turnsWithAnyPassage": 0,
+          "answerableTurns": 10,
+          "turnsWithAnyDirectSupport": 0,
+          "turnsWithAllAvailablePoints": 0,
+          "availablePoints": 10,
+          "coveredPoints": 0,
+          "turnsWithLabelledDistractor": 0
+        },
+        "top8": {
+          "measuredTurns": 10,
+          "turnsWithAnyPassage": 4,
+          "answerableTurns": 10,
+          "turnsWithAnyDirectSupport": 4,
+          "turnsWithAllAvailablePoints": 4,
+          "availablePoints": 10,
+          "coveredPoints": 4,
+          "turnsWithLabelledDistractor": 0
+        },
+        "admitted": {
+          "measuredTurns": 10,
+          "turnsWithAnyPassage": 0,
+          "answerableTurns": 10,
+          "turnsWithAnyDirectSupport": 0,
+          "turnsWithAllAvailablePoints": 0,
+          "availablePoints": 10,
+          "coveredPoints": 0,
+          "turnsWithLabelledDistractor": 0
+        }
+      }
+    },
+    "absent": {
+      "turns": 7,
+      "prematureClarifications": 0,
+      "scopeEscapes": 0,
+      "stages": {
+        "sources": {
+          "measuredTurns": 7,
+          "turnsWithAnyPassage": 1,
+          "answerableTurns": 0,
+          "turnsWithAnyDirectSupport": 0,
+          "turnsWithAllAvailablePoints": 0,
+          "availablePoints": 0,
+          "coveredPoints": 0,
+          "turnsWithLabelledDistractor": 1
+        },
+        "selectedQuotes": {
+          "measuredTurns": 7,
+          "turnsWithAnyPassage": 0,
+          "answerableTurns": 0,
+          "turnsWithAnyDirectSupport": 0,
+          "turnsWithAllAvailablePoints": 0,
+          "availablePoints": 0,
+          "coveredPoints": 0,
+          "turnsWithLabelledDistractor": 0
+        },
+        "top8": {
+          "measuredTurns": 7,
+          "turnsWithAnyPassage": 7,
+          "answerableTurns": 0,
+          "turnsWithAnyDirectSupport": 0,
+          "turnsWithAllAvailablePoints": 0,
+          "availablePoints": 0,
+          "coveredPoints": 0,
+          "turnsWithLabelledDistractor": 7
+        },
+        "admitted": {
+          "measuredTurns": 7,
+          "turnsWithAnyPassage": 1,
+          "answerableTurns": 0,
+          "turnsWithAnyDirectSupport": 0,
+          "turnsWithAllAvailablePoints": 0,
+          "availablePoints": 0,
+          "coveredPoints": 0,
+          "turnsWithLabelledDistractor": 1
+        }
+      }
+    },
+    "paired": {
+      "turns": 40,
+      "prematureClarifications": 2,
+      "scopeEscapes": 0,
+      "stages": {
+        "sources": {
+          "measuredTurns": 40,
+          "turnsWithAnyPassage": 12,
+          "answerableTurns": 33,
+          "turnsWithAnyDirectSupport": 9,
+          "turnsWithAllAvailablePoints": 9,
+          "availablePoints": 53,
+          "coveredPoints": 15,
+          "turnsWithLabelledDistractor": 12
+        },
+        "selectedQuotes": {
+          "measuredTurns": 40,
+          "turnsWithAnyPassage": 0,
+          "answerableTurns": 33,
+          "turnsWithAnyDirectSupport": 0,
+          "turnsWithAllAvailablePoints": 0,
+          "availablePoints": 53,
+          "coveredPoints": 0,
+          "turnsWithLabelledDistractor": 0
+        },
+        "top8": {
+          "measuredTurns": 40,
+          "turnsWithAnyPassage": 38,
+          "answerableTurns": 33,
+          "turnsWithAnyDirectSupport": 31,
+          "turnsWithAllAvailablePoints": 31,
+          "availablePoints": 53,
+          "coveredPoints": 50,
+          "turnsWithLabelledDistractor": 38
+        },
+        "admitted": {
+          "measuredTurns": 40,
+          "turnsWithAnyPassage": 14,
+          "answerableTurns": 33,
+          "turnsWithAnyDirectSupport": 13,
+          "turnsWithAllAvailablePoints": 13,
+          "availablePoints": 53,
+          "coveredPoints": 21,
+          "turnsWithLabelledDistractor": 14
+        }
+      }
+    },
+    "followups": {
+      "turns": 10,
+      "prematureClarifications": 2,
+      "scopeEscapes": 0,
+      "stages": {
+        "sources": {
+          "measuredTurns": 10,
+          "turnsWithAnyPassage": 0,
+          "answerableTurns": 8,
+          "turnsWithAnyDirectSupport": 0,
+          "turnsWithAllAvailablePoints": 0,
+          "availablePoints": 13,
+          "coveredPoints": 0,
+          "turnsWithLabelledDistractor": 0
+        },
+        "selectedQuotes": {
+          "measuredTurns": 10,
+          "turnsWithAnyPassage": 0,
+          "answerableTurns": 8,
+          "turnsWithAnyDirectSupport": 0,
+          "turnsWithAllAvailablePoints": 0,
+          "availablePoints": 13,
+          "coveredPoints": 0,
+          "turnsWithLabelledDistractor": 0
+        },
+        "top8": {
+          "measuredTurns": 10,
+          "turnsWithAnyPassage": 8,
+          "answerableTurns": 8,
+          "turnsWithAnyDirectSupport": 6,
+          "turnsWithAllAvailablePoints": 6,
+          "availablePoints": 13,
+          "coveredPoints": 10,
+          "turnsWithLabelledDistractor": 8
+        },
+        "admitted": {
+          "measuredTurns": 10,
+          "turnsWithAnyPassage": 0,
+          "answerableTurns": 8,
+          "turnsWithAnyDirectSupport": 0,
+          "turnsWithAllAvailablePoints": 0,
+          "availablePoints": 13,
+          "coveredPoints": 0,
+          "turnsWithLabelledDistractor": 0
+        }
+      }
+    },
+    "partial": {
+      "turns": 13,
+      "prematureClarifications": 1,
+      "scopeEscapes": 0,
+      "stages": {
+        "sources": {
+          "measuredTurns": 13,
+          "turnsWithAnyPassage": 4,
+          "answerableTurns": 13,
+          "turnsWithAnyDirectSupport": 3,
+          "turnsWithAllAvailablePoints": 3,
+          "availablePoints": 13,
+          "coveredPoints": 3,
+          "turnsWithLabelledDistractor": 4
+        },
+        "selectedQuotes": {
+          "measuredTurns": 13,
+          "turnsWithAnyPassage": 0,
+          "answerableTurns": 13,
+          "turnsWithAnyDirectSupport": 0,
+          "turnsWithAllAvailablePoints": 0,
+          "availablePoints": 13,
+          "coveredPoints": 0,
+          "turnsWithLabelledDistractor": 0
+        },
+        "top8": {
+          "measuredTurns": 13,
+          "turnsWithAnyPassage": 12,
+          "answerableTurns": 13,
+          "turnsWithAnyDirectSupport": 12,
+          "turnsWithAllAvailablePoints": 12,
+          "availablePoints": 13,
+          "coveredPoints": 12,
+          "turnsWithLabelledDistractor": 12
+        },
+        "admitted": {
+          "measuredTurns": 13,
+          "turnsWithAnyPassage": 5,
+          "answerableTurns": 13,
+          "turnsWithAnyDirectSupport": 5,
+          "turnsWithAllAvailablePoints": 5,
+          "availablePoints": 13,
+          "coveredPoints": 5,
+          "turnsWithLabelledDistractor": 5
+        }
+      }
+    },
+    "full": {
+      "turns": 20,
+      "prematureClarifications": 1,
+      "scopeEscapes": 0,
+      "stages": {
+        "sources": {
+          "measuredTurns": 20,
+          "turnsWithAnyPassage": 7,
+          "answerableTurns": 20,
+          "turnsWithAnyDirectSupport": 6,
+          "turnsWithAllAvailablePoints": 6,
+          "availablePoints": 40,
+          "coveredPoints": 12,
+          "turnsWithLabelledDistractor": 7
+        },
+        "selectedQuotes": {
+          "measuredTurns": 20,
+          "turnsWithAnyPassage": 0,
+          "answerableTurns": 20,
+          "turnsWithAnyDirectSupport": 0,
+          "turnsWithAllAvailablePoints": 0,
+          "availablePoints": 40,
+          "coveredPoints": 0,
+          "turnsWithLabelledDistractor": 0
+        },
+        "top8": {
+          "measuredTurns": 20,
+          "turnsWithAnyPassage": 19,
+          "answerableTurns": 20,
+          "turnsWithAnyDirectSupport": 19,
+          "turnsWithAllAvailablePoints": 19,
+          "availablePoints": 40,
+          "coveredPoints": 38,
+          "turnsWithLabelledDistractor": 19
+        },
+        "admitted": {
+          "measuredTurns": 20,
+          "turnsWithAnyPassage": 8,
+          "answerableTurns": 20,
+          "turnsWithAnyDirectSupport": 8,
+          "turnsWithAllAvailablePoints": 8,
+          "availablePoints": 40,
+          "coveredPoints": 16,
+          "turnsWithLabelledDistractor": 8
+        }
+      }
+    }
+  },
+  "semanticReview": null
+}

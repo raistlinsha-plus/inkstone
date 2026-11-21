@@ -2,6 +2,11 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v1.0.0-rc.4 · 换个说法问笔记
+
+- 从「问这篇文档」提问时，可以用自己的说法询问笔记中的事实。开启模型辅助核对后，应用会把模型选中的内容绑定到当前原句，出处可回到原文。
+- 一次问多件事时分项核对。能找到出处的部分保留在回答里，缺项写明待核实的内容。星期追问会重新查找对应日期的依据。[交付与验证](docs/DELIVERY-v1.0.0-rc.4.md)
+
 ## v1.0.0-rc.3 · 按小问核对原句
 
 - 文档和空间问答在已有证据不足时，可重新阅读获准的候选片段。找到的原句带有来源和行号，复合问题可以分别说明哪些部分有据、哪些仍待核实。

@@ -240,3 +240,15 @@ fn an_unanswered_parent_can_name_one_current_document_but_never_supply_the_fact(
         .clarification
         .is_some());
 }
+
+#[test]
+fn day_only_after_two_independent_subjects_asks_which_of_those_items_to_verify() {
+    let history = vec!["周六云杉书屋几点打烊，灯塔讲座几点开始？".to_owned()];
+    let message = weekday_question("那周日呢？", &history)
+        .unwrap()
+        .unwrap_err();
+    assert!(
+        message.contains("周日") && message.contains("云杉书屋") && message.contains("灯塔讲座"),
+        "{message}"
+    );
+}

@@ -11,20 +11,123 @@ use std::{collections::HashMap, sync::atomic::Ordering, time::Instant};
 
 pub(crate) fn unresolved(question: &str, fast: &[SearchResult]) -> Vec<String> {
     let facets = evidence_reader::split_facets(question);
-    if fast.is_empty() {
-        return facets;
+    // Whole-passage relevance cannot establish that every independently requested
+    // value is present. Bind compound questions to exact quotes before generation.
+    if fast.is_empty()
+        || facets.len() > 1
+        || crate::assistant::grounding::weekday(question).is_some()
+    {
+        facets
+    } else {
+        Vec::new()
     }
-    if facets.len() <= 1 {
-        return Vec::new();
+}
+
+/// An ordinary search may expand an approved excerpt to its parent paragraph.
+/// Strict reranking and follow-ups approve only the retrieved line range.
+pub(crate) fn fast_context(
+    ws: &Workspace,
+    found: &SearchResponse,
+    budget: usize,
+    scope: Option<&str>,
+    gate: Option<&FollowupGate>,
+) -> Vec<SearchResult> {
+    if found.strict_reader_floor.is_none() && gate.is_none() {
+        return retrieval::generation_context(ws, &found.results, budget, scope.is_some());
     }
-    facets
-        .into_iter()
-        .filter(|facet| {
-            let mut hits = fast.to_vec();
-            retrieval::mark_lexical_evidence(facet, &mut hits);
-            !hits.iter().any(|r| r.evidence)
-        })
-        .collect()
+    approved_ranges(ws, found, budget, scope, gate)
+}
+
+fn approved_ranges(
+    ws: &Workspace,
+    found: &SearchResponse,
+    budget: usize,
+    scope: Option<&str>,
+    gate: Option<&FollowupGate>,
+) -> Vec<SearchResult> {
+    let mut sources = Vec::new();
+    let mut originals = HashMap::new();
+    let mut remaining = budget;
+    for hit in found.results.iter().filter(|s| s.evidence) {
+        if scope.is_some_and(|p| p != hit.path)
+            || found
+                .strict_reader_floor
+                .is_some_and(|f| hit.rerank_score.is_none_or(|score| score < f))
+            || gate.is_some_and(|g| !crate::assistant::grounding::in_followup_range(g, hit))
+        {
+            continue;
+        }
+        let body = originals.entry(&hit.path).or_insert_with(|| {
+            files::resolve(&ws.root, &hit.path, false)
+                .and_then(|p| files::read_text(&p))
+                .ok()
+        });
+        let Some(body) = body.as_ref().filter(|b| files::hash(b) == hit.hash) else {
+            continue;
+        };
+        if hit.start_line == 0 || hit.end_line < hit.start_line {
+            continue;
+        }
+        let lines = body.lines().collect::<Vec<_>>();
+        let Some(lines) = lines.get(hit.start_line - 1..hit.end_line) else {
+            continue;
+        };
+        let mut exact = hit.clone();
+        exact.text = lines.join("\n");
+        let cost = exact.text.chars().count() + 200;
+        if cost > remaining {
+            continue;
+        }
+        remaining -= cost;
+        sources.push(exact);
+        if sources.len() == 6 {
+            break;
+        }
+    }
+    sources
+}
+
+pub(crate) const RELATED_NOTE: &str = "相关原文，逐项核实不足。请逐项核对所附原文，只回答对象、条件和取值都得到原文支持的部分，为其引用来源；其余明确指出本轮片段不足以核实。";
+pub(crate) const RELATED_STATUS: &str = "相关原文，逐项核实不足；已按普通资料问答处理";
+
+pub(crate) fn related_originals(
+    ws: &Workspace,
+    found: &SearchResponse,
+    budget: usize,
+    scope: Option<&str>,
+    gate: Option<&FollowupGate>,
+    question: &str,
+) -> Vec<SearchResult> {
+    if gate.is_some() {
+        return vec![];
+    }
+    let question = retrieval::knowledge_query(question);
+    let mut sources = Vec::new();
+    // Keep original approved indexes/ranges and the exact retrieved order.
+    // Nothing in the reader's broader candidate pool can enter here.
+    for hit in approved_ranges(ws, found, budget, scope, None) {
+        for part in evidence_reader::compatible_original_lines(&question, &hit) {
+            if sources.iter().any(|s: &SearchResult| {
+                s.path == part.path
+                    && s.start_line == part.start_line
+                    && s.end_line == part.end_line
+            }) {
+                continue;
+            }
+            sources.push(part);
+            if providers::chat_source_text(&sources).chars().count()
+                + RELATED_NOTE.chars().count()
+                + 1
+                > budget
+            {
+                sources.pop();
+            }
+            if sources.len() == 6 {
+                return sources;
+            }
+        }
+    }
+    sources
 }
 
 pub(crate) fn workspace_candidates(
@@ -87,6 +190,9 @@ pub(crate) fn workspace_candidates(
             continue;
         }
         let mut passage = hit.clone();
+        if scope.is_some() {
+            passage.match_kind = "scoped-original".into();
+        }
         let (from, to) = if gate.is_some() || found.strict_reader_floor.is_some() {
             (start, hit.end_line - 1)
         } else {
@@ -108,8 +214,11 @@ pub(crate) fn workspace_candidates(
         }
     }
     // A frozen, short single-document scope can be read even before its index is ready.
-    // The direct read has no rerank score and must never cross a strict or follow-up gate.
-    if let Some(path) = scope.filter(|_| found.strict_reader_floor.is_none() && gate.is_none()) {
+    // A direct read has no rerank score. A resolved weekday continuation must also
+    // match its prior document identity and hash before the reader checks the new day.
+    if let Some(path) = scope
+        .filter(|_| found.strict_reader_floor.is_none() && gate.is_none_or(|g| g.recheck_weekday))
+    {
         let doc = catalogue
             .as_ref()
             .map(|docs| docs.get(path).ok_or("所选文档已移除"))
@@ -125,8 +234,10 @@ pub(crate) fn workspace_candidates(
                 body.lines().collect::<Vec<_>>().join("\n"),
             );
             hit.document_id = doc.map(|(id, _)| id.clone());
-            passages.clear();
-            passages.push(hit);
+            if gate.is_none_or(|g| crate::assistant::grounding::in_followup_range(g, &hit)) {
+                passages.clear();
+                passages.push(hit);
+            }
         }
     }
     Ok(passages)
@@ -157,7 +268,7 @@ pub(crate) fn explicit_passage(
         vector_rank: None,
         rerank_score: None,
         evidence: false,
-        match_kind: "candidate".into(),
+        match_kind: "scoped-original".into(),
     }
 }
 
@@ -199,6 +310,7 @@ pub(crate) async fn review(
     config: &Provider,
     facets: &[String],
     passages: &[SearchResult],
+    admitted: &[SearchResult],
     budget: usize,
     allow_model: bool,
     current: impl Fn() -> bool,
@@ -212,7 +324,8 @@ pub(crate) async fn review(
     );
     let dispatch_enabled = allow_model && provider_allowed(state, config)?;
     let (mut reading, payload) = loop {
-        let reading = evidence_reader::prepare_facets(facets, passages, limit);
+        let mut reading = evidence_reader::prepare_facets(facets, passages, limit);
+        reading.recover_fast(passages, admitted);
         let payload = reading.model_request();
         let size = evidence_reader::SYSTEM_PROMPT.chars().count()
             + payload.as_ref().map_or(0, |p| p.chars().count());
@@ -365,7 +478,86 @@ pub(crate) fn add_calculation(
     }
 }
 
+/// The binding survives context budgeting so the response can identify exactly
+/// which requested items the transmitted originals did and did not support.
+#[derive(Default)]
+pub(crate) struct FacetCoverage(pub Vec<(String, Vec<usize>)>);
+
+fn display_literal(text: &str) -> String {
+    // Source or question text can itself contain Markdown links, citations and fences.
+    if !text.contains(['[', ']', '<', '>', '\n', '`', '*', '|', '#', '_', '~', '\\']) {
+        return text.to_string();
+    }
+    let ticks = text.split(|c| c != '`').map(str::len).max().unwrap_or(0);
+    let fence = "`".repeat(ticks + 1);
+    format!("{fence} {} {fence}", text.replace(['\n', '\r'], " "))
+}
+
+impl FacetCoverage {
+    pub fn note_missing(&self, text: &mut String) {
+        let missing = self
+            .0
+            .iter()
+            .filter(|(_, ids)| ids.is_empty())
+            .map(|(q, _)| display_literal(q.trim_end_matches(['？', '?'])))
+            .collect::<Vec<_>>();
+        if !missing.is_empty() {
+            text.push_str("\n\n本轮本地片段不足以核实：");
+            text.push_str(&missing.join("；"));
+            text.push('。');
+        }
+    }
+
+    pub fn partial_text(&self, source: impl Fn(usize) -> Option<String>) -> Option<String> {
+        if !self.0.iter().any(|(_, ids)| ids.is_empty())
+            || !self.0.iter().any(|(_, ids)| !ids.is_empty())
+        {
+            return None;
+        }
+        let mut rows = Vec::new();
+        for (q, ids) in &self.0 {
+            let label = display_literal(q.trim_end_matches(['？', '?']));
+            let facts = ids
+                .iter()
+                .map(|&id| source(id).map(|s| format!("{} [{id}]", display_literal(&s))))
+                .collect::<Option<Vec<_>>>()?;
+            let result = if facts.is_empty() {
+                "本轮本地片段不足以核实。".into()
+            } else {
+                facts.join(" ")
+            };
+            rows.push(format!("- {label}：{result}"));
+        }
+        Some(rows.join("\n"))
+    }
+
+    pub fn complete_text(&self, text: &mut String, source: impl Fn(usize) -> Option<String>) {
+        if self.0.len() < 2 {
+            return;
+        }
+        // Preserve the generator's requested presentation. If it omitted a verified
+        // citation, give the exact original next to its application-owned number.
+        let mut cited = crate::answer_validation::cited_numbers(text);
+        for (question, ids) in &self.0 {
+            let missing = ids
+                .iter()
+                .filter(|id| cited.insert(**id))
+                .filter_map(|id| source(*id).map(|s| format!("{} [{id}]", display_literal(&s))))
+                .collect::<Vec<_>>();
+            if !missing.is_empty() {
+                text.push_str(&format!(
+                    "\n\n{}：{}",
+                    display_literal(question.trim_end_matches(['？', '?'])),
+                    missing.join(" ")
+                ));
+            }
+        }
+        self.note_missing(text);
+    }
+}
+
 pub(crate) struct ScopedContext {
+    pub coverage: FacetCoverage,
     pub stats: Option<ReviewStats>,
     pub sources: Vec<SearchResult>,
     pub guidance: String,
@@ -385,13 +577,15 @@ pub(crate) async fn scoped_context(
     has_web: bool,
     generation: u64,
     allow_model: bool,
+    allow_related: bool,
 ) -> Result<ScopedContext, String> {
     let fast = crate::assistant_runtime::local_first(budget, has_web, |n| {
-        retrieval::generation_context(ws, &found.results, n, scope.is_some())
+        fast_context(ws, found, n, scope, gate)
     });
     let facets = unresolved(&retrieval::knowledge_query(question), &fast);
     let mut context = ScopedContext {
-        sources: fast,
+        coverage: FacetCoverage::default(),
+        sources: if facets.is_empty() { fast } else { vec![] },
         guidance: String::new(),
         step: None,
         warning: None,
@@ -411,6 +605,7 @@ pub(crate) async fn scoped_context(
         config,
         &facets,
         &passages,
+        &found.results,
         budget,
         allow_model,
         || same_workspace() && crate::sources_current(state, ws, &passages),
@@ -443,6 +638,7 @@ pub(crate) async fn scoped_context(
             > budget
         {
             context.sources.truncate(before);
+            citations.clear();
             note = facet_note(&facet.question, &[]);
         }
         if providers::chat_source_text(&context.sources)
@@ -454,10 +650,39 @@ pub(crate) async fn scoped_context(
         {
             context.guidance.push_str(&note);
         }
+        context.coverage.0.push((facet.question.clone(), citations));
+    }
+    let mut used_related = false;
+    if allow_related && review.reading.facets().iter().all(|f| f.quotes.is_empty()) {
+        let related = related_originals(ws, found, budget, scope, gate, question);
+        if !related.is_empty() {
+            check(state, &|| {
+                same_workspace() && crate::sources_current(state, ws, &related)
+            })?;
+            context.sources = related;
+            context.coverage.0.clear();
+            context.guidance = format!("\n{RELATED_NOTE}");
+            used_related = true;
+        }
     }
     context.stats = Some(review.stats);
-    context.step = Some(review.step);
-    context.warning = review.warning;
+    context.step = Some(if used_related {
+        format!("{} · {RELATED_STATUS}", review.step)
+    } else {
+        review.step
+    });
+    context.warning = if used_related {
+        Some(
+            review
+                .warning
+                .into_iter()
+                .chain(std::iter::once(RELATED_STATUS.to_owned()))
+                .collect::<Vec<_>>()
+                .join("\n"),
+        )
+    } else {
+        review.warning
+    };
     Ok(context)
 }
 

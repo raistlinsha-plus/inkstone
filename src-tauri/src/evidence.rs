@@ -231,6 +231,150 @@ enum DurationFact {
     Resolution,
 }
 
+fn duration_subject(question: &str) -> Option<(&str, DurationFact)> {
+    let resolution = [
+        "应该多久处理完",
+        "需要多久处理完",
+        "多久能处理完",
+        "多久处理完",
+        "多久处置完",
+    ]
+    .iter()
+    .find_map(|ending| question.strip_suffix(ending))
+    .map(|subject| (subject, DurationFact::Resolution));
+    resolution.or_else(|| {
+        [
+            "确认收到的时限是多少",
+            "确认收到的期限是多少",
+            "多久必须确认收到",
+        ]
+        .iter()
+        .find_map(|ending| question.strip_suffix(ending))
+        .map(|subject| (subject, DurationFact::Confirmation))
+    })
+}
+
+fn normalized_day_question(q: &str) -> Option<String> {
+    let day = crate::assistant::grounding::weekday(q)?;
+    q.starts_with(day)
+        .then(|| q.replacen(&format!("{day}，"), day, 1))
+}
+
+pub(crate) fn has_bound_intro(question: &str, sentence: &str) -> bool {
+    if let Some((intro, _)) = question.split_once(['，', ',']) {
+        let subject = intro
+            .strip_suffix('里')
+            .or_else(|| intro.strip_suffix('中'));
+        if let Some((context, assertion)) = sentence.split_once(['，', ',']) {
+            if subject.is_some_and(|s| s.chars().count() >= 2 && context.contains(s))
+                && context.trim_end().ends_with(['里', '中'])
+                && !assertion.contains(['，', ','])
+            {
+                return true;
+            }
+        }
+    }
+    let q = question.trim_end_matches(['？', '?']);
+    let normal = normalized_day_question(q);
+    per_unit::Request::parse(normal.as_deref().unwrap_or(q)).is_some()
+}
+
+// Compact notebook entries sometimes omit 是 or 为 between a named field
+// and its measurement. Accept only the complete subject and field followed
+// immediately by one finite value, with the requested unit when supplied.
+fn measured_field(question: &str, clause: &str) -> bool {
+    let Some((left, unit)) = question.rsplit_once("是多少") else {
+        return false;
+    };
+    let Some((owner, field)) = left.rsplit_once('的') else {
+        return false;
+    };
+    if [owner, field]
+        .iter()
+        .any(|s| s.chars().count() < 2 || !s.chars().all(char::is_alphanumeric))
+    {
+        return false;
+    }
+    let Some(rest) = clause.trim().strip_prefix(owner) else {
+        return false;
+    };
+    let rest = ["只登记", "已登记", "记录的", "登记的", "记录", "登记", "的"]
+        .iter()
+        .find_map(|p| rest.strip_prefix(p))
+        .unwrap_or(rest);
+    let Some(value) = rest.strip_prefix(field) else {
+        return false;
+    };
+    let value = value.trim_start_matches([' ', '为', '是', '：', ':', '=']);
+    let digits = value
+        .find(|c: char| !c.is_ascii_digit() && c != '.' && c != '-')
+        .unwrap_or(value.len());
+    if !value[..digits].parse::<f64>().is_ok_and(f64::is_finite) {
+        return false;
+    }
+    let stated = value[digits..].trim();
+    if !unit.is_empty() {
+        return stated == unit;
+    }
+    // The whole remainder must be a unit, never a qualifier such as “旧值”.
+    stated.is_empty()
+        || [
+            "K", "°C", "℃", "m", "cm", "mm", "kg", "g", "Hz", "kHz", "MHz", "V", "A", "W", "kW",
+            "%", "元", "米", "千克", "公斤", "分钟", "小时", "次", "个", "份", "台", "件",
+        ]
+        .contains(&stated)
+}
+
+/// Reuse the typed evidence gates on a single current source assertion. This
+/// intentionally omits the broad passage-level keyword threshold.
+pub(crate) fn supports_typed_assertion(
+    question: &str,
+    hit: &SearchResult,
+    assertion: &str,
+) -> bool {
+    let mut q = question.trim().trim_end_matches(['？', '?', '。']);
+    let text = assertion
+        .trim_end_matches(['。', '；', ';', '！', '!'])
+        .trim();
+    if text.is_empty() || text.contains(['?', '？']) {
+        return false;
+    }
+    if let Some((intro, rest)) = q.split_once(['，', ',']) {
+        if let Some(subject) = intro
+            .strip_suffix('里')
+            .or_else(|| intro.strip_suffix('中'))
+        {
+            if ![assertion, &hit.heading, hit.title.as_deref().unwrap_or("")]
+                .iter()
+                .any(|part| part.contains(subject))
+            {
+                return false;
+            }
+            q = rest.trim();
+        }
+    }
+    if !provisional(text) && !text.contains(['，', ',']) && measured_field(q, text) {
+        return true;
+    }
+    let normal = normalized_day_question(q);
+    let q = normal.as_deref().unwrap_or(q);
+    if let Some((subject, duration)) = duration_subject(q) {
+        let words = terms(subject);
+        return !words.is_empty() && supports_duration(duration, &words, text);
+    }
+    if let Some(request) = availability::Availability::parse(q) {
+        return !provisional(text) && request.supports(text);
+    }
+    if let Some(request) = per_unit::Request::parse(q) {
+        return !provisional(text) && request.supports(hit.title.as_deref().unwrap_or(""), text);
+    }
+    if let Some(request) = dated_clock::Request::parse(q) {
+        return request.supports(hit.title.as_deref().unwrap_or(""), &hit.heading, text);
+    }
+    predicate::Request::parse(q)
+        .is_some_and(|r| r.supports(hit.title.as_deref(), &hit.heading, text))
+}
+
 fn subquestion_terms(query: &str) -> (Vec<String>, Vec<Subquestion<'_>>) {
     // An introductory qualifier applies to every following question. Only
     // peel a simple qualifier with no embedded scope instruction.
@@ -264,26 +408,7 @@ fn subquestion_terms(query: &str) -> (Vec<String>, Vec<Subquestion<'_>>) {
         .map(|question| {
             // Refuse to split statements or a clause with a trailing side
             // constraint. Each accepted clause is a standalone question.
-            let resolution = [
-                "应该多久处理完",
-                "需要多久处理完",
-                "多久能处理完",
-                "多久处理完",
-                "多久处置完",
-            ]
-            .iter()
-            .find_map(|ending| question.strip_suffix(ending))
-            .map(|subject| (subject, DurationFact::Resolution));
-            let duration = resolution.or_else(|| {
-                [
-                    "确认收到的时限是多少",
-                    "确认收到的期限是多少",
-                    "多久必须确认收到",
-                ]
-                .iter()
-                .find_map(|ending| question.strip_suffix(ending))
-                .map(|subject| (subject, DurationFact::Confirmation))
-            });
+            let duration = duration_subject(question);
             let clause = duration
                 .map(|(subject, _)| subject)
                 .or_else(|| {
@@ -431,7 +556,7 @@ fn years(text: &str) -> impl Iterator<Item = &str> {
     })
 }
 
-fn date_number(text: &str) -> Option<u8> {
+pub(crate) fn date_number(text: &str) -> Option<u8> {
     let digit = |s: &str| {
         let c = s.chars().next()?;
         (s.chars().count() == 1)
