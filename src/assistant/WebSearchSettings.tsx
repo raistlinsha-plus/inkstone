@@ -1,4 +1,4 @@
-import { msg } from "../i18n";
+import { msg, systemMessage } from "../i18n";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import ModalDialog from "../ModalDialog";
@@ -14,7 +14,7 @@ const diagnosticMessages = {
   missing_key: "未找到可用密钥，请输入 Brave Search API 密钥后重试。",
   invalid_key: "密钥格式不正确，请检查复制的内容后重试。",
   keychain:
-    "暂时无法读取已保存的密钥。请检查 macOS 钥匙串授权，或用新输入的密钥测试。",
+    "暂时无法读取本地搜索密钥。请检查本地配置或填写密钥后再测试。",
   timeout: "连接 Brave Search 超时。请检查网络或系统代理后重试。",
   connection: "未能与 Brave Search 建立连接。请检查网络、DNS 或系统代理。",
   unauthorized: "Brave Search 未接受该密钥。请检查密钥是否有效。",
@@ -48,6 +48,7 @@ export default function WebSearchSettings({
   const [clear, setClear] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [importMessage, setImportMessage] = useState("");
   const [testing, setTesting] = useState(false);
   const [diagnostic, setDiagnostic] = useState<BraveDiagnostic>();
   useEffect(() => {
@@ -79,6 +80,26 @@ export default function WebSearchSettings({
       onClose();
     } catch (reason) {
       setError(String(reason));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function importLegacyKey() {
+    if (!settings || settings.hasKey || busy || testing || clear || key.trim()) return;
+    setBusy(true);
+    setError("");
+    setImportMessage("");
+    setDiagnostic(undefined);
+    try {
+      if (await invoke<boolean>("import_legacy_model_key", { kind: "web-brave" })) {
+        setSettings({ ...settings, hasKey: true });
+        setImportMessage(msg("密钥已导入本机，可直接使用。"));
+      } else {
+        setError(msg("未找到可导入的旧密钥。请填写 API 密钥后保存。"));
+      }
+    } catch {
+      setError(msg("未能导入旧密钥。可重试并允许这次钥匙串读取，或填写 API 密钥后保存。"));
     } finally {
       setBusy(false);
     }
@@ -145,10 +166,22 @@ export default function WebSearchSettings({
               disabled={busy || testing || clear}
               onChange={(e) => {
                 setKey(e.target.value);
+                setImportMessage("");
+                setError("");
                 setDiagnostic(undefined);
               }}
             />
           </label>
+          <small>{msg("API 密钥保存在当前 Mac 用户的本地配置中。")}</small>
+          {!settings.hasKey && !key.trim() && !clear && (
+            <div>
+              <button type="button" className="button small" disabled={busy || testing} onClick={importLegacyKey}>
+                {msg("从旧钥匙串导入")}
+              </button>{" "}
+              <small>{msg("仅导入时可能弹出 macOS 授权提示。")}</small>
+            </div>
+          )}
+          {importMessage && <p role="status">{importMessage}</p>}
           {settings.hasKey && (
             <label className="web-search-toggle">
               <input
@@ -184,7 +217,7 @@ export default function WebSearchSettings({
               {testing && <p>{msg("正在测试 Brave Search…")}</p>}
               {diagnostic && (
                 <>
-                  <p>{diagnosticMessages[diagnostic.status]}</p>
+                  <p>{systemMessage(diagnosticMessages[diagnostic.status])}</p>
                   {(diagnostic.httpStatus != null ||
                     diagnostic.searchElapsedMs != null ||
                     diagnostic.candidateCount != null ||

@@ -3,7 +3,7 @@
 #[path = "web_retrieval/html.rs"]
 mod html;
 
-use crate::{files, providers, AppState};
+use crate::{files, AppState};
 use chrono::Utc;
 use futures_util::{stream, StreamExt};
 use reqwest::{header, Client, StatusCode, Url};
@@ -21,8 +21,8 @@ use std::{
 };
 use tauri::State;
 
-const ENDPOINT: &str = "https://api.search.brave.com/res/v1/web/search";
-const KEY_KIND: &str = "web-brave";
+pub(crate) const ENDPOINT: &str = "https://api.search.brave.com/res/v1/web/search";
+pub(crate) const KEY_KIND: &str = "web-brave";
 const SEARCH_RESULTS: usize = 10;
 const MAX_PAGES: usize = 4;
 const MAX_SEARCH_BYTES: usize = 384 * 1024;
@@ -66,7 +66,7 @@ pub(crate) fn is_enabled(state: &AppState) -> bool {
 fn settings_view(state: &AppState) -> Result<WebSettingsView, String> {
     Ok(WebSettingsView {
         enabled: config(state)?.enabled,
-        has_key: providers::has_key_for(KEY_KIND, ENDPOINT, false)?,
+        has_key: crate::has_local_key(state, KEY_KIND, ENDPOINT)?,
         provider: "brave",
     })
 }
@@ -98,17 +98,13 @@ pub async fn save_web_search_settings(
         if let Some(value) = key {
             validate_key(value)?;
         }
-        if enabled && key.is_none() && !providers::has_key_for(KEY_KIND, ENDPOINT, false)? {
+        if enabled && key.is_none() && !crate::has_local_key(&state, KEY_KIND, ENDPOINT)? {
             return Err("启用前请填写 Brave Search API 密钥".into());
         }
         if clear || key.is_some() {
             crate::check_idle(&state)?;
-            let pending = state.credentials.pending();
             state.credentials.invalidate();
-            if pending {
-                return Err(crate::credentials::PENDING.into());
-            }
-            providers::set_key_for(KEY_KIND, ENDPOINT, key, clear)?;
+            crate::local_credentials::save(&state.data_dir, KEY_KIND, ENDPOINT, key, clear)?;
         }
         files::write_atomic(
             &config_path(&state),
@@ -862,7 +858,9 @@ async fn fetch_page(client: &Client, url: Url, terms: &[String]) -> Option<WebEv
         .send()
         .await
         .ok()?;
-    if let Some(h) = receipt { h.status(response.status().as_u16()); }
+    if let Some(h) = receipt {
+        h.status(response.status().as_u16());
+    }
     if response.status() != StatusCode::OK
         || !response_is_public(&response)
         || !identity_encoding(&response)
@@ -1038,7 +1036,10 @@ impl BraveClient {
 
     async fn candidates(&self, query: &str, key: &str) -> Result<(usize, Vec<Url>), SearchFailure> {
         let req = self.request(query, key)?;
-        let receipt = crate::request_receipt::begin(crate::request_receipt::Service::WebSearch, query.chars().count());
+        let receipt = crate::request_receipt::begin(
+            crate::request_receipt::Service::WebSearch,
+            query.chars().count(),
+        );
         let response = req.send().await.map_err(|error| {
             let status = if error.is_timeout() {
                 DiagnosticStatus::Timeout
@@ -1047,7 +1048,9 @@ impl BraveClient {
             };
             SearchFailure::new(status, None)
         })?;
-        if let Some(h) = receipt { h.status(response.status().as_u16()); }
+        if let Some(h) = receipt {
+            h.status(response.status().as_u16());
+        }
         decode_candidate_response(response).await
     }
 }
@@ -1105,15 +1108,8 @@ async fn discover(
     cancel: &AtomicBool,
 ) -> Result<(usize, Vec<Url>), String> {
     let key = crate::read_key(state, KEY_KIND, ENDPOINT, cancel)
-        .await
-        .map_err(|error| {
-            if error == crate::credentials::PENDING {
-                crate::credentials::PENDING
-            } else {
-                "无法读取 Brave Search 密钥，请检查钥匙串授权。"
-            }
-        })?
-        .ok_or("尚未配置 Brave Search API 密钥。")?;
+        .await?
+        .ok_or("尚未配置 Brave Search API 密钥。请在设置中保存，或从旧钥匙串导入。")?;
     validate_key(&key)?;
     if !safe_to_dispatch(state, cancel) {
         return Err("联网搜索已关闭或取消".into());

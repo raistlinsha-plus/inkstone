@@ -590,6 +590,10 @@ fn inputs(paths: &[String], warnings: &mut Vec<String>) -> Vec<Input> {
             continue;
         }
         let Ok(p) = p.canonicalize() else { continue };
+        if let Err(reason) = files::require_document_path(&p) {
+            warnings.push(reason);
+            continue;
+        }
         let allowed = if p.is_dir() {
             p.clone()
         } else {
@@ -599,7 +603,10 @@ fn inputs(paths: &[String], warnings: &mut Vec<String>) -> Vec<Input> {
             .follow_links(false)
             .max_depth(13)
             .into_iter()
-            .filter_entry(|e| e.depth() == 0 || !excluded(&e.file_name().to_string_lossy()))
+            .filter_entry(|e| {
+                (e.depth() == 0 || !excluded(&e.file_name().to_string_lossy()))
+                    && !crate::local_credentials::is_private_document_path(e.path())
+            })
         {
             let e = match entry {
                 Ok(e) => e,
@@ -804,6 +811,7 @@ fn import_fingerprint(input: &Input, text: &str, original_hash: &str, attachment
     )
 }
 fn read_attachment(path: &Path) -> Result<Vec<u8>, String> {
+    files::require_document_path(path)?;
     use std::io::Read;
     let mut bytes = vec![];
     fs::File::open(path)

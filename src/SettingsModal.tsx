@@ -1,4 +1,4 @@
-import { msg } from "./i18n";
+import { msg, systemMessage } from "./i18n";
 import { useLocale } from "./i18n";
 import { isImeEvent } from "./platform/ime";
 import { getAppearance, setAppearance } from "./platform/appearance";
@@ -16,6 +16,7 @@ import type { LibraryProject } from "./library";
 import ExternalToolsDialog from "./ExternalToolsDialog";
 type Tab = "embedding" | "chat" | "rerank";
 type SavedKeySource = "embedding" | "chat";
+const keyFlags = { embedding: "hasEmbeddingKey", chat: "hasChatKey", rerank: "hasRerankKey" } as const;
 function serviceOrigin(address: string): string | null {
   try {
     const url = new URL(address);
@@ -40,6 +41,7 @@ export default function SettingsModal({
   onClose,
   onSave,
   onWebSearch,
+  onKeyImported,
   projects,
 }: {
   value: Settings;
@@ -48,6 +50,7 @@ export default function SettingsModal({
   onClose: () => void;
   onSave: (settings: Settings) => void;
   onWebSearch?: () => void;
+  onKeyImported?: (value: Settings) => void;
   projects?: LibraryProject[];
 }) {
   const { preference, setPreference, t } = useLocale();
@@ -75,7 +78,7 @@ export default function SettingsModal({
   useEffect(() => {
     setMessage("");
     setError("");
-  }, [form, keys, clear, reuseKeySource]);
+  }, [form.embedding, form.chat, form.rerank, form.candidateReading, keys, clear, reuseKeySource]);
   const targetOrigin = serviceOrigin(form.rerank.endpoint);
   const reusableSources = (["embedding", "chat"] as const).filter((source) => {
     const savedOrigin = serviceOrigin(value[source].baseUrl);
@@ -83,7 +86,7 @@ export default function SettingsModal({
       !!targetOrigin &&
       savedOrigin === targetOrigin &&
       serviceOrigin(form[source].baseUrl) === savedOrigin &&
-      (source === "embedding" ? value.hasEmbeddingKey : value.hasChatKey) &&
+      form[keyFlags[source]] &&
       !clear[source] &&
       !keys[source].trim()
     );
@@ -101,6 +104,9 @@ export default function SettingsModal({
   const provider = form[tab === "rerank" ? "embedding" : tab];
   const update = (patch: Partial<Provider>) => {
     if (tab === "rerank") return;
+    if (patch.baseUrl !== undefined && patch.baseUrl !== provider.baseUrl) {
+      setClear((old) => ({ ...old, [tab]: false }));
+    }
     setForm((old) => ({
       ...old,
       ...(tab === "chat" && patch.baseUrl !== undefined && patch.baseUrl !== old.chat.baseUrl
@@ -109,8 +115,12 @@ export default function SettingsModal({
       [tab]: { ...old[tab], ...patch },
     }));
   };
-  const updateRerank = (patch: Partial<RerankProvider>) =>
+  const updateRerank = (patch: Partial<RerankProvider>) => {
+    if (patch.endpoint !== undefined && patch.endpoint !== form.rerank.endpoint) {
+      setClear((old) => ({ ...old, rerank: false }));
+    }
     setForm((old) => ({ ...old, rerank: { ...old.rerank, ...patch } }));
+  };
   const changeKey = (kind: Tab, next: string) => {
     setKeys((old) => ({ ...old, [kind]: next }));
     if (next.trim()) {
@@ -125,12 +135,32 @@ export default function SettingsModal({
       setReuseKeySource(null);
     }
   };
-  const hasKey =
-    tab === "embedding"
-      ? value.hasEmbeddingKey
-      : tab === "chat"
-        ? value.hasChatKey
-        : value.hasRerankKey;
+  const address = tab === "rerank" ? form.rerank.endpoint : form[tab].baseUrl;
+  const savedAddress = tab === "rerank" ? value.rerank?.endpoint : value[tab].baseUrl;
+  const sameAddress = !!address && address === savedAddress;
+  const hasKey = sameAddress && form[keyFlags[tab]];
+  const canImport = sameAddress && !hasKey && !keys[tab].trim() && !clear[tab]
+    && !(tab === "rerank" && selectedReuse);
+  async function importLegacyKey() {
+    if (busy || !canImport) return;
+    setBusy("import");
+    setMessage("");
+    setError("");
+    try {
+      if (await invoke<boolean>("import_legacy_model_key", { kind: tab })) {
+        const flag = keyFlags[tab];
+        setForm((current) => ({ ...current, [flag]: true }));
+        onKeyImported?.({ ...value, [flag]: true });
+        setMessage(msg("密钥已导入本机，可直接使用。"));
+      } else {
+        setError(msg("未找到可导入的旧密钥。请填写 API 密钥后保存。"));
+      }
+    } catch {
+      setError(msg("未能导入旧密钥。可重试并允许这次钥匙串读取，或填写 API 密钥后保存。"));
+    } finally {
+      setBusy("");
+    }
+  }
   async function test() {
     const generation = ++testGeneration.current;
     setBusy("test");
@@ -432,7 +462,7 @@ export default function SettingsModal({
                   </label>
                 )}
                 <small>
-                  {msg("测试时读取同一服务已保存的密钥；保存时复制为独立重排密钥，重排开关仍由上方控制。密钥由钥匙串读取，不显示到界面；填写独立密钥时优先使用填写值。")}
+                  {msg("测试使用同服务已保存的密钥。保存设置时会为重排单独保留一份。填写独立密钥时优先使用填写值。")}
                 </small>
               </div>
             )}
@@ -647,12 +677,20 @@ export default function SettingsModal({
         )}
         <div className="privacy-note">
           <KeyRound size={15} />
-          <span>
+          <div>
             {tab === "rerank"
               ? msg("远程重排会把问题和候选片段发送到你配置的服务；默认关闭。")
-              : msg("远程向量化发送所选文本，问答发送问题与命中的片段。")}
-            {msg("密钥存入 macOS 钥匙串，服务地址变化后需重新填写。")}
-          </span>
+              : msg("远程向量化发送所选文本，问答发送问题与命中的片段。")}{" "}
+            {msg("API 密钥保存在当前 Mac 用户的本地配置中。更换服务地址后需重新填写。")}
+            {canImport && (
+              <div>
+                <button type="button" className="button small" onClick={importLegacyKey}>
+                  {msg("从旧钥匙串导入")}
+                </button>{" "}
+                {msg("仅导入时可能弹出 macOS 授权提示。")}
+              </div>
+            )}
+          </div>
         </div>
       </fieldset>
       {(error || message) && (
@@ -660,7 +698,7 @@ export default function SettingsModal({
           role="status"
           className={error ? "inline-message error" : "inline-message success"}
         >
-          {error || (
+          {(error && systemMessage(error)) || (
             <>
               <Check size={15} />
               {message}

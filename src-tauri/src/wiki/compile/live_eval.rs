@@ -234,7 +234,6 @@ fn real_wiki_compile_and_refresh_smoke() -> Result<(), String> {
         .build()
         .map_err(error)?;
     let result = runtime.block_on(check_live_wiki());
-    // An outstanding macOS authorization dialog can outlive the bounded waiting period.
     runtime.shutdown_background();
     result
 }
@@ -266,13 +265,19 @@ async fn check_live_wiki() -> Result<(), String> {
     } else {
         KeySource::Environment
     };
-    run_wiki(provider, CredentialReader::default(), &report, source).await
+    let run = run_wiki(provider, CredentialReader::default(), &report, source);
+    if use_saved {
+        crate::evaluation_v086::CREDENTIAL_DIRECTORY
+            .scope(crate::evaluation_v086::saved_credential_directory()?, run)
+            .await
+    } else {
+        run.await
+    }
 }
 
 fn credential_error(reason: &str) -> Option<&'static str> {
     match reason {
-        "keychain-authorization-pending" => Some("keychain-authorization-pending"),
-        "keychain-read-failed" => Some("keychain-read-failed"),
+        "local-credential-read-failed" => Some("local-credential-read-failed"),
         "provider-authorization-denied" => Some("provider-authorization-denied"),
         "saved-address-bound-key-missing" => Some("saved-address-bound-key-missing"),
         _ => None,
@@ -340,14 +345,13 @@ async fn run_wiki(
     };
     store::save_policy(&store::write(data.path())?, &space, &policy)?;
     let state = state(data.path(), &ws, provider.clone(), credentials)?;
-    // The standalone evaluator allows a separate, bounded authorization window before
-    // the model budget starts. Subsequent requests still check the normal reader TTL.
+    // Check the saved local key before starting the model budget.
     if source == KeySource::StandaloneSaved {
         if let Err(reason) =
             crate::evaluation_v086::saved_key(&state, "chat", &provider.base_url).await
         {
             let failure = json!({"schema": 1, "completed": false, "stage": "read-chat-key", "error": reason,
-                "keychainAccessed": true, "syntheticSourcesOnly": true, "trace": {"httpAttempts": 0}});
+                "keychainAccessed": false, "localCredentialsAccessed": true, "syntheticSourcesOnly": true, "trace": {"httpAttempts": 0}});
             serde_json::to_writer_pretty(report, &failure).map_err(error)?;
             return Err(reason.into());
         }
@@ -363,7 +367,7 @@ async fn run_wiki(
         "fixtureSha256": files::hash([OLD, NEW, OTHER].join("\n")),
         "model": provider.model,
         "syntheticSourcesOnly": true,
-        "keychainAccessed": use_saved,
+        "keychainAccessed": false, "localCredentialsAccessed": use_saved,
         "inputBudgetChars": provider.context_chars,
         "maxOutputTokensPerRequest": 3000,
         "initial": {},
@@ -453,7 +457,7 @@ async fn run_wiki(
     let waiting_for_key = result[phase]["stage"] == "read-chat-key";
     let outcome = match outcome {
         _ if trace.provider_denied() => Err("provider-authorization-denied"),
-        Err(_) if waiting_for_key => Err("keychain-authorization-pending"),
+        Err(_) if waiting_for_key => Err("local-credential-read-failed"),
         Err(_) => Err("Wiki 模型评测总预算已用尽"),
         Ok(Err(reason)) => Err(credential_error(&reason)
             .unwrap_or("Wiki 模型评测未完成，检查已保存的阶段和 HTTP 记录")),
@@ -486,17 +490,9 @@ async fn run_wiki(
 
 #[cfg(not(feature = "desktop-e2e"))]
 #[tokio::test]
-async fn batch_wiki_reports_a_cached_missing_key_without_http() {
+async fn batch_wiki_reports_a_missing_local_key_without_http() {
     let address = "https://wiki-fixture.invalid/v1".to_string();
     let credentials = CredentialReader::default();
-    credentials
-        .read(
-            crate::credentials::Identity::new("chat", &address, false),
-            &AtomicBool::new(false),
-            || Ok(None),
-        )
-        .await
-        .unwrap();
     let mut config = crate::Settings::default();
     config.chat.enabled = true;
     config.chat.base_url = address;

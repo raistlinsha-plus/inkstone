@@ -10,7 +10,7 @@ Create a Markdown note with **New document**. Use **Editor** to format text, **S
 
 Open **Models and settings → Language / 语言**. Choose **Use system language**, **简体中文**, or **English**. The setting takes effect immediately. The current calendar and schedule continue to use their own time zones. Imported documents, prompts, citations, Wiki pages and previous answers keep their original text.
 
-New installations match supported languages in the system’s preferred order and fall back to English. Upgrades with existing Inkstone browser preferences retain Simplified Chinese until you choose another language. macOS file pickers and Keychain notices follow the system. Provider errors and older saved status messages may appear in their original language.
+New installations match supported languages in the system’s preferred order and fall back to English. Upgrades with existing Inkstone browser preferences retain Simplified Chinese until you choose another language. macOS file pickers and system dialogs follow the system. Provider errors and older saved status messages may appear in their original language.
 
 Open **Answer preferences** to select an answer language for one space or globally. The default follows your question. A request such as “summarize this in English” takes priority. Citations preserve the original passage. A provider’s performance on cross-language retrieval depends on the selected model and available evidence.
 
@@ -22,6 +22,10 @@ Open **Answer preferences** to select an answer language for one space or global
 4. Use **Save as document** to preview the Markdown and choose its destination. Saving an answer or importing a file never silently changes the external original.
 
 Embedding, reranking, chat and web search can use the providers you configure. Their settings explain what text they receive. To restrict a turn, disable web search or remove sources before sending. Local keyword search is available without an API key.
+
+**Save or migrate a service key.** Enter an API key in the settings for chat, embeddings, reranking or Brave Search and choose **Save**. For an existing installation, select the service at its saved address and choose **Import from old Keychain**. If macOS asks for your login keychain password, **Allow** is sufficient for that read. Import saves the key immediately. Repeat for each service you use. You can also enter the key directly. To retry a failed answer, choose **Regenerate** under the original question.
+
+Inkstone stores these keys in `~/Library/Preferences/local.inkstone.desktop/credentials.json` with owner-only file permissions (`0600`). The file contains the keys in plaintext and can be read by programs running with your account’s permissions. Treat it as private. Normal chat, indexing, Wiki generation and search read the local configuration. The portable space backup omits the keys.
 
 ## Track work in Markdown
 
@@ -41,4 +45,4 @@ Click the desk pet for its actions or expand the explanation to see why the curr
 
 ## Back up and recover
 
-Open **Spaces and files → Backup and restore rehearsal**. Create a backup, verify its manifest and test restoration in an empty folder. Keep the verified archive separately. Cloud API keys remain in macOS Keychain. Use the document trash to restore a removed copy or review the impact before permanently deleting it. Use **Recovery and diagnostics** if an import or file operation was interrupted.
+Open **Spaces and files → Backup and restore rehearsal**. Create a backup, verify its manifest and test restoration in an empty folder. Keep the verified archive separately. Configure service keys separately after restoring to a different Mac. Use the document trash to restore a removed copy or review the impact before permanently deleting it. Use **Recovery and diagnostics** if an import or file operation was interrupted.

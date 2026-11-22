@@ -231,6 +231,106 @@ pub(super) fn validate_snapshot(c: &Connection) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn private_credentials_stay_out_of_documents_attachments_index_and_backup() {
+        use std::{fs, io::Read, sync::atomic::AtomicBool};
+        // Run with a synthetic home in a child process so unrelated parallel tests
+        // and the user's installed preferences never participate in this fixture.
+        let marker = "INKSTONE_CREDENTIAL_FIXTURE_HOME";
+        let Some(fake_home) = std::env::var_os(marker) else {
+            let home = tempfile::tempdir().unwrap();
+            let fixture = home.path().canonicalize().unwrap();
+            let private = fixture.join("Library/Preferences/local.inkstone.desktop");
+            fs::create_dir_all(&private).unwrap();
+            fs::write(private.join("credentials.json"), "private-fixture-key-127").unwrap();
+            let output = std::process::Command::new(std::env::current_exe().unwrap())
+                .args(["--exact", std::thread::current().name().unwrap()])
+                .env("HOME", &fixture)
+                .env(marker, &fixture)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert!(String::from_utf8_lossy(&output.stdout).contains("1 passed"));
+            return;
+        };
+        let home = Path::new(&fake_home);
+        assert_eq!(std::env::home_dir().unwrap(), home);
+        assert!(home.starts_with(std::env::temp_dir().canonicalize().unwrap()));
+        let prefs = home.join("Library/Preferences");
+        let private = prefs.join("local.inkstone.desktop");
+        let key = private.join("credentials.json");
+        let ordinary = prefs.join("credentials.json");
+        fs::write(&ordinary, "user-authored example").unwrap();
+        let alias = prefs.join("alias.json");
+        std::os::unix::fs::symlink(&key, &alias).unwrap();
+        let hard_link = prefs.join("alternate.json");
+        fs::hard_link(&key, &hard_link).unwrap();
+        let data = tempfile::tempdir().unwrap();
+        let data = data.path();
+        let scope = crate::models::Workspace {
+            root: prefs.clone(),
+            db: home.join("work.sqlite3"),
+        };
+        assert!(files::scan(&scope, Some("local.inkstone.desktop/credentials.json")).is_err());
+        assert_eq!(
+            files::scan(&scope, Some("credentials.json"))
+                .unwrap()
+                .0
+                .len(),
+            1
+        );
+        let tree = files::list_tree(&prefs).unwrap();
+        assert_eq!(tree.len(), 1);
+        assert_eq!(tree[0].name, "credentials.json");
+
+        let conversation =
+            super::super::create(data, GENERAL_OWNER, None, "fixture".into(), None).unwrap();
+        for path in [&key, &alias, &hard_link] {
+            assert!(add(data, &conversation.id, path).is_err());
+        }
+        assert!(add(data, &conversation.id, &ordinary).is_ok());
+        let batch = crate::library::import(
+            data,
+            "inbox",
+            &[
+                prefs.to_string_lossy().into_owned(),
+                key.to_string_lossy().into_owned(),
+            ],
+            true,
+            true,
+            &AtomicBool::new(false),
+            |_| {},
+        )
+        .unwrap();
+        assert_eq!(batch.items.len(), 1);
+        assert!(batch.items[0].document_id.is_some());
+        crate::local_credentials::save(
+            data,
+            "chat",
+            "fixture",
+            Some("private-fixture-key-127"),
+            false,
+        )
+        .unwrap();
+        let backup = home.join("backup.zip");
+        crate::maintenance::create_backup(data, &backup).unwrap();
+        let validated = crate::maintenance::validate_backup(&backup).unwrap();
+        assert_eq!(serde_json::to_value(validated).unwrap()["valid"], true);
+        let mut archive = zip::ZipArchive::new(fs::File::open(backup).unwrap()).unwrap();
+        let marker = b"private-fixture-key-127";
+        for i in 0..archive.len() {
+            let mut entry = archive.by_index(i).unwrap();
+            let mut bytes = Vec::new();
+            entry.read_to_end(&mut bytes).unwrap();
+            assert!(!bytes.windows(marker.len()).any(|part| part == marker));
+        }
+    }
+
     #[test]
     fn attachment_scope_and_frozen_turn_survive_reopen() {
         let dir = tempfile::tempdir().unwrap();

@@ -1,5 +1,5 @@
 import ContextReceipt from "./ContextReceipt";
-import { msg, type Message } from "../i18n";
+import { msg, systemMessage, type Message } from "../i18n";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   BookOpen,
@@ -277,7 +277,7 @@ export function ConversationTimeline({
           />
         )}{" "}
         {record.warning && (
-          <div className="panel-warning">{record.warning}</div>
+          <div className="panel-warning">{systemMessage(record.warning)}</div>
         )}
         {record.chartWarnings.map((w, i) => (
           <div className="panel-warning" key={i}>

@@ -1,5 +1,5 @@
 import ChatTaskDialog, { type ChatTaskMessage } from "./tasks/ChatTaskDialog";
-import { msg, type Message } from "./i18n";
+import { msg, systemMessage, type Message } from "./i18n";
 import { dismissDetailsOnOutside, dismissOnOutside, focusMenuButton } from "./platform/menu";
 import { imeBoundary, isImeEvent } from "./platform/ime";
 import { isTauri } from "@tauri-apps/api/core";
@@ -4056,7 +4056,7 @@ export default function App() {
                 )}
                 {assistantRunError && (
                   <div className="panel-warning" role="alert">
-                    {assistantRunError.message}
+                    {systemMessage(assistantRunError.message)}
                     {canRetryUnsent && (
                       <button
                         type="button"
@@ -4476,6 +4476,7 @@ export default function App() {
             setWebSettingsOpen(true);
           }}
           value={settings}
+          onKeyImported={setSettings}
           onClose={() => {
             if (settingsFromFirstUse) setFocusQuestion(true);
             setSettingsFromFirstUse(false);
@@ -4782,7 +4783,7 @@ export default function App() {
               } else void openPath(source.path, source);
             }}
           />
-          {answerWarning && <p className="panel-warning">{answerWarning}</p>}
+          {answerWarning && <p className="panel-warning">{systemMessage(answerWarning)}</p>}
           {answerChartWarnings.map((warning, i) => (
             <p className="panel-warning" key={i}>
               {warning}

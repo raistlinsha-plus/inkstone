@@ -39,7 +39,7 @@ To try the editor, create a document space and copy-import [the synthetic sample
 
 ## Connect your API
 
-Configure OpenAI-compatible embedding/chat endpoints and models in settings; reranking uses a separately configured Cohere-compatible endpoint. Remote endpoints require HTTPS, while loopback services can use HTTP. Keys use macOS Keychain. No model weights, hosted account or document server are bundled.
+Configure OpenAI-compatible embedding/chat endpoints and models in settings; reranking uses a separately configured Cohere-compatible endpoint. Remote endpoints require HTTPS, while loopback services can use HTTP. Inkstone stores provider keys in an owner-only preferences file. Settings can import an existing macOS Keychain item. No model weights, hosted account or document server are bundled.
 
 Documents, catalog, history and indexes stay local. Model operations transmit selected chunks, questions/candidate snippets or evidence to the service you configure. Keyword-only retrieval makes no model request. [Security and data boundaries](../SECURITY.md).
 

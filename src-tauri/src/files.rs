@@ -48,9 +48,18 @@ pub fn resolve(root: &Path, relative: &str, new: bool) -> Result<PathBuf, String
     if !canonical.starts_with(root) {
         return Err("只能访问当前工作区内的文件".into());
     }
+    require_document_path(&canonical)?;
     Ok(canonical)
 }
+pub(crate) fn require_document_path(path: &Path) -> Result<(), String> {
+    if crate::local_credentials::is_private_document_path(path) {
+        return Err("Inkstone 的私有凭据配置不能用作文档或附件。".into());
+    }
+    Ok(())
+}
+
 pub fn read_text(path: &Path) -> Result<String, String> {
+    require_document_path(path)?;
     if !supported(path) {
         return Err("支持 TXT、Markdown、JSON 和 MMD 文件".into());
     }
@@ -128,6 +137,9 @@ pub fn list_tree(root: &Path) -> Result<Vec<FileEntry>, String> {
                 continue;
             }
             let path = entry.path();
+            if crate::local_credentials::is_private_document_path(&path) {
+                continue;
+            }
             let directory = ty.is_dir();
             if !directory && !supported(&path) {
                 continue;
@@ -156,6 +168,7 @@ pub fn list_tree(root: &Path) -> Result<Vec<FileEntry>, String> {
         });
         Ok(list)
     }
+    require_document_path(root)?;
     entries(root, root, 0, &mut 0)
 }
 pub fn scan(
@@ -167,6 +180,7 @@ pub fn scan(
     } else {
         workspace.root.clone()
     };
+    require_document_path(&start)?;
     let mut documents = vec![];
     let mut warnings = vec![];
     let mut total = 0usize;
@@ -174,7 +188,10 @@ pub fn scan(
         .follow_links(false)
         .max_depth(13)
         .into_iter()
-        .filter_entry(|e| e.depth() == 0 || !excluded(&e.file_name().to_string_lossy()))
+        .filter_entry(|e| {
+            (e.depth() == 0 || !excluded(&e.file_name().to_string_lossy()))
+                && !crate::local_credentials::is_private_document_path(e.path())
+        })
     {
         let entry = match entry {
             Ok(e) => e,

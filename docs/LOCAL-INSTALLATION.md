@@ -57,7 +57,7 @@ python3 scripts/local-upgrade.py apply --state "$inkstone_upgrade_state"
 python3 scripts/local-upgrade.py rollback --state "$inkstone_upgrade_state"
 ```
 
-回退会把当前资料保留在私有事务的 `return-stage`，恢复后活跃资料回到升级前时点。系统偏好和 WebKit 界面状态仅随原始快照备查。该目录、原始快照和便携备份均位于本机 Git 忽略的 `artifacts` 下。API 密钥仍由 macOS 钥匙串管理。可用 `python3 scripts/local-upgrade.test.py` 在临时目录验证故障和回退。
+回退会把当前资料保留在私有事务的 `return-stage`，恢复后活跃资料回到升级前时点。系统偏好和 WebKit 界面状态仅随原始快照备查。该目录、原始快照和便携备份均位于本机 Git 忽略的 `artifacts` 下。从 v1.2.0-beta.1 构建 10202 起，API 密钥由 Inkstone 私有配置管理，路径为 `~/Library/Preferences/local.inkstone.desktop/credentials.json`。升级前已有的钥匙串项目可在服务设置中单独导入；旧版应用回退后仍使用原钥匙串。此私有配置独立于资料快照及便携备份。可用 `python3 scripts/local-upgrade.test.py` 在临时目录验证故障和回退。
 
 ## 2026-11-07 历史整理记录
 

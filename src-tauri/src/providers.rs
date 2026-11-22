@@ -54,9 +54,6 @@ pub fn fingerprint(provider: &Provider) -> String {
         provider.max_input_chars
     ))
 }
-pub fn has_key(kind: &str) -> Result<bool, String> {
-    credential_metadata_exists(kind)
-}
 #[cfg(all(target_os = "macos", not(feature = "desktop-e2e")))]
 fn credential_metadata_exists(account: &str) -> Result<bool, String> {
     use core_foundation::{
@@ -122,22 +119,6 @@ fn key(kind: &str) -> Result<Option<String>, String> {
         Err(_) => Err("无法读取 API Key，请检查 macOS 钥匙串权限".into()),
     }
 }
-#[cfg(not(feature = "desktop-e2e"))]
-fn set_key(kind: &str, value: Option<&str>, clear: bool) -> Result<(), String> {
-    let entry =
-        keyring::Entry::new("local.inkstone.desktop", kind).map_err(|_| "无法访问 macOS 钥匙串")?;
-    if let Some(value) = value.filter(|s| !s.trim().is_empty()) {
-        entry
-            .set_password(value.trim())
-            .map_err(|_| "API Key 保存到钥匙串失败")?;
-    } else if clear {
-        match entry.delete_credential() {
-            Ok(()) | Err(keyring::Error::NoEntry) => (),
-            Err(_) => return Err("无法删除钥匙串中的 API Key".into()),
-        }
-    }
-    Ok(())
-}
 #[cfg(feature = "desktop-e2e")]
 fn credential_metadata_exists(_account: &str) -> Result<bool, String> {
     Ok(false)
@@ -146,31 +127,15 @@ fn credential_metadata_exists(_account: &str) -> Result<bool, String> {
 fn key(_kind: &str) -> Result<Option<String>, String> {
     Ok(None)
 }
-#[cfg(feature = "desktop-e2e")]
-fn set_key(_kind: &str, value: Option<&str>, _clear: bool) -> Result<(), String> {
-    if value.is_some_and(|x| !x.trim().is_empty()) {
-        Err("隔离测试构建禁用系统凭据存储".into())
-    } else {
-        Ok(())
-    }
-}
 #[cfg(all(test, feature = "desktop-e2e"))]
-mod isolation_tests {
-    #[test]
-    fn credentials_are_compiled_out() {
-        assert_eq!(super::key("embedding").unwrap(), None);
-        assert!(!super::has_key("embedding").unwrap());
-        assert!(super::set_key("embedding", Some("synthetic-test-value"), false).is_err());
-        assert!(super::set_key("embedding", None, true).is_ok());
-    }
-    #[test]
-    fn isolated_provider_can_change_address_without_a_key() {
-        let address = "http://127.0.0.1:18925/v1";
-        assert!(super::set_key_for("chat", address, None, true).is_ok());
-        assert!(super::set_key_for("chat", address, Some("test-only"), false).is_err());
-        assert_eq!(super::key_for("chat", address, true).unwrap(), None);
-    }
+#[test]
+fn isolated_legacy_import_never_uses_system_credentials() {
+    assert_eq!(
+        legacy_key_for_import("chat", "https://a.invalid", true).unwrap(),
+        None
+    );
 }
+
 pub fn credential_origin(address: &str) -> String {
     files::hash(address.as_bytes())
 }
@@ -222,155 +187,75 @@ fn credential_accounts(kind: &str, address: &str) -> (String, String) {
         format!("v2-cleared:{kind}:{origin}"),
     )
 }
-trait CredentialStore {
-    fn get(&self, account: &str) -> Result<Option<String>, String>;
-    fn put(&self, account: &str, value: &str) -> Result<(), String>;
-    fn remove(&self, account: &str) -> Result<(), String>;
-}
-struct KeychainStore;
-impl CredentialStore for KeychainStore {
-    fn get(&self, account: &str) -> Result<Option<String>, String> {
-        key(account)
-    }
-    fn put(&self, account: &str, value: &str) -> Result<(), String> {
-        set_key(account, Some(value), false)
-    }
-    fn remove(&self, account: &str) -> Result<(), String> {
-        set_key(account, None, true)
-    }
-}
-fn read_bound_key(
-    store: &impl CredentialStore,
+/// Used only by the explicit import action. Older installers still own their Keychain items.
+pub fn legacy_key_for_import(
     kind: &str,
     address: &str,
     allow_legacy: bool,
 ) -> Result<Option<String>, String> {
+    read_legacy_key(kind, address, allow_legacy, credential_metadata_exists, key)
+}
+
+fn read_legacy_key(
+    kind: &str,
+    address: &str,
+    allow_legacy: bool,
+    exists: impl Fn(&str) -> Result<bool, String>,
+    get: impl Fn(&str) -> Result<Option<String>, String>,
+) -> Result<Option<String>, String> {
     let (account, cleared) = credential_accounts(kind, address);
-    if store.get(&cleared)?.is_some() {
+    if exists(&cleared)? {
         return Ok(None);
     }
-    if let Some(value) = store.get(&account)? {
+    if let Some(value) = get(&account)? {
         return Ok(Some(value));
     }
-    if !allow_legacy {
-        return Ok(None);
-    }
-    let value = store.get(kind)?;
-    if let Some(value) = value.as_deref() {
-        // A failed migration must not delete the original credential or prevent same-address use.
-        let _ = store.put(&account, value);
-    }
-    Ok(value)
-}
-fn write_bound_key(
-    store: &impl CredentialStore,
-    kind: &str,
-    address: &str,
-    value: Option<&str>,
-    clear: bool,
-) -> Result<(), String> {
-    let (account, cleared) = credential_accounts(kind, address);
-    if let Some(value) = value.filter(|s| !s.trim().is_empty()) {
-        store.put(&account, value.trim())?;
-        store.remove(&cleared)?;
-    } else if clear {
-        // Record the denial first so a failed deletion cannot reactivate a legacy credential.
-        store.put(&cleared, "cleared")?;
-        store.remove(&account)?;
-    }
-    Ok(())
-}
-pub fn key_for(kind: &str, address: &str, allow_legacy: bool) -> Result<Option<String>, String> {
-    read_bound_key(&KeychainStore, kind, address, allow_legacy)
-}
-pub fn set_key_for(
-    kind: &str,
-    address: &str,
-    value: Option<&str>,
-    clear: bool,
-) -> Result<(), String> {
-    #[cfg(feature = "desktop-e2e")]
-    {
-        // An address change normally writes a Keychain denial marker. An
-        // isolated build has no credentials to invalidate at the old address.
-        let _ = address;
-        set_key(kind, value, clear)
-    }
-    #[cfg(not(feature = "desktop-e2e"))]
-    write_bound_key(&KeychainStore, kind, address, value, clear)
-}
-pub fn has_key_for(kind: &str, address: &str, allow_legacy: bool) -> Result<bool, String> {
-    let (account, cleared) = credential_accounts(kind, address);
-    if has_key(&cleared)? {
-        return Ok(false);
-    }
-    if has_key(&account)? {
-        return Ok(true);
-    }
     if allow_legacy {
-        has_key(kind)
-    } else {
-        Ok(false)
+        return get(kind);
     }
+    Ok(None)
 }
 
 #[cfg(test)]
 mod credential_tests {
     use super::*;
-    use std::{cell::RefCell, collections::HashMap};
-    #[derive(Default)]
-    struct Store {
-        values: RefCell<HashMap<String, String>>,
-        fail_put: RefCell<Option<String>>,
-    }
-    impl CredentialStore for Store {
-        fn get(&self, account: &str) -> Result<Option<String>, String> {
-            Ok(self.values.borrow().get(account).cloned())
-        }
-        fn put(&self, account: &str, value: &str) -> Result<(), String> {
-            if self.fail_put.borrow().as_deref() == Some(account) {
-                return Err("模拟保存失败".into());
-            }
-            self.values
-                .borrow_mut()
-                .insert(account.into(), value.into());
-            Ok(())
-        }
-        fn remove(&self, account: &str) -> Result<(), String> {
-            self.values.borrow_mut().remove(account);
-            Ok(())
-        }
-    }
+
     #[test]
-    fn legacy_migration_and_partial_settings_failure_never_cross_service_addresses() {
-        let store = Store::default();
-        store.put("embedding", "legacy-a").unwrap();
-        let a = "https://a.example/v1";
-        let b = "https://b.example/v1";
-        assert_eq!(read_bound_key(&store, "embedding", b, false).unwrap(), None);
+    fn import_reads_only_the_bound_address_or_its_permitted_legacy_item() {
+        let address = "https://a.invalid/v1";
+        let (account, _) = credential_accounts("chat", address);
+        let get = |name: &str| {
+            Ok(match name {
+                "chat" => Some("old".to_string()),
+                name if name == account => Some("bound".to_string()),
+                _ => None,
+            })
+        };
+        let missing = |_: &str| Ok(false);
         assert_eq!(
-            read_bound_key(&store, "embedding", a, true)
+            read_legacy_key("chat", address, true, missing, get)
                 .unwrap()
                 .as_deref(),
-            Some("legacy-a")
-        );
-        write_bound_key(&store, "embedding", b, Some("new-b"), false).unwrap();
-        // A later role/config save may fail: the old configuration still resolves only A's key.
-        assert_eq!(
-            read_bound_key(&store, "embedding", a, true)
-                .unwrap()
-                .as_deref(),
-            Some("legacy-a")
+            Some("bound")
         );
         assert_eq!(
-            read_bound_key(&store, "embedding", b, false)
-                .unwrap()
-                .as_deref(),
-            Some("new-b")
+            read_legacy_key("chat", "https://b.invalid", false, missing, get).unwrap(),
+            None
         );
-        assert_eq!(store.get("embedding").unwrap().as_deref(), Some("legacy-a"));
-        assert_eq!(read_bound_key(&store, "chat", b, false).unwrap(), None);
+        assert_eq!(
+            read_legacy_key("chat", address, true, missing, |name| Ok(
+                (name == "chat").then(|| "old".to_owned())
+            ))
+            .unwrap()
+            .as_deref(),
+            Some("old")
+        );
+        assert_eq!(
+            read_legacy_key("embedding", address, false, missing, get).unwrap(),
+            None
+        );
     }
+
     #[test]
     fn explicit_reuse_requires_normalized_exact_origin_and_supported_source_role() {
         let mut settings = Settings::default();
@@ -397,48 +282,28 @@ mod credential_tests {
         );
     }
     #[test]
-    fn clear_tombstone_blocks_legacy_resurrection_and_failed_migration_preserves_original() {
-        let store = Store::default();
-        let address = "https://a.example/v1";
-        store.put("chat", "legacy").unwrap();
-        *store.fail_put.borrow_mut() = Some(credential_accounts("chat", address).0);
-        assert_eq!(
-            read_bound_key(&store, "chat", address, true)
-                .unwrap()
-                .as_deref(),
-            Some("legacy")
-        );
-        *store.fail_put.borrow_mut() = None;
-        write_bound_key(&store, "chat", address, None, true).unwrap();
-        assert_eq!(read_bound_key(&store, "chat", address, true).unwrap(), None);
-        assert_eq!(store.get("chat").unwrap().as_deref(), Some("legacy"));
-        write_bound_key(&store, "chat", address, Some("replacement"), false).unwrap();
-        assert_eq!(
-            read_bound_key(&store, "chat", address, true)
-                .unwrap()
-                .as_deref(),
-            Some("replacement")
-        );
-        // Address-change invalidation is an internal clear, not an explicit deletion choice.
-        write_bound_key(
-            &store,
-            "chat",
-            "https://new.example/v1",
-            Some("new-address-key"),
-            true,
-        )
-        .unwrap();
-        assert_eq!(
-            read_bound_key(&store, "chat", "https://new.example/v1", false)
-                .unwrap()
-                .as_deref(),
-            Some("new-address-key")
-        );
+    fn import_never_reads_secret_data_after_a_clear_or_marker_lookup_error() {
+        let skip = |_: &str| -> Result<Option<String>, String> { panic!("unexpected secret read") };
+        for known in [true, false] {
+            let marker = |_: &str| {
+                if known {
+                    Ok(true)
+                } else {
+                    Err("unavailable".into())
+                }
+            };
+            let result = read_legacy_key("chat", "https://a.invalid/v1", true, marker, skip);
+            if known {
+                assert_eq!(result.unwrap(), None);
+            } else {
+                assert!(result.is_err());
+            }
+        }
     }
 }
 fn status_message(code: reqwest::StatusCode) -> String {
     match code.as_u16() {
-        401 | 403 => "API 鉴权失败，请检查 Key 和访问权限".into(),
+        401 | 403 => "API 鉴权失败。请到「模型与设置」保存此服务的 API 密钥，或从旧钥匙串导入，并核对服务权限。".into(),
         404 => "找不到 API 或模型，请检查 Base URL 和模型名称".into(),
         413 => "API 输入过长，请减小切片或上下文长度".into(),
         429 => "API 请求受限，请稍后重试或减小批量大小".into(),
@@ -465,10 +330,32 @@ async fn request(
     let url = format!("{}/{}", provider.base_url.trim_end_matches('/'), endpoint);
     use crate::request_receipt::{self, Service};
     let (kind, chars) = if endpoint == "embeddings" {
-        (Service::Embedding, body["input"].as_array().into_iter().flatten().filter_map(Value::as_str).map(|s| s.chars().count()).sum())
+        (
+            Service::Embedding,
+            body["input"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(|s| s.chars().count())
+                .sum(),
+        )
     } else {
-        let kind = if body["stream"] == true { Service::Answer } else { request_receipt::structured_purpose() };
-        (kind, body["messages"].as_array().into_iter().flatten().filter_map(|m| m["content"].as_str()).map(|s| s.chars().count()).sum())
+        let kind = if body["stream"] == true {
+            Service::Answer
+        } else {
+            request_receipt::structured_purpose()
+        };
+        (
+            kind,
+            body["messages"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|m| m["content"].as_str())
+                .map(|s| s.chars().count())
+                .sum(),
+        )
     };
     for attempt in 0..max_attempts {
         if cancel.load(Ordering::SeqCst) {
@@ -570,7 +457,10 @@ async fn bounded_json(
     limit: usize,
     cancel: &AtomicBool,
 ) -> Result<Value, String> {
-    let receipt = response.extensions().get::<crate::request_receipt::Handle>().copied();
+    let receipt = response
+        .extensions()
+        .get::<crate::request_receipt::Handle>()
+        .copied();
     if response.content_length().is_some_and(|n| n > limit as u64) {
         return Err("模型响应超过限制".into());
     }
@@ -591,7 +481,9 @@ async fn bounded_json(
         return Err("操作已取消".into());
     }
     let value = serde_json::from_slice(&bytes).map_err(|_| "模型返回了无效的 JSON")?;
-    if let Some(handle) = receipt { handle.usage(&value); }
+    if let Some(handle) = receipt {
+        handle.usage(&value);
+    }
     Ok(value)
 }
 pub async fn embed(
@@ -749,7 +641,10 @@ pub async fn stream_chat(
 ) -> Result<ChatOutput, String> {
     let body = json!({"model":provider.model,"stream":true,"messages":[{"role":"system","content":system},{"role":"user","content":user}],"max_tokens":4096});
     let response = request(client, provider, key, "chat/completions", body, cancel, 3).await?;
-    let receipt = response.extensions().get::<crate::request_receipt::Handle>().copied();
+    let receipt = response
+        .extensions()
+        .get::<crate::request_receipt::Handle>()
+        .copied();
     let content_type = response
         .headers()
         .get("content-type")
@@ -823,7 +718,9 @@ pub async fn stream_chat(
             }
             let v: Value =
                 serde_json::from_str(data).map_err(|_| "服务的流式响应不是兼容的 JSON")?;
-            if let Some(handle) = receipt { handle.usage(&v); }
+            if let Some(handle) = receipt {
+                handle.usage(&v);
+            }
             if v.get("error").is_some() {
                 return Err("模型服务在生成过程中返回错误".into());
             }
@@ -974,22 +871,44 @@ mod tests {
     async fn request_receipt_matches_transport_payload_and_provider_usage() {
         let body = r#"{"choices":[{"message":{"content":"ok"},"finish_reason":"stop"}],"usage":{"prompt_tokens":11,"completion_tokens":1}}"#;
         let (base_url, server) = mock_server(body.into(), "application/json");
-        let provider = Provider {enabled:true, base_url, model:"test".into(), ..Default::default()};
+        let provider = Provider {
+            enabled: true,
+            base_url,
+            model: "test".into(),
+            ..Default::default()
+        };
         crate::request_receipt::observe(async {
-            stream_chat(&reqwest::Client::new(),&provider,None,"system","中文🙂",&AtomicBool::new(false),None,"receipt").await.unwrap();
-            let transmitted=server.join().unwrap();
-            let (_,json)=transmitted.split_once("\r\n\r\n").unwrap();
-            let payload:Value=serde_json::from_str(json).unwrap();
-            let actual:usize=payload["messages"].as_array().unwrap().iter().map(|m|m["content"].as_str().unwrap().chars().count()).sum();
-            let receipt=crate::request_receipt::snapshot().unwrap();
-            let attempt=&receipt.attempts[0];
-            assert_eq!(receipt.attempts.len(),1);
-            assert_eq!(attempt.input_chars,actual);
-            assert_eq!(attempt.http_status,Some(200));
-            assert_eq!(attempt.input_tokens,Some(11));
-            assert_eq!(attempt.output_tokens,Some(1));
+            stream_chat(
+                &reqwest::Client::new(),
+                &provider,
+                None,
+                "system",
+                "中文🙂",
+                &AtomicBool::new(false),
+                None,
+                "receipt",
+            )
+            .await
+            .unwrap();
+            let transmitted = server.join().unwrap();
+            let (_, json) = transmitted.split_once("\r\n\r\n").unwrap();
+            let payload: Value = serde_json::from_str(json).unwrap();
+            let actual: usize = payload["messages"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|m| m["content"].as_str().unwrap().chars().count())
+                .sum();
+            let receipt = crate::request_receipt::snapshot().unwrap();
+            let attempt = &receipt.attempts[0];
+            assert_eq!(receipt.attempts.len(), 1);
+            assert_eq!(attempt.input_chars, actual);
+            assert_eq!(attempt.http_status, Some(200));
+            assert_eq!(attempt.input_tokens, Some(11));
+            assert_eq!(attempt.output_tokens, Some(1));
             assert!(!serde_json::to_string(&receipt).unwrap().contains("中文"));
-        }).await;
+        })
+        .await;
     }
     #[tokio::test]
     async fn source_headers_bind_display_and_structured_ids_independently_of_database_ids() {
@@ -1498,13 +1417,17 @@ pub async fn rerank(
         }
         #[cfg(test)]
         let trace = crate::eval_trace::begin("rerank")?;
-        let receipt = crate::request_receipt::begin(crate::request_receipt::Service::Rerank,
-            query.chars().count() + documents.iter().map(|s| s.chars().count()).sum::<usize>());
+        let receipt = crate::request_receipt::begin(
+            crate::request_receipt::Service::Rerank,
+            query.chars().count() + documents.iter().map(|s| s.chars().count()).sum::<usize>(),
+        );
         let response = request
             .send()
             .await
             .map_err(|_| "无法连接重排服务或请求超时")?;
-        if let Some(handle) = receipt { handle.status(response.status().as_u16()); }
+        if let Some(handle) = receipt {
+            handle.status(response.status().as_u16());
+        }
         #[cfg(test)]
         if let Some(trace) = trace {
             trace.response(response.status().as_u16());

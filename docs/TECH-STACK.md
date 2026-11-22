@@ -15,7 +15,7 @@ CLI 是同一 Cargo workspace 中的独立二进制，复用 Rust 的本地关�
 | 图形与日历 | Mermaid 11.17.2、markmap-view 0.18.12、ECharts 6.1.0、FullCalendar React 7.1.3、temporal-polyfill 1.0.1 | 流程图、脑图、受约束的图表、日历和时区处理 |
 | 本机存储与检索 | rusqlite 0.41.1（内置 SQLite）、sqlite-vec 0.1.9、jieba-rs 0.7.4 | 事务、FTS5 关键词检索、中文分词与向量召回 |
 | 服务与内容边界 | reqwest 0.12.28、Tokio 1.54.1、html5ever 0.39.0、DOMPurify 3.4.17 | HTTPS 调用、流式响应与取消、网页正文提取及渲染净化 |
-| 凭据与备份 | keyring 3.6.3、macOS Security Framework、zip 9.0.5 | 系统钥匙串、便携备份打包和恢复校验 |
+| 凭据与备份 | keyring 3.6.3、macOS Security Framework、zip 9.0.5 | 私有 JSON 凭据文件、旧版钥匙串导入、便携备份打包和恢复校验 |
 | 构建与测试 | Vite 8.3.5、Vitest 4.1.12、Testing Library React 16.3.3、Cargo | WebView 资源构建、界面测试、原生模块构建与测试 |
 
 页边桌宠使用应用自有的角色图形、CSS 和 React 状态。桌宠通过应用内编辑区域定位，窄窗时改用书签尺寸。动作、章节与相册的展示可使用本地资源。[页边交互](../src/companion/CompanionPet.tsx) · [角色素材说明](../src/companion/assets/README.md)
@@ -30,7 +30,7 @@ CLI 是同一 Cargo workspace 中的独立二进制，复用 Rust 的本地关�
 | 同一问答服务的候选原文核对 | 用户单独开启，且本机筛选仍需核对小问时 | 每轮最多一次请求，最多 8 段、合计 4,000 个原文字符，以及对应小问和必要标题 |
 | Brave Search | 授权自动联网，且本轮计划需要公开资料时 | 经过检查的公开查询词。随后读取可访问的公开 HTTPS 网页以取得原文 |
 
-服务凭据由系统钥匙串保存。远程端点要求 HTTPS，本机回环模型端点可用 HTTP。模型由用户选择，服务费用和模型质量随所选服务而变。使用本地关键词检索无需配置这些服务。[提供方适配](../src-tauri/src/providers.rs) · [网页检索](../src-tauri/src/web_retrieval.rs)
+凭据保存在仅当前用户可读写的应用私有文件中。系统钥匙串仅用于用户发起的旧凭据导入。远程端点要求 HTTPS，本机回环模型端点可用 HTTP。模型由用户选择，服务费用和模型质量随所选服务而变。使用本地关键词检索无需配置这些服务。[提供方适配](../src-tauri/src/providers.rs) · [网页检索](../src-tauri/src/web_retrieval.rs)
 
 ## 如何核验
 

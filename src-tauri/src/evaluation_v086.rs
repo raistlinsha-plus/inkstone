@@ -347,53 +347,39 @@ pub(crate) fn save_report(
 }
 
 pub(crate) fn saved_settings() -> Result<Settings, &'static str> {
-    let path = PathBuf::from(std::env::var_os("HOME").ok_or("missing home directory")?)
-        .join("Library/Application Support/local.inkstone.desktop/settings.json");
+    let path = saved_credential_directory()?.join("settings.json");
     let bytes = fs::read(path).map_err(|_| "saved settings are unavailable")?;
     let (config, _) = crate::decode_saved_config(&bytes).ok_or("saved settings are invalid")?;
     Ok(config.settings)
 }
 
-// A batch gets one bounded interactive authorization window by default. Standalone tests
-// keep their existing wait policy, even when the test harness runs other tests concurrently.
-tokio::task_local! { static DEFAULT_AUTH_WAIT_SECONDS: u64; }
+// Only an explicitly opted-in live workload selects the daily credential store.
+tokio::task_local! { pub(crate) static CREDENTIAL_DIRECTORY: PathBuf; }
+
+pub(crate) fn credential_directory(default: &Path) -> PathBuf {
+    CREDENTIAL_DIRECTORY
+        .try_with(Clone::clone)
+        .unwrap_or_else(|_| default.to_path_buf())
+}
+
+pub(crate) fn saved_credential_directory() -> Result<PathBuf, &'static str> {
+    if cfg!(feature = "desktop-e2e") {
+        return Err("isolated desktop builds cannot read daily credentials");
+    }
+    Ok(std::env::home_dir()
+        .ok_or("missing home directory")?
+        .join("Library/Application Support/local.inkstone.desktop"))
+}
 
 pub(crate) async fn saved_key(
     state: &AppState,
     role: &str,
     address: &str,
 ) -> Result<String, &'static str> {
-    // Explicit live runs can leave an OS authorization prompt open for the tester.
-    // Polling observes the same in-flight keychain request; interactive desktop reads keep their usual timeout.
-    let wait = std::env::var("INKSTONE_EVAL_KEYCHAIN_WAIT_SECONDS")
-        .ok()
-        .and_then(|s| s.parse::<u64>().ok())
-        .unwrap_or_else(|| {
-            DEFAULT_AUTH_WAIT_SECONDS
-                .try_with(|wait| *wait)
-                .unwrap_or(0)
-        })
-        .min(300);
-    let deadline = std::time::Instant::now() + Duration::from_secs(wait);
-    loop {
-        match crate::read_key(state, role, address, &state.cancel_chat).await {
-            Err(error)
-                if error == crate::credentials::PENDING && std::time::Instant::now() < deadline =>
-            {
-                tokio::time::sleep(Duration::from_millis(500)).await;
-            }
-            value => {
-                return match value {
-                    Ok(Some(key)) if !key.trim().is_empty() => Ok(key),
-                    Err(error) if error == crate::credentials::PENDING => {
-                        Err("keychain-authorization-pending")
-                    }
-                    Err(_) => Err("keychain-read-failed"),
-                    _ => Err("saved-address-bound-key-missing"),
-                }
-            }
-        }
-    }
+    crate::read_key(state, role, address, &state.cancel_chat)
+        .await
+        .map_err(|_| "local-credential-read-failed")?
+        .ok_or("saved-address-bound-key-missing")
 }
 
 #[test]
@@ -424,9 +410,10 @@ fn run_live(suite: &Suite) -> Result<(), &'static str> {
         .enable_all()
         .build()
         .map_err(|_| "runtime initialization failed")?;
-    let result = runtime.block_on(grounded_holdout(suite, &mode, config, true));
-    // A timed-out macOS system authorization may still own the native
-    // credential thread. This explicit test must report without waiting on it.
+    let result = runtime.block_on(CREDENTIAL_DIRECTORY.scope(
+        saved_credential_directory()?,
+        grounded_holdout(suite, &mode, config, true),
+    ));
     runtime.shutdown_background();
     result
 }
@@ -650,7 +637,7 @@ async fn run_fixture(
         let mut conversations = HashMap::new();
         for case in &fixture.cases {
             if live {
-                // An expired entry must go through the OS reader before another model turn.
+                // Recheck the saved role and endpoint before another model turn.
                 check_keys(&state, &config, mode, &mut stage, &mut keys).await?;
             }
             stage = "evaluate-question";
@@ -761,11 +748,8 @@ async fn run_fixture(
                 };
                 match result {
                     Ok(response) => (Some(response), None, None),
-                    Err(error) if error == crate::credentials::PENDING => {
-                        (None, None, Some("keychain-authorization-pending"))
-                    }
-                    Err(error) if error.contains("钥匙串") => {
-                        (None, None, Some("keychain-read-failed"))
+                    Err(error) if error.contains("凭据配置") => {
+                        (None, None, Some("local-credential-read-failed"))
                     }
                     Err(_) => (None, None, Some("answer-pipeline-error")),
                 }
@@ -833,9 +817,7 @@ async fn run_fixture(
             let conversation = assistant::finish(data.path(), &owner, &started, outcome, false)
                 .map_err(|_| "fixture-save-answer-failed")?;
             conversations.insert(conversation_key.clone(), conversation);
-            if let Some(reason @ ("keychain-authorization-pending" | "keychain-read-failed")) =
-                failure
-            {
+            if let Some(reason @ "local-credential-read-failed") = failure {
                 return Err(reason);
             }
             if trace.provider_denied() {

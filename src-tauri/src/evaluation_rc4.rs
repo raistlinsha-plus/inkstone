@@ -119,10 +119,9 @@ fn live_frozen_packet() -> Result<(), &'static str> {
         .enable_all()
         .build()
         .map_err(|_| "runtime-initialization-failed")?;
-    let result = runtime.block_on(live_with_settings(
-        &report_path(&SUITE)?,
-        config,
-        Default::default(),
+    let result = runtime.block_on(CREDENTIAL_DIRECTORY.scope(
+        saved_credential_directory()?,
+        live_with_settings(&report_path(&SUITE)?, config, Default::default()),
     ));
     runtime.shutdown_background();
     result

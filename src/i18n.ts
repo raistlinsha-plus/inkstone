@@ -54,6 +54,9 @@ const current = () => snapshot;
 export type Message = keyof typeof english;
 export const msg = (key: Message) =>
   snapshot.language === "en" ? english[key] : key;
+// Only localize recognized application messages. Other service diagnostics keep their original text.
+export const systemMessage = (text: string) =>
+  Object.hasOwn(english, text) ? msg(text as Message) : text;
 export const translate = (zh: string, en: string) =>
   snapshot.language === "en" ? en : zh;
 export function documentCount(count: number, removed = false) {

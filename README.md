@@ -38,7 +38,7 @@ npm run desktop
 
 Editing, keyword search, companion stories and document backups work on your Mac. Documents, indexes, conversations and Wiki state are stored locally. When you ask a model to answer or organize a Wiki, the configured service receives the question or the relevant material for that task. Embeddings use your embedding endpoint and reranking uses a separately configured Cohere-compatible endpoint. These services can incur usage charges.
 
-If you configure and authorize Brave Search, the model can decide when public information is useful. Brave receives a validated public query. You can disallow web search for a turn. Service keys are stored in macOS Keychain. [Security policy](SECURITY.md) · [Search and citation limits](docs/KNOWN-LIMITATIONS.md)
+If you configure and authorize Brave Search, the model can decide when public information is useful. Brave receives a validated public query. You can disallow web search for a turn. Inkstone stores service keys in a private, user-readable file on this Mac. Existing installations can import their previous Keychain entries in Settings. [Security policy](SECURITY.md) · [Search and citation limits](docs/KNOWN-LIMITATIONS.md)
 
 ## Documentation and feedback
 
