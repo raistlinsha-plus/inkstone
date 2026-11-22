@@ -1,0 +1,32 @@
+[
+  {
+    "conversationId": "会话-α",
+    "turnId": "turn😺",
+    "candidateId": "answer-2",
+    "documentId": "笔记/文档",
+    "startChar": 2,
+    "quote": "核对“草稿”\\n发送 \"OK\" \\ 引文 🖋",
+    "fromQuestion": false,
+    "expectedId": "4a7b6927-3611-4833-b84f-596b3a5ad3f6"
+  },
+  {
+    "conversationId": "会话-α",
+    "turnId": "turn😺",
+    "candidateId": "answer-2",
+    "documentId": "笔记/文档",
+    "startChar": 2,
+    "quote": "核对“草稿”\\n发送 \"OK\" \\ 引文 🖋",
+    "fromQuestion": true,
+    "expectedId": "511fe086-3bbc-40ea-960a-d54036aaefe8"
+  },
+  {
+    "conversationId": "A",
+    "turnId": "B",
+    "candidateId": null,
+    "documentId": "C",
+    "startChar": 7,
+    "quote": "写\t手册\n第 二行",
+    "fromQuestion": false,
+    "expectedId": "13748057-7de0-49cf-b40f-971b7d7f5319"
+  }
+]

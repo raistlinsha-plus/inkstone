@@ -2,6 +2,13 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v1.2.0-beta.1 · 从聊天到文档任务
+
+- 从自己的提问或助手的回答选取原话，逐项核对并保存到指定 Markdown。也可主动调用问答模型提取建议。新建、完成、排期与等待跟进都回写所属笔记，可从日历回到原行。
+- 简体中文与英文可在设置中即时切换。可以独立设置回答语言，文档、引用、历史消息与任务原话保留用户输入的文字。
+- 回答的「本轮上下文」列出各阶段实际发出的请求、最终请求里的来源数量、回答保留及引用的来源。页边同伴可说明当前动作由什么本地事件触发。
+- 调整文档问答的原句筛选及追问处理。离线对照、实机试用和真实模型评测各自的结果见[集成候选交付记录](docs/DELIVERY-v1.2.0-beta.1.md)。
+
 ## v1.0.0-rc.4 · 换个说法问笔记
 
 - 从「问这篇文档」提问时，可以用自己的说法询问笔记中的事实。开启模型辅助核对后，应用会把模型选中的内容绑定到当前原句，出处可回到原文。

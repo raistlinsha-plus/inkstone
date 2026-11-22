@@ -1,5 +1,11 @@
 # Inkstone roadmap
 
+**Development status, 22 November 2026.** The 1.2.0-beta.1 build integrates the RC.5 evidence changes, the 1.1 task workflow and bilingual context inspection. Next steps are a frozen live-service evaluation, independent review of answers and citations, and native trials of cross-language tasks on additional Macs. [Implementation and evidence (中文)](DELIVERY-v1.2.0-beta.1.md)
+
+### Earlier milestones
+
+The proposed 1.1 task workflows will pilot Simplified Chinese and English in the same app. Another planned change will let readers inspect the sources and conversation history supplied to an answer, or trace a companion’s recollection to a confirmed local journal entry. The proposed 1.2 milestone extends bilingual coverage across the desktop interface. [Localization design (中文)](design/localization.zh-CN.md) · [Chat and companion context design (中文)](design/context-and-companion.zh-CN.md)
+
 The **v1.0.0-rc.4 source prerelease** is available for testing on Apple Silicon Macs. The next priority is to recover answers whose evidence reached the search results but was dropped during quotation selection, particularly on follow-ups and partially supported questions. A new blinded human review will inform the 1.0 decision. [RC.4 results](DELIVERY-v1.0.0-rc.4.md) · [1.0 release criteria](design/v1.0.zh-CN.md)
 
 The earlier **v0.9.6 source preview** brings together claim-by-claim Wiki review, a way back to the exact writing selection after checking a source, and three optional page-edge companions. [Wiki changes](DELIVERY-v0.9.4.md) · [Writing changes](DELIVERY-v0.9.5.md) · [Companions](DELIVERY-v0.9.6.md)

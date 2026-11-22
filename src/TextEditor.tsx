@@ -1,3 +1,4 @@
+import { msg, translate } from "./i18n";
 import { isImeEvent } from "./platform/ime";
 import {
   useEffect,
@@ -43,6 +44,8 @@ import { Crepe } from "@milkdown/crepe";
 import { commandsCtx, editorViewCtx, parserCtx } from "@milkdown/kit/core";
 import { linkAttr } from "@milkdown/kit/preset/commonmark";
 import { invoke } from "@tauri-apps/api/core";
+import { trackSourceSelection, scanTrackedTasks, readTaskMarker } from "./content/tasks";
+import { configureTrackedTasks, taskClipboardPlugin } from "./rich/trackedTasks";
 import { safeInlineBreaks } from "./rich/breaks";
 import {
   commandIcon,
@@ -270,15 +273,15 @@ export default function TextEditor({
         } else if (source.current) {
           const view = source.current,
             sel = view.state.selection.main;
-          const text =
-            "\n\n" +
-            insertSource(id, view.state.sliceDoc(sel.from, sel.to)) +
-            "\n\n";
-          view.dispatch({
-            changes: { from: sel.from, to: sel.to, insert: text },
-            selection: { anchor: sel.from + text.length },
-          });
+          try {
+          const change = id === "tracked-task"
+            ? trackSourceSelection(view.state.doc.toString(), sel.from, sel.to, translate("新任务","New task"))
+            : {from:sel.from, to:sel.to, insert:"\n\n"+insertSource(id, view.state.sliceDoc(sel.from, sel.to))+"\n\n"};
+          view.dispatch({changes:change, selection: {anchor: change.from + change.insert.length}});
           view.focus();
+          } catch(error) {
+            latest.current.onError(String(error));
+          }
         }
       },
       insertBlock: (kind, calendarView = "agenda") => {
@@ -319,7 +322,7 @@ export default function TextEditor({
           doc: content,
           extensions: [
             EditorView.contentAttributes.of({
-              "aria-label": "文档源码",
+              "aria-label": msg("文档源码"),
               spellcheck: "false",
             }),
             EditorView.domEventHandlers({
@@ -476,8 +479,8 @@ export default function TextEditor({
           },
           buildMenu: (builder) => {
             builder.clear();
-            for (const group of ["文本", "列表", "内容块", "插入内容"]) {
-              const items = builder.addGroup(group, group);
+            for (const group of ["文本", "列表", "内容块", "插入内容"] as const) {
+              const items = builder.addGroup(group, msg(group));
               for (const command of insertCommands.filter(
                 (item) => item.group === group,
               )) {
@@ -494,28 +497,28 @@ export default function TextEditor({
             }
           },
           textGroup: {
-            label: "文本",
-            text: { label: "正文" },
-            h1: { label: "标题 1" },
-            h2: { label: "标题 2" },
-            h3: { label: "标题 3" },
-            h4: { label: "标题 4" },
-            h5: { label: "标题 5" },
-            h6: { label: "标题 6" },
-            quote: { label: "引用" },
-            divider: { label: "分隔线" },
+            label: msg("文本"),
+            text: { label: msg("正文") },
+            h1: { label: translate("标题 1", "Heading 1") },
+            h2: { label: translate("标题 2", "Heading 2") },
+            h3: { label: translate("标题 3", "Heading 3") },
+            h4: { label: translate("标题 4", "Heading 4") },
+            h5: { label: translate("标题 5", "Heading 5") },
+            h6: { label: translate("标题 6", "Heading 6") },
+            quote: { label: msg("引用") },
+            divider: { label: msg("分隔线") },
           },
           listGroup: {
-            label: "列表",
-            bulletList: { label: "无序列表" },
-            orderedList: { label: "有序列表" },
-            taskList: { label: "任务列表" },
+            label: msg("列表"),
+            bulletList: { label: msg("无序列表") },
+            orderedList: { label: msg("有序列表") },
+            taskList: { label: msg("任务列表") },
           },
           advancedGroup: {
-            label: "内容块",
-            image: { label: "本地图片" },
-            codeBlock: { label: "代码块" },
-            table: { label: "表格" },
+            label: msg("内容块"),
+            image: { label: msg("本地图片") },
+            codeBlock: { label: msg("代码块") },
+            table: { label: msg("表格") },
             math: null,
           },
         },
@@ -559,9 +562,9 @@ export default function TextEditor({
             }
           },
           headingOptions: [
-            { label: "正文", level: null },
+            { label: msg("正文"), level: null },
             ...[1, 2, 3, 4, 5, 6].map((level) => ({
-              label: `标题 ${level}`,
+              label: translate(`标题 ${level}`, `Heading ${level}`),
               level,
             })),
           ],
@@ -570,7 +573,7 @@ export default function TextEditor({
         [Crepe.Feature.CodeMirror]: {
           previewToggleText: (mode) => (mode ? "编辑代码" : "预览代码"),
         },
-        [Crepe.Feature.Placeholder]: { text: "从一个想法开始…" },
+        [Crepe.Feature.Placeholder]: { text: msg("从一个想法开始…") },
         [Crepe.Feature.ImageBlock]: {
           proxyDomURL: async (url) => {
             try {
@@ -610,6 +613,8 @@ export default function TextEditor({
         };
       });
     });
+    crepe.editor.config(configureTrackedTasks);
+    crepe.editor.use($prose(taskClipboardPlugin));
     crepe.editor.use(safeInlineBreaks);
     crepe.editor.use($prose(() => identityPlugin(viewKey, content)));
     crepe.editor.use(
@@ -787,7 +792,7 @@ export default function TextEditor({
         if (bar && toolbarHost?.current) toolbarHost.current.append(bar);
         const toolbar = bar
           ? enhanceFormattingToolbar(bar, (button) => {
-              if (button.getAttribute("aria-label") === "链接") return;
+              if (button.dataset.formatAction === "link") return;
               requestAnimationFrame(() => {
                 if (!cancelled && crepe.editor.status === "Created")
                   crepe.editor.action((ctx) => ctx.get(editorViewCtx).focus());
@@ -846,7 +851,7 @@ export default function TextEditor({
         const focusAfterAction = (button: HTMLButtonElement) => {
           if (
             button.classList.contains("top-bar-heading-button") ||
-            button.getAttribute("aria-label") === "链接"
+            button.dataset.formatAction === "link"
           )
             return;
           requestAnimationFrame(() => {
@@ -1031,7 +1036,14 @@ export default function TextEditor({
             offset = rows
               .slice(0, Math.max(0, line - 1))
               .reduce((sum, row) => sum + row.length + 1, 0);
-          const target = visualFromSource(view.state.doc, offset, content);
+          const sourceTask = scanTrackedTasks(content).find(task => task.line === line);
+          let exact: number | undefined;
+          if (sourceTask && !sourceTask.duplicate) {
+            view.state.doc.descendants((node,pos) => {
+              if (node.attrs.taskMarker && readTaskMarker(node.attrs.taskMarker)?.id === sourceTask.id) exact = pos+2;
+            });
+          }
+          const target = exact ?? visualFromSource(view.state.doc, offset, content);
           revealTextPosition(view, target);
         });
         return;

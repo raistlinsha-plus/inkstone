@@ -1,3 +1,8 @@
+#[cfg(test)]
+#[path = "calendar_task_benchmark.rs"]
+mod task_benchmark;
+#[path = "calendar_tasks.rs"]
+pub(crate) mod tasks;
 use crate::{files, library};
 use chrono::{DateTime, NaiveDate, Offset};
 use chrono_tz::Tz;
@@ -20,6 +25,8 @@ pub struct CalendarDocument {
     pub path: String,
     pub content: String,
     pub hash: String,
+    pub task_hash: String,
+    pub task_rows: Vec<tasks::TaskRow>,
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -240,6 +247,9 @@ fn closed_fence(raw: &str) -> bool {
 }
 
 fn projection(content: &str) -> (Vec<Projected>, Vec<String>) {
+    if !content.contains("```") && !content.contains("~~~") {
+        return (vec![], vec![]);
+    }
     let mut result: Vec<Projected> = vec![];
     let mut warnings = vec![];
     let mut active: Option<(usize, String)> = None;
@@ -302,6 +312,7 @@ fn connection(data: &Path) -> Result<Connection, String> {
     c.execute_batch("PRAGMA journal_mode=WAL;
       CREATE TABLE IF NOT EXISTS events(project TEXT NOT NULL,document TEXT NOT NULL,block TEXT NOT NULL,event TEXT NOT NULL,title TEXT NOT NULL,start TEXT NOT NULL,end TEXT NOT NULL,time_zone TEXT NOT NULL,all_day INTEGER NOT NULL,status TEXT NOT NULL,notes TEXT NOT NULL,path TEXT NOT NULL,source_hash TEXT NOT NULL,start_line INTEGER NOT NULL,end_line INTEGER NOT NULL,PRIMARY KEY(project,document,block,event));
       CREATE INDEX IF NOT EXISTS events_project_date ON events(project,start,end);
+      CREATE TABLE IF NOT EXISTS task_documents_v1(project TEXT NOT NULL,document TEXT NOT NULL,source_hash TEXT NOT NULL,rows_json TEXT NOT NULL,PRIMARY KEY(project,document));
       PRAGMA user_version=1;").map_err(error)?;
     Ok(c)
 }
@@ -319,13 +330,19 @@ pub fn purge_document(data: &Path, project: &str, document: &str) -> Result<(), 
         return Ok(());
     }
     projection_lock(|| {
-        connection(data)?
-            .execute(
-                "DELETE FROM events WHERE project=? AND document=?",
-                params![project, document],
-            )
-            .map_err(error)?;
-        Ok(())
+        let mut c = connection(data)?;
+        let tx = c.transaction().map_err(error)?;
+        tx.execute(
+            "DELETE FROM task_documents_v1 WHERE project=? AND document=?",
+            params![project, document],
+        )
+        .map_err(error)?;
+        tx.execute(
+            "DELETE FROM events WHERE project=? AND document=?",
+            params![project, document],
+        )
+        .map_err(error)?;
+        tx.commit().map_err(error)
     })
 }
 fn refresh_project(data: &Path, project: &str) -> Result<CalendarView, String> {
@@ -334,6 +351,8 @@ fn refresh_project(data: &Path, project: &str) -> Result<CalendarView, String> {
     let mut documents = vec![];
     let mut warnings = vec![];
     let mut projected = vec![];
+    let cache = connection(data).ok();
+    let mut dirty_tasks = vec![];
     let mut bytes = 0usize;
     for doc in view
         .documents
@@ -361,7 +380,16 @@ fn refresh_project(data: &Path, project: &str) -> Result<CalendarView, String> {
                 let (events, errors) = projection(&content);
                 warnings.extend(errors.into_iter().map(|e| format!("{}：{e}", doc.title)));
                 projected.push((doc.clone(), hash.clone(), events));
+                let task_rows = cache
+                    .as_ref()
+                    .and_then(|c| tasks::read(c, project, &doc.id, &hash))
+                    .unwrap_or_else(|| {
+                        dirty_tasks.push(documents.len());
+                        tasks::rows(&content)
+                    });
                 documents.push(CalendarDocument {
+                    task_hash: hash.clone(),
+                    task_rows,
                     document_id: doc.id.clone(),
                     title: doc.title.clone(),
                     path: doc.path.clone(),
@@ -377,6 +405,15 @@ fn refresh_project(data: &Path, project: &str) -> Result<CalendarView, String> {
         let tx = c.transaction().map_err(error)?;
         tx.execute("DELETE FROM events WHERE project=?", [project])
             .map_err(error)?;
+        let present = documents
+            .iter()
+            .map(|d| d.document_id.as_str())
+            .collect::<HashSet<_>>();
+        tasks::remove_missing(&tx, project, &present)?;
+        for idx in dirty_tasks {
+            let doc = &documents[idx];
+            tasks::write(&tx, project, &doc.document_id, &doc.hash, &doc.task_rows)?;
+        }
         for (doc, hash, events) in projected {
             write_events(&tx, project, &doc.id, &doc.path, &hash, events)?;
         }
@@ -452,6 +489,13 @@ pub fn refresh_saved(data: &Path, root: &Path, path: &str, content: &str) -> Res
             } else {
                 vec![]
             };
+        tasks::write(
+            &tx,
+            &project,
+            &document,
+            &files::hash(content),
+            &tasks::rows(content),
+        )?;
         write_events(
             &tx,
             &project,
@@ -588,6 +632,50 @@ mod tests {
         );
         library::trash(data.path(), &d.id, true).unwrap();
         assert_eq!(refresh(data.path(), "inbox").unwrap().documents.len(), 1);
+    }
+    #[test]
+    fn task_projection_rebuilds_and_refuses_to_overwrite_pending_drafts() {
+        let data = tempfile::tempdir().unwrap();
+        let id = "c729524a-9cc2-4ac2-a0f5-5a034429de64";
+        let source = format!("- [ ] Start <!--inkstone-task:v1 {{\"id\":\"{id}\"}}-->\n");
+        let doc = library::create_document(data.path(), "inbox", "Tasks.md", &source).unwrap();
+        let ws = crate::documents::library_workspace(data.path(), "inbox").unwrap();
+        let view = refresh(data.path(), "inbox").unwrap();
+        let hash = view.documents[0].hash.clone();
+        assert_eq!(view.documents[0].task_rows[0].id(), id);
+        let c = connection(data.path()).unwrap();
+        let stored = tasks::read(&c, "inbox", &doc.id, &hash).unwrap();
+        assert_eq!(stored.len(), 1);
+        c.execute("DELETE FROM task_documents_v1", []).unwrap();
+        assert_eq!(
+            refresh(data.path(), "inbox").unwrap().documents[0]
+                .task_rows
+                .len(),
+            1
+        );
+        crate::documents::draft(
+            &ws,
+            data.path(),
+            &doc.path,
+            "My pending edits".into(),
+            hash.clone(),
+        )
+        .unwrap();
+        let next = source.replace("[ ]", "[x]");
+        assert!(
+            crate::documents::save_if_clean(&ws, data.path(), &doc.path, &next, &hash).is_err()
+        );
+        let reopened = crate::documents::read(&ws, data.path(), &doc.path).unwrap();
+        assert_eq!(reopened.content, source);
+        assert_eq!(reopened.draft.unwrap().content, "My pending edits");
+        library::trash(data.path(), &doc.id, false).unwrap();
+        assert!(refresh(data.path(), "inbox").unwrap().documents.is_empty());
+        assert!(tasks::read(&c, "inbox", &doc.id, &hash).is_none());
+        library::trash(data.path(), &doc.id, true).unwrap();
+        assert_eq!(
+            refresh(data.path(), "inbox").unwrap().documents[0].task_rows[0].id(),
+            id
+        );
     }
     #[test]
     fn rejects_wrong_offsets_duplicate_blocks_but_keeps_original() {

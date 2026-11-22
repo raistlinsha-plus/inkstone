@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { useEffect, useId, useMemo, useState } from "react";
 import { chartText, parseChart, type ChartData } from "../content/chart";
 import Graph from "./Graph";
@@ -130,8 +131,8 @@ export default function Chart({
   };
   const shown = editing && tab === "data" ? fields : checked.data;
   return (
-    <section className="data-chart" aria-label="数据图表">
-      <div className="chart-tabs" role="group" aria-label="图表视图">
+    <section className="data-chart" aria-label={msg("数据图表")}>
+      <div className="chart-tabs" role="group" aria-label={msg("图表视图")}>
         {(
           [
             ["chart", "图表"],
@@ -150,18 +151,18 @@ export default function Chart({
         ))}
         {!readOnly && onApply && !editing && (
           <button className="chart-edit-button" onClick={begin}>
-            编辑图表
+            {msg("编辑图表")}
           </button>
         )}
       </div>
       {checked.error && !editing && (
         <div className="preview-error" role="status">
-          {checked.error} <span>可以查看源码并修正。</span>
+          {checked.error} <span>{msg("可以查看源码并修正。")}</span>
         </div>
       )}
       {stale && (
         <p className="preview-error" role="alert">
-          原文已变化。草稿已保留，取消后可重新编辑。
+          {msg("原文已变化。草稿已保留，取消后可重新编辑。")}
         </p>
       )}
       {tab === "chart" && checked.data && !untrustedSources && (
@@ -175,8 +176,8 @@ export default function Chart({
             }}
           />
           <p className="chart-summary">
-            {checked.data.title} · {checked.data.series.length} 个系列 ·{" "}
-            {checked.data.x.values.length} 个分类
+            {checked.data.title} · {checked.data.series.length} {msg("个系列 ·")}{" "}
+            {checked.data.x.values.length} {msg("个分类")}
             {checked.data.y.unit ? ` · 单位：${checked.data.y.unit}` : ""}
           </p>
         </>
@@ -186,9 +187,9 @@ export default function Chart({
           {editing && (
             <div className="chart-fields">
               <label>
-                标题
+                {msg("标题")}
                 <input
-                  aria-label="图表标题"
+                  aria-label={msg("图表标题")}
                   value={shown.title}
                   onChange={(e) =>
                     setFields({ ...shown, title: e.target.value })
@@ -196,9 +197,9 @@ export default function Chart({
                 />
               </label>
               <label>
-                类型
+                {msg("类型")}
                 <select
-                  aria-label="图表类型"
+                  aria-label={msg("图表类型")}
                   value={shown.type}
                   onChange={(e) =>
                     setFields({
@@ -208,15 +209,15 @@ export default function Chart({
                     })
                   }
                 >
-                  <option value="bar">柱状图</option>
-                  <option value="line">折线图</option>
-                  <option value="pie">饼图</option>
+                  <option value="bar">{msg("柱状图")}</option>
+                  <option value="line">{msg("折线图")}</option>
+                  <option value="pie">{msg("饼图")}</option>
                 </select>
               </label>
               <label>
-                分类轴
+                {msg("分类轴")}
                 <input
-                  aria-label="分类轴名称"
+                  aria-label={msg("分类轴名称")}
                   value={shown.x.label}
                   onChange={(e) =>
                     setFields({
@@ -227,9 +228,9 @@ export default function Chart({
                 />
               </label>
               <label>
-                数值轴
+                {msg("数值轴")}
                 <input
-                  aria-label="数值轴名称"
+                  aria-label={msg("数值轴名称")}
                   value={shown.y.label}
                   onChange={(e) =>
                     setFields({
@@ -240,9 +241,9 @@ export default function Chart({
                 />
               </label>
               <label>
-                单位
+                {msg("单位")}
                 <input
-                  aria-label="图表单位"
+                  aria-label={msg("图表单位")}
                   value={shown.y.unit}
                   onChange={(e) =>
                     setFields({
@@ -261,13 +262,13 @@ export default function Chart({
                       setFields({ ...shown, donut: e.target.checked })
                     }
                   />
-                  环形显示
+                  {msg("环形显示")}
                 </label>
               ) : (
                 <label>
-                  方向
+                  {msg("方向")}
                   <select
-                    aria-label="图表方向"
+                    aria-label={msg("图表方向")}
                     value={shown.orientation ?? "vertical"}
                     onChange={(e) =>
                       setFields({
@@ -277,8 +278,8 @@ export default function Chart({
                       })
                     }
                   >
-                    <option value="vertical">纵向</option>
-                    <option value="horizontal">横向</option>
+                    <option value="vertical">{msg("纵向")}</option>
+                    <option value="horizontal">{msg("横向")}</option>
                   </select>
                 </label>
               )}
@@ -288,7 +289,7 @@ export default function Chart({
             <table className="chart-table" aria-label={`${shown.title}数据表`}>
               <thead>
                 <tr>
-                  <th scope="col">{shown.x.label || "分类"}</th>
+                  <th scope="col">{shown.x.label || msg("分类")}</th>
                   {shown.series.map((s, i) => (
                     <th scope="col" key={i}>
                       {editing ? (
@@ -324,7 +325,7 @@ export default function Chart({
                       )}
                     </th>
                   ))}
-                  {editing && <th scope="col">操作</th>}
+                  {editing && <th scope="col">{msg("操作")}</th>}
                 </tr>
               </thead>
               <tbody>
@@ -358,7 +359,7 @@ export default function Chart({
                             inputMode="decimal"
                             aria-label={`${s.name} 第 ${row + 1} 项数值`}
                             value={cells[column]?.[row] ?? ""}
-                            placeholder="缺失"
+                            placeholder={msg("缺失")}
                             onChange={(e) =>
                               setCells(
                                 cells.map((col, i) =>
@@ -372,7 +373,7 @@ export default function Chart({
                             }
                           />
                         ) : s.values[row] === null ? (
-                          <span className="chart-missing">缺失</span>
+                          <span className="chart-missing">{msg("缺失")}</span>
                         ) : (
                           String(s.values[row])
                         )}
@@ -437,7 +438,7 @@ export default function Chart({
                   setCells(cells.map((col) => [...col, ""]));
                 }}
               >
-                新增分类
+                {msg("新增分类")}
               </button>
               <button
                 disabled={
@@ -459,23 +460,23 @@ export default function Chart({
                   setCells([...cells, shown.x.values.map(() => "")]);
                 }}
               >
-                新增系列
+                {msg("新增系列")}
               </button>
             </div>
           )}
           <p className="preview-help">
-            空值表示缺失，不会自动补零。
-            {!editing && "数据表与图形使用同一份数据。"}
+            {msg("空值表示缺失，不会自动补零。")}
+            {!editing && msg("数据表与图形使用同一份数据。")}
           </p>
         </>
       )}
       {tab === "source" &&
         (editing ? (
           <label htmlFor={id}>
-            图表 JSON
+            {msg("图表 JSON")}
             <textarea
               id={id}
-              aria-label="图表 JSON 源码"
+              aria-label={msg("图表 JSON 源码")}
               spellCheck={false}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -499,10 +500,10 @@ export default function Chart({
               setMessage("");
             }}
           >
-            取消编辑
+            {msg("取消编辑")}
           </button>
           <button disabled={stale} onClick={apply}>
-            应用图表修改
+            {msg("应用图表修改")}
           </button>
         </div>
       )}
@@ -513,28 +514,28 @@ export default function Chart({
       )}
       {sourceRefs !== undefined && !refs.length && checked.data && (
         <p className="preview-error" role="status">
-          图表没有声明本次资料来源，暂不绘图；可查看数据表与源码。
+          {msg("图表没有声明本次资料来源，暂不绘图；可查看数据表与源码。")}
         </p>
       )}
       {unknownRefs.length > 0 && (
         <p className="preview-error" role="status">
-          来源 {unknownRefs.join("、")}{" "}
-          不属于本次资料，暂不绘图；可查看数据表与源码。
+          {msg("来源")} {unknownRefs.join("、")}{" "}
+          {msg("不属于本次资料，暂不绘图；可查看数据表与源码。")}
         </p>
       )}
       {refs.length > 0 && (
         <p className="chart-source-note">
-          声明来源：{refs.join("、")}。来源编号不代表每个数值已经核验。
+          {msg("声明来源：")}{refs.join("、")}{msg("。来源编号不代表每个数值已经核验。")}
         </p>
       )}
       {readOnly && (
         <p className="chart-source-note">
-          AI 生成，请核对类别、数值与单位；保存为文档后可编辑。
+          {msg("AI 生成，请核对类别、数值与单位；保存为文档后可编辑。")}
         </p>
       )}
       {checked.data && (
         <details className="chart-description">
-          <summary>图表文字说明</summary>
+          <summary>{msg("图表文字说明")}</summary>
           <pre>{chartText(checked.data)}</pre>
         </details>
       )}

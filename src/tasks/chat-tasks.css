@@ -1,0 +1,33 @@
+.chat-task-dialog {
+  max-height: 85vh;
+  overflow: auto;
+}
+.chat-task-dialog > label,
+.chat-task-dialog fieldset {
+  display: grid;
+  gap: 0.45rem;
+  margin-block: 0.8rem;
+}
+.chat-task-dialog textarea {
+  resize: vertical;
+}
+.chat-task-dialog fieldset {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+.chat-task-dialog fieldset label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  overflow-wrap: anywhere;
+}
+.chat-task-dialog fieldset button {
+  justify-self: start;
+}
+.chat-task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}

@@ -1087,7 +1087,7 @@ test("a calendar response from a previous project does not reopen its calendar",
         },
   );
   await boot();
-  fireEvent.click(screen.getByRole("button", { name: "日历" }));
+  fireEvent.click(screen.getByRole("button", { name: "任务与日历" }));
   await waitFor(() => expect(calls("calendar_list")).toHaveLength(1));
   fireEvent.click(screen.getByRole("button", { name: "我的文档" }));
   await screen.findByRole("button", { name: "项目 p2" });
@@ -1108,7 +1108,7 @@ test("a calendar response from a previous project does not reopen its calendar",
     });
   });
   expect(screen.queryByTestId("calendar-documents")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "日历" }));
+  fireEvent.click(screen.getByRole("button", { name: "任务与日历" }));
   await waitFor(() =>
     expect(screen.getByTestId("calendar-documents").textContent).toBe("c.md"),
   );
@@ -1123,7 +1123,7 @@ test("a calendar write blocks source navigation and a second write until it comp
   overrides.set("calendar_save", () => save.promise);
   await boot();
   await openDocument("a.md");
-  fireEvent.click(screen.getByRole("button", { name: "日历" }));
+  fireEvent.click(screen.getByRole("button", { name: "任务与日历" }));
   await waitFor(() =>
     expect(screen.getByTestId("calendar-documents").textContent).toBe("a.md"),
   );
@@ -1154,7 +1154,7 @@ test("a calendar write blocks source navigation and a second write until it comp
     ).toContain("日程已修改"),
   );
   expect(screen.getByTestId("opened-path").textContent).toBe("a.md:7");
-  fireEvent.click(screen.getByRole("button", { name: "日历" }));
+  fireEvent.click(screen.getByRole("button", { name: "任务与日历" }));
   await waitFor(() =>
     expect(
       screen.getByRole("button", { name: "测试撤销事项" }).matches(":disabled"),
@@ -1164,7 +1164,7 @@ test("a calendar write blocks source navigation and a second write until it comp
   await screen.findByRole("button", { name: "项目 p2" });
   fireEvent.click(screen.getByRole("button", { name: "项目 p2" }));
   await screen.findByRole("button", { name: "打开 c.md" });
-  fireEvent.click(screen.getByRole("button", { name: "日历" }));
+  fireEvent.click(screen.getByRole("button", { name: "任务与日历" }));
   await waitFor(() =>
     expect(screen.getByTestId("calendar-documents").textContent).toBe("c.md"),
   );
@@ -1177,7 +1177,7 @@ test("double clicking a new calendar document creates one copy", async () => {
   const created = deferred<LibraryDocument>();
   overrides.set("library_create_document", () => created.promise);
   await boot();
-  fireEvent.click(screen.getByRole("button", { name: "日历" }));
+  fireEvent.click(screen.getByRole("button", { name: "任务与日历" }));
   await waitFor(() =>
     expect(screen.getByTestId("calendar-documents").textContent).toBe("a.md"),
   );

@@ -1,3 +1,5 @@
+import { msg } from "./i18n";
+import { useLocale } from "./i18n";
 import { isImeEvent } from "./platform/ime";
 import { getAppearance, setAppearance } from "./platform/appearance";
 import { useState, useRef, useEffect } from "react";
@@ -48,6 +50,7 @@ export default function SettingsModal({
   onWebSearch?: () => void;
   projects?: LibraryProject[];
 }) {
+  const { preference, setPreference, t } = useLocale();
   const [form, setForm] = useState<Settings>(() => ({
     ...structuredClone(value),
     chat: { ...value.chat, enabled: chatSetupOnly || value.chat.enabled },
@@ -159,7 +162,7 @@ export default function SettingsModal({
     ++testGeneration.current;
     await invoke("cancel_provider_test");
     setBusy("");
-    setMessage("连接测试已取消");
+    setMessage(msg("连接测试已取消"));
   }
   async function save() {
     setBusy("save");
@@ -190,18 +193,18 @@ export default function SettingsModal({
   return (
     <>
     <ModalDialog
-      label="模型设置"
+      label={msg("模型设置")}
       className="settings-modal"
       onClose={onClose}
       busy={!!busy}
     >
       <div className="modal-heading">
         <div>
-          <h2>{chatSetupOnly ? "连接问答模型" : "连接你的模型"}</h2>
+          <h2>{chatSetupOnly ? msg("连接问答模型") : msg("连接你的模型")}</h2>
         </div>
         <button
           className="icon-button"
-          aria-label="关闭设置"
+          aria-label={msg("关闭设置")}
           disabled={!!busy}
           onClick={onClose}
         >
@@ -210,13 +213,13 @@ export default function SettingsModal({
       </div>
       <p className="muted">
         {chatSetupOnly
-          ? "配置自己的问答接口。保存后返回当前问题，准备好后再发送。"
-          : "文件与索引保存在本机。按需要连接自己的 API，也可以使用本地服务。"}
+          ? msg("配置自己的问答接口。保存后返回当前问题，准备好后再发送。")
+          : msg("文件与索引保存在本机。按需要连接自己的 API，也可以使用本地服务。")}
       </p>
       {!chatSetupOnly && <div className="settings-utilities">
         {projects && (
           <button type="button" className="button small" disabled={!!busy} onClick={() => setExternalOpen(true)}>
-            外部工具
+            {msg("外部工具")}
           </button>
         )}
         {onWebSearch && (
@@ -226,11 +229,11 @@ export default function SettingsModal({
             disabled={!!busy}
             onClick={onWebSearch}
           >
-            自动联网设置
+            {msg("自动联网设置")}
           </button>
         )}
         <label>
-          工作台外观
+          {msg("工作台外观")}
           <select
             value={appearance}
             onChange={(event) => {
@@ -241,17 +244,28 @@ export default function SettingsModal({
               setAppearance(next);
             }}
           >
-            <option value="system">跟随系统</option>
-            <option value="light">浅色</option>
-            <option value="dark">深色</option>
+            <option value="system">{msg("跟随系统")}</option>
+            <option value="light">{msg("浅色")}</option>
+            <option value="dark">{msg("深色")}</option>
           </select>
         </label>
-        <small>即时生效</small>
+        <label>
+          {t("语言 / Language", "Language / 语言")}
+          <select value={preference} onChange={(event) => {
+            const next = event.target.value;
+            if (next === "system" || next === "zh-CN" || next === "en") setPreference(next);
+          }}>
+            <option value="system">{t("跟随系统", "Use system language")}</option>
+            <option value="zh-CN">{"简体中文"}</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+        <small>{msg("即时生效")}</small>
       </div>}
       {!chatSetupOnly && <div
         className="settings-tabs"
         role="tablist"
-        aria-label="模型用途"
+        aria-label={msg("模型用途")}
         onKeyDown={(event) => {
           if (isImeEvent(event.nativeEvent)) return;
           if (
@@ -278,9 +292,9 @@ export default function SettingsModal({
       >
         {(
           [
-            ["embedding", "向量化模型", "理解与检索资料"],
-            ["chat", "问答模型", "根据资料生成回答"],
-            ["rerank", "重排模型", "筛选更相关的证据"],
+            ["embedding", msg("向量化模型"), msg("理解与检索资料")],
+            ["chat", msg("问答模型"), msg("根据资料生成回答")],
+            ["rerank", msg("重排模型"), msg("筛选更相关的证据")],
           ] as const
         ).map(([id, title, subtitle]) => (
           <button
@@ -309,18 +323,18 @@ export default function SettingsModal({
         disabled={!!busy}
         role={chatSetupOnly ? undefined : "tabpanel"}
         id="settings-provider-panel"
-        aria-label={chatSetupOnly ? "问答模型" : undefined}
+        aria-label={chatSetupOnly ? msg("问答模型") : undefined}
         aria-labelledby={chatSetupOnly ? undefined : "settings-tab-" + tab}
       >
         <label className="enable-row">
           <span>
             <Server size={17} />
-            启用
+            {msg("启用")}
             {tab === "embedding"
-              ? "语义检索"
+              ? msg("语义检索")
               : tab === "chat"
-                ? "资料问答"
-                : "相关性重排"}
+                ? msg("资料问答")
+                : msg("相关性重排")}
           </span>
           <input
             type="checkbox"
@@ -335,7 +349,7 @@ export default function SettingsModal({
         {tab === "rerank" ? (
           <div className="form-grid">
             <label className="wide">
-              重排接口地址
+              {msg("重排接口地址")}
               <input
                 value={form.rerank.endpoint}
                 onChange={(e) =>
@@ -345,21 +359,21 @@ export default function SettingsModal({
                 spellCheck={false}
               />
               <small>
-                填写服务文档中的完整接口地址。支持向量化或问答的地址不一定支持重排；请先测试连接。
+                {msg("填写服务文档中的完整接口地址。支持向量化或问答的地址不一定支持重排；请先测试连接。")}
               </small>
             </label>
             <label>
-              接口协议
+              {msg("接口协议")}
               <select value={form.rerank.protocol} onChange={() => {}}>
-                <option value="cohere">Cohere 兼容重排接口</option>
+                <option value="cohere">{msg("Cohere 兼容重排接口")}</option>
               </select>
             </label>
             <label>
-              重排模型名称
+              {msg("重排模型名称")}
               <input
                 value={form.rerank.model}
                 onChange={(e) => updateRerank({ model: e.target.value })}
-                placeholder="服务支持的 rerank 模型"
+                placeholder={msg("服务支持的 rerank 模型")}
                 spellCheck={false}
               />
             </label>
@@ -368,7 +382,7 @@ export default function SettingsModal({
               {hasKey && (
                 <span className="key-saved">
                   <KeyRound size={11} />
-                  已保存
+                  {msg("已保存")}
                 </span>
               )}
               <input
@@ -376,7 +390,7 @@ export default function SettingsModal({
                 autoComplete="off"
                 value={keys.rerank}
                 onChange={(e) => changeKey("rerank", e.target.value)}
-                placeholder={hasKey ? "留空保留现有密钥" : "本地服务可留空"}
+                placeholder={hasKey ? msg("留空保留现有密钥") : msg("本地服务可留空")}
               />
             </label>
             {reusableSources.length > 0 && (
@@ -395,14 +409,14 @@ export default function SettingsModal({
                   <span>
                     {reusableSources.length === 1
                       ? reusableSources[0] === "embedding"
-                        ? "沿用同服务已保存的向量密钥"
-                        : "沿用同服务已保存的问答密钥"
-                      : "沿用同服务已保存的密钥"}
+                        ? msg("沿用同服务已保存的向量密钥")
+                        : msg("沿用同服务已保存的问答密钥")
+                      : msg("沿用同服务已保存的密钥")}
                   </span>
                 </label>
                 {selectedReuse && reusableSources.length > 1 && (
                   <label>
-                    已保存的密钥来源
+                    {msg("已保存的密钥来源")}
                     <select
                       value={selectedReuse}
                       onChange={(e) =>
@@ -411,22 +425,22 @@ export default function SettingsModal({
                     >
                       {reusableSources.map((source) => (
                         <option key={source} value={source}>
-                          {source === "embedding" ? "向量化服务" : "问答服务"}
+                          {source === "embedding" ? msg("向量化服务") : msg("问答服务")}
                         </option>
                       ))}
                     </select>
                   </label>
                 )}
                 <small>
-                  测试时读取同一服务已保存的密钥；保存时复制为独立重排密钥，重排开关仍由上方控制。密钥由钥匙串读取，不显示到界面；填写独立密钥时优先使用填写值。
+                  {msg("测试时读取同一服务已保存的密钥；保存时复制为独立重排密钥，重排开关仍由上方控制。密钥由钥匙串读取，不显示到界面；填写独立密钥时优先使用填写值。")}
                 </small>
               </div>
             )}
             <details>
-              <summary>重排与证据参数</summary>
+              <summary>{msg("重排与证据参数")}</summary>
               <div className="advanced-fields">
                 <label>
-                  最多重排候选数
+                  {msg("最多重排候选数")}
                   <input
                     type="number"
                     min={1}
@@ -438,7 +452,7 @@ export default function SettingsModal({
                   />
                 </label>
                 <label>
-                  超时（秒）
+                  {msg("超时（秒）")}
                   <input
                     type="number"
                     min={0.5}
@@ -451,7 +465,7 @@ export default function SettingsModal({
                   />
                 </label>
                 <label>
-                  每条候选字符上限
+                  {msg("每条候选字符上限")}
                   <input
                     type="number"
                     min={128}
@@ -463,7 +477,7 @@ export default function SettingsModal({
                   />
                 </label>
                 <label>
-                  最低证据分
+                  {msg("最低证据分")}
                   <input
                     type="number"
                     min={0}
@@ -475,7 +489,7 @@ export default function SettingsModal({
                     }
                   />
                   <small>
-                    阈值需按所选模型与资料评测，不能视为回答正确率。
+                    {msg("阈值需按所选模型与资料评测，不能视为回答正确率。")}
                   </small>
                 </label>
                 <label className="wide clear-key">
@@ -484,10 +498,10 @@ export default function SettingsModal({
                     checked={form.rerank.strict}
                     onChange={(e) => updateRerank({ strict: e.target.checked })}
                   />
-                  严格证据模式
+                  {msg("严格证据模式")}
                 </label>
                 <small className="wide">
-                  重排只排序和筛选已有证据，不能仅凭高分新增证据。严格模式在重排失败时不使用资料生成答案。
+                  {msg("重排只排序和筛选已有证据，不能仅凭高分新增证据。严格模式在重排失败时不使用资料生成答案。")}
                 </small>
               </div>
             </details>
@@ -495,7 +509,7 @@ export default function SettingsModal({
         ) : (
           <div className="form-grid">
             <label className="wide">
-              服务地址 · Base URL
+              {msg("服务地址 · Base URL")}
               <input
                 value={provider.baseUrl}
                 onChange={(e) => update({ baseUrl: e.target.value.trim() })}
@@ -503,17 +517,16 @@ export default function SettingsModal({
                 spellCheck={false}
               />
               <small>
-                包含接口前缀，例如 /v1；本机 Ollama 可填
-                http://localhost:11434/v1
+                {msg("包含接口前缀，例如 /v1；本机 Ollama 可填 http://localhost:11434/v1")}
               </small>
             </label>
             <label>
-              模型名称
+              {msg("模型名称")}
               <input
                 value={provider.model}
                 onChange={(e) => update({ model: e.target.value })}
                 placeholder={
-                  tab === "embedding" ? "你的 embedding 模型" : "你的对话模型"
+                  tab === "embedding" ? msg("你的 embedding 模型") : msg("你的对话模型")
                 }
                 spellCheck={false}
               />
@@ -523,7 +536,7 @@ export default function SettingsModal({
               {hasKey && (
                 <span className="key-saved">
                   <KeyRound size={11} />
-                  已保存
+                  {msg("已保存")}
                 </span>
               )}
               <input
@@ -531,7 +544,7 @@ export default function SettingsModal({
                 autoComplete="off"
                 value={keys[tab]}
                 onChange={(e) => changeKey(tab, e.target.value)}
-                placeholder={hasKey ? "留空保留现有密钥" : "本机服务可留空"}
+                placeholder={hasKey ? msg("留空保留现有密钥") : msg("本机服务可留空")}
               />
             </label>
             {tab === "chat" && (
@@ -546,20 +559,20 @@ export default function SettingsModal({
                       setForm((old) => ({ ...old, candidateReading: checked }));
                     }}
                   />
-                  用问答模型核对候选原文
+                  {msg("用问答模型核对候选原文")}
                 </label>
                 <small id="candidate-reading-help">
-                  本机取证不足时，可把小问与所选资料的标题、原句发给上方问答服务核对。每题最多增加一次请求，最多 8 段、合计 4,000 个原文字符。
+                  {msg("本机取证不足时，可把小问与所选资料的标题、原句发给上方问答服务核对。每题最多增加一次请求，最多 8 段、合计 4,000 个原文字符。")}
                 </small>
               </div>
             )}
             <details>
-              <summary>高级参数</summary>
+              <summary>{msg("高级参数")}</summary>
               <div className="advanced-fields">
                 {tab === "embedding" ? (
                   <>
                     <label>
-                      向量维度（可选）
+                      {msg("向量维度（可选）")}
                       <input
                         type="number"
                         min={1}
@@ -572,11 +585,11 @@ export default function SettingsModal({
                               : null,
                           })
                         }
-                        placeholder="自动检测"
+                        placeholder={msg("自动检测")}
                       />
                     </label>
                     <label>
-                      每批切片数
+                      {msg("每批切片数")}
                       <input
                         type="number"
                         min={1}
@@ -588,7 +601,7 @@ export default function SettingsModal({
                       />
                     </label>
                     <label className="wide">
-                      单个输入字符上限
+                      {msg("单个输入字符上限")}
                       <input
                         type="number"
                         min={128}
@@ -599,14 +612,13 @@ export default function SettingsModal({
                         }
                       />
                       <small>
-                        包含标题上下文；设定应保守低于模型的 token
-                        上限。更改模型、维度或切片长度后需更新索引。
+                        {msg("包含标题上下文；设定应保守低于模型的 token 上限。更改模型、维度或切片长度后需更新索引。")}
                       </small>
                     </label>
                   </>
                 ) : (
                   <label className="wide">
-                    问答上下文字符预算
+                    {msg("问答上下文字符预算")}
                     <input
                       type="number"
                       min={2000}
@@ -616,7 +628,7 @@ export default function SettingsModal({
                         update({ contextChars: Number(e.target.value) })
                       }
                     />
-                    <small>更换问答模型不会重建索引。</small>
+                    <small>{msg("更换问答模型不会重建索引。")}</small>
                   </label>
                 )}
               </div>
@@ -630,16 +642,16 @@ export default function SettingsModal({
               checked={clear[tab]}
               onChange={(e) => changeClearKey(tab, e.target.checked)}
             />
-            删除已保存的此服务密钥
+            {msg("删除已保存的此服务密钥")}
           </label>
         )}
         <div className="privacy-note">
           <KeyRound size={15} />
           <span>
             {tab === "rerank"
-              ? "远程重排会把问题和候选片段发送到你配置的服务；默认关闭。"
-              : "远程向量化发送所选文本，问答发送问题与命中的片段。"}
-            密钥存入 macOS 钥匙串，服务地址变化后需重新填写。
+              ? msg("远程重排会把问题和候选片段发送到你配置的服务；默认关闭。")
+              : msg("远程向量化发送所选文本，问答发送问题与命中的片段。")}
+            {msg("密钥存入 macOS 钥匙串，服务地址变化后需重新填写。")}
           </span>
         </div>
       </fieldset>
@@ -659,20 +671,20 @@ export default function SettingsModal({
       <div className="modal-actions">
         <button className="button" disabled={!!busy} onClick={test}>
           {busy === "test" && <LoaderCircle size={15} className="spin" />}
-          测试连接
+          {msg("测试连接")}
         </button>
         {busy === "test" && (
           <button className="button" onClick={() => void stopTest()}>
-            停止测试
+            {msg("停止测试")}
           </button>
         )}
         <div />
         <button className="button ghost" disabled={!!busy} onClick={onClose}>
-          取消
+          {msg("取消")}
         </button>
         <button className="button primary" disabled={!!busy} onClick={save}>
           {busy === "save" && <LoaderCircle size={15} className="spin" />}
-          保存设置
+          {msg("保存设置")}
         </button>
       </div>
     </ModalDialog>

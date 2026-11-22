@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { useLayoutEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Context, Pending, Preview, Snapshot } from "./types";
@@ -133,17 +134,17 @@ export function WorkReceipt({
   return (
     <section
       className="companion-work-receipt"
-      aria-label="本次完成经历卡"
+      aria-label={msg("本次完成经历卡")}
       ref={section}
       tabIndex={-1}
     >
-      {edge && <strong>记录本次完成</strong>}
-      {request.phase === "loading" && <p role="status">正在核对本次保存…</p>}
+      {edge && <strong>{msg("记录本次完成")}</strong>}
+      {request.phase === "loading" && <p role="status">{msg("正在核对本次保存…")}</p>}
       {request.phase === "error" && <p role="alert">{request.message}</p>}
       {preview && (
         <>
           <label>
-            拟存经历
+            {msg("拟存经历")}
             <textarea
               ref={field}
               rows={2}
@@ -157,7 +158,7 @@ export function WorkReceipt({
             />
           </label>
           <label>
-            经历类型
+            {msg("经历类型")}
             <select
               value={kind}
               disabled={submitting}
@@ -166,14 +167,14 @@ export function WorkReceipt({
                 setConsent(false);
               }}
             >
-              <option value="complete">完成一份笔记</option>
-              <option value="milestone">确认项目里程碑</option>
+              <option value="complete">{msg("完成一份笔记")}</option>
+              <option value="milestone">{msg("确认项目里程碑")}</option>
               <option value="revision" disabled={!preview.canRevise}>
-                复盘一次已有记录
+                {msg("复盘一次已有记录")}
               </option>
             </select>
           </label>
-          <small>有效日 {preview.day} · 同一文档当日一次，每日最多两条。</small>
+          <small>{msg("有效日")} {preview.day} {msg("· 同一文档当日一次，每日最多两条。")}</small>
           <label className="companion-check">
             <input
               type="checkbox"
@@ -181,13 +182,13 @@ export function WorkReceipt({
               disabled={submitting}
               onChange={(event) => setConsent(event.target.checked)}
             />
-            我确认保存以上经历卡内容。
+            {msg("我确认保存以上经历卡内容。")}
           </label>
         </>
       )}
       <div className="companion-receipt-actions">
         <button type="button" disabled={submitting} onClick={onCancel}>
-          {request.phase === "error" ? "返回" : "暂不记录"}
+          {request.phase === "error" ? msg("返回") : msg("暂不记录")}
         </button>
         {preview && (
           <button
@@ -198,7 +199,7 @@ export function WorkReceipt({
               if (consent && text.trim()) onSubmit(preview, text.trim(), kind);
             }}
           >
-            {submitting ? "正在记录…" : "确认并记录"}
+            {submitting ? msg("正在记录…") : msg("确认并记录")}
           </button>
         )}
       </div>

@@ -9,11 +9,13 @@ use std::collections::HashSet;
 #[derive(Clone, Debug)]
 pub struct PriorSource {
     pub path: String,
+    quote_lines: Vec<usize>,
     pub document_id: Option<String>,
     pub hash: String,
 }
 #[derive(Clone, Debug)]
 pub struct FollowupGate {
+    pub named_subject: Option<String>,
     pub sources: Vec<PriorSource>,
     pub attributes: Vec<String>,
     pub clock: Option<&'static str>,
@@ -120,6 +122,29 @@ pub(crate) fn weekday_question(
 
 pub fn is_followup(question: &str, has_parent: bool) -> bool {
     let q = question.trim_start();
+    // Temporal demonstratives can introduce a fully specified first question
+    // ("这次由哪个部门承办？"). Retrieval still verifies the asserted fact.
+    let temporal = [
+        "这次",
+        "这一次",
+        "这一轮",
+        "这轮",
+        "这个月",
+        "这一年",
+        "这个季度",
+    ]
+    .iter()
+    .find_map(|prefix| q.strip_prefix(prefix));
+    if !has_parent
+        && temporal.is_some_and(|rest| {
+            rest.trim().chars().count() >= 5
+                && !["它", "那个", "那份", "其中"]
+                    .iter()
+                    .any(|p| rest.trim_start().starts_with(p))
+        })
+    {
+        return false;
+    }
     let pointer = [
         "它",
         "这",
@@ -134,6 +159,7 @@ pub fn is_followup(question: &str, has_parent: bool) -> bool {
         "那么",
         "哪个",
         "其中",
+        "接着说它",
         "上面",
         "前面",
     ]
@@ -240,14 +266,26 @@ pub fn prior_sources(
             };
             files::validate_relative(path)?;
             let document_id = source["documentId"].as_str().map(str::to_string);
-            if !out
-                .iter()
-                .any(|s: &PriorSource| s.path == path && s.document_id == document_id)
-            {
+            let line = source["startLine"]
+                .as_u64()
+                .and_then(|n| usize::try_from(n).ok())
+                .filter(|&n| {
+                    n > 0
+                        && source["endLine"].as_u64() == Some(n as u64)
+                        && source["matchKind"].as_str() == Some("selected-quote")
+                });
+            if let Some(existing) = out.iter_mut().find(|s: &&mut PriorSource| {
+                s.path == path && s.document_id == document_id && s.hash == hash
+            }) {
+                if let Some(line) = line {
+                    existing.quote_lines.push(line);
+                }
+            } else {
                 out.push(PriorSource {
                     path: path.into(),
                     document_id,
                     hash: hash.into(),
+                    quote_lines: line.into_iter().collect(),
                 });
             }
         }
@@ -399,6 +437,7 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
                 let text = files::read_text(&files::resolve(&ws.root, &entry.path, false)?)?;
                 recovered.push(PriorSource {
                     path: entry.path.clone(),
+                    quote_lines: vec![],
                     document_id: id,
                     hash: files::hash(text),
                 });
@@ -440,6 +479,11 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
     let managed = library::project_at_root(data, &ws.root);
     let mut sources = vec![];
     let mut names = vec![];
+    let naming = started
+        .previous_questions
+        .last()
+        .and_then(|q| crate::evidence_reader::named_value::Naming::parse(q));
+    let mut named_values = std::collections::BTreeSet::new();
     for prior in referents {
         let (path, name) = if let Some(space) = &managed {
             let Some(id) = &prior.document_id else {
@@ -473,6 +517,15 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
         if content.as_ref().ok().map(files::hash).as_deref() != Some(prior.hash.as_str()) {
             return clarify("此前引用的资料已变化，请明确文档重新提问以核对最新内容。");
         }
+        if let (Some(naming), Ok(body)) = (&naming, &content) {
+            // Re-read a previously bound quote from the unchanged original.
+            // The prior model's reply supplies neither the name nor any evidence.
+            for line in &prior.quote_lines {
+                if let Some(value) = body.lines().nth(line - 1).and_then(|s| naming.value(s)) {
+                    named_values.insert(value.to_owned());
+                }
+            }
+        }
         names.push(
             Path::new(&name)
                 .file_stem()
@@ -482,18 +535,40 @@ pub fn prepare(data: &Path, ws: &Workspace, started: &Started) -> Result<Prepare
         );
         sources.push(PriorSource {
             path,
+            quote_lines: prior.quote_lines.clone(),
             document_id: prior.document_id.clone(),
             hash: prior.hash.clone(),
         });
     }
     // Names assist recall only. Strict attributes below are solely the CURRENT question.
     let operator = if names.len() > 1 { "比较" } else { "在" };
+    let resolved = (sources.len() == 1 && named_values.len() == 1)
+        .then(|| named_values.into_iter().next())
+        .flatten()
+        .and_then(|name| {
+            let q = started.grounded_question.trim();
+            let rest = ["接着说它", "它", "该项目", "该文档", "该物品", "该对象"]
+                .iter()
+                .find_map(|p| q.strip_prefix(p))?;
+            if rest.starts_with('们') {
+                return None;
+            }
+            let rest = rest.trim_start_matches(['，', ',', ' ']);
+            let join = if rest.starts_with(['的', '在', '由', '是']) {
+                ""
+            } else {
+                "在"
+            };
+            Some((format!("{name}{join}{rest}"), name))
+        });
     Ok(Prepared {
         retrieval_question: day_query
             .clone()
+            .or_else(|| resolved.as_ref().map(|(q, _)| q.clone()))
             .unwrap_or_else(|| format!("{operator} {} {}", names.join("与"), terms.join(" "))),
         gate: Some(FollowupGate {
             sources,
+            named_subject: resolved.map(|(_, n)| n),
             attributes: terms,
             clock,
             clock_day: clock.and_then(|_| prior_clock_day(started)),
@@ -506,6 +581,9 @@ pub(crate) fn in_followup_range(gate: &FollowupGate, result: &SearchResult) -> b
     let identity = gate.sources.iter().any(|s| {
         s.path == result.path && s.document_id == result.document_id && s.hash == result.hash
     });
+    if let Some(subject) = &gate.named_subject {
+        return identity && result.text.contains(subject);
+    }
     if gate.recheck_weekday {
         // The reader will bind the new weekday, object and predicate within each sentence.
         return identity;
@@ -532,8 +610,11 @@ pub(crate) fn in_followup_range(gate: &FollowupGate, result: &SearchResult) -> b
 
 pub fn tighten(gate: &FollowupGate, results: &mut [SearchResult]) {
     for result in results {
-        result.evidence &= !gate.recheck_weekday && in_followup_range(gate, result);
-        if !result.evidence {
+        let in_range = in_followup_range(gate, result);
+        result.evidence &= !gate.recheck_weekday && in_range;
+        if !result.evidence
+            && !(in_range && gate.named_subject.is_some() && result.match_kind == "scoped-related")
+        {
             result.match_kind = "candidate".into();
         }
     }

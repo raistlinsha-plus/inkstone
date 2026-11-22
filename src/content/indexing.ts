@@ -1,3 +1,4 @@
+import { taskRetrievalText } from "./tasks";
 import { chunkDocument } from "../document";
 import { chartIndexChunks } from "./chartIndex";
 import { inspectJson, pointer, type JsonNode } from "./json";
@@ -10,6 +11,7 @@ export function chunkStructured(
 ): Chunk[] {
   if (!/\.json$/i.test(path)) {
     if (/\.(txt|mmd)$/i.test(path)) return chunkDocument(content, false, max);
+    content = taskRetrievalText(content);
     const tree = parseMarkdown(content);
     const special = (n: MarkdownNode) =>
       n.type === "code" &&

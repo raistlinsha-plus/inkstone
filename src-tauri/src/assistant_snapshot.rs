@@ -154,6 +154,14 @@ pub fn validate_snapshot(path: &Path) -> Result<(), String> {
             }
         }
     }
+    if version >= 5 {
+        let invalid: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM task_origins o
+            JOIN turns t ON t.id=o.turn_id LEFT JOIN candidates a ON a.id=o.candidate_id
+            WHERE t.conversation_id<>o.conversation_id OR (o.candidate_id IS NOT NULL AND a.turn_id<>o.turn_id)
+            OR length(o.document_id)<>36 OR length(o.task_id)<>36 OR length(o.digest)<>64
+            OR o.start_char<0 OR o.start_char>2097152 OR o.char_count NOT BETWEEN 1 AND 8000)",[],|r|r.get(0)).map_err(err)?;
+        if invalid { return Err("任务来源快照无效".into()); }
+    }
     if version >= 2 {
         memory::validate_snapshot(&c)?;
     }

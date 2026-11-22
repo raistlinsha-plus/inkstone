@@ -1,3 +1,6 @@
+import { translate, msg } from "../i18n";
+import { insertTrackedTask } from "./trackedTasks";
+import { taskLine } from "../content/tasks";
 import type { Ctx } from "@milkdown/kit/ctx";
 import { commandsCtx, editorViewCtx } from "@milkdown/kit/core";
 import {
@@ -38,28 +41,29 @@ import { blockSource, insertBlock, type BlockKind } from "./blocks";
 
 // One command catalog for toolbar, slash and block-handle insertion.
 export const insertCommands = [
-  { id: "text", label: "正文", group: "文本", Icon: Type },
+  { id: "text", get label() { return msg("正文"); }, group: "文本", Icon: Type },
   ...[1, 2, 3, 4, 5, 6].map((level) => ({
     id: `h${level}`,
-    label: `标题 ${level}`,
+    get label() { return translate(`标题 ${level}`, `Heading ${level}`); },
     group: "文本",
     Icon: Heading,
   })),
-  { id: "bullet", label: "无序列表", group: "列表", Icon: List },
-  { id: "ordered", label: "有序列表", group: "列表", Icon: ListOrdered },
-  { id: "task", label: "任务列表", group: "列表", Icon: ListTodo },
-  { id: "quote", label: "引用", group: "文本", Icon: Quote },
-  { id: "clear", label: "清除文字格式", group: "文本", Icon: Type },
-  { id: "divider", label: "分隔线", group: "文本", Icon: Minus },
-  { id: "code", label: "代码块", group: "内容块", Icon: Code },
-  { id: "table", label: "表格", group: "内容块", Icon: Table },
-  { id: "image", label: "本地图片", group: "内容块", Icon: Image },
-  { id: "json", label: "JSON 数据", group: "插入内容", Icon: Braces },
-  { id: "mindmap", label: "脑图", group: "插入内容", Icon: GitBranch },
-  { id: "mermaid", label: "Mermaid 图表", group: "插入内容", Icon: Workflow },
-  { id: "chart", label: "数据图表", group: "插入内容", Icon: ChartColumn },
-  { id: "agenda", label: "日程", group: "插入内容", Icon: ListTodo },
-  { id: "calendar", label: "日历", group: "插入内容", Icon: CalendarDays },
+  { id: "bullet", get label() { return msg("无序列表"); }, group: "列表", Icon: List },
+  { id: "ordered", get label() { return msg("有序列表"); }, group: "列表", Icon: ListOrdered },
+  { id: "tracked-task", get label() { return translate("跟踪为任务","Track as task"); }, group: "列表", Icon: ListTodo },
+  { id: "task", get label() { return msg("任务列表"); }, group: "列表", Icon: ListTodo },
+  { id: "quote", get label() { return msg("引用"); }, group: "文本", Icon: Quote },
+  { id: "clear", get label() { return msg("清除文字格式"); }, group: "文本", Icon: Type },
+  { id: "divider", get label() { return msg("分隔线"); }, group: "文本", Icon: Minus },
+  { id: "code", get label() { return msg("代码块"); }, group: "内容块", Icon: Code },
+  { id: "table", get label() { return msg("表格"); }, group: "内容块", Icon: Table },
+  { id: "image", get label() { return msg("本地图片"); }, group: "内容块", Icon: Image },
+  { id: "json", get label() { return msg("JSON 数据"); }, group: "插入内容", Icon: Braces },
+  { id: "mindmap", get label() { return msg("脑图"); }, group: "插入内容", Icon: GitBranch },
+  { id: "mermaid", get label() { return msg("Mermaid 图表"); }, group: "插入内容", Icon: Workflow },
+  { id: "chart", get label() { return msg("数据图表"); }, group: "插入内容", Icon: ChartColumn },
+  { id: "agenda", get label() { return msg("日程"); }, group: "插入内容", Icon: ListTodo },
+  { id: "calendar", get label() { return msg("日历"); }, group: "插入内容", Icon: CalendarDays },
 ] as const;
 export function commandIcon(command: (typeof insertCommands)[number]) {
   return renderToStaticMarkup(<command.Icon size={18} />);
@@ -85,6 +89,8 @@ export function runInsertCommand(ctx: Ctx, id: string, fromSlash = false) {
       id === "agenda" ? "calendar" : (id as BlockKind),
       id === "agenda" ? "agenda" : "month",
     );
+  } else if (id === "tracked-task") {
+    insertTrackedTask(view, translate("新任务","New task"));
   } else if (id === "clear") {
     const { from, to } = view.state.selection;
     view.dispatch(view.state.tr.removeMark(from, to).setStoredMarks([]));
@@ -126,6 +132,7 @@ export function runInsertCommand(ctx: Ctx, id: string, fromSlash = false) {
   view.focus();
 }
 export function insertSource(id: string, selection = "") {
+  if (id === "tracked-task") return taskLine({id: crypto.randomUUID(), title: selection.split(/\r?\n/)[0] || "新任务"});
   if (
     ["json", "mindmap", "mermaid", "chart", "agenda", "calendar"].includes(id)
   ) {

@@ -27,6 +27,7 @@ pub enum Key {
     Structure,
     Length,
     OriginalUnits,
+    Language,
 }
 
 impl Key {
@@ -35,6 +36,7 @@ impl Key {
             Self::Structure => "structure",
             Self::Length => "length",
             Self::OriginalUnits => "original_units",
+            Self::Language => "language",
         }
     }
     pub fn legacy(key: &str) -> Option<Self> {
@@ -49,12 +51,14 @@ impl Key {
 
 fn instruction(key: &str, value: &str) -> Option<&'static str> {
     Some(match (key, value) {
-        ("structure", "default") | ("original_units", "default") => "",
+        ("structure", "default") | ("original_units", "default") | ("language", "question") => "",
         ("structure", "conclusion_first") => "先给结论，再说明依据。",
         ("structure", "compare") => "适合比较时逐项对照，保留各自引用。",
         ("length", "short") => "使用精简回答，保留必要条件与引用。",
         ("length", "standard") => "",
         ("length", "detailed") => "展开关键判断和依据。",
+        ("language", "en") => "若本轮没有明确指定目标语言，以英语回答，引文保留原文。",
+        ("language", "zh-CN") => "若本轮没有明确指定目标语言，以简体中文回答，引文保留原文。",
         ("original_units", "explicit") => "显式标注资料原有单位。",
         _ => return None,
     })
@@ -382,13 +386,13 @@ pub(super) fn validate_usage(usage: &serde_json::Value) -> Result<(), String> {
             .is_some_and(|s| !s.is_empty() && s.len() <= 80)
     };
     let valid_preferences = usage["preferences"].as_array().is_some_and(|rows| {
-        rows.len() <= 3
+        rows.len() <= 4
             && rows.iter().all(|row| {
                 valid_id(&row["id"])
                     && row["revision"].as_i64().is_some_and(|n| n > 0)
                     && matches!(
                         row["key"].as_str(),
-                        Some("structure" | "length" | "original_units")
+                        Some("structure" | "length" | "original_units" | "language")
                     )
                     && matches!(row["scope"].as_str(), Some("space" | "global"))
             })

@@ -616,3 +616,55 @@ fn numeric_prefixes_are_part_of_the_unit_and_numbered_variants_keep_their_name()
         assert!(read.facets()[0].quotes.is_empty(), "{text}");
     }
 }
+
+#[test]
+fn naming_requires_the_whole_owner_and_relation_and_preserves_conflicts() {
+    let hits = [source("a.md", 7, "海湾组本次领用的号牌名为云梯。\n海湾组上次领用的号牌名为青苔。\n海湾组本次借出的号牌名为飞鱼。\n海湾组本次领用的号牌名为石门。")];
+    let read = prepare("这次由海湾组领用的号牌叫什么？", &hits, 4000);
+    let lines = read.facets()[0]
+        .quotes
+        .iter()
+        .map(|q| q.start_line)
+        .collect::<Vec<_>>();
+    assert_eq!(lines, [7, 10]);
+}
+
+#[test]
+fn conditioned_reading_keeps_only_current_object_and_condition_as_related_originals() {
+    let question = "白沙仓在检修期间要留几箱水，用什么登记领取人？";
+    let frame = scoped_clause::Frame::parse(question).unwrap();
+    let body = "# 正本\n白沙仓在检修期间留存三箱水。\n白沙仓在营业期间登记领取人。\n白沙仓二号库在检修期间登记领取人。\n黑沙仓在检修期间留存六箱水。\n# 草案\n## 操作说明\n白沙仓在检修期间留存九箱水。";
+    let hit = source("b.md", 11, body);
+    let related = frame.related(&hit);
+    assert_eq!(related.len(), 1);
+    assert_eq!((related[0].start_line, related[0].end_line), (12, 12));
+    assert_eq!(related[0].match_kind, "related-original");
+    assert!(frame
+        .related(&source("c.md", 2, "白沙仓在检修期间停电。"))
+        .is_empty());
+}
+
+#[test]
+fn numbered_platform_is_not_a_second_day_in_a_dated_source() {
+    let request = semantic::Request::new("核对8月12日的发车时间", "核对发车时间");
+    assert!(request.compatible_original_conditions("首班在07:20由4号站台发车。", "8月12日值班表"));
+    assert!(!request
+        .compatible_original_conditions("8月11号首班在07:20由4号站台发车。", "8月12日值班表"));
+}
+
+#[test]
+fn current_inventory_preserves_unit_owner_and_period_in_a_partial_answer() {
+    let hit = source("spec.md", 3, "红玉柜目前安装三层滤片。\n上期红玉柜安装五层滤片。\n红玉柜二号机目前安装七层滤片。\n红玉柜目前安装九片滤棉。\n红玉柜目前计划安装六层滤片。");
+    let read = prepare("红玉柜现在装几层滤片？保修期是哪年？", &[hit], 4000);
+    let points = read.facets();
+    assert_eq!(points.len(), 2);
+    assert_eq!(
+        points[0]
+            .quotes
+            .iter()
+            .map(|q| q.start_line)
+            .collect::<Vec<_>>(),
+        [3]
+    );
+    assert!(points[1].quotes.is_empty());
+}

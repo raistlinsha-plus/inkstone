@@ -855,12 +855,14 @@ fn safe_to_dispatch(state: &AppState, cancel: &AtomicBool) -> bool {
 }
 
 async fn fetch_page(client: &Client, url: Url, terms: &[String]) -> Option<WebEvidence> {
+    let receipt = crate::request_receipt::begin(crate::request_receipt::Service::WebPage, 0);
     let response = client
         .get(url.clone())
         .header(header::ACCEPT, "text/html,text/plain")
         .send()
         .await
         .ok()?;
+    if let Some(h) = receipt { h.status(response.status().as_u16()); }
     if response.status() != StatusCode::OK
         || !response_is_public(&response)
         || !identity_encoding(&response)
@@ -1035,7 +1037,9 @@ impl BraveClient {
     }
 
     async fn candidates(&self, query: &str, key: &str) -> Result<(usize, Vec<Url>), SearchFailure> {
-        let response = self.request(query, key)?.send().await.map_err(|error| {
+        let req = self.request(query, key)?;
+        let receipt = crate::request_receipt::begin(crate::request_receipt::Service::WebSearch, query.chars().count());
+        let response = req.send().await.map_err(|error| {
             let status = if error.is_timeout() {
                 DiagnosticStatus::Timeout
             } else {
@@ -1043,6 +1047,7 @@ impl BraveClient {
             };
             SearchFailure::new(status, None)
         })?;
+        if let Some(h) = receipt { h.status(response.status().as_u16()); }
         decode_candidate_response(response).await
     }
 }
@@ -1489,6 +1494,9 @@ mod tests {
                     Err(error) => panic!("proxy received no CONNECT: {error}"),
                 }
             };
+            // macOS may inherit O_NONBLOCK from the listener on an accepted socket.
+            // The fixture reads the CONNECT header with blocking BufRead.
+            socket.set_nonblocking(false).unwrap();
             socket
                 .set_read_timeout(Some(Duration::from_secs(2)))
                 .unwrap();

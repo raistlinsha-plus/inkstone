@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -121,10 +122,11 @@ export function ConversationHeader({
   const autoTitle = Array.from(firstQuestion).slice(0, 32).join("");
   const namedTitle =
     c?.title && c.title !== autoTitle && c.title !== "新会话" ? c.title : "";
+  const conversationTitle = c?.title === "新会话" && !c.turns?.length ? msg("新会话") : c?.title;
   const headerTitle =
     !controller.general && c?.title === autoTitle
-      ? "当前会话"
-      : c?.title || "新会话";
+      ? msg("当前会话")
+      : conversationTitle || msg("新会话");
   useEffect(() => {
     setBackground(undefined);
     setPreview(undefined);
@@ -163,11 +165,11 @@ export function ConversationHeader({
     <button
       onClick={onExpand}
       aria-pressed={expanded}
-      aria-label={expanded ? "返回编辑" : "展开问答"}
-      title={expanded ? "返回编辑" : "展开问答"}
+      aria-label={expanded ? msg("返回编辑") : msg("展开问答")}
+      title={expanded ? msg("返回编辑") : msg("展开问答")}
     >
       {expanded ? <Minimize2 size={15} /> : <Expand size={15} />}
-      <span>{expanded ? "返回编辑" : "展开问答"}</span>
+      <span>{expanded ? msg("返回编辑") : msg("展开问答")}</span>
     </button>
   );
   return (
@@ -186,9 +188,9 @@ export function ConversationHeader({
               <small>
                 {controller.general
                   ? c?.archived
-                    ? "通用问答 · 已归档"
-                    : "通用问答 · 每轮可添加资料"
-                  : "已归档"}
+                    ? msg("通用问答 · 已归档")
+                    : msg("通用问答 · 每轮可添加资料")
+                  : msg("已归档")}
               </small>
             )}
           </div>
@@ -199,21 +201,21 @@ export function ConversationHeader({
             onClick={() => {
               setDialog("history");
             }}
-            title="会话历史"
-            aria-label={dock ? "会话历史" : "会话"}
+            title={msg("会话历史")}
+            aria-label={dock ? msg("会话历史") : msg("会话")}
           >
             <History size={15} />
-            <span>会话</span>
+            <span>{msg("会话")}</span>
           </button>
           {showNew && (
             <button
               disabled={disabled}
               onClick={onNew}
-              aria-label={dock ? "新建会话" : "新建"}
-              title="新建会话"
+              aria-label={dock ? msg("新建会话") : msg("新建")}
+              title={msg("新建会话")}
             >
               <MessageSquarePlus size={15} />
-              <span>新建</span>
+              <span>{msg("新建")}</span>
             </button>
           )}
           {(!dock || expanded) && expandAction}
@@ -221,11 +223,11 @@ export function ConversationHeader({
             <button
               disabled={disabled}
               onClick={onPreferences}
-              title="回答偏好"
-              aria-label="回答偏好"
+              title={msg("回答偏好")}
+              aria-label={msg("回答偏好")}
             >
               <SlidersHorizontal size={15} />
-              <span>回答偏好</span>
+              <span>{msg("回答偏好")}</span>
             </button>
           )}
           {(c || dock) && (
@@ -253,8 +255,8 @@ export function ConversationHeader({
               }}
             >
               <summary
-                aria-label={dock ? "更多会话操作" : "管理当前会话"}
-                title={dock ? "更多会话操作" : "管理当前会话"}
+                aria-label={dock ? msg("更多会话操作") : msg("管理当前会话")}
+                title={dock ? msg("更多会话操作") : msg("管理当前会话")}
                 onClick={(e) => e.currentTarget.focus({ preventScroll: true })}
               >
                 <MoreHorizontal size={16} />
@@ -273,12 +275,12 @@ export function ConversationHeader({
                     disabled={!dock.canOpenGeneral}
                     onClick={dock.onGeneral}
                   >
-                    <ArrowUpRight size={15} /> 通用问答
+                    <ArrowUpRight size={15} /> {msg("通用问答")}
                   </button>
                 )}
                 {dock && onPreferences && (
                   <button disabled={disabled} onClick={onPreferences}>
-                    <SlidersHorizontal size={15} /> 回答偏好
+                    <SlidersHorizontal size={15} /> {msg("回答偏好")}
                   </button>
                 )}
                 {c && (
@@ -290,7 +292,7 @@ export function ConversationHeader({
                         setDialog("rename");
                       }}
                     >
-                      重命名会话
+                      {msg("重命名会话")}
                     </button>
                     <button
                       disabled={disabled}
@@ -300,7 +302,7 @@ export function ConversationHeader({
                         })
                       }
                     >
-                      {c.archived ? "取消归档" : "归档会话"}
+                      {c.archived ? msg("取消归档") : msg("归档会话")}
                     </button>
                     <button
                       disabled={disabled}
@@ -325,13 +327,13 @@ export function ConversationHeader({
                         })
                       }
                     >
-                      导出会话
+                      {msg("导出会话")}
                     </button>
                     <button
                       disabled={disabled}
                       onClick={() => setDialog("delete")}
                     >
-                      删除会话…
+                      {msg("删除会话…")}
                     </button>
                   </>
                 )}
@@ -341,8 +343,8 @@ export function ConversationHeader({
           {dock && (
             <button
               type="button"
-              aria-label="收起知识侧栏"
-              title="收起知识侧栏"
+              aria-label={msg("收起知识侧栏")}
+              title={msg("收起知识侧栏")}
               onClick={dock.onClose}
             >
               <PanelRightClose size={15} />
@@ -353,7 +355,7 @@ export function ConversationHeader({
       {dock && (namedTitle || c?.archived) && (
         <div className="contextual-thread-title">
           {namedTitle && <strong title={namedTitle}>{namedTitle}</strong>}
-          {c?.archived && <span>已归档</span>}
+          {c?.archived && <span>{msg("已归档")}</span>}
         </div>
       )}
       {controller.error && (
@@ -364,7 +366,7 @@ export function ConversationHeader({
               disabled={disabled || working}
               onClick={() => void run(() => controller.flushDraft())}
             >
-              重试保存草稿
+              {msg("重试保存草稿")}
             </button>
           )}
         </div>
@@ -373,14 +375,14 @@ export function ConversationHeader({
         <ModalDialog
           label={
             dialog === "background"
-              ? "选择历史背景"
+              ? msg("选择历史背景")
               : dialog === "history"
-                ? "问答会话"
+                ? msg("问答会话")
                 : dialog === "rename"
-                  ? "重命名会话"
+                  ? msg("重命名会话")
                   : dialog === "delete"
-                    ? "删除问答会话"
-                    : "导出问答会话"
+                    ? msg("删除问答会话")
+                    : msg("导出问答会话")
           }
           className="assistant-history-dialog"
           busy={working}
@@ -390,17 +392,17 @@ export function ConversationHeader({
           <div className="modal-heading">
             <h2>
               {dialog === "background"
-                ? "选择历史背景"
+                ? msg("选择历史背景")
                 : dialog === "history"
-                  ? "问答会话"
+                  ? msg("问答会话")
                   : dialog === "rename"
-                    ? "重命名会话"
+                    ? msg("重命名会话")
                     : dialog === "delete"
-                      ? "删除这段会话？"
-                      : "导出会话 Markdown"}
+                      ? msg("删除这段会话？")
+                      : msg("导出会话 Markdown")}
             </h2>
             <button
-              aria-label="关闭会话管理"
+              aria-label={msg("关闭会话管理")}
               onClick={() => setDialog(null)}
               disabled={working}
             >
@@ -410,13 +412,13 @@ export function ConversationHeader({
           {dialog === "history" && (
             <>
               <label>
-                查找会话
+                {msg("查找会话")}
                 <input
                   autoFocus
                   maxLength={200}
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
-                  placeholder="搜索本空间会话标题…"
+                  placeholder={msg("搜索本空间会话标题…")}
                 />
               </label>
               <label className="assistant-archive-toggle">
@@ -425,7 +427,7 @@ export function ConversationHeader({
                   checked={archived}
                   onChange={(e) => setArchived(e.target.checked)}
                 />
-                显示已归档会话
+                {msg("显示已归档会话")}
               </label>
               <div className="assistant-history-list">
                 {rows.map((row) => (
@@ -446,8 +448,8 @@ export function ConversationHeader({
                     >
                       <strong>{row.title}</strong>
                       <small>
-                        {row.scopeLabel} · {row.turnCount}轮
-                        {row.archived ? " · 已归档" : ""}
+                        {row.scopeLabel} · {row.turnCount}{msg("轮")}
+                        {row.archived ? msg(" · 已归档") : ""}
                       </small>
                     </button>
                     {onUseHistory &&
@@ -470,7 +472,7 @@ export function ConversationHeader({
                             })
                           }
                         >
-                          选作背景
+                          {msg("选作背景")}
                         </button>
                       )}
                   </div>
@@ -478,36 +480,36 @@ export function ConversationHeader({
                 {!searching && !searchError && !rows.length && (
                   <p className="muted">
                     {controller.general
-                      ? "暂无匹配的通用会话。"
-                      : "本空间暂无匹配会话。"}
+                      ? msg("暂无匹配的通用会话。")
+                      : msg("本空间暂无匹配会话。")}
                   </p>
                 )}
               </div>
               {searchError && <p role="alert">{searchError}</p>}
               <p className="muted" role="status">
                 {searching
-                  ? "正在查找…"
+                  ? msg("正在查找…")
                   : `已显示${rows.length}条${hasMore ? "，还有更多会话" : "，已显示全部匹配会话"}`}
               </p>
               {(hasMore || searchError) && (
                 <button disabled={searching} onClick={() => void loadMore()}>
-                  {searchError ? "重试查找" : "加载更多会话"}
+                  {searchError ? msg("重试查找") : msg("加载更多会话")}
                 </button>
               )}
             </>
           )}
           {dialog === "background" && background && (
             <>
-              <p>{background.title} · 当前分支</p>
+              <p>{background.title} {msg("· 当前分支")}</p>
               <label>
-                选择一个历史问题
+                {msg("选择一个历史问题")}
                 <select
                   disabled={working}
                   value={preview?.reference.turnId ?? ""}
                   onChange={(event) => void previewQuestion(event.target.value)}
                 >
                   <option value="" disabled>
-                    请选择
+                    {msg("请选择")}
                   </option>
                   {branchTurns(background)
                     .slice(-200)
@@ -522,17 +524,17 @@ export function ConversationHeader({
               {preview && (
                 <>
                   <p className="muted">
-                    {new Date(preview.createdAt).toLocaleString()} · 最多 400 字
+                    {new Date(preview.createdAt).toLocaleString()} {msg("· 最多 400 字")}
                   </p>
                   <blockquote>{preview.excerpt}</blockquote>
                 </>
               )}
               <p className="muted">
-                确认后，预览片段会随下一次问答发给聊天模型，作为理解问题的背景。检索仍使用你当前输入的问题。
+                {msg("确认后，预览片段会随下一次问答发给聊天模型，作为理解问题的背景。检索仍使用你当前输入的问题。")}
               </p>
               <div className="modal-actions">
                 <button disabled={working} onClick={() => setDialog("history")}>
-                  返回会话
+                  {msg("返回会话")}
                 </button>
                 <button
                   className="primary"
@@ -543,7 +545,7 @@ export function ConversationHeader({
                     setDialog(null);
                   }}
                 >
-                  加入本轮
+                  {msg("加入本轮")}
                 </button>
               </div>
             </>
@@ -559,7 +561,7 @@ export function ConversationHeader({
               }}
             >
               <label>
-                会话标题
+                {msg("会话标题")}
                 <input
                   autoFocus
                   maxLength={80}
@@ -569,7 +571,7 @@ export function ConversationHeader({
               </label>
               <div className="modal-actions">
                 <button className="primary" disabled={working || !title.trim()}>
-                  保存标题
+                  {msg("保存标题")}
                 </button>
               </div>
             </form>
@@ -577,11 +579,11 @@ export function ConversationHeader({
           {dialog === "delete" && (
             <>
               <p>
-                将删除此会话、问题、回答候选、来源快照和草稿。工作文档与角色进度保留。你自行保存的导出文件或旧备份仍可能含有历史内容。
+                {msg("将删除此会话、问题、回答候选、来源快照和草稿。工作文档与角色进度保留。你自行保存的导出文件或旧备份仍可能含有历史内容。")}
               </p>
               <div className="modal-actions">
                 <button disabled={working} onClick={() => setDialog(null)}>
-                  保留会话
+                  {msg("保留会话")}
                 </button>
                 <button
                   className="danger"
@@ -594,7 +596,7 @@ export function ConversationHeader({
                     })
                   }
                 >
-                  删除此会话
+                  {msg("删除此会话")}
                 </button>
               </div>
             </>
@@ -602,9 +604,9 @@ export function ConversationHeader({
           {dialog === "export" && (
             <>
               <label>
-                导出范围
+                {msg("导出范围")}
                 <select
-                  aria-label="会话导出范围"
+                  aria-label={msg("会话导出范围")}
                   value={exportScope}
                   onChange={(e) => {
                     setExportScope(e.target.value);
@@ -615,12 +617,12 @@ export function ConversationHeader({
                     );
                   }}
                 >
-                  <option value="current">当前分支与选中回答</option>
-                  <option value="all">全部分支与全部候选</option>
+                  <option value="current">{msg("当前分支与选中回答")}</option>
+                  <option value="all">{msg("全部分支与全部候选")}</option>
                 </select>
               </label>
               <p className="muted">
-                Markdown按所选范围导出；JSON包含完整会话、全部分支与来源快照。
+                {msg("Markdown按所选范围导出；JSON包含完整会话、全部分支与来源快照。")}
               </p>
               <label>
                 Markdown
@@ -639,7 +641,7 @@ export function ConversationHeader({
                       .catch(onError)
                   }
                 >
-                  复制 Markdown
+                  {msg("复制 Markdown")}
                 </button>
                 <button
                   onClick={() => {
@@ -654,7 +656,7 @@ export function ConversationHeader({
                     setTimeout(() => URL.revokeObjectURL(url), 1000);
                   }}
                 >
-                  下载 Markdown
+                  {msg("下载 Markdown")}
                 </button>
                 <button
                   onClick={() => {
@@ -669,7 +671,7 @@ export function ConversationHeader({
                     setTimeout(() => URL.revokeObjectURL(url), 1000);
                   }}
                 >
-                  下载 JSON
+                  {msg("下载 JSON")}
                 </button>
               </div>
             </>

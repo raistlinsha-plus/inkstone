@@ -142,8 +142,21 @@ async fn scoped_unindexed_short_file_answers_one_facet_without_sending_candidate
 }
 
 fn selected_turn(data: &Path, question: &str, attachment: bool) -> (assistant::Started, String) {
+    selected_turn_with_body(
+        data,
+        question,
+        attachment,
+        "# 通知\n云杉书屋营业至 19:30。\n灯塔讲座安排另行通知。合成干扰行。",
+    )
+}
+
+fn selected_turn_with_body(
+    data: &Path,
+    question: &str,
+    attachment: bool,
+    body: &str,
+) -> (assistant::Started, String) {
     let c = assistant::create(data, assistant::GENERAL_OWNER, None, "通用".into(), None).unwrap();
-    let body = "# 通知\n云杉书屋营业至 19:30。\n灯塔讲座安排另行通知。合成干扰行。";
     let (selection, id) = if attachment {
         let id = uuid::Uuid::new_v4().to_string();
         let conn = rusqlite::Connection::open(data.join("assistant.sqlite3")).unwrap();
@@ -1174,5 +1187,35 @@ fn related_context_keeps_strict_scope_and_rejects_known_conflicts() {
             evidence_reader::compatible_original_lines(q, &hit).is_empty(),
             "{q} / {bad}"
         );
+    }
+}
+
+#[tokio::test]
+async fn explicit_document_and_attachment_return_only_conditioned_original_lines() {
+    const QUESTION: &str = "白沙仓在检修期间要留几箱水，用什么登记领取人？";
+    const ACCEPTED: &str = "白沙仓在检修期间留存三箱水。";
+    const REJECTED: &str = "黑沙仓在检修期间用新表登记领取人。";
+    for attachment in [false, true] {
+        let data = tempfile::tempdir().unwrap();
+        let (state, listener) = setup(data.path(), false);
+        let (turn, id) = selected_turn_with_body(
+            data.path(),
+            QUESTION,
+            attachment,
+            &format!("# 原文\n{ACCEPTED}\n{REJECTED}"),
+        );
+        let server = serve(listener, 200, "留存三箱水[1]。资料未说明登记方式。", || {});
+        let answer =
+            assistant_runtime::general(None, &state, &turn, "q", "keyword", &Default::default())
+                .await
+                .unwrap();
+        assert_eq!(answer.external_sources.len(), 1, "{}", answer.text);
+        let source = &answer.external_sources[0];
+        assert_eq!(source.id, format!("{id}:2-2"));
+        assert_eq!(source.excerpt.as_deref(), (!attachment).then_some(ACCEPTED));
+        let request = server.join().unwrap();
+        let prompt = request["messages"][1]["content"].as_str().unwrap();
+        assert!(prompt.contains(RELATED_NOTE) && prompt.contains(ACCEPTED));
+        assert!(!prompt.contains(REJECTED));
     }
 }

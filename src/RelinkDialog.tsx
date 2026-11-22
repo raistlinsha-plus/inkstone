@@ -1,3 +1,4 @@
+import { msg } from "./i18n";
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { X } from "lucide-react";
@@ -129,7 +130,7 @@ export default function RelinkDialog({
   };
   return (
     <ModalDialog
-      label="重新关联链接"
+      label={msg("重新关联链接")}
       onClose={onClose}
       busy={busy}
       className="source-review-modal"
@@ -137,31 +138,31 @@ export default function RelinkDialog({
       <div className="modal-heading">
         <div>
           <span className="eyebrow">LINK REVIEW</span>
-          <h2>重新关联链接</h2>
+          <h2>{msg("重新关联链接")}</h2>
           <p>{document.title}</p>
         </div>
         <button
           className="icon-button"
           disabled={busy}
-          aria-label="关闭重新关联链接"
+          aria-label={msg("关闭重新关联链接")}
           onClick={onClose}
         >
           <X size={18} />
         </button>
       </div>
       <p className="muted">
-        只在当前空间查找已登记的文档，不要求外部原件在线。保存前保留历史；不改代码中的链接字面量。
+        {msg("只在当前空间查找已登记的文档，不要求外部原件在线。保存前保留历史；不改代码中的链接字面量。")}
       </p>
       {!preview && !busy && !saved && Object.keys(choices).length > 0 && (
-        <p role="status">目标选择已更改，请重新预览后保存。</p>
+        <p role="status">{msg("目标选择已更改，请重新预览后保存。")}</p>
       )}
       {error && (
         <p className="panel-warning" role="alert">
           {error}
         </p>
       )}
-      {saved && <p role="status">链接已保存，旧版本可从历史恢复。</p>}
-      {busy && <p role="status">正在核对链接与文档身份…</p>}
+      {saved && <p role="status">{msg("链接已保存，旧版本可从历史恢复。")}</p>}
+      {busy && <p role="status">{msg("正在核对链接与文档身份…")}</p>}
       <div className="relink-list">
         {preview?.links.map((link, i) => (
           <article key={link.url + ":" + i}>
@@ -169,7 +170,7 @@ export default function RelinkDialog({
             <code title={link.url}>{readableLinkName(link.url)}</code>
             {link.status === "ambiguous" && (
               <label>
-                关联目标
+                {msg("关联目标")}
                 <select
                   aria-label={`关联目标 ${link.url}`}
                   value={choices[link.url] ?? ""}
@@ -182,7 +183,7 @@ export default function RelinkDialog({
                     setPreview(null);
                   }}
                 >
-                  <option value="">保持不变，稍后处理</option>
+                  <option value="">{msg("保持不变，稍后处理")}</option>
                   {link.candidates.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.title} · {c.id.slice(0, 8)}
@@ -199,12 +200,12 @@ export default function RelinkDialog({
               </small>
             )}
             <details>
-              <summary>核对完整链接</summary>
-              <p>原链接</p>
+              <summary>{msg("核对完整链接")}</summary>
+              <p>{msg("原链接")}</p>
               <code>{link.url}</code>
               {link.replacement && (
                 <>
-                  <p>目标路径</p>
+                  <p>{msg("目标路径")}</p>
                   <code>{link.replacement}</code>
                 </>
               )}
@@ -213,7 +214,7 @@ export default function RelinkDialog({
         ))}
       </div>
       {!busy && preview?.links.length === 0 && (
-        <p>这篇文档没有需要重新关联的本地链接。</p>
+        <p>{msg("这篇文档没有需要重新关联的本地链接。")}</p>
       )}
       {preview?.warnings.map((w, i) => (
         <p className="panel-warning" key={i}>
@@ -223,18 +224,18 @@ export default function RelinkDialog({
       {preview && (
         <div className="source-comparison">
           <label>
-            当前内容
+            {msg("当前内容")}
             <textarea readOnly value={preview.currentContent} />
           </label>
           <label>
-            重新关联后的内容
+            {msg("重新关联后的内容")}
             <textarea readOnly value={preview.projectedContent} />
           </label>
         </div>
       )}
       <div className="modal-actions">
         <button className="button" disabled={busy} onClick={() => void load()}>
-          重新预览
+          {msg("重新预览")}
         </button>
         <div />
         <button
@@ -242,7 +243,7 @@ export default function RelinkDialog({
           disabled={busy || !changed}
           onClick={() => void apply()}
         >
-          保存链接关联
+          {msg("保存链接关联")}
         </button>
       </div>
     </ModalDialog>

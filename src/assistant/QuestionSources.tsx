@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -164,7 +165,7 @@ export default function QuestionSources({
   return (
     <section
       className="question-sources"
-      aria-label="本轮资料与选项"
+      aria-label={msg("本轮资料与选项")}
       onKeyDown={(event) => {
         if (event.key !== "Escape" || isImeEvent(event.nativeEvent) || !adding)
           return;
@@ -189,18 +190,18 @@ export default function QuestionSources({
           disabled={disabled || working}
         >
           <Plus size={14} />
-          {adding ? "完成选择" : "添加资料"}
+          {adding ? msg("完成选择") : msg("添加资料")}
         </button>
         {project && (
           <button
             type="button"
             className="question-source-chip"
-            aria-description="移除当前知识空间范围"
+            aria-description={msg("移除当前知识空间范围")}
             title={
               docs
                 .filter((doc) => documentIds.includes(doc.id))
                 .map((doc) => doc.title)
-                .join("、") || "移除整个空间"
+                .join("、") || msg("移除整个空间")
             }
             disabled={disabled || working}
             onClick={() =>
@@ -208,11 +209,11 @@ export default function QuestionSources({
             }
           >
             {project.title}
-            {documentIds.length ? ` · ${documentIds.length} 篇` : " · 整个空间"}
+            {documentIds.length ? ` · ${documentIds.length} 篇` : msg(" · 整个空间")}
             <X size={12} />
           </button>
         )}
-        {!project && !attachedIds.length && <small>未添加资料</small>}
+        {!project && !attachedIds.length && <small>{msg("未添加资料")}</small>}
         {files
           .filter((file) => attachedIds.includes(file.id))
           .map((file) => (
@@ -233,7 +234,7 @@ export default function QuestionSources({
       </div>
       {(staleDocumentScope || staleAttachments) && (
         <div role="alert">
-          草稿选定的部分资料已不可用。请重新确认本轮资料。
+          {msg("草稿选定的部分资料已不可用。请重新确认本轮资料。")}
           <button
             type="button"
             disabled={disabled || working}
@@ -248,7 +249,7 @@ export default function QuestionSources({
               })
             }
           >
-            移除失效选择
+            {msg("移除失效选择")}
           </button>
         </div>
       )}
@@ -257,7 +258,7 @@ export default function QuestionSources({
           id={pickerId}
           className="question-source-picker"
           role="group"
-          aria-label="选择本轮资料"
+          aria-label={msg("选择本轮资料")}
         >
           <div className="question-source-picker-actions">
             <button
@@ -266,7 +267,7 @@ export default function QuestionSources({
               onClick={() => void attach()}
             >
               <Paperclip size={15} />
-              附加临时文件
+              {msg("附加临时文件")}
             </button>
             {currentDocument && (
               <button
@@ -282,13 +283,13 @@ export default function QuestionSources({
                   });
                 }}
               >
-                添加当前文档
+                {msg("添加当前文档")}
               </button>
             )}
           </div>
           {!!view.projects.length && (
             <label>
-              知识空间
+              {msg("知识空间")}
               <select
                 value={browsing ? browsingId : ""}
                 disabled={disabled || working}
@@ -297,7 +298,7 @@ export default function QuestionSources({
                   setDocumentQuery("");
                 }}
               >
-                <option value="">选择要浏览的空间</option>
+                <option value="">{msg("选择要浏览的空间")}</option>
                 {view.projects.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.title}
@@ -312,8 +313,8 @@ export default function QuestionSources({
                 {browsingId === project?.id
                   ? browsingSelection.length
                     ? `本轮已选 ${browsingSelection.length} 篇，最多 5 篇。`
-                    : "本轮使用整个空间。勾选文档可缩小范围。"
-                  : "选择文档或整个空间后才会加入本轮。"}
+                    : msg("本轮使用整个空间。勾选文档可缩小范围。")
+                  : msg("选择文档或整个空间后才会加入本轮。")}
               </small>
               <button
                 type="button"
@@ -332,20 +333,20 @@ export default function QuestionSources({
                   })
                 }
               >
-                使用整个空间
+                {msg("使用整个空间")}
               </button>
               {browsingDocs.length > 5 && (
                 <input
                   type="search"
-                  aria-label="筛选空间文档"
-                  placeholder="筛选文档标题…"
+                  aria-label={msg("筛选空间文档")}
+                  placeholder={msg("筛选文档标题…")}
                   value={documentQuery}
                   onChange={(e) => setDocumentQuery(e.target.value)}
                 />
               )}
               {!visibleDocs.length && (
                 <small>
-                  {filter ? "没有匹配的文档。" : "空间中还没有可用文档。"}
+                  {filter ? msg("没有匹配的文档。") : msg("空间中还没有可用文档。")}
                 </small>
               )}
               {visibleDocs.map((doc) => (
@@ -398,18 +399,18 @@ export default function QuestionSources({
                     disabled={disabled || working}
                     onClick={() => void remove(file)}
                   >
-                    删除附件
+                    {msg("删除附件")}
                   </button>
                 </div>
               ))}
             </div>
           )}
           <small>
-            所选资料可发送给已配置的聊天模型。本轮发送后将清除资料选择。
+            {msg("所选资料可发送给已配置的聊天模型。本轮发送后将清除资料选择。")}
           </small>
         </div>
       )}
-      {working && <p role="status">正在处理附件…</p>}
+      {working && <p role="status">{msg("正在处理附件…")}</p>}
       {error && <p role="alert">{error}</p>}
     </section>
   );

@@ -15,6 +15,7 @@ pub(crate) fn unresolved(question: &str, fast: &[SearchResult]) -> Vec<String> {
     // value is present. Bind compound questions to exact quotes before generation.
     if fast.is_empty()
         || facets.len() > 1
+        || evidence_reader::named_value::Naming::parse(question).is_some()
         || crate::assistant::grounding::weekday(question).is_some()
     {
         facets
@@ -35,7 +36,7 @@ pub(crate) fn fast_context(
     if found.strict_reader_floor.is_none() && gate.is_none() {
         return retrieval::generation_context(ws, &found.results, budget, scope.is_some());
     }
-    approved_ranges(ws, found, budget, scope, gate)
+    approved_ranges(ws, found, budget, scope, gate, false)
 }
 
 fn approved_ranges(
@@ -44,11 +45,18 @@ fn approved_ranges(
     budget: usize,
     scope: Option<&str>,
     gate: Option<&FollowupGate>,
+    include_scoped_clues: bool,
 ) -> Vec<SearchResult> {
     let mut sources = Vec::new();
     let mut originals = HashMap::new();
     let mut remaining = budget;
-    for hit in found.results.iter().filter(|s| s.evidence) {
+    for hit in found.results.iter().filter(|s| {
+        s.evidence
+            || (include_scoped_clues
+                && scope.is_some()
+                && found.strict_reader_floor.is_none()
+                && s.match_kind == "scoped-related")
+    }) {
         if scope.is_some_and(|p| p != hit.path)
             || found
                 .strict_reader_floor
@@ -98,15 +106,24 @@ pub(crate) fn related_originals(
     gate: Option<&FollowupGate>,
     question: &str,
 ) -> Vec<SearchResult> {
-    if gate.is_some() {
+    let question = retrieval::knowledge_query(question);
+    if gate.is_some_and(|g| {
+        g.named_subject.is_none()
+            || evidence_reader::scoped_clause::Frame::parse(&question).is_none()
+    }) {
         return vec![];
     }
-    let question = retrieval::knowledge_query(question);
     let mut sources = Vec::new();
     // Keep original approved indexes/ranges and the exact retrieved order.
     // Nothing in the reader's broader candidate pool can enter here.
-    for hit in approved_ranges(ws, found, budget, scope, None) {
-        for part in evidence_reader::compatible_original_lines(&question, &hit) {
+    for hit in approved_ranges(ws, found, budget, scope, gate, true) {
+        let lines = if gate.is_some() {
+            evidence_reader::scoped_clause::Frame::parse(&question)
+                .map_or_else(Vec::new, |frame| frame.related(&hit))
+        } else {
+            evidence_reader::compatible_original_lines(&question, &hit)
+        };
+        for part in lines {
             if sources.iter().any(|s: &SearchResult| {
                 s.path == part.path
                     && s.start_line == part.start_line
@@ -356,14 +373,17 @@ pub(crate) async fn review(
                 Ok(key) => {
                     calls = 1;
                     outcome = "provider";
-                    providers::json_completion(
-                        &state.client,
-                        config,
-                        key.as_deref(),
-                        evidence_reader::SYSTEM_PROMPT,
-                        &payload,
-                        &state.cancel_chat,
-                        1,
+                    crate::request_receipt::structured(
+                        crate::request_receipt::Service::ReviewPassages,
+                        providers::json_completion(
+                            &state.client,
+                            config,
+                            key.as_deref(),
+                            evidence_reader::SYSTEM_PROMPT,
+                            &payload,
+                            &state.cancel_chat,
+                            1,
+                        ),
                     )
                     .await
                 }
@@ -582,7 +602,12 @@ pub(crate) async fn scoped_context(
     let fast = crate::assistant_runtime::local_first(budget, has_web, |n| {
         fast_context(ws, found, n, scope, gate)
     });
-    let facets = unresolved(&retrieval::knowledge_query(question), &fast);
+    let current_question = retrieval::knowledge_query(question);
+    let facets = if gate.is_some_and(|g| g.named_subject.is_some()) {
+        evidence_reader::split_facets(&current_question)
+    } else {
+        unresolved(&current_question, &fast)
+    };
     let mut context = ScopedContext {
         coverage: FacetCoverage::default(),
         sources: if facets.is_empty() { fast } else { vec![] },

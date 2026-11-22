@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { useLayoutEffect, useRef, useState } from "react";
 
 const minWidth = 300;
@@ -43,7 +44,7 @@ export default function KnowledgePanelResizer({
       ref={handle}
       className="panel-resize"
       role="separator"
-      aria-label="知识侧栏宽度"
+      aria-label={msg("知识侧栏宽度")}
       aria-orientation="vertical"
       aria-valuemin={minWidth}
       aria-valuemax={bounds.max}

@@ -269,6 +269,7 @@ pub async fn assistant_ask(
     sources: Option<crate::assistant_sources::Selection>,
     web_access: Option<crate::assistant_sources::WebAccess>,
 ) -> Result<assistant::Conversation, String> {
+    crate::request_receipt::observe(async {
     let _busy = crate::begin_chat(&state, &request_id)?;
     let options = memory_options.unwrap_or_default();
     if general == Some(true) {
@@ -405,4 +406,5 @@ pub async fn assistant_ask(
         return Err("资料空间已变化，请在当前空间继续问答".into());
     }
     result
+    }).await
 }

@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import type { SearchResult } from "../types";
 const basename = (path: string) => path.split("/").at(-1) ?? path;
 export default function Sources({
@@ -28,12 +29,12 @@ export default function Sources({
             }
           >
             {s.evidence === false
-              ? "待核实候选"
+              ? msg("待核实候选")
               : s.matchKind === "reranked"
-                ? "关键词 + 重排"
-                : "关键词命中"}
+                ? msg("关键词 + 重排")
+                : msg("关键词命中")}
           </small>
-          <p>{s.heading || "正文"}</p>
+          <p>{s.heading || msg("正文")}</p>
           <span className="source-excerpt">
             {s.text.slice(0, 135)}
             {s.text.length > 135 ? "…" : ""}

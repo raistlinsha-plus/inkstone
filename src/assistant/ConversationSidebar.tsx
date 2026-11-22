@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { MessageSquare, MessageSquarePlus } from "lucide-react";
 import type { ConversationSummary } from "./types";
 
@@ -20,21 +21,21 @@ export default function ConversationSidebar({
     (row) => !row.archived || row.id === activeId,
   );
   return (
-    <section className="workbench-history" aria-label="最近会话">
+    <section className="workbench-history" aria-label={msg("最近会话")}>
       <button
         className="workbench-new-chat"
         type="button"
-        title="新建会话"
+        title={msg("新建会话")}
         disabled={disabled}
         onClick={onNew}
       >
         <MessageSquarePlus size={16} />
-        新建会话
+        {msg("新建会话")}
       </button>
-      <h2>最近会话</h2>
+      <h2>{msg("最近会话")}</h2>
       {!recent.length && (
         <p role="status">
-          {loading ? "正在读取会话…" : "发送问题后，会话将出现在这里。"}
+          {loading ? msg("正在读取会话…") : msg("发送问题后，会话将出现在这里。")}
         </p>
       )}
       <ul>
@@ -50,7 +51,7 @@ export default function ConversationSidebar({
               <MessageSquare size={15} />
               <span>
                 {row.title}
-                {row.archived && " · 已归档"}
+                {row.archived && msg(" · 已归档")}
               </span>
             </button>
           </li>

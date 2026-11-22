@@ -87,6 +87,20 @@ fn qualifiers(text: &str) -> Vec<String> {
     for (at, unit) in text.match_indices(['年', '月', '日', '号', '版']) {
         let digits = text[..at].rsplit(|c| !numeric_char(c)).next().unwrap_or("");
         if !digits.is_empty() {
+            // A room, route, platform or asset number is not a second calendar
+            // date. An explicit month still establishes an ordinary day.
+            let after = &text[at + unit.len()..];
+            if unit == "号"
+                && !text[..at - digits.len()].ends_with('月')
+                && [
+                    "房", "线", "楼", "门", "桌", "床", "台", "站", "浮台", "站台", "窗口", "车厢",
+                    "柜", "座位", "文件",
+                ]
+                .iter()
+                .any(|noun| after.starts_with(noun))
+            {
+                continue;
+            }
             out.push(format!("{digits}{unit}"));
         }
     }

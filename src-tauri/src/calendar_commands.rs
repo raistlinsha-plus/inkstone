@@ -40,9 +40,8 @@ pub async fn calendar_save(
         };
         let before = files::read_text(&files::resolve(&ws.root, &doc.path, false)?)?;
         calendar::validate_edit(&before, &content)?;
-        let result = documents::save(&ws, &data, &doc.path, &content, &expected_hash)?;
-        // Projection is disposable; a cache error must not report the authoritative save as failed.
-        let _ = calendar::refresh(&data, &project_id);
+        let result = documents::save_if_clean(&ws, &data, &doc.path, &content, &expected_hash)?;
+        // documents::save_if_clean refreshes just this document's projection under its write lock.
         Ok(result)
     })
     .await

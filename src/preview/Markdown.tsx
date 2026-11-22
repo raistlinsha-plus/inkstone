@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import {
   useEffect,
   useId,
@@ -14,6 +15,7 @@ import {
   type MarkdownNode,
 } from "../content/blocks";
 import { replaceRange } from "../session";
+import { taskAnnotation } from "../content/tasks";
 import { isSafeBreak } from "../rich/markdown";
 import { blockTypes } from "../rich/blocks";
 import type { SearchResult } from "../types";
@@ -80,7 +82,7 @@ function LocalImage({
     <img src={src} alt={alt} onError={() => setFailed(true)} />
   ) : (
     <span className="preview-help">
-      [{failed ? "图片不可读取" : readOnly ? "图片未自动加载" : "本地图片"}：
+      [{failed ? msg("图片不可读取") : readOnly ? msg("图片未自动加载") : msg("本地图片")}：
       {alt || url}]
     </span>
   );
@@ -296,7 +298,9 @@ export default function Markdown({
         ) : (
           <ul key={key}>{children()}</ul>
         );
-      case "listItem":
+      case "listItem": {
+        const annotation = taskAnnotation(node);
+        const first = node.children?.[0];
         return (
           <li key={key}>
             {typeof node.checked === "boolean" && (
@@ -305,12 +309,14 @@ export default function Markdown({
                 checked={node.checked}
                 readOnly
                 disabled
-                aria-label={node.checked ? "已完成任务" : "未完成任务"}
+                aria-label={node.checked ? msg("已完成任务") : msg("未完成任务")}
               />
             )}{" "}
-            {children()}
+            {annotation && first ? [render({...first, children:first.children?.filter(n=>n!==annotation.node)},key+":title",allowCitations),
+              ...node.children!.slice(1).map((child,i)=>render(child,key+":child"+i,allowCitations))] : children()}
           </li>
         );
+      }
       case "table": {
         const rows = node.children ?? [];
         return (
@@ -452,11 +458,11 @@ export default function Markdown({
                 {known
                   ? blockTypes[language as keyof typeof blockTypes].label
                   : language}{" "}
-                · 第 {node.position.start.line} 行
+                {msg("· 第")} {node.position.start.line} {msg("行")}
               </span>
               {!readOnly && onLocate && (
                 <button onClick={() => onLocate(node.position.start.line)}>
-                  编辑源码
+                  {msg("编辑源码")}
                 </button>
               )}
               <button
@@ -466,7 +472,7 @@ export default function Markdown({
                     .catch((e) => onError?.(String(e)))
                 }
               >
-                复制
+                {msg("复制")}
               </button>
             </div>
             {known && block && !pending && !rejected ? (
@@ -502,10 +508,10 @@ export default function Markdown({
                 {known && (
                   <p className="preview-help">
                     {rejected
-                      ? "图表数值或来源待核实，暂以原文显示。"
+                      ? msg("图表数值或来源待核实，暂以原文显示。")
                       : pending
-                        ? "内容尚未完成，暂以原文显示。"
-                        : "代码围栏尚未闭合，原文已保留。"}
+                        ? msg("内容尚未完成，暂以原文显示。")
+                        : msg("代码围栏尚未闭合，原文已保留。")}
                   </p>
                 )}
                 <pre>

@@ -41,6 +41,7 @@ mod local_acceptance;
 mod maintenance;
 mod models;
 mod providers;
+mod request_receipt;
 mod retrieval;
 mod web_retrieval;
 mod wiki;
@@ -2055,7 +2056,7 @@ async fn ask_pipeline(
         usage
     });
     let prompt = format!("资料开始\n{context}\n资料结束\n\n问题：{question_for_model}");
-    let mut output = providers::stream_chat(
+    let mut output = crate::request_receipt::with_sources(&sources, &external, providers::stream_chat(
         &state.client,
         &config,
         key.as_deref(),
@@ -2064,7 +2065,7 @@ async fn ask_pipeline(
         &state.cancel_chat,
         app,
         request_id,
-    )
+    ))
     .await;
     if provider_reviewed && !candidate_reading::provider_allowed(state, &config)? {
         return Err("候选核对的传输设置已变化，已撤回本轮结果".into());
@@ -2829,6 +2830,10 @@ pub fn run() {
             assistant_commands::assistant_export,
             assistant_commands::assistant_select_candidate,
             assistant_commands::assistant_ask,
+            assistant::tasks::task_document,
+            assistant::tasks::task_save_from_chat,
+            assistant::tasks::task_origin,
+            assistant::tasks::task_extract,
             assistant::attachments::assistant_attachment_add,
             assistant::attachments::assistant_attachment_list,
             assistant::attachments::assistant_attachment_read,

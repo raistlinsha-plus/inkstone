@@ -1,0 +1,185 @@
+{
+  "suite": "rc4-blind",
+  "syntheticOnly": true,
+  "gatedLiveRuns": [
+    {
+      "status": "incomplete",
+      "error": "keychain-authorization-pending",
+      "httpAttempts": 0,
+      "waitMs": 300415,
+      "scored": false
+    },
+    {
+      "status": "incomplete",
+      "error": "keychain-authorization-pending",
+      "httpAttempts": 0,
+      "waitMs": 300322,
+      "scored": false
+    }
+  ],
+  "pins": {
+    "packet.json": "82ad39942669040f9aabdd704935f71a451a23d7a2845e97b30ae636a1132038",
+    "labels.json": "8932b7c5fb8fe9ca8f704f7dde82afcb5afdcd779f6004350714200133c11fe5",
+    "RUBRIC.md": "946d28ddb306fd2df2120d334a6fbf1decfbea3b2602616eb6cfa14df9be2225"
+  },
+  "offline": {
+    "RC.4": {
+      "version": "1.0.0-rc.4",
+      "httpAttempts": 0,
+      "turnMsP50": 40.5,
+      "turnMsP95": 92,
+      "groups": {
+        "paired": {
+          "turns": 40,
+          "availablePoints": 53,
+          "top8": 50,
+          "admitted": 21,
+          "context": 15,
+          "verifiedQuotePoints": 0,
+          "prematureClarifications": 2,
+          "finalContextWithLabelledDistractors": 12,
+          "scopeEscapes": 0
+        },
+        "partial": {
+          "turns": 13,
+          "availablePoints": 13,
+          "top8": 12,
+          "admitted": 5,
+          "context": 3,
+          "verifiedQuotePoints": 0,
+          "prematureClarifications": 1,
+          "finalContextWithLabelledDistractors": 4,
+          "scopeEscapes": 0
+        },
+        "followups": {
+          "turns": 10,
+          "availablePoints": 13,
+          "top8": 10,
+          "admitted": 0,
+          "context": 0,
+          "verifiedQuotePoints": 0,
+          "prematureClarifications": 2,
+          "finalContextWithLabelledDistractors": 0,
+          "scopeEscapes": 0
+        },
+        "absent": {
+          "turns": 7,
+          "availablePoints": 0,
+          "top8": 0,
+          "admitted": 0,
+          "context": 0,
+          "verifiedQuotePoints": 0,
+          "prematureClarifications": 0,
+          "finalContextWithLabelledDistractors": 1,
+          "scopeEscapes": 0
+        },
+        "setup": {
+          "turns": 10,
+          "availablePoints": 10,
+          "top8": 4,
+          "admitted": 0,
+          "context": 0,
+          "verifiedQuotePoints": 0,
+          "prematureClarifications": 6,
+          "finalContextWithLabelledDistractors": 0,
+          "scopeEscapes": 0
+        }
+      },
+      "legacy40": {
+        "complete": 22,
+        "positive": 34,
+        "coveredPoints": 32,
+        "totalPoints": 48,
+        "scopeEscapes": 0
+      },
+      "legacy12": {
+        "positive": 9,
+        "complete": 9
+      },
+      "precomputed64": {
+        "positive": 52,
+        "complete": 49,
+        "externalCalls": 0
+      }
+    },
+    "1.2-integration": {
+      "version": "1.2.0-beta.1",
+      "httpAttempts": 0,
+      "turnMsP50": 14.0,
+      "turnMsP95": 17,
+      "groups": {
+        "paired": {
+          "turns": 40,
+          "availablePoints": 53,
+          "top8": 50,
+          "admitted": 23,
+          "context": 21,
+          "verifiedQuotePoints": 2,
+          "prematureClarifications": 2,
+          "finalContextWithLabelledDistractors": 10,
+          "scopeEscapes": 0
+        },
+        "partial": {
+          "turns": 13,
+          "availablePoints": 13,
+          "top8": 12,
+          "admitted": 5,
+          "context": 4,
+          "verifiedQuotePoints": 1,
+          "prematureClarifications": 1,
+          "finalContextWithLabelledDistractors": 3,
+          "scopeEscapes": 0
+        },
+        "followups": {
+          "turns": 10,
+          "availablePoints": 13,
+          "top8": 10,
+          "admitted": 2,
+          "context": 2,
+          "verifiedQuotePoints": 0,
+          "prematureClarifications": 2,
+          "finalContextWithLabelledDistractors": 0,
+          "scopeEscapes": 0
+        },
+        "absent": {
+          "turns": 7,
+          "availablePoints": 0,
+          "top8": 0,
+          "admitted": 0,
+          "context": 0,
+          "verifiedQuotePoints": 0,
+          "prematureClarifications": 0,
+          "finalContextWithLabelledDistractors": 1,
+          "scopeEscapes": 0
+        },
+        "setup": {
+          "turns": 10,
+          "availablePoints": 10,
+          "top8": 10,
+          "admitted": 2,
+          "context": 2,
+          "verifiedQuotePoints": 2,
+          "prematureClarifications": 0,
+          "finalContextWithLabelledDistractors": 0,
+          "scopeEscapes": 0
+        }
+      },
+      "legacy40": {
+        "complete": 24,
+        "positive": 34,
+        "coveredPoints": 34,
+        "totalPoints": 48,
+        "scopeEscapes": 0
+      },
+      "legacy12": {
+        "positive": 9,
+        "complete": 9
+      },
+      "precomputed64": {
+        "positive": 52,
+        "complete": 49,
+        "externalCalls": 0
+      }
+    }
+  }
+}

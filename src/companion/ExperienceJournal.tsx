@@ -1,6 +1,7 @@
+import { msg } from "../i18n";
 import { useState } from "react";
 import {
-  characters,
+  characterProfiles,
   type Snapshot,
   type ExperienceCard,
   type Pending,
@@ -42,22 +43,22 @@ export default function ExperienceJournal({
   } as const;
   return (
     <>
-      <h3>{spaceId ? "当前空间的经历卡" : "所有空间的经历卡"}</h3>
+      <h3>{spaceId ? msg("当前空间的经历卡") : msg("所有空间的经历卡")}</h3>
       <p>
-        普通保存不计成长；确认后每日最多两条，同一文档同日只计一次。时区：
+        {msg("普通保存不计成长；确认后每日最多两条，同一文档同日只计一次。时区：")}
         {snapshot.timezone}
       </p>
       <div className="companion-journal-filters">
         <label>
-          角色
+          {msg("角色")}
           <select
             value={role}
             onChange={(event) =>
               setRole(event.target.value as CharacterId | "")
             }
           >
-            <option value="">全部角色</option>
-            {Object.entries(characters).map(([id, character]) => (
+            <option value="">{msg("全部角色")}</option>
+            {Object.entries(characterProfiles()).map(([id, character]) => (
               <option key={id} value={id}>
                 {character.name}
               </option>
@@ -65,7 +66,7 @@ export default function ExperienceJournal({
           </select>
         </label>
         <label>
-          起始日期
+          {msg("起始日期")}
           <input
             type="date"
             value={since}
@@ -75,28 +76,28 @@ export default function ExperienceJournal({
       </div>
       {snapshot.pending.map((p) => (
         <div key={p.token} className="companion-pending-card">
-          <p>经历待保存：{p.text}</p>
+          <p>{msg("经历待保存：")}{p.text}</p>
           <div>
             <button
               disabled={busy || spaceId !== p.receipt.spaceId}
               onClick={() => onRetry(p)}
             >
-              重试保存
+              {msg("重试保存")}
             </button>
             <button disabled={busy} onClick={() => onCard(p.eventId, null)}>
-              删除待存内容
+              {msg("删除待存内容")}
             </button>
           </div>
           {spaceId !== p.receipt.spaceId && (
-            <small>请切回该经历所属空间重试。</small>
+            <small>{msg("请切回该经历所属空间重试。")}</small>
           )}
         </div>
       ))}
       {!cards.length && (
         <p className="companion-empty">
           {role || since
-            ? "没有符合筛选条件的经历。"
-            : "尚未记录经历。完成并保存一份文档后，可主动确认。"}
+            ? msg("没有符合筛选条件的经历。")
+            : msg("尚未记录经历。完成并保存一份文档后，可主动确认。")}
         </p>
       )}
       {cards.map((c) => (
@@ -104,7 +105,7 @@ export default function ExperienceJournal({
           {editing?.id === c.id ? (
             <>
               <textarea
-                aria-label="修改经历卡"
+                aria-label={msg("修改经历卡")}
                 disabled={busy || saving}
                 maxLength={160}
                 value={editing.text}
@@ -128,25 +129,25 @@ export default function ExperienceJournal({
                   }
                 }}
               >
-                {saving ? "正在保存…" : "保存修改"}
+                {saving ? msg("正在保存…") : msg("保存修改")}
               </button>
               <button disabled={saving} onClick={() => setEditing(null)}>
-                取消
+                {msg("取消")}
               </button>
               {saveError && <p role="alert">{saveError}</p>}
             </>
           ) : (
             <>
               <small>
-                {c.day} · {characters[c.characterId]?.name ?? "同伴"} ·{" "}
-                {c.kind === "revision" ? "复盘" : "完成"}
+                {c.day} · {characterProfiles()[c.characterId]?.name ?? msg("同伴")} ·{" "}
+                {c.kind === "revision" ? msg("复盘") : msg("完成")}
                 {spaceId && (
                   <>
                     {" "}
                     ·{" "}
                     {sourceStatuses?.[c.id]
                       ? statuses[sourceStatuses[c.id]]
-                      : "来源待核验"}
+                      : msg("来源待核验")}
                   </>
                 )}
               </small>
@@ -156,7 +157,7 @@ export default function ExperienceJournal({
                   disabled={busy || saving}
                   onClick={() => onOpenSource(c.id)}
                 >
-                  打开来源
+                  {msg("打开来源")}
                 </button>
               )}
               <button
@@ -166,10 +167,10 @@ export default function ExperienceJournal({
                   setEditing({ ...c });
                 }}
               >
-                编辑
+                {msg("编辑")}
               </button>
               <button disabled={busy} onClick={() => onCard(c.id, null)}>
-                删除卡片文字
+                {msg("删除卡片文字")}
               </button>
             </>
           )}

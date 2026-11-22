@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import ModalDialog from "../ModalDialog";
@@ -108,17 +109,16 @@ export default function WebSearchSettings({
 
   return (
     <ModalDialog
-      label="自动联网设置"
+      label={msg("自动联网设置")}
       className="settings-modal web-search-settings"
       busy={busy}
       onClose={onClose}
     >
-      <h2>自动联网</h2>
+      <h2>{msg("自动联网")}</h2>
       <p>
-        配置 Brave Search
-        后，模型按问题判断是否查公开资料。搜索接口可使用系统代理，候选网页只允许安全直连。
+        {msg("配置 Brave Search 后，模型按问题判断是否查公开资料。搜索接口可使用系统代理，候选网页只允许安全直连。")}
       </p>
-      {!settings && !error && <p role="status">正在读取搜索设置…</p>}
+      {!settings && !error && <p role="status">{msg("正在读取搜索设置…")}</p>}
       {settings && (
         <form
           onSubmit={(event) => {
@@ -133,15 +133,15 @@ export default function WebSearchSettings({
               onChange={(e) => setEnabled(e.target.checked)}
               disabled={busy || testing}
             />
-            允许模型按需联网
+            {msg("允许模型按需联网")}
           </label>
           <label className="web-search-key">
-            Brave Search API 密钥
+            {msg("Brave Search API 密钥")}
             <input
               type="password"
               autoComplete="off"
               value={key}
-              placeholder={settings.hasKey ? "已保存 · 留空保留" : "输入密钥"}
+              placeholder={settings.hasKey ? msg("已保存 · 留空保留") : msg("输入密钥")}
               disabled={busy || testing || clear}
               onChange={(e) => {
                 setKey(e.target.value);
@@ -164,10 +164,10 @@ export default function WebSearchSettings({
                   }
                 }}
               />
-              删除已保存的搜索密钥
+              {msg("删除已保存的搜索密钥")}
             </label>
           )}
-          <section className="web-search-diagnostic" aria-label="连接诊断">
+          <section className="web-search-diagnostic" aria-label={msg("连接诊断")}>
             <button
               type="button"
               className="button"
@@ -175,14 +175,13 @@ export default function WebSearchSettings({
               aria-describedby="web-search-test-description"
               onClick={() => void testConnection()}
             >
-              测试连接
+              {msg("测试连接")}
             </button>
             <p id="web-search-test-description">
-              发送一条固定的公开查询，并尝试读取候选网页的正文。测试可能计入
-              Brave 用量，可在自动联网关闭时运行，且不会保存密钥或设置。
+              {msg("发送一条固定的公开查询，并尝试读取候选网页的正文。测试可能计入 Brave 用量，可在自动联网关闭时运行，且不会保存密钥或设置。")}
             </p>
             <div role="status" aria-atomic="true">
-              {testing && <p>正在测试 Brave Search…</p>}
+              {testing && <p>{msg("正在测试 Brave Search…")}</p>}
               {diagnostic && (
                 <>
                   <p>{diagnosticMessages[diagnostic.status]}</p>
@@ -195,13 +194,13 @@ export default function WebSearchSettings({
                         <li>HTTP {diagnostic.httpStatus}</li>
                       )}
                       {diagnostic.searchElapsedMs != null && (
-                        <li>搜索耗时 {diagnostic.searchElapsedMs} ms</li>
+                        <li>{msg("搜索耗时")} {diagnostic.searchElapsedMs} ms</li>
                       )}
                       {diagnostic.candidateCount != null && (
-                        <li>{diagnostic.candidateCount} 条可尝试的候选</li>
+                        <li>{diagnostic.candidateCount} {msg("条可尝试的候选")}</li>
                       )}
                       {diagnostic.pageElapsedMs != null && (
-                        <li>网页读取 {diagnostic.pageElapsedMs} ms</li>
+                        <li>{msg("网页读取")} {diagnostic.pageElapsedMs} ms</li>
                       )}
                     </ul>
                   )}
@@ -216,7 +215,7 @@ export default function WebSearchSettings({
               disabled={busy}
               onClick={onClose}
             >
-              取消
+              {msg("取消")}
             </button>
             <button
               type="submit"
@@ -227,7 +226,7 @@ export default function WebSearchSettings({
                 (enabled && (clear || (!settings.hasKey && !key.trim())))
               }
             >
-              保存
+              {msg("保存")}
             </button>
           </div>
         </form>

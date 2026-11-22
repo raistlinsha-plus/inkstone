@@ -10,6 +10,8 @@ Inkstone is a local-first Markdown workspace for **macOS 13+ on Apple Silicon**.
 
 **Trying RC.4?** Open a note and ask two things at once. Follow each citation back to the note to see which parts it answers. You can opt in to an extra quotation check by your chat provider, grant another tool read-only search in one space, or preview which Wiki versions a source withdrawal would remove. The candidate still misses supported answers. In a blind AI review, 15 of 40 test answers met all accuracy and citation criteria, the same score as RC.3. [RC.4 behavior and evaluation](docs/DELIVERY-v1.0.0-rc.4.md) · [CLI guide](docs/EXTERNAL-TOOLS.zh-CN.md)
 
+**In the 1.2 development build**, select a passage in a conversation, edit its suggested action and save it into a Markdown note. Add a due date or a work session, then jump back to the note from the calendar. The desktop interface supports English and Simplified Chinese. [English guide](docs/USER-MANUAL.en.md) · [Candidate test results (中文)](docs/DELIVERY-v1.2.0-beta.1.md)
+
 ## What you can do
 
 - **Keep your own documents.** Copy-import Markdown, TXT, JSON or Mermaid files into a space. Edit the copies, compare later changes with the originals, and export your work. Use source and rich editing side by side for tables, JSON trees, diagrams, mindmaps, calendar entries and constrained ECharts charts.
@@ -19,7 +21,7 @@ Inkstone is a local-first Markdown workspace for **macOS 13+ on Apple Silicon**.
 
 ## Try it from source
 
-The GitHub release provides a source archive and SHA-256 checksum. The desktop interface is in Chinese. To run it on your Mac, install Apple's command-line developer tools, Node **24.14.0**, npm **11.9.0** and Rust **1.99.1**. [Pinned toolchain](toolchain.json)
+The GitHub release provides a source archive and SHA-256 checksum. The tagged RC.4 desktop interface uses Simplified Chinese. To run it on your Mac, install Apple's command-line developer tools, Node **24.14.0**, npm **11.9.0** and Rust **1.99.1**. [Pinned toolchain](toolchain.json)
 
 ```sh
 git clone --branch v1.0.0-rc.4 https://github.com/raistlinsha-plus/inkstone.git

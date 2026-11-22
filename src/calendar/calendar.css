@@ -480,3 +480,26 @@
 :root[data-theme="dark"] :is(.inkstone-calendar, .project-calendar-container) {
   color-scheme: dark;
 }
+
+.task-section-switch, .task-actions, .task-filters, .task-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.task-section-switch { padding-block: 8px; }
+.task-section-switch button[aria-pressed=true] { background: var(--ui-selected); color: var(--ui-accent); }
+.task-filters label, .task-fields label { display: flex; align-items: center; gap: 6px; }
+.task-filters select { max-width: min(300px,100%); }
+.task-list ul { padding: 0; margin-block: 16px; list-style: none; }
+.task-list li { display: flex; gap: 12px; align-items: center; border-bottom: 1px solid var(--ui-line); padding: 8px 0; }
+.task-list .task-open { flex: 1; min-width: 0; border: 0; background: transparent; text-align: start; overflow-wrap: anywhere; }
+.task-list .task-open small, .task-form header span { display: block; color: var(--ui-muted); }
+.task-list .calendar-source { max-width: 35%; overflow-wrap: anywhere; }
+.task-form { border: 1px solid var(--ui-line); border-radius: 8px; padding: 14px; margin-block: 12px; }
+.task-form header, .task-form fieldset { display: grid; gap: 12px; }
+.task-form fieldset { border: 0; padding: 12px 0; min-width: 0; }
+.task-form input:not([type=checkbox]), .task-filters select { border-radius: 6px; padding: 5px 8px; }
+.task-form label input { margin-inline-start: 6px; }
+.task-form details summary { cursor: pointer; }
+.task-actions { justify-content: flex-end; padding-top: 8px; }

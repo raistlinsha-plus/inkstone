@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import {
   useCallback,
   useEffect,
@@ -338,36 +339,36 @@ export default function Graph({
       <div className="graph-actions">
         <span className="graph-kind">
           {kind === "mermaid"
-            ? "Mermaid 图表"
+            ? msg("Mermaid 图表")
             : kind === "chart"
-              ? "数据图表"
-              : "脑图"}
+              ? msg("数据图表")
+              : msg("脑图")}
         </span>
         {kind !== "chart" && (
           <>
             <button
               onClick={() => send({ type: "command", action: "in" })}
-              aria-label="放大图表"
+              aria-label={msg("放大图表")}
             >
               <ZoomIn size={16} aria-hidden="true" />
             </button>
             <button
               onClick={() => send({ type: "command", action: "out" })}
-              aria-label="缩小图表"
+              aria-label={msg("缩小图表")}
             >
               <ZoomOut size={16} aria-hidden="true" />
             </button>
             <button onClick={() => send({ type: "command", action: "fit" })}>
-              适应窗口
+              {msg("适应窗口")}
             </button>
             {kind === "mindmap" && (
               <>
                 <button
                   onClick={() => send({ type: "command", action: "actual" })}
                 >
-                  原始比例
+                  {msg("原始比例")}
                 </button>
-                <output aria-label="脑图缩放比例">{zoom}%</output>
+                <output aria-label={msg("脑图缩放比例")}>{zoom}%</output>
               </>
             )}
           </>
@@ -378,7 +379,7 @@ export default function Graph({
             onClick={() => setCanvasExpanded(!canvasExpanded)}
           >
             {canvasExpanded ? <Minimize2 size={15} /> : <Expand size={15} />}
-            {canvasExpanded ? "收起画布" : "展开画布"}
+            {canvasExpanded ? msg("收起画布") : msg("展开画布")}
           </button>
         )}
         <button
@@ -386,7 +387,7 @@ export default function Graph({
           onClick={() => send({ type: "command", action: "export" })}
         >
           <Download size={15} aria-hidden="true" />
-          导出 SVG
+          {msg("导出 SVG")}
         </button>
         {kind === "chart" && (
           <button
@@ -396,13 +397,13 @@ export default function Graph({
             }
           >
             <Download size={15} aria-hidden="true" />
-            导出 PNG
+            {msg("导出 PNG")}
           </button>
         )}
       </div>
       {stale && (
         <div className="preview-status" role="status">
-          正在更新；下方为上次预览，完成前不可导出。
+          {msg("正在更新；下方为上次预览，完成前不可导出。")}
         </div>
       )}
       {(problem || status) && (
@@ -413,11 +414,11 @@ export default function Graph({
           {problem || status}
           {errorLine !== null && onLocate && (
             <button onClick={() => onLocate(startLine + errorLine - 1)}>
-              定位源码第 {startLine + errorLine - 1} 行
+              {msg("定位源码第")} {startLine + errorLine - 1} {msg("行")}
             </button>
           )}
           {failed && (
-            <button onClick={() => setAttempt((n) => n + 1)}>重新预览</button>
+            <button onClick={() => setAttempt((n) => n + 1)}>{msg("重新预览")}</button>
           )}
         </div>
       )}
@@ -432,10 +433,10 @@ export default function Graph({
           sandbox="allow-scripts"
           title={
             kind === "mermaid"
-              ? "Mermaid 本地预览"
+              ? msg("Mermaid 本地预览")
               : kind === "chart"
-                ? "数据图表本地预览"
-                : "Markdown 脑图"
+                ? msg("数据图表本地预览")
+                : msg("Markdown 脑图")
           }
           src={
             kind === "chart"

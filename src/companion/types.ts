@@ -1,3 +1,4 @@
+import { msg, type Message } from "../i18n";
 export type CharacterId = "motuan" | "yanzhou" | "zhiwei";
 export interface Context {
   generation: string;
@@ -82,28 +83,30 @@ export interface StoryCharacter {
   theme: string;
   episodes: StoryEpisode[];
 }
-export const characters: Record<
+export function characterProfiles(): Record<
   CharacterId,
   { name: string; description: string; quote: string }
-> = {
-  motuan: {
-    name: "墨团",
-    description: "墨色书猫 · 叶纹纸签",
-    quote: "这枚纸签……刚好留给你。",
-  },
-  yanzhou: {
-    name: "砚舟",
-    description: "成年男性 · 27岁 · 铜书签",
-    quote: "还没想清楚的部分，也可以先留在这里。",
-  },
-  zhiwei: {
-    name: "知微",
-    description: "成年女性 · 25岁 · 叶形纸夹",
-    quote: "不一样的想法，也值得有自己的位置。",
-  },
-};
-export const stages = ["初遇", "相识", "同行"];
-export const preferenceLabels: Record<string, string> = {
+> {
+  return {
+    motuan: {
+      name: msg("墨团"),
+      description: msg("墨色书猫 · 叶纹纸签"),
+      quote: msg("这枚纸签……刚好留给你。"),
+    },
+    yanzhou: {
+      name: msg("砚舟"),
+      description: msg("成年男性 · 27岁 · 铜书签"),
+      quote: msg("还没想清楚的部分，也可以先留在这里。"),
+    },
+    zhiwei: {
+      name: msg("知微"),
+      description: msg("成年女性 · 25岁 · 叶形纸夹"),
+      quote: msg("不一样的想法，也值得有自己的位置。"),
+    },
+  };
+}
+export const stageNames = () => [msg("初遇"), msg("相识"), msg("同行")];
+export const preferenceLabels: Record<string, Message> = {
   answerStyle: "回答组织",
   answerLength: "回答长度",
   displayUnit: "展示单位",
@@ -124,8 +127,8 @@ export function chapterLabel(
   if (!progress?.read.includes(stage)) return "";
   const outcome = progress.outcomes?.[stage];
   return outcome === "read"
-    ? "已读完"
+    ? msg("已读完")
     : outcome === "skipped"
-      ? "已跳过"
-      : "已解锁";
+      ? msg("已跳过")
+      : msg("已解锁");
 }

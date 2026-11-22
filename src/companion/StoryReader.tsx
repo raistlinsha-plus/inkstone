@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { characterArt, cgArt } from "./art";
@@ -93,13 +94,13 @@ export default function StoryReader({
         />
         <figcaption aria-live="polite">
           <span className="companion-reader-count">
-            旁白 · {page + 1} / {episode.paragraphs.length}
+            {msg("旁白 ·")} {page + 1} / {episode.paragraphs.length}
           </span>
           <p>{episode.paragraphs[page]}</p>
         </figcaption>
       </figure>
       {last && episode.choices.length > 0 && (
-        <div className="companion-story-choices" aria-label="剧情选择">
+        <div className="companion-story-choices" aria-label={msg("剧情选择")}>
           {episode.choices.map((entry) => (
             <button
               key={entry.id}
@@ -120,11 +121,11 @@ export default function StoryReader({
           disabled={busy || page === 0}
           onClick={() => move(page - 1)}
         >
-          <ChevronLeft size={15} /> 上一段
+          <ChevronLeft size={15} /> {msg("上一段")}
         </button>
         {!read && canFinish && (
           <button type="button" disabled={busy} onClick={onSkip}>
-            跳过本章
+            {msg("跳过本章")}
           </button>
         )}
         {last ? (
@@ -134,7 +135,7 @@ export default function StoryReader({
             disabled={busy || (!read && episode.choices.length > 0 && !choice)}
             onClick={onFinish}
           >
-            {read ? "返回章节" : "读完本章"}
+            {read ? msg("返回章节") : msg("读完本章")}
           </button>
         ) : (
           <button
@@ -143,7 +144,7 @@ export default function StoryReader({
             disabled={busy}
             onClick={() => move(page + 1)}
           >
-            继续 <ChevronRight size={15} />
+            {msg("继续")} <ChevronRight size={15} />
           </button>
         )}
       </div>

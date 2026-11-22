@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { useEffect, useRef, useState } from "react";
 import { FileText, X } from "lucide-react";
 import ModalDialog from "../ModalDialog";
@@ -179,7 +180,7 @@ export default function TrashDialog({
       <header className="modal-heading">
         <h2>{title}</h2>
         <button
-          aria-label="关闭回收站详情"
+          aria-label={msg("关闭回收站详情")}
           disabled={working}
           onClick={onClose}
         >
@@ -194,40 +195,38 @@ export default function TrashDialog({
             <small>
               {detail?.trashedAt
                 ? new Date(detail.trashedAt * 1000).toLocaleDateString(
-                    "zh-CN",
+                    undefined,
                   ) + " 移入"
                 : detail
-                  ? "升级前已移入"
-                  : "正在读取…"}
+                  ? msg("升级前已移入")
+                  : msg("正在读取…")}
             </small>
           </div>
         </div>
         {detail && !purging && (
           <p className="trash-facts">
-            {detail.attachments} 个附件 · {detail.history} 个历史版本 ·{" "}
+            {detail.attachments} {msg("个附件 ·")} {detail.history} {msg("个历史版本 ·")}{" "}
             {(detail.bytes / 1024).toFixed(1)} KB
           </p>
         )}
         {!completed && (preview || purging) && (
           <>
-            <h3>将从 Inkstone 删除</h3>
+            <h3>{msg("将从 Inkstone 删除")}</h3>
             <p>
-              文档副本、专属附件、历史版本、恢复草稿，以及检索和日历派生数据。引用这篇文档的
-              Wiki
-              已发布主题及其版本历史、相关待审阅改动和摘录也会删除，可从剩余资料重新整理。
+              {msg("文档副本、专属附件、历史版本、恢复草稿，以及检索和日历派生数据。引用这篇文档的 Wiki 已发布主题及其版本历史、相关待审阅改动和摘录也会删除，可从剩余资料重新整理。")}
             </p>
-            <h3>不会删除</h3>
+            <h3>{msg("不会删除")}</h3>
             <p>
-              导入原件、已有问答和手札中的文本、已导出的文件与备份。已有来源引用会标为不可用。
+              {msg("导入原件、已有问答和手札中的文本、已导出的文件与备份。已有来源引用会标为不可用。")}
             </p>
-            <p className="trash-danger-note">此操作无法在 Inkstone 中恢复。</p>
+            <p className="trash-danger-note">{msg("此操作无法在 Inkstone 中恢复。")}</p>
           </>
         )}
         {preview && !purging && !completed && (
           <label className="trash-confirm">
-            输入“删除”以确认
+            {msg("输入“删除”以确认")}
             <input
-              aria-label="输入删除以确认"
+              aria-label={msg("输入删除以确认")}
               autoComplete="off"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
@@ -237,7 +236,7 @@ export default function TrashDialog({
         )}
         {purging && !completed && (
           <p>
-            删除操作尚未完成，请重试同一次清理；若提示需要修复，可先运行资料恢复检查。完成前该文档暂不可编辑。
+            {msg("删除操作尚未完成，请重试同一次清理；若提示需要修复，可先运行资料恢复检查。完成前该文档暂不可编辑。")}
           </p>
         )}
         {error && (
@@ -246,12 +245,12 @@ export default function TrashDialog({
           </p>
         )}
         {!preview && !purging && (
-          <p className="muted">标题点击只查看详情；恢复后文档回到原空间。</p>
+          <p className="muted">{msg("标题点击只查看详情；恢复后文档回到原空间。")}</p>
         )}
       </div>
       <footer className="modal-actions">
         <button data-autofocus disabled={working} onClick={onClose}>
-          {preview && !completed ? "取消" : "关闭"}
+          {preview && !completed ? msg("取消") : msg("关闭")}
         </button>
         {completed ? (
           <button
@@ -263,7 +262,7 @@ export default function TrashDialog({
               })
             }
           >
-            刷新列表
+            {msg("刷新列表")}
           </button>
         ) : purging ? (
           <button
@@ -271,7 +270,7 @@ export default function TrashDialog({
             disabled={working || !operation.current}
             onClick={() => void execute()}
           >
-            {working ? "正在清理…" : "重试清理"}
+            {working ? msg("正在清理…") : msg("重试清理")}
           </button>
         ) : preview ? (
           <button
@@ -279,7 +278,7 @@ export default function TrashDialog({
             disabled={working || confirm !== "删除"}
             onClick={() => void execute()}
           >
-            {working ? "正在删除…" : "彻底删除"}
+            {working ? msg("正在删除…") : msg("彻底删除")}
           </button>
         ) : (
           <>
@@ -293,20 +292,20 @@ export default function TrashDialog({
                 })
               }
             >
-              恢复文档
+              {msg("恢复文档")}
             </button>
             <button
               className="danger-text"
               disabled={working || !detail}
               onClick={() => void prepare()}
             >
-              彻底删除…
+              {msg("彻底删除…")}
             </button>
           </>
         )}
         {error && preview && !purging && !completed && (
           <button disabled={working} onClick={() => void prepare()}>
-            重新核对删除范围
+            {msg("重新核对删除范围")}
           </button>
         )}
       </footer>

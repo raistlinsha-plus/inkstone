@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, RefreshCw, Undo2 } from "lucide-react";
 import {
@@ -26,6 +27,10 @@ import CalendarTools from "./CalendarTools";
 import EventEditor from "./EventEditor";
 import { exportCalendar } from "./export";
 import { useCalendarFocus } from "./useCalendarFocus";
+import TaskList from "../tasks/TaskList";
+import TaskForm from "../tasks/TaskForm";
+import { projectTasks, taskCalendarRows, type ProjectTask } from "../tasks/project";
+import { useLocale, translate as t } from "../i18n";
 import "./calendar.css";
 export interface CalendarPatch {
   documentId: string;
@@ -42,6 +47,7 @@ interface Props {
   busy?: boolean;
   onRefresh?: () => void;
   onNewDocument?: () => void;
+  onAskForHelp?: (title: string) => void;
   initialRange?: DateRange;
   initialQuery?: string;
 }
@@ -63,9 +69,15 @@ export default function ProjectCalendar({
   onNewDocument,
   initialRange,
   initialQuery,
+  onAskForHelp,
 }: Props) {
+  const { language } = useLocale();
+  const [section, setSection] = useState<"tasks" | "calendar">("calendar");
+  const [taskEditor, setTaskEditor] = useState<{document: CalendarDocument; origin?: ProjectTask} | null>(null);
+  const tasks = useMemo(() => projectTasks(documents), [documents]);
   const projection = useMemo(() => projectEvents(documents), [documents]);
   const zone = currentTimeZone();
+  const datedTasks = useMemo(() => taskCalendarRows(tasks, zone, {due:t("到期","Due"), slot:t("执行","Scheduled"), follow:t("跟进","Follow up")}), [tasks,zone,language]);
   const [anchor, setAnchor] = useState(
     () => initialRange?.start ?? dateInZone(new Date(), zone),
   );
@@ -86,6 +98,7 @@ export default function ProjectCalendar({
   };
   useEffect(() => {
     if (initialRange) {
+      setSection("calendar");
       setRange(initialRange);
       setAnchor(initialRange.start);
       setView("agenda");
@@ -114,6 +127,10 @@ export default function ProjectCalendar({
     query,
     zone,
   );
+  const visibleEvents = filterCalendarEvents([
+    ...projection.events.map(r => ({key:r.key,event:r.event,source:r.document.title})),
+    ...datedTasks
+  ], range, status, query, zone);
   const chooseAnchor = (date: string) => {
     setAnchor(date);
     setRange(monthRange(date));
@@ -144,6 +161,13 @@ export default function ProjectCalendar({
   const edit = (key: string) => {
     if (busy || saving) return;
     focus.remember();
+    const dated = datedTasks.find(r => r.key === key);
+    if (dated) {
+      setEditing(null);
+      setTaskEditor({document:dated.origin.document,origin:dated.origin});
+      return;
+    }
+    setTaskEditor(null);
     const row = projection.events.find((r) => r.key === key);
     if (row)
       setEditing({
@@ -155,6 +179,7 @@ export default function ProjectCalendar({
   const add = (date = anchor) => {
     if (busy || saving) return;
     focus.remember();
+    setTaskEditor(null);
     if (!selectedTarget) {
       onNewDocument?.();
       return;
@@ -208,35 +233,50 @@ export default function ProjectCalendar({
     <section
       ref={focus.scope}
       className="project-calendar inkstone-calendar"
-      aria-label="项目日历"
+      aria-label={msg("项目日历")}
     >
       <header className="project-calendar-heading">
         <div>
-          <span className="calendar-eyebrow">本机计划</span>
+
           <h1>
             <CalendarDays size={27} />
-            项目日历
+            {msg("项目日历")}
           </h1>
-          <p>文档里的日程汇总在这里，修改会保存回原文。</p>
+          <p>{msg("文档里的日程汇总在这里，修改会保存回原文。")}</p>
         </div>
         <div className="calendar-heading-actions">
           {onUndo && (
             <button onClick={onUndo} disabled={!canUndo || busy || saving}>
               <Undo2 size={15} />
-              撤销上次日历修改
+              {msg("撤销上次日历修改")}
             </button>
           )}
           {onRefresh && (
             <button
               onClick={onRefresh}
               disabled={busy || saving}
-              aria-label="刷新项目日历"
+              aria-label={msg("刷新项目日历")}
             >
               <RefreshCw size={16} />
             </button>
           )}
         </div>
       </header>
+      <nav aria-label={t("计划视图","Planning view")} className="task-section-switch">
+        <button aria-pressed={section === "calendar"} onClick={() => {setSection("calendar");setTaskEditor(null);}}>{t("日历","Calendar")}</button>
+        <button aria-pressed={section === "tasks"} onClick={() => {setSection("tasks");setEditing(null);setTaskEditor(null);}}>{t("任务","Tasks")}</button>
+      </nav>
+      {taskEditor && <TaskForm key={taskEditor.document.documentId+":"+(taskEditor.origin?.task.line ?? "new")}
+        document={taskEditor.document} current={documents.find(d=>d.documentId===taskEditor.document.documentId)} origin={taskEditor.origin}
+        onPatch={onPatch} busy={busy} onAskForHelp={onAskForHelp ? (title) => {
+          // The chat composer owns focus when switching away from the details form.
+          setTaskEditor(null);
+          onAskForHelp(title);
+        } : undefined}
+        onClose={()=>{setTaskEditor(null);focus.restore();}} />}
+      {section === "tasks" ? <TaskList documents={documents} rows={tasks} busy={busy || !!taskEditor} onPatch={onPatch} onOpen={onOpen}
+        onNew={document=>{focus.remember();setTaskEditor({document});}}
+        onEdit={origin=>{focus.remember();setTaskEditor({document:origin.document,origin});}} /> : <>
       <CalendarTools
         view={view}
         onView={setView}
@@ -255,9 +295,9 @@ export default function ProjectCalendar({
       />
       <div className="project-calendar-filters">
         <label>
-          从
+          {msg("从")}
           <input
-            aria-label="日历范围开始"
+            aria-label={msg("日历范围开始")}
             type="date"
             value={range.start}
             onInput={(e) => chooseRangeStart(e.currentTarget.value)}
@@ -265,9 +305,9 @@ export default function ProjectCalendar({
           />
         </label>
         <label>
-          至
+          {msg("至")}
           <input
-            aria-label="日历范围结束"
+            aria-label={msg("日历范围结束")}
             type="date"
             value={addDays(range.end, -1)}
             min={range.start}
@@ -276,23 +316,23 @@ export default function ProjectCalendar({
           />
         </label>
         <label>
-          状态
+          {msg("状态")}
           <select
-            aria-label="日历状态筛选"
+            aria-label={msg("日历状态筛选")}
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
-            <option value="all">全部状态</option>
-            <option value="planned">待办</option>
-            <option value="done">已完成</option>
-            <option value="cancelled">已取消</option>
+            <option value="all">{msg("全部状态")}</option>
+            <option value="planned">{msg("待办")}</option>
+            <option value="done">{msg("已完成")}</option>
+            <option value="cancelled">{msg("已取消")}</option>
           </select>
         </label>
         <label className="calendar-query">
-          查找事项
+          {msg("查找事项")}
           <input
-            aria-label="查找日程"
-            placeholder="标题或备注…"
+            aria-label={msg("查找日程")}
+            placeholder={msg("标题或备注…")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -300,30 +340,30 @@ export default function ProjectCalendar({
       </div>
       {available.length > 1 && (
         <label className="calendar-target-select">
-          新增事项保存到
+          {msg("新增事项保存到")}
           <select
-            aria-label="新事项所属日历块"
+            aria-label={msg("新事项所属日历块")}
             value={selectedTarget?.key ?? ""}
             onChange={(e) => setTarget(e.target.value)}
           >
             {available.map((t) => (
               <option key={t.key} value={t.key}>
-                {t.document.title} · 第 {t.block.line} 行
+                {t.document.title} {msg("· 第")} {t.block.line} {msg("行")}
               </option>
             ))}
           </select>
         </label>
       )}
       <div className="calendar-range-description">
-        <strong>共 {rows.length} 个事项</strong>
+        <strong>{msg("共")} {visibleEvents.length} {msg("个事项")}</strong>
         <span>
-          {range.start} 至 {addDays(range.end, -1)} · {zone} · 完整日期结果
+          {range.start} {msg("至")} {addDays(range.end, -1)} · {zone} {msg("· 完整日期结果")}
         </span>
       </div>
       {editing && (
         <div className="project-calendar-editor">
           <div className="calendar-editor-source">
-            保存到：{editing.document.title}
+            {msg("保存到：")}{editing.document.title}
             <button
               onClick={() =>
                 onOpen({
@@ -332,7 +372,7 @@ export default function ProjectCalendar({
                 })
               }
             >
-              回到原文 ↗
+              {msg("回到原文 ↗")}
             </button>
           </div>
           <EventEditor
@@ -353,44 +393,41 @@ export default function ProjectCalendar({
           />
         </div>
       )}
-      {!available.length && (
+      {!available.length && !datedTasks.length && (
         <div className="calendar-empty">
-          <h3>在文档里安排第一件事</h3>
-          <p>正文输入 /日程 或 /日历，或者创建一篇日程文档。</p>
+          <h3>{msg("在文档里安排第一件事")}</h3>
+          <p>{msg("正文输入 /日程 或 /日历，或者创建一篇日程文档。")}</p>
           {onNewDocument && (
             <button
               className="calendar-primary"
               onClick={onNewDocument}
               disabled={busy}
             >
-              新建日程文档
+              {msg("新建日程文档")}
             </button>
           )}
         </div>
       )}
       {view === "month" ? (
         <CalendarBoard
-          rows={rows.map((r) => ({
-            key: r.key,
-            event: r.event,
-            source: r.document.title,
-          }))}
+          rows={visibleEvents}
           anchor={anchor}
           timeZone={zone}
           onDate={add}
           onEdit={edit}
         />
       ) : (
-        available.length > 0 && (
+        (available.length > 0 || datedTasks.length > 0) && (
           <CalendarAgenda
-            rows={rows.map((r) => ({
-              key: r.key,
-              event: r.event,
-              source: r.document.title,
-            }))}
+            rows={visibleEvents}
             timeZone={zone}
             onEdit={edit}
             onOpen={(key) => {
+              const dated = datedTasks.find(r => r.key === key);
+              if (dated) {
+                onOpen({path:dated.origin.document.path, line:dated.origin.task.line});
+                return;
+              }
               const row = projection.events.find((r) => r.key === key);
               if (row)
                 onOpen({ path: row.document.path, line: row.block.line });
@@ -401,7 +438,7 @@ export default function ProjectCalendar({
       {projection.warnings.length > 0 && (
         <details className="calendar-warnings">
           <summary>
-            {projection.warnings.length} 个日历块需要检查（原文保留）
+            {projection.warnings.length} {msg("个日历块需要检查（原文保留）")}
           </summary>
           <ul>
             {projection.warnings.map((w, i) => (
@@ -410,6 +447,7 @@ export default function ProjectCalendar({
           </ul>
         </details>
       )}
+      </>}
       {error && (
         <p className="calendar-error" role="alert">
           {error}

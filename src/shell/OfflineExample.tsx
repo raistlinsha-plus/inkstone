@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { useState } from "react";
 import bundledSample from "../../examples/v0.8.5/离线体验：社区阅读活动.md?raw";
 import type { AnswerRecord } from "../assistant/ConversationPanel";
@@ -65,9 +66,9 @@ export default function OfflineExample({
       : undefined;
 
   return (
-    <section className="offline-example" aria-label="离线问答练习">
-      <h3>离线问答练习</h3>
-      <p>用预设回答体验核对原文。无需模型，也不会发送资料。</p>
+    <section className="offline-example" aria-label={msg("离线问答练习")}>
+      <h3>{msg("离线问答练习")}</h3>
+      <p>{msg("用预设回答体验核对原文。无需模型，也不会发送资料。")}</p>
       {!started ? (
         <button
           type="button"
@@ -75,7 +76,7 @@ export default function OfflineExample({
           disabled={disabled}
           onClick={() => setStarted(true)}
         >
-          体验模拟问答
+          {msg("体验模拟问答")}
         </button>
       ) : (
         <>
@@ -101,7 +102,7 @@ export default function OfflineExample({
               <p aria-live="polite">
                 {source
                   ? `模拟回答：${exercise.answer}`
-                  : "样例正文已改动，固定回答无法引用这份正文。"}
+                  : msg("样例正文已改动，固定回答无法引用这份正文。")}
               </p>
               {source && (
                 <>
@@ -112,7 +113,7 @@ export default function OfflineExample({
                       aria-expanded={showSource}
                       onClick={() => setShowSource(!showSource)}
                     >
-                      查看原文 · 第 {line} 行
+                      {msg("查看原文 · 第")} {line} {msg("行")}
                     </button>
                     <button
                       type="button"
@@ -131,7 +132,7 @@ export default function OfflineExample({
                         })
                       }
                     >
-                      保存示例回答
+                      {msg("保存示例回答")}
                     </button>
                   </div>
                   {showSource && (
@@ -143,7 +144,7 @@ export default function OfflineExample({
                         disabled={disabled}
                         onClick={() => onOpenSource(source)}
                       >
-                        打开原文
+                        {msg("打开原文")}
                       </button>
                     </>
                   )}
@@ -157,7 +158,7 @@ export default function OfflineExample({
             disabled={disabled}
             onClick={onImport}
           >
-            导入我的资料
+            {msg("导入我的资料")}
           </button>
         </>
       )}

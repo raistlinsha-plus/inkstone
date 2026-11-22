@@ -116,6 +116,26 @@ pub fn save(
     content: &str,
     expected: &str,
 ) -> Result<SaveResult, String> {
+    save_inner(ws, data_dir, path, content, expected, false)
+}
+/// Calendar and chat actions cannot resolve an outstanding editor recovery draft.
+pub fn save_if_clean(
+    ws: &Workspace,
+    data_dir: &Path,
+    path: &str,
+    content: &str,
+    expected: &str,
+) -> Result<SaveResult, String> {
+    save_inner(ws, data_dir, path, content, expected, true)
+}
+fn save_inner(
+    ws: &Workspace,
+    data_dir: &Path,
+    path: &str,
+    content: &str,
+    expected: &str,
+    require_clean: bool,
+) -> Result<SaveResult, String> {
     let _permit = crate::maintenance::mutation_scope(
         data_dir,
         crate::maintenance::is_managed_root(data_dir, &ws.root),
@@ -126,7 +146,22 @@ pub fn save(
     }
     let p = files::resolve(&ws.root, path, false)?;
     with_write_lock(&p, || {
-        if files::hash(files::read_text(&p)?) != expected {
+        let original = files::read_text(&p)?;
+        if require_clean {
+            let draft_path = files::draft_path(data_dir, ws, path);
+            with_lock_key(draft_path.clone(), || match fs::read(&draft_path) {
+                Ok(bytes)
+                    if serde_json::from_slice::<Draft>(&bytes)
+                        .map(|d| d.content == original)
+                        .unwrap_or(false) =>
+                {
+                    Ok(())
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                _ => Err("原文有待恢复的编辑草稿，请先打开并保存。".into()),
+            })?;
+        }
+        if files::hash(&original) != expected {
             return Err("CONFLICT:磁盘文件已被其他应用修改，请核对原文或另存为。".into());
         }
         files::write_atomic(&p, content.as_bytes())?;

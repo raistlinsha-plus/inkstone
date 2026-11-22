@@ -1,3 +1,4 @@
+import { msg, type Message } from "../i18n";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -99,33 +100,33 @@ const coverageLabels = {
   retry: "整理未完成，可重试",
   unavailable: "资料当前不可用",
   empty: "资料没有可整理的文本",
-};
-const jobLabels: Record<string, string> = {
+} as const;
+const jobLabels: Record<string, Message> = {
   running: "整理中",
   ready: "整理完成",
   error: "整理失败",
   cancelled: "已取消",
-};
-const changeLabels: Record<string, string> = {
+} as const;
+const changeLabels: Record<string, Message> = {
   pending: "待审阅",
   published: "已生效",
   rejected: "已拒绝",
   superseded: "已被替代",
-};
-const reviewMessages: Record<ReviewAction, string> = {
+} as const;
+const reviewMessages: Record<ReviewAction, Message> = {
   publish: "改动已发布，可在主题中查看生效版本。",
   "publish-excerpts": "已发布核验过的原文摘录。",
   reject: "改动已拒绝，可重新整理。",
   restore: "历史版本已恢复，可在主题中查看。",
   "restore-excerpts": "已恢复核验过的原文摘录。",
-};
+} as const;
 const sourceChangeLabels = {
   added: "新增引用",
   updated: "更新引用",
   removed: "移除引用",
-};
+} as const;
 
-const changeDate = new Intl.DateTimeFormat("zh-CN", {
+const changeDate = new Intl.DateTimeFormat(undefined, {
   year: "numeric",
   month: "short",
   day: "numeric",
@@ -397,7 +398,7 @@ export default function WikiPanel({
       if (result) applyStatus(result);
       const next = result ?? (await refresh());
       if (!active.current) return;
-      setReviewNotice(reviewMessages[action]);
+      setReviewNotice(msg(reviewMessages[action]));
       if (action === "reject") {
         const rejected = next?.changes.find(
           (item) => item.id === id && item.status === "rejected",
@@ -543,18 +544,18 @@ export default function WikiPanel({
   const coverageDetails = tab !== "pages" && !!status?.coverage?.length && (
     <details className="wiki-coverage">
       <summary>
-        资料覆盖 ·{" "}
+        {msg("资料覆盖 ·")}{" "}
         {status.coverage.filter((item) => item.status === "included").length}/
-        {status.coverage.length} 份已引用
+        {status.coverage.length} {msg("份已引用")}
       </summary>
       <p>
-        这里显示授权范围内各份资料的整理状态。请在候选正文中核对关键结论及其出处。
+        {msg("这里显示授权范围内各份资料的整理状态。请在候选正文中核对关键结论及其出处。")}
       </p>
       <ul>
         {status.coverage.map((item) => (
           <li key={item.documentId} data-status={item.status}>
-            <strong>{item.title || "不可用资料"}</strong>
-            <span>{coverageLabels[item.status]}</span>
+            <strong>{item.title || msg("不可用资料")}</strong>
+            <span>{msg(coverageLabels[item.status])}</span>
           </li>
         ))}
       </ul>
@@ -568,34 +569,34 @@ export default function WikiPanel({
   }
   return (
     <ModalDialog
-      label="知识 Wiki"
+      label={msg("知识 Wiki")}
       className="wiki-dialog"
       busy={!!busy && !isRunning}
       onClose={onClose}
     >
       <div className="modal-heading">
         <div>
-          <h2>知识 Wiki</h2>
+          <h2>{msg("知识 Wiki")}</h2>
           {spaceTitle && <p className="wiki-space-name">{spaceTitle}</p>}
         </div>
         <button
           className="icon-button"
           type="button"
-          aria-label="关闭知识 Wiki"
+          aria-label={msg("关闭知识 Wiki")}
           disabled={!!busy && !isRunning}
           onClick={onClose}
         >
           <X size={18} />
         </button>
       </div>
-      <nav className="wiki-toolbar wiki-nav" aria-label="Wiki 页面导航">
+      <nav className="wiki-toolbar wiki-nav" aria-label={msg("Wiki 页面导航")}>
         <button
           type="button"
           aria-pressed={tab === "pages"}
           disabled={!!busy && !isRunning}
           onClick={() => setTab("pages")}
         >
-          主题
+          {msg("主题")}
         </button>
         <button
           type="button"
@@ -603,7 +604,7 @@ export default function WikiPanel({
           disabled={!!busy && !isRunning}
           onClick={() => setTab("changes")}
         >
-          审阅与变更{pendingCount ? ` · ${pendingCount}` : ""}
+          {msg("审阅与变更")}{pendingCount ? ` · ${pendingCount}` : ""}
         </button>
         <button
           type="button"
@@ -611,7 +612,7 @@ export default function WikiPanel({
           disabled={!!busy && !isRunning}
           onClick={() => setTab("policy")}
         >
-          资料范围
+          {msg("资料范围")}
         </button>
         <span className="wiki-toolbar-divider" />
         {isRunning ? (
@@ -623,7 +624,7 @@ export default function WikiPanel({
               )
             }
           >
-            取消整理
+            {msg("取消整理")}
           </button>
         ) : (
           <button
@@ -638,34 +639,34 @@ export default function WikiPanel({
             }
             onClick={() => void organize()}
           >
-            整理所选资料
+            {msg("整理所选资料")}
           </button>
         )}
         <button
           type="button"
           className="icon-button"
-          aria-label="刷新 Wiki"
-          title="刷新 Wiki"
+          aria-label={msg("刷新 Wiki")}
+          title={msg("刷新 Wiki")}
           disabled={!!busy}
           onClick={() => void run("刷新中", () => refresh())}
         >
           <RefreshCw size={16} />
         </button>
       </nav>
-      {!status && !error && <p role="status">正在读取 Wiki…</p>}
+      {!status && !error && <p role="status">{msg("正在读取 Wiki…")}</p>}
       {status && !reviewing && (
         <div className="wiki-overview">
           <span>
             {status.policy.enabled
               ? `已授权 ${status.policy.documentIds.length} 篇资料`
-              : "尚未启用整理"}
+              : msg("尚未启用整理")}
           </span>
           {status.policy.enabled && status.policy.paused && (
-            <span>整理已暂停</span>
+            <span>{msg("整理已暂停")}</span>
           )}
-          <span>{status.pages.length} 个已发布主题</span>
+          <span>{status.pages.length} {msg("个已发布主题")}</span>
           <strong className="wiki-pending-count" role="status">
-            当前待审阅 {pendingCount} 项
+            {msg("当前待审阅")} {pendingCount} {msg("项")}
           </strong>
         </div>
       )}
@@ -684,7 +685,7 @@ export default function WikiPanel({
             open={job.status === "error" || undefined}
           >
             <summary>
-              上次整理<span>{jobLabels[job.status] ?? job.status}</span>
+              {msg("上次整理")}<span>{(jobLabels[job.status] ? msg(jobLabels[job.status]) : job.status)}</span>
             </summary>
             {job.message && <p>{job.message}</p>}
           </details>
@@ -706,7 +707,7 @@ export default function WikiPanel({
                 selectChange(nextReview);
               }}
             >
-              审阅下一项
+              {msg("审阅下一项")}
             </button>
           )}
         </div>
@@ -717,12 +718,12 @@ export default function WikiPanel({
         </p>
       )}
       {tab === "pages" && (firstWiki || !!pending.length) && (
-        <section className="wiki-next-step" aria-label="整理与审阅进度">
+        <section className="wiki-next-step" aria-label={msg("整理与审阅进度")}>
           {pending.length ? (
             <>
               <p>
-                有 {pendingCount} 项改动等待审阅，发布后可参与问答。
-                {pending[0].stale && " 部分原文已变化，请优先核对。"}
+                {msg("有")} {pendingCount} {msg("项改动等待审阅，发布后可参与问答。")}
+                {pending[0].stale && msg(" 部分原文已变化，请优先核对。")}
               </p>
               <button
                 className="button small"
@@ -730,38 +731,38 @@ export default function WikiPanel({
                 disabled={!!busy}
                 onClick={() => selectChange(pending[0])}
               >
-                查看待审阅改动
+                {msg("查看待审阅改动")}
               </button>
             </>
           ) : docs.length === 0 ? (
             <>
-              <p>先复制导入一份资料，再选择可整理的文档。</p>
+              <p>{msg("先复制导入一份资料，再选择可整理的文档。")}</p>
               <button
                 className="button small"
                 type="button"
                 disabled={!!busy}
                 onClick={onImport}
               >
-                复制导入资料
+                {msg("复制导入资料")}
               </button>
             </>
           ) : !scopeReady ? (
             <>
-              <p>选择当前空间中允许整理的文档。</p>
+              <p>{msg("选择当前空间中允许整理的文档。")}</p>
               <button
                 className="button small"
                 type="button"
                 disabled={!!busy}
                 onClick={() => setTab("policy")}
               >
-                选择整理范围
+                {msg("选择整理范围")}
               </button>
             </>
           ) : (
             <p>
               {status?.policy.paused
-                ? "可在「资料范围」中继续整理。"
-                : "资料范围已保存。整理完成后，可核对候选正文和原文。"}
+                ? msg("可在「资料范围」中继续整理。")
+                : msg("资料范围已保存。整理完成后，可核对候选正文和原文。")}
             </p>
           )}
         </section>
@@ -776,10 +777,10 @@ export default function WikiPanel({
               disabled={!!busy}
               onChange={(e) => patch({ enabled: e.target.checked })}
             />
-            启用当前空间的 Wiki
+            {msg("启用当前空间的 Wiki")}
           </label>
           <label>
-            关注主题
+            {msg("关注主题")}
             <input
               maxLength={120}
               value={policy.topic}
@@ -788,7 +789,7 @@ export default function WikiPanel({
             />
           </label>
           <label>
-            维护方式
+            {msg("维护方式")}
             <select
               value={
                 policy.paused ? "paused" : policy.automatic ? "auto" : "review"
@@ -803,19 +804,19 @@ export default function WikiPanel({
                 })
               }
             >
-              <option value="review">发布前全部审阅</option>
-              <option value="auto">自动发布符合规则的常规变更</option>
-              <option value="paused">暂停整理</option>
+              <option value="review">{msg("发布前全部审阅")}</option>
+              <option value="auto">{msg("自动发布符合规则的常规变更")}</option>
+              <option value="paused">{msg("暂停整理")}</option>
             </select>
           </label>
           <p className="muted">
-            整理时会把所选资料提交给配置的聊天模型。已选{" "}
-            {policy.documentIds.length} 篇。
-            {dirty.current && " 请先保存更改再整理。"}
+            {msg("整理时会把所选资料提交给配置的聊天模型。已选")}{" "}
+            {policy.documentIds.length} {msg("篇。")}
+            {dirty.current && msg(" 请先保存更改再整理。")}
           </p>
           {!!docs.length && (
             <label>
-              筛选资料
+              {msg("筛选资料")}
               <input
                 type="search"
                 value={documentFilter}
@@ -845,17 +846,17 @@ export default function WikiPanel({
                 {doc.title}
               </label>
             ))}
-            {!docs.length && <small>请先在当前空间导入或新建文档。</small>}
+            {!docs.length && <small>{msg("请先在当前空间导入或新建文档。")}</small>}
             {!!docs.length && !visibleDocuments.length && (
-              <small>没有匹配的资料。</small>
+              <small>{msg("没有匹配的资料。")}</small>
             )}
           </div>
           {removingDocuments && (
             <p className="panel-warning" role="status">
               {removalImpact
                 ? `确认后将清除 ${removalImpact.pages} 个主题、${removalImpact.revisions} 个已发布版本及 ${removalImpact.pending} 个待审改动。相关变更历史也将清除。`
-                : "移出资料会清除依赖它的 Wiki 内容。保存前可查看影响范围。"}
-              原始文档会保留，可用剩余资料重新整理。
+                : msg("移出资料会清除依赖它的 Wiki 内容。保存前可查看影响范围。")}
+              {msg("原始文档会保留，可用剩余资料重新整理。")}
             </p>
           )}
           <div className="modal-actions">
@@ -864,7 +865,7 @@ export default function WikiPanel({
               disabled={!!busy}
               onClick={() => void run("刷新中", () => refresh(true))}
             >
-              重新载入配置
+              {msg("重新载入配置")}
             </button>
             <button
               type="button"
@@ -878,9 +879,9 @@ export default function WikiPanel({
             >
               {removingDocuments
                 ? removalImpact
-                  ? "确认保存并清除"
-                  : "查看清除范围"
-                : "保存范围与维护"}
+                  ? msg("确认保存并清除")
+                  : msg("查看清除范围")
+                : msg("保存范围与维护")}
             </button>
           </div>
         </div>
@@ -888,9 +889,9 @@ export default function WikiPanel({
       {tab === "pages" && status && (
         <div className="wiki-columns">
           <div className="wiki-list">
-            <h3 className="wiki-section-title">已发布主题</h3>
+            <h3 className="wiki-section-title">{msg("已发布主题")}</h3>
             <label>
-              查找主题
+              {msg("查找主题")}
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -898,7 +899,7 @@ export default function WikiPanel({
             </label>
             {!pages.length && (
               <p>
-                {filter ? "暂无匹配的主题。" : "当前空间还没有已发布主题。"}
+                {filter ? msg("暂无匹配的主题。") : msg("当前空间还没有已发布主题。")}
               </p>
             )}
             {pages.map((item) => (
@@ -913,8 +914,8 @@ export default function WikiPanel({
               >
                 <strong>{item.title}</strong>
                 <small>
-                  版本 {item.revision} · {item.sourceCount} 处来源
-                  {item.stale && " · 出处待更新"}
+                  {msg("版本")} {item.revision} · {item.sourceCount} {msg("处来源")}
+                  {item.stale && msg(" · 出处待更新")}
                 </small>
                 {item.summary && <small>{item.summary}</small>}
               </button>
@@ -929,16 +930,16 @@ export default function WikiPanel({
               onError={setError}
             />
           ) : readingId ? (
-            <WikiReaderPlaceholder loading text="从左侧选择一个主题" />
+            <WikiReaderPlaceholder loading text={msg("从左侧选择一个主题")} />
           ) : (
             <div className="wiki-recent">
               <WikiChangeList
-                label="最近变化"
+                label={msg("最近变化")}
                 items={history
                   .filter((item) => item.status !== "superseded")
                   .slice(0, 5)}
                 busy={!!busy && !isRunning}
-                emptyText="还没有整理记录。发布或拒绝改动后，可在这里查看。"
+                emptyText={msg("还没有整理记录。发布或拒绝改动后，可在这里查看。")}
                 onSelect={selectChange}
               />
               {!!history.length && (
@@ -948,7 +949,7 @@ export default function WikiPanel({
                   disabled={!!busy && !isRunning}
                   onClick={() => setTab("changes")}
                 >
-                  查看全部变化
+                  {msg("查看全部变化")}
                 </button>
               )}
             </div>
@@ -959,7 +960,7 @@ export default function WikiPanel({
         <div className="wiki-columns">
           <div className="wiki-list">
             <WikiChangeList
-              label="待审阅"
+              label={msg("待审阅")}
               items={pending}
               activeId={change?.id}
               busy={!!busy && !isRunning}
@@ -967,7 +968,7 @@ export default function WikiPanel({
             />
             {!!history.length && (
               <WikiChangeList
-                label="变更历史"
+                label={msg("变更历史")}
                 items={history}
                 activeId={change?.id}
                 busy={!!busy && !isRunning}
@@ -987,8 +988,8 @@ export default function WikiPanel({
                 <strong>{page.title}</strong>
                 <span>
                   {selectedChange.status === "pending"
-                    ? "待发布的候选版本"
-                    : `${changeLabels[selectedChange.status] ?? selectedChange.status} · 版本 ${page.revision}`}
+                    ? msg("待发布的候选版本")
+                    : `${(changeLabels[selectedChange.status] ? msg(changeLabels[selectedChange.status]) : selectedChange.status)} · 版本 ${page.revision}`}
                 </span>
                 <p>{selectedChange.reason}</p>
               </div>
@@ -1012,38 +1013,38 @@ export default function WikiPanel({
               {selectedChange.status === "pending" &&
                 !!summaryIssues.length && (
                   <WikiSummaryWarning
-                    title="摘要需要核对"
+                    title={msg("摘要需要核对")}
                     issues={summaryIssues}
-                    guidance="可仅发布已核验的原文摘录。如需重新生成摘要，拒绝此改动后选择「重新整理已拒绝改动」。"
+                    guidance={msg("可仅发布已核验的原文摘录。如需重新生成摘要，拒绝此改动后选择「重新整理已拒绝改动」。")}
                   />
                 )}
               {selectedChange.canRestore && !!restoreIssues.length && (
                 <WikiSummaryWarning
-                  title="可恢复版本的摘要需要核对"
+                  title={msg("可恢复版本的摘要需要核对")}
                   issues={restoreIssues}
-                  guidance="该版本只能恢复已核验的原文摘录。"
+                  guidance={msg("该版本只能恢复已核验的原文摘录。")}
                 />
               )}
               {selectedChange.canRestore &&
                 selectedChange.restoreRevision !== undefined && (
                   <p className="wiki-restore-note">
-                    恢复会使用此次改动前的版本 {selectedChange.restoreRevision}
+                    {msg("恢复会使用此次改动前的版本")} {selectedChange.restoreRevision}
                     。
                     {selectedChange.restoreAvailability === "excerpts" &&
-                      " 该版本只可恢复仍能核验的原文摘录。"}
+                      msg(" 该版本只可恢复仍能核验的原文摘录。")}
                     {selectedChange.restoreAvailability === "unavailable" &&
-                      " 该版本已没有可核验的原文，无法恢复。"}
+                      msg(" 该版本已没有可核验的原文，无法恢复。")}
                   </p>
                 )}
               {!baseOutdated && baseline && baseline.body !== page.body && (
                 <details className="wiki-baseline">
-                  <summary>对照当前生效版 · 版本 {baseline.revision}</summary>
+                  <summary>{msg("对照当前生效版 · 版本")} {baseline.revision}</summary>
                   <Markdown
                     source={baseline.body}
                     path=""
                     readOnly
                     onError={setError}
-                    label="当前生效版正文"
+                    label={msg("当前生效版正文")}
                   />
                   <WikiHistoricalSources sources={baseline.historicalSources} />
                 </details>
@@ -1065,7 +1066,7 @@ export default function WikiPanel({
           ) : (
             <WikiReaderPlaceholder
               loading={!!readingId}
-              text="选择一项改动以核对正文和原文"
+              text={msg("选择一项改动以核对正文和原文")}
             />
           )}
         </div>
@@ -1081,7 +1082,7 @@ export default function WikiPanel({
           <div
             className="modal-actions wiki-review-actions"
             role="group"
-            aria-label="Wiki 审阅操作"
+            aria-label={msg("Wiki 审阅操作")}
           >
             {selectedChange.status === "rejected" && (
               <button
@@ -1091,7 +1092,7 @@ export default function WikiPanel({
                 }
                 onClick={() => void organize(selectedChange.id)}
               >
-                重新整理已拒绝改动
+                {msg("重新整理已拒绝改动")}
               </button>
             )}
             {selectedChange.status === "pending" && (
@@ -1101,7 +1102,7 @@ export default function WikiPanel({
                   disabled={!!busy}
                   onClick={() => void review("reject")}
                 >
-                  拒绝改动
+                  {msg("拒绝改动")}
                 </button>
                 <button
                   type="button"
@@ -1120,7 +1121,7 @@ export default function WikiPanel({
                     )
                   }
                 >
-                  {publishExcerpts ? "仅发布原文摘录" : "发布改动"}
+                  {publishExcerpts ? msg("仅发布原文摘录") : msg("发布改动")}
                 </button>
               </>
             )}
@@ -1137,7 +1138,7 @@ export default function WikiPanel({
                   void review(restoreExcerpts ? "restore-excerpts" : "restore")
                 }
               >
-                {restoreExcerpts ? "仅恢复原文摘录" : "恢复改动前版本"}
+                {restoreExcerpts ? msg("仅恢复原文摘录") : msg("恢复改动前版本")}
               </button>
             )}
           </div>
@@ -1167,21 +1168,21 @@ function WikiReviewChanges({
     sources,
   } = comparison;
   return (
-    <section className="wiki-review-changes" aria-label="改动对照">
+    <section className="wiki-review-changes" aria-label={msg("改动对照")}>
       <header>
-        <h3>改动对照</h3>
+        <h3>{msg("改动对照")}</h3>
         <span>
-          {baseRevision ? `生成基准 · 版本 ${baseRevision}` : "新建主题"}
+          {baseRevision ? `生成基准 · 版本 ${baseRevision}` : msg("新建主题")}
         </span>
       </header>
       {outdated && (
         <p className="panel-warning">
-          生效版本已变化。可拒绝此项，再重新整理。
+          {msg("生效版本已变化。可拒绝此项，再重新整理。")}
         </p>
       )}
       {!baseAvailable ? (
         <p className="panel-warning">
-          无法读取生成基准。可拒绝此项，再重新整理。
+          {msg("无法读取生成基准。可拒绝此项，再重新整理。")}
         </p>
       ) : (
         <>
@@ -1199,27 +1200,27 @@ function WikiReviewChanges({
             <dl className="wiki-conclusion-diff">
               {!!baseRevision && (
                 <div>
-                  <dt>生效版摘要</dt>
-                  <dd>{previousSummary || "当前没有可展示的生效摘要。"}</dd>
+                  <dt>{msg("生效版摘要")}</dt>
+                  <dd>{previousSummary || msg("当前没有可展示的生效摘要。")}</dd>
                 </div>
               )}
               <div>
-                <dt>候选摘要</dt>
-                <dd>{nextSummary || "当前没有可展示的候选摘要。"}</dd>
+                <dt>{msg("候选摘要")}</dt>
+                <dd>{nextSummary || msg("当前没有可展示的候选摘要。")}</dd>
               </div>
             </dl>
           )}
           {!!sources.length && (
-            <ul aria-label="引用资料变化">
+            <ul aria-label={msg("引用资料变化")}>
               {sources.map((source, index) => (
                 <li key={index}>
-                  <span>{sourceChangeLabels[source.status]}</span>
+                  <span>{msg(sourceChangeLabels[source.status])}</span>
                   <strong>{source.title}</strong>
                 </li>
               ))}
             </ul>
           )}
-          {!sources.length && <p>引用资料无变化</p>}
+          {!sources.length && <p>{msg("引用资料无变化")}</p>}
         </>
       )}
     </section>
@@ -1257,8 +1258,8 @@ function WikiChangedQuotes({
   });
   if (!groups.length) return null;
   return (
-    <section aria-label="原文摘录变化" className="wiki-review-changes">
-      <h3>原文摘录变化</h3>
+    <section aria-label={msg("原文摘录变化")} className="wiki-review-changes">
+      <h3>{msg("原文摘录变化")}</h3>
       {groups.map(({ id, title, removed, added }) => (
         <div key={id}>
           <strong>{title}</strong>
@@ -1289,7 +1290,7 @@ function WikiChangeList({
   activeId,
   busy,
   onSelect,
-  emptyText = "当前没有待审阅的改动。",
+  emptyText = msg("当前没有待审阅的改动。"),
 }: {
   label: string;
   items: WikiChange[];
@@ -1312,20 +1313,20 @@ function WikiChangeList({
         >
           <strong>{item.title}</strong>
           <small>
-            {changeLabels[item.status] ?? item.status} · {item.sourceCount}{" "}
-            处来源
+            {(changeLabels[item.status] ? msg(changeLabels[item.status]) : item.status)} · {item.sourceCount}{" "}
+            {msg("处来源")}
             {item.created > 0 &&
               ` · ${changeDate.format(item.created * 1_000)}`}
           </small>
           <small>
             {item.stale && item.status === "pending" && (
-              <span className="wiki-attention">出处已变 · </span>
+              <span className="wiki-attention">{msg("出处已变 ·")} </span>
             )}
             {!!item.summaryIssues?.length && item.status === "pending" && (
               <span className="wiki-attention">
                 {item.summaryIssues.some(({ reason }) => reason === "conflict")
-                  ? "结论与引用不一致 · "
-                  : "部分结论缺少出处 · "}
+                  ? msg("结论与引用不一致 · ")
+                  : msg("部分结论缺少出处 · ")}
               </span>
             )}
             {item.reason}
@@ -1346,7 +1347,7 @@ function WikiReaderPlaceholder({
   return (
     <div className="wiki-reader-placeholder">
       <BookOpen size={24} aria-hidden="true" />
-      {loading ? <p role="status">正在读取正文…</p> : <p>{text}</p>}
+      {loading ? <p role="status">{msg("正在读取正文…")}</p> : <p>{text}</p>}
     </div>
   );
 }
@@ -1367,7 +1368,7 @@ function WikiSummaryWarning({
         {issues.map(({ claim, reason }, index) => (
           <li key={index}>
             <strong>
-              {reason === "conflict" ? "与已引用原文不一致" : "缺少对应引文"}
+              {reason === "conflict" ? msg("与已引用原文不一致") : msg("缺少对应引文")}
             </strong>{" "}
             {claim}
           </li>
@@ -1404,7 +1405,7 @@ function WikiPageView({
       path=""
       readOnly
       onError={onError}
-      label="Wiki 正文"
+      label={msg("Wiki 正文")}
     />
   );
   return (
@@ -1416,13 +1417,13 @@ function WikiPageView({
         {page.stale && (
           <p className="panel-warning">
             {history
-              ? "此版的部分资料已经变化，下方仅展示仍可核验的原文。"
-              : "部分所用资料已经变化，当前版本暂停参与问答。重新整理后可更新结论。"}
+              ? msg("此版的部分资料已经变化，下方仅展示仍可核验的原文。")
+              : msg("部分所用资料已经变化，当前版本暂停参与问答。重新整理后可更新结论。")}
           </p>
         )}
         {!showQuotes && !!page.summaryIssues?.length && (
           <p className="panel-warning">
-            此版本的摘要缺少可核验的原文，暂只显示已核验的摘录。
+            {msg("此版本的摘要缺少可核验的原文，暂只显示已核验的摘录。")}
           </p>
         )}
         {hasClaims ? (
@@ -1434,7 +1435,7 @@ function WikiPageView({
               onOpen={onOpen}
             />
             <details className="wiki-full-page">
-              <summary>完整主题正文</summary>
+              <summary>{msg("完整主题正文")}</summary>
               {body}
             </details>
           </>
@@ -1459,8 +1460,8 @@ function WikiPageView({
         className="wiki-evidence"
         open={(showQuotes && !hasClaims) || undefined}
       >
-        <summary>原文位置 · {page.refs.length}</summary>
-        {!page.refs.length && <p>此版本暂无可打开的原文。</p>}
+        <summary>{msg("原文位置 ·")} {page.refs.length}</summary>
+        {!page.refs.length && <p>{msg("此版本暂无可打开的原文。")}</p>}
         <ul className="wiki-citation-list">
           {page.refs.map((source, index) => (
             <li key={`${source.documentId}-${index}`}>
@@ -1494,8 +1495,8 @@ function WikiHistoricalSources({
   if (!sources?.length) return null;
   return (
     <details className="wiki-historical-sources">
-      <summary>已变化或不可用的出处 · {sources.length}</summary>
-      <p>下列位置记录于整理当时，仅供追溯。</p>
+      <summary>{msg("已变化或不可用的出处 ·")} {sources.length}</summary>
+      <p>{msg("下列位置记录于整理当时，仅供追溯。")}</p>
       <ul className="wiki-citation-list">
         {sources.map((source, index) => (
           <li key={`${source.documentId}-${index}`}>
@@ -1504,7 +1505,7 @@ function WikiHistoricalSources({
               <small>
                 {source.excerpt
                   ? `历史摘录 · ${sourceLines(source)}`
-                  : "原文当前不可用"}
+                  : msg("原文当前不可用")}
               </small>
             </div>
             {source.excerpt && (
@@ -1517,7 +1518,7 @@ function WikiHistoricalSources({
                     aria-label={`打开当前文档 ${source.title}`}
                     onClick={() => onOpenCurrent(source.documentId)}
                   >
-                    打开当前文档 <ExternalLink size={14} aria-hidden="true" />
+                    {msg("打开当前文档")} <ExternalLink size={14} aria-hidden="true" />
                   </button>
                 )}
               </>

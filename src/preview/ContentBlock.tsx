@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { lazy, Suspense } from "react";
 import JsonTree from "./JsonTree";
 import Mindmap from "./Mindmap";
@@ -62,7 +63,7 @@ export default function ContentBlock(props: ContentBlockProps) {
   else if (kind === "calendar")
     body = (
       <Suspense
-        fallback={<p className="block-placeholder">正在准备本地日历…</p>}
+        fallback={<p className="block-placeholder">{msg("正在准备本地日历…")}</p>}
       >
         <CalendarBlock
           source={source}

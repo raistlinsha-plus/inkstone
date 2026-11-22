@@ -1,3 +1,4 @@
+import { msg } from "./i18n";
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -124,7 +125,7 @@ export default function BackupDialog({
   };
   return (
     <ModalDialog
-      label="备份与恢复预演"
+      label={msg("备份与恢复预演")}
       className="backup-modal"
       onClose={onClose}
       busy={busy}
@@ -132,40 +133,40 @@ export default function BackupDialog({
       <div className="modal-heading">
         <div>
           <span className="eyebrow">LOCAL BACKUP</span>
-          <h2>备份与恢复预演</h2>
+          <h2>{msg("备份与恢复预演")}</h2>
         </div>
         <button
           className="icon-button"
           disabled={busy}
-          aria-label="关闭备份与恢复预演"
+          aria-label={msg("关闭备份与恢复预演")}
           onClick={onClose}
         >
           <X size={18} />
         </button>
       </div>
       <p className="muted">
-        备份全部文档空间的正文、附件、目录、历史和恢复草稿。外部原件、系统设置、API密钥与系统口令不打包；索引可重新建立。未应用的内容块表单请先应用或取消。
+        {msg("备份全部文档空间的正文、附件、目录、历史和恢复草稿。外部原件、系统设置、API密钥与系统口令不打包；索引可重新建立。未应用的内容块表单请先应用或取消。")}
       </p>
       <section className="backup-section">
-        <h3>1. 生成完整备份</h3>
+        <h3>{msg("1. 生成完整备份")}</h3>
         <label>
-          保存位置
+          {msg("保存位置")}
           <div className="path-picker">
-            <input readOnly value={parent} placeholder="选择一个父目录" />
+            <input readOnly value={parent} placeholder={msg("选择一个父目录")} />
             <button
               className="button"
               disabled={busy}
               onClick={() => void select("parent")}
             >
               <FolderOpen size={14} />
-              选择父目录
+              {msg("选择父目录")}
             </button>
           </div>
         </label>
         <label>
-          新备份文件名
+          {msg("新备份文件名")}
           <input
-            aria-label="备份文件名"
+            aria-label={msg("备份文件名")}
             disabled={busy}
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -178,24 +179,24 @@ export default function BackupDialog({
           }
           onClick={() => void run("create")}
         >
-          生成并校验备份
+          {msg("生成并校验备份")}
         </button>
       </section>
       <section className="backup-section">
-        <h3>2. 校验已有备份</h3>
+        <h3>{msg("2. 校验已有备份")}</h3>
         <div className="path-picker">
           <input
-            aria-label="所选备份路径"
+            aria-label={msg("所选备份路径")}
             readOnly
             value={path}
-            placeholder="选择备份 ZIP 包"
+            placeholder={msg("选择备份 ZIP 包")}
           />
           <button
             className="button"
             disabled={busy}
             onClick={() => void select("path")}
           >
-            选择备份包
+            {msg("选择备份包")}
           </button>
         </div>
         <button
@@ -203,7 +204,7 @@ export default function BackupDialog({
           disabled={busy || !path}
           onClick={() => void run("validate")}
         >
-          校验清单与文件
+          {msg("校验清单与文件")}
         </button>
         {validation && (
           <div
@@ -211,10 +212,10 @@ export default function BackupDialog({
             className={validation.valid ? "backup-result" : "panel-warning"}
           >
             <strong>
-              {validation.valid ? "备份校验通过" : "备份校验失败"}
+              {validation.valid ? msg("备份校验通过") : msg("备份校验失败")}
             </strong>
             <p>
-              {validation.files} 个文件 ·{" "}
+              {validation.files} {msg("个文件 ·")}{" "}
               {(validation.totalBytes / 1024 / 1024).toFixed(2)} MB · schema{" "}
               {validation.schemaVersion}
             </p>
@@ -225,29 +226,29 @@ export default function BackupDialog({
         )}
       </section>
       <section className="backup-section">
-        <h3>3. 恢复到全新目录预演</h3>
+        <h3>{msg("3. 恢复到全新目录预演")}</h3>
         <p className="muted">
-          校验备份后，使用上方父目录创建隔离的恢复副本。当前工作库不被覆盖，也不会自动切换。
+          {msg("校验备份后，使用上方父目录创建隔离的恢复副本。当前工作库不被覆盖，也不会自动切换。")}
         </p>
         <div className="path-picker">
           <input
-            aria-label="恢复预演父目录"
+            aria-label={msg("恢复预演父目录")}
             readOnly
             value={parent}
-            placeholder="选择恢复预演的父目录"
+            placeholder={msg("选择恢复预演的父目录")}
           />
           <button
             className="button"
             disabled={busy}
             onClick={() => void select("parent")}
           >
-            选择恢复父目录
+            {msg("选择恢复父目录")}
           </button>
         </div>
         <label>
-          新预演文件夹
+          {msg("新预演文件夹")}
           <input
-            aria-label="恢复预演文件夹名称"
+            aria-label={msg("恢复预演文件夹名称")}
             disabled={busy}
             value={restoreName}
             onChange={(e) => setRestoreName(e.target.value)}
@@ -260,10 +261,10 @@ export default function BackupDialog({
           }
           onClick={() => void run("restore")}
         >
-          生成恢复预演副本
+          {msg("生成恢复预演副本")}
         </button>
       </section>
-      {busy && <p role="status">正在处理，请保持当前窗口打开…</p>}
+      {busy && <p role="status">{msg("正在处理，请保持当前窗口打开…")}</p>}
       {error && (
         <p className="panel-warning" role="alert">
           {error}
@@ -273,12 +274,12 @@ export default function BackupDialog({
         <div className="backup-result" role="status">
           <strong>
             {report.mode === "backup"
-              ? "备份已生成并校验"
-              : "恢复预演已完成，当前库保持原样"}
+              ? msg("备份已生成并校验")
+              : msg("恢复预演已完成，当前库保持原样")}
           </strong>
           <p>{report.path}</p>
           <p>
-            {report.files} 个文件 ·{" "}
+            {report.files} {msg("个文件 ·")}{" "}
             {(report.totalBytes / 1024 / 1024).toFixed(2)} MB
           </p>
           {report.warnings.map((w, i) => (
