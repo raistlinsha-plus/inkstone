@@ -123,10 +123,10 @@ export function ConversationHeader({
   const namedTitle =
     c?.title && c.title !== autoTitle && c.title !== "新会话" ? c.title : "";
   const conversationTitle = c?.title === "新会话" && !c.turns?.length ? msg("新会话") : c?.title;
-  const headerTitle =
-    !controller.general && c?.title === autoTitle
-      ? msg("当前会话")
-      : conversationTitle || msg("新会话");
+  let headerTitle = conversationTitle || msg("新会话");
+  if (firstQuestion && c?.title === autoTitle) {
+    headerTitle = controller.general ? firstQuestion : msg("当前会话");
+  }
   useEffect(() => {
     setBackground(undefined);
     setPreview(undefined);
@@ -183,16 +183,8 @@ export function ConversationHeader({
           dock.modes
         ) : (
           <div className="assistant-conversation-title">
-            <strong title={c?.title}>{headerTitle}</strong>
-            {(controller.general || c?.archived) && (
-              <small>
-                {controller.general
-                  ? c?.archived
-                    ? msg("通用问答 · 已归档")
-                    : msg("通用问答 · 每轮可添加资料")
-                  : msg("已归档")}
-              </small>
-            )}
+            <strong title={headerTitle}>{headerTitle}</strong>
+            {c?.archived && <small>{msg("已归档")}</small>}
           </div>
         )}
         <div className="assistant-toolbar-actions">

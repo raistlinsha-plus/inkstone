@@ -77,7 +77,7 @@
 }
 .workbench-history h2 {
   flex: none;
-  margin: 17px 8px 6px;
+  margin: 22px 10px 6px;
   font-size: 12px;
   font-weight: 550;
   color: var(--ui-muted, #62695e);
@@ -90,9 +90,10 @@
 }
 .workbench-history ul {
   overflow: auto;
-  padding: 0 1px 2px;
+  padding: 4px;
+  margin-inline: -4px;
   list-style: none;
-  margin: 0;
+  margin-block: 0;
 }
 .workbench-history button {
   display: flex;
@@ -100,18 +101,21 @@
   gap: 8px;
   width: 100%;
   min-height: 34px;
-  padding: 5px 8px;
+  padding: 5px 10px;
   text-align: left;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 .workbench-history svg {
   flex: none;
   color: var(--ui-muted, #62695e);
 }
-.workbench-history button:hover:not(:disabled),
-.workbench-history button[aria-current] {
-  background: var(--ui-selected, #e0e9de);
-  color: var(--ui-accent, #2c5943);
+.workbench-history button:hover:not(:disabled) {
+  background: var(--ui-hover);
+}
+.workbench-history li button[aria-current] {
+  background: var(--ui-hover);
+  color: var(--ui-text);
+  font-weight: 600;
 }
 .workbench-history li button span {
   white-space: nowrap;
@@ -120,8 +124,8 @@
   font-size: 13px;
 }
 .workbench-history .workbench-new-chat {
-  border: 1px solid var(--ui-control-line, #dce0d7);
-  background: var(--ui-field, #fffefa);
+  background: transparent;
+  border: 0;
   flex: none;
   font-weight: 600;
 }
@@ -133,25 +137,79 @@
 .main-layout.ask-workbench > .knowledge-panel {
   background: var(--ui-paper, #fdfcf9);
 }
-.main-layout.ask-workbench .assistant-toolbar {
-  background: var(--ui-surface, #f7f7f3);
-  border-color: var(--ui-line, #e2e4dc);
-  padding: 7px 16px;
+.main-layout.ask-workbench .knowledge-panel .assistant-toolbar {
+  min-height: 46px;
+  padding: 6px clamp(12px, 2vw, 24px);
+  background: var(--ui-paper);
+}
+.main-layout.ask-workbench .assistant-conversation-title {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.main-layout.ask-workbench .assistant-conversation-title strong {
+  max-width: 48ch;
+  font-size: 14px;
+  font-weight: 600;
 }
 .main-layout.ask-workbench .assistant-conversation-title small {
-  color: var(--ui-muted, #62695e);
+  flex: none;
+  margin: 0;
 }
-.main-layout.ask-workbench .assistant-toolbar-actions > button {
-  border-color: transparent;
+.main-layout.ask-workbench .knowledge-panel .assistant-toolbar-actions > button,
+.main-layout.ask-workbench .knowledge-panel .assistant-manage > summary {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ui-muted);
   background: transparent;
 }
-.main-layout.ask-workbench
-  .assistant-toolbar-actions
-  > button:hover:not(:disabled) {
-  background: var(--ui-hover, #e7e9e1);
+.main-layout.ask-workbench .knowledge-panel .assistant-toolbar-actions > button:hover:enabled,
+.main-layout.ask-workbench .knowledge-panel .assistant-manage > summary:hover,
+.main-layout.ask-workbench .knowledge-panel .assistant-manage[open] > summary {
+  background: var(--ui-hover);
+  color: var(--ui-text);
 }
 .main-layout.ask-workbench .assistant-toolbar-actions > button > span {
   display: none;
+}
+.main-layout.ask-workbench .ask-scroll {
+  display: flex;
+  flex-direction: column;
+  padding: 24px var(--ask-gutter);
+}
+.main-layout.ask-workbench .ask-scroll .panel-empty {
+  width: min(100%, var(--ask-width));
+  margin: auto;
+  padding: 0;
+}
+.main-layout.ask-workbench .ask-scroll .panel-empty h3 {
+  margin: 0 0 8px;
+  font-size: clamp(22px, 2.1vw, 30px);
+  font-weight: 600;
+  line-height: 1.4;
+}
+.main-layout.ask-workbench .ask-scroll .panel-empty p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.main-layout.ask-workbench .ask-scroll .example-searches button {
+  padding: 5px 11px;
+  border: 1px solid var(--ui-line);
+  border-radius: 16px;
+  background: transparent;
+  color: var(--ui-muted);
+  font-size: 12px;
+}
+.main-layout.ask-workbench .ask-scroll .example-searches button:hover:enabled {
+  background: var(--ui-hover);
+  color: var(--ui-text);
+}
+.main-layout.ask-workbench .ask-scroll .example-searches + button {
+  margin-top: 14px;
 }
 .main-layout.ask-workbench .workbench-timeline {
   padding: 24px var(--ask-gutter) 16px;
@@ -348,17 +406,6 @@
 }
 .workspace-shell .sidebar-resizer:is(:hover, :focus-visible) {
   background: var(--ui-focus);
-}
-.workbench-history li button[aria-current]::before {
-  content: "";
-  position: absolute;
-  inset: 8px auto 8px 0;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--ui-accent);
-}
-.workbench-history li button[aria-current] {
-  position: relative;
 }
 .workspace-shell .workspace-rail .pending-dot {
   background: var(--ui-accent);
@@ -638,7 +685,6 @@
     .question-source-picker select,
     .question-source-picker input:not([type="checkbox"]),
     .ask-form,
-    .assistant-toolbar-actions > button,
     .assistant-turn-actions button,
     .assistant-branches button,
     .question-source-documents > .button,

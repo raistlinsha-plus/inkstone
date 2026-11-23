@@ -1510,6 +1510,16 @@ test("browsing a space does not attach it to an independent question", async () 
   }) as HTMLButtonElement;
   await waitFor(() => expect(addSources.disabled).toBe(false));
   fireEvent.click(addSources);
+  const picker = () => screen.queryByRole("group", { name: "选择本轮资料" });
+  expect(picker()).toBeTruthy();
+  fireEvent.pointerDown(composer);
+  expect(picker()).toBeNull();
+  expect(screen.queryByText("未添加资料")).toBeNull();
+  fireEvent.click(addSources);
+  fireEvent.keyDown(within(picker()!).getByRole("combobox"), { key: "Escape" });
+  expect(picker()).toBeNull();
+  expect(document.activeElement).toBe(addSources);
+  fireEvent.click(addSources);
   fireEvent.change(screen.getByRole("combobox", { name: "知识空间" }), {
     target: { value: "p2" },
   });

@@ -42,7 +42,7 @@
     "shortDescription": "本地写作与知识检索",
     "macOS": {
       "minimumSystemVersion": "13.0",
-      "bundleVersion": "10204",
+      "bundleVersion": "10205",
       "signingIdentity": "-"
     },
     "resources": {

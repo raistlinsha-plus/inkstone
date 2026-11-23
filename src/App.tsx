@@ -2992,13 +2992,11 @@ export default function App() {
   const turnControls = (
     <>
       <label
-        className={generalAsk ? "assistant-skip-preference" : "composer-web-toggle"}
+        className="composer-web-toggle"
         title={
-          generalAsk
-            ? msg("仍可向已配置的聊天模型发送问题和所选资料")
-            : localOnlyTurn
-              ? msg("本轮不搜索网页。点击恢复自动判断。")
-              : msg("本轮允许模型按需搜索网页，受联网设置限制。点击关闭。")
+          localOnlyTurn
+            ? msg("本轮不搜索网页。点击恢复自动判断。")
+            : msg("本轮允许模型按需搜索网页，受联网设置限制。点击关闭。")
         }
       >
         <input
@@ -3013,12 +3011,8 @@ export default function App() {
             else if (webAccess) changeDraftContext(context);
           }}
         />
-        {generalAsk ? msg("本轮不搜索网页") : (
-          <>
-            {localOnlyTurn ? <GlobeLock size={15} /> : <Globe size={15} />}
-            {localOnlyTurn ? msg("不搜网页") : msg("按需搜索网页")}
-          </>
-        )}
+        {localOnlyTurn ? <GlobeLock size={15} /> : <Globe size={15} />}
+        {localOnlyTurn ? msg("不搜网页") : msg("按需搜索网页")}
       </label>
       <details
         className="assistant-composer-options"
@@ -3039,7 +3033,7 @@ export default function App() {
           aria-label={skipPreferences ? msg("更多选项，已停用回答偏好") : msg("更多选项")}
           title={skipPreferences ? msg("更多选项，已停用回答偏好") : msg("更多选项")}
         >
-          {generalAsk ? (skipPreferences ? msg("已停用回答偏好") : msg("更多选项")) : <MoreHorizontal size={17} />}
+          <MoreHorizontal size={17} />
         </summary>
         <div>
           <label className="assistant-skip-preference">
@@ -3052,7 +3046,7 @@ export default function App() {
             {msg("本轮停用回答偏好")}
           </label>
           <p>{msg("所选资料可发给聊天模型。本轮选项随发送重置。")}</p>
-          {!generalAsk && <p><kbd>Enter</kbd> {msg("发送 ·")} <kbd>Shift+Enter</kbd> {msg("换行")}</p>}
+          <p><kbd>Enter</kbd> {msg("发送 ·")} <kbd>Shift+Enter</kbd> {msg("换行")}</p>
         </div>
       </details>
     </>
@@ -4257,11 +4251,6 @@ export default function App() {
                 ) : (
                   <div className="panel-scroll ask-scroll">
                     <div className="panel-empty">
-                      {generalAsk && <div className="orbit-icon">
-                        <Sparkles size={26} strokeWidth={1.4} />
-                        <span />
-                        <i />
-                      </div>}
                       <h3>
                         {generalAsk ? msg("今天想做些什么？") : msg("问问这些资料")}
                       </h3>
@@ -4332,7 +4321,7 @@ export default function App() {
                   </div>
                 )}
                 <form
-                  className={generalAsk ? "ask-form" : "ask-form document-composer"}
+                  className={`ask-form agent-composer ${generalAsk ? "general-composer" : "document-composer"}`}
                   aria-busy={openingConversation || undefined}
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -4356,14 +4345,17 @@ export default function App() {
                       <small>{msg("发送时会将以上背景一并发给聊天模型。")}</small>
                     </section>
                   )}
-                  <div className={generalAsk ? "general-composer-field" : "document-composer-field"}>
-                    {!generalAsk && (
-                      <span className="composer-text-measure" aria-hidden="true" data-value={question} />
-                    )}
+                  <div className="agent-composer-field">
+                    <span className="composer-text-measure" aria-hidden="true" data-value={question} />
                     <textarea
                       ref={questionInput}
-                      aria-label={generalAsk ? msg("向 AI 提问") : separateFixedScope ? `向会话文档 ${basename(fixedScope)} 提问` : panelScope === "current" ? msg("向当前文档提问") : msg("向当前空间提问")}
-                      rows={generalAsk ? 2 : 1}
+                      aria-label={
+                        generalAsk ? msg("向 AI 提问")
+                          : separateFixedScope
+                            ? t(`向会话文档 ${basename(fixedScope)} 提问`, `Ask about conversation document ${basename(fixedScope)}`)
+                            : panelScope === "current" ? msg("向当前文档提问") : msg("向当前空间提问")
+                      }
+                      rows={1}
                       value={question}
                       maxLength={1500}
                       disabled={composerLocked || documentScopeMissing}
@@ -4446,9 +4438,7 @@ export default function App() {
                     </section>
                   )}
                   <div className="composer-send-row">
-                    {(generalAsk || (chatBusy && question.trim())) && (
-                      <span>{chatBusy && question.trim() ? msg("下一问草稿自动保存") : msg("Enter 发送 / Shift+Enter 换行")}</span>
-                    )}
+                    {chatBusy && question.trim() && <span>{msg("下一问草稿自动保存")}</span>}
                     {chatBusy ? (
                       <button
                         type="button"

@@ -1,5 +1,5 @@
 import { msg } from "../i18n";
-import { MessageSquare, MessageSquarePlus } from "lucide-react";
+import { SquarePen } from "lucide-react";
 import type { ConversationSummary } from "./types";
 
 export default function ConversationSidebar({
@@ -29,7 +29,7 @@ export default function ConversationSidebar({
         disabled={disabled}
         onClick={onNew}
       >
-        <MessageSquarePlus size={16} />
+        <SquarePen size={16} aria-hidden="true" />
         {msg("新建会话")}
       </button>
       <h2>{msg("最近会话")}</h2>
@@ -48,7 +48,6 @@ export default function ConversationSidebar({
               title={row.title}
               onClick={() => onSelect(row.id)}
             >
-              <MessageSquare size={15} />
               <span>
                 {row.title}
                 {row.archived && msg(" · 已归档")}

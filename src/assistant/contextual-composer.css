@@ -1,61 +1,62 @@
-.ask-form > .general-composer-field {
-  display: contents;
-}
-
-.workspace-shell .contextual-panel form.ask-form.document-composer {
+/* The same writing surface is used in a document and in the chat workbench. */
+.workspace-shell .knowledge-panel form.agent-composer {
   position: relative;
   flex: none;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
   gap: 6px 8px;
-  border-radius: 16px;
+  background: var(--ui-field);
+  border: 1px solid var(--ui-line);
+  border-radius: 18px;
+}
+.workspace-shell .knowledge-panel form.agent-composer:has(textarea:focus) {
+  border-color: var(--ui-focus);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ui-focus) 15%, transparent);
+}
+.workspace-shell .contextual-panel form.document-composer {
   margin: 6px 12px 12px;
   padding: 10px 10px 7px;
-  background: var(--ui-surface);
-  border: 1px solid var(--ui-line);
+  border-radius: 16px;
 }
-
-.workspace-shell .contextual-panel .document-composer:focus-within {
-  border-color: var(--ui-control-line);
-  box-shadow: none;
-}
-.workspace-shell .contextual-panel .document-composer:has(textarea:focus-visible) {
-  border-color: var(--ui-focus);
-}
-
-.document-composer > .assistant-background-chip,
-.document-composer > .document-composer-field {
+.agent-composer > .assistant-background-chip,
+.agent-composer > .agent-composer-field {
   grid-column: 1 / -1;
 }
-.document-composer > .document-composer-field {
+.agent-composer > .agent-composer-field {
   position: relative;
   display: block;
   min-width: 0;
-  min-height: 25px;
-  max-height: min(140px, 24vh);
+  min-height: 27px;
+  max-height: min(144px, 24vh);
   margin: 0;
   overflow: hidden;
 }
-.document-composer .composer-text-measure,
-.workspace-shell .contextual-panel .document-composer textarea {
+.general-composer > .agent-composer-field { min-height: 34px; }
+
+/* Matching metrics reflow both typed and restored drafts as the pane resizes. */
+.workspace-shell .knowledge-panel .agent-composer :is(.composer-text-measure, textarea) {
   display: block;
   box-sizing: border-box;
   margin: 0;
-  padding: 2px 4px;
+  padding: 3px 5px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font: inherit;
   font-size: 14px;
   line-height: 21px;
 }
-/* Matching metrics also size restored drafts and reflow them on sidebar resize. */
+.workspace-shell .knowledge-panel .general-composer :is(.composer-text-measure, textarea) {
+  padding-inline: 6px;
+  font-size: 15px;
+  line-height: 23px;
+}
 .composer-text-measure {
   visibility: hidden;
   pointer-events: none;
 }
 .composer-text-measure::before { content: attr(data-value) " "; }
-.workspace-shell .contextual-panel .document-composer textarea {
+.workspace-shell .knowledge-panel .agent-composer textarea {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -70,19 +71,44 @@
   box-shadow: none;
   color: var(--ui-text);
 }
-.document-composer .question-source-chips,
-.document-composer > .composer-send-row {
+.agent-composer .question-source-chips,
+.agent-composer .composer-selected-sources,
+.agent-composer > .composer-send-row {
   display: flex;
   align-items: center;
-  gap: 3px;
-  min-height: 30px;
+  gap: 4px;
   margin: 0;
   padding: 0;
 }
-.document-composer .composer-send-row { justify-content: end; }
-.document-composer .composer-send-row span { font-size: 11px; }
-.document-composer .composer-web-toggle,
-.document-composer .assistant-composer-options > summary {
+.agent-composer .question-sources > :is([role="alert"], [role="status"], .composer-selected-sources) {
+  flex-basis: 100%;
+}
+.agent-composer .composer-selected-sources {
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.agent-composer .question-source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.agent-composer .question-source-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-composer .question-source-chip svg { flex-shrink: 0; }
+.agent-composer > .composer-send-row { justify-content: end; }
+.agent-composer .composer-send-row span { font-size: 11px; }
+.agent-composer .composer-web-toggle,
+.agent-composer .composer-add-source,
+.agent-composer .assistant-composer-options > summary {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -90,19 +116,22 @@
   gap: 5px;
   min-height: 30px;
   margin: 0;
-  padding: 0 6px;
-  border-radius: 7px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 8px;
   color: var(--ui-muted);
+  background: transparent;
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
 }
-.document-composer .assistant-composer-options > summary {
+.agent-composer .assistant-composer-options > summary {
   min-width: 30px;
   padding: 0;
   list-style: none;
 }
-.document-composer summary::-webkit-details-marker { display: none; }
-.document-composer .composer-web-toggle input {
+.agent-composer summary::-webkit-details-marker { display: none; }
+.agent-composer .composer-web-toggle input {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -111,43 +140,48 @@
   opacity: 0;
   cursor: inherit;
 }
-.document-composer .composer-web-toggle:has(input:focus-visible) {
+.agent-composer .composer-web-toggle:has(input:focus-visible) {
   outline: 2px solid var(--ui-focus);
   outline-offset: 1px;
 }
-.document-composer .composer-web-toggle:has(input:checked),
-.document-composer .assistant-composer-options[open] > summary,
-.document-composer .assistant-composer-options[data-preferences-skipped] > summary {
+.agent-composer .composer-web-toggle:has(input:checked),
+.agent-composer .composer-add-source[aria-expanded="true"],
+.agent-composer .assistant-composer-options[open] > summary,
+.agent-composer .assistant-composer-options[data-preferences-skipped] > summary {
   background: var(--ui-selected);
   color: var(--ui-accent);
 }
-.document-composer .composer-web-toggle:hover:not(:has(input:disabled)),
-.document-composer .assistant-composer-options > summary:hover {
+.agent-composer .composer-web-toggle:hover:not(:has(input:disabled)),
+.agent-composer .composer-add-source:hover:not(:disabled),
+.agent-composer .assistant-composer-options > summary:hover {
   background: var(--ui-hover);
   color: var(--ui-text);
 }
-.document-composer .composer-web-toggle:has(input:disabled) {
+.agent-composer .composer-web-toggle:has(input:disabled) {
   opacity: .65;
   cursor: default;
 }
-.document-composer .assistant-composer-options { position: static; }
-.document-composer .assistant-composer-options > div {
-  inset: auto auto calc(100% + 4px) 0;
+
+/* Anchor both popovers above the composer and keep them inside a narrow pane. */
+.agent-composer .question-sources,
+.agent-composer .assistant-composer-options { position: static; }
+.agent-composer :is(.question-source-picker, .assistant-composer-options > div) {
+  inset: auto auto calc(100% + 6px) 0;
   box-sizing: border-box;
-  width: min(252px, 100%);
+  width: min(100%, 360px);
   max-width: 100%;
+  min-width: 0;
+  border-radius: 12px;
 }
-.document-composer .send-button {
-  width: 30px;
-  height: 30px;
+.agent-composer .assistant-composer-options > div { width: min(100%, 252px); }
+.agent-composer .send-button {
+  flex: none;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
 }
-
 @media (max-height: 720px) {
-  .workspace-shell .contextual-panel .document-composer {
-    padding: 8px 10px 6px !important;
-  }
-  .workspace-shell .contextual-panel .document-composer textarea {
+  .workspace-shell .knowledge-panel .agent-composer textarea {
     height: 100% !important;
     min-height: 0 !important;
   }
