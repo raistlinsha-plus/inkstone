@@ -127,38 +127,81 @@
   padding: 3px 6px;
   border-radius: 5px;
 }
-.task-quick-entry > div {
+.task-quick-control {
+  display: flex;
+  align-items: stretch;
+  min-height: 44px;
+  background: var(--ui-field);
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+}
+.task-quick-control:hover {
+  border-color: var(--ui-control-line);
+}
+.task-quick-control:has(input:focus) {
+  border-color: var(--ui-focus);
+  box-shadow: inset 0 0 0 1px var(--ui-focus);
+}
+.task-quick-title {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 13px;
-  min-height: 44px;
-  background: var(--ui-field);
-  border: 1px solid var(--ui-control-line);
-  border-radius: 8px;
-  color: var(--ui-accent);
-}
-.task-quick-entry > div:focus-within {
-  outline: 2px solid var(--ui-focus);
-  outline-offset: 1px;
-}
-.task-quick-entry input {
   flex: 1;
   min-width: 0;
+  padding-inline: 13px;
+  cursor: text;
+  color: var(--ui-muted);
+}
+.task-quick-title svg {
+  flex: none;
+}
+.task-quick-title:focus-within {
+  color: var(--ui-accent);
+}
+.task-workspace .task-quick-title input {
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
   background: transparent;
   border: 0;
+  border-radius: 0;
   padding: 0;
+  margin: 0;
   color: var(--ui-text);
+  caret-color: var(--ui-accent);
   font-size: 14px;
 }
-.task-quick-entry input:focus-visible {
+.task-workspace .task-quick-title input:focus {
   outline: none;
+  box-shadow: none;
 }
-.task-quick-entry button {
-  display: grid;
-  place-items: center;
-  min-width: 28px;
-  min-height: 26px;
+.task-quick-title input::placeholder {
+  color: var(--ui-placeholder);
+  opacity: 1;
+}
+.task-quick-entry .task-quick-submit:not([hidden]) {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  gap: 6px;
+  margin: 5px 6px 5px 0;
+  padding: 4px 10px;
+  min-height: 30px;
+  border-radius: 6px;
+  background: var(--ui-action);
+  color: var(--ui-on-action);
+  font-size: 12px;
+  font-weight: 600;
+}
+.task-quick-entry .task-quick-submit:not(:disabled):hover {
+  background: var(--ui-action-hover);
+}
+@media (forced-colors: active) {
+  .task-quick-control:has(input:focus) {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
 }
 .task-quick-entry > label {
   display: flex;
@@ -248,29 +291,6 @@
 }
 .task-row-dates.overdue {
   color: var(--ui-danger);
-}
-.task-detail-sheet {
-  max-width: min(550px, 94vw);
-  max-height: 88vh;
-  overflow: auto;
-  background: var(--ui-paper);
-  color: var(--ui-text);
-}
-.task-detail-sheet .task-form {
-  margin: 0;
-  border: 0;
-  background: transparent;
-}
-.task-detail-sheet footer {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 8px 14px;
-}
-.task-detail-sheet footer button {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
 }
 @media (max-width: 850px) {
   .task-workspace {

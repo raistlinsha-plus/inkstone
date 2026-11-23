@@ -513,19 +513,6 @@ export default function ProjectCalendar({
       <div className="calendar-main-split">
         {taskEditor && (
           <aside className="calendar-inspector">
-            <div className="calendar-editor-source">
-              <span>{taskEditor.document.title}</span>
-              <button
-                onClick={() =>
-                  onOpen({
-                    path: taskEditor.document.path,
-                    line: taskEditor.origin.task.line,
-                  })
-                }
-              >
-                {msg("回到原文 ↗")}
-              </button>
-            </div>
             <TaskForm
               key={
                 taskEditor.document.documentId +
@@ -537,6 +524,13 @@ export default function ProjectCalendar({
                 (d) => d.documentId === taskEditor.document.documentId,
               )}
               origin={taskEditor.origin}
+              openSourceLabel={msg("回到原文 ↗")}
+              onOpenSource={() =>
+                onOpen({
+                  path: taskEditor.document.path,
+                  line: taskEditor.origin.task.line,
+                })
+              }
               onPatch={onPatch}
               busy={busy}
               onAskForHelp={

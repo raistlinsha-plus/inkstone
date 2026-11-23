@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -38,6 +39,102 @@ const taskProps = {
   onRefresh: vi.fn(),
   onAskForHelp: vi.fn(),
 };
+
+function renderQuickAdd(onQuickAdd: typeof taskProps.onQuickAdd) {
+  render(
+    <TaskList
+      {...taskProps}
+      documents={[]}
+      onQuickAdd={onQuickAdd}
+      onPatch={vi.fn()}
+      onOpen={vi.fn()}
+    />,
+  );
+  return screen.getByRole<HTMLInputElement>("textbox", { name: "任务标题" });
+}
+
+it("submits a quick entry once and returns from the submit button to a cleared title for the next task", async () => {
+  let finish!: () => void;
+  const write = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    )
+    .mockResolvedValue(undefined);
+  const input = renderQuickAdd(write);
+  fireEvent.change(input, { target: { value: "   " } });
+  expect(screen.queryByRole("button", { name: "添加任务" })).toBeNull();
+  fireEvent.submit(input.form!);
+  expect(write).not.toHaveBeenCalled();
+  fireEvent.change(input, { target: { value: "  发出会议纪要  " } });
+  const add = screen.getByRole<HTMLButtonElement>("button", {
+    name: "添加任务",
+  });
+  add.focus();
+  fireEvent.click(add);
+  fireEvent.submit(input.form!);
+  expect(write).toHaveBeenCalledTimes(1);
+  expect(write.mock.calls[0][0].title).toBe("发出会议纪要");
+  expect(input.value.trim()).toBe("发出会议纪要");
+  expect(input.readOnly).toBe(true);
+  expect(add.disabled).toBe(true);
+  await act(async () => {
+    finish();
+  });
+  await waitFor(() => {
+    expect(input.value).toBe("");
+    expect(document.activeElement).toBe(input);
+  });
+  expect(input.readOnly).toBe(false);
+
+  fireEvent.change(input, { target: { value: "预约复盘" } });
+  fireEvent.submit(input.form!);
+  await waitFor(() => expect(input.value).toBe(""));
+  expect(write.mock.calls.map(([draft]) => draft.title)).toEqual([
+    "发出会议纪要",
+    "预约复盘",
+  ]);
+  expect(write.mock.calls[1][0].id).not.toBe(write.mock.calls[0][0].id);
+});
+
+it("retains the title after a failed quick add and retries the same task ID", async () => {
+  const write = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("保存失败"))
+    .mockResolvedValueOnce(undefined);
+  const input = renderQuickAdd(write);
+  fireEvent.change(input, { target: { value: "保存这条任务" } });
+  fireEvent.submit(input.form!);
+  expect((await screen.findByRole("alert")).textContent).toContain("保存失败");
+  expect(input.value).toBe("保存这条任务");
+  fireEvent.click(screen.getByRole("button", { name: "添加任务" }));
+  await waitFor(() => expect(input.value).toBe(""));
+  expect(write).toHaveBeenCalledTimes(2);
+  expect(write.mock.calls[1][0]).toEqual(write.mock.calls[0][0]);
+});
+
+it("prevents implicit submission for Chinese candidate confirmation, including WebKit's final key", async () => {
+  const write = vi.fn().mockResolvedValue(undefined);
+  const input = renderQuickAdd(write);
+  fireEvent.change(input, { target: { value: "整理资料" } });
+  for (const event of [
+    { isComposing: true },
+    { isComposing: false, keyCode: 229 },
+  ]) {
+    // An uncancelled Enter implicitly submits the form in the desktop webview.
+    const allowed = fireEvent.keyDown(input, { key: "Enter", ...event });
+    expect(allowed).toBe(false);
+  }
+  expect(write).not.toHaveBeenCalled();
+  expect(input.value).toBe("整理资料");
+  expect(fireEvent.keyDown(input, { key: "Enter" })).toBe(true);
+  fireEvent.submit(input.form!);
+  await waitFor(() => expect(input.value).toBe(""));
+  expect(write).toHaveBeenCalledTimes(1);
+});
 it("writes a task to its chosen document, follows a due marker back to its line, completes it and guards a stale detail form", async () => {
   const a = {
     documentId: "a",

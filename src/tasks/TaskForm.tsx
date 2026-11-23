@@ -1,5 +1,13 @@
 import { useRef, useState } from "react";
 import {
+  CalendarClock,
+  ChevronRight,
+  ExternalLink,
+  FileText,
+  Sparkles,
+} from "lucide-react";
+import "./task-detail.css";
+import {
   currentTimeZone,
   dateInZone,
   dateTimeInput,
@@ -17,6 +25,31 @@ import { translate as t, useLocale } from "../i18n";
 import type { ProjectTask } from "./project";
 import TaskOrigin from "./TaskOrigin";
 
+function TaskDateInput({
+  type = "date",
+  value,
+  onChange,
+  hint,
+}: {
+  type?: "date" | "datetime-local";
+  value: string;
+  onChange: (value: string) => void;
+  hint: string;
+}) {
+  return (
+    <span className="task-date-control">
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {!value && (
+        <span className="task-date-hint" data-hint={hint} aria-hidden="true" />
+      )}
+    </span>
+  );
+}
+
 export default function TaskForm({
   document: doc,
   current,
@@ -26,6 +59,8 @@ export default function TaskForm({
   busy,
   onCalendar,
   onAskForHelp,
+  onOpenSource,
+  openSourceLabel,
 }: {
   document: CalendarDocument;
   current?: CalendarDocument;
@@ -35,6 +70,8 @@ export default function TaskForm({
   busy: boolean;
   onCalendar?: (day: string) => void;
   onAskForHelp?: (title: string) => void;
+  onOpenSource?: () => void;
+  openSourceLabel?: string;
 }) {
   useLocale();
   const task = origin?.task;
@@ -122,9 +159,20 @@ export default function TaskForm({
       submitting.current = false;
     }
   }
+  const locked = busy || saving || stale;
+  const sourceLabel = openSourceLabel ?? t("打开原文", "Open source document");
+  const source = (
+    <>
+      <FileText size={14} aria-hidden="true" />
+      <span>
+        {doc.title}
+        {task ? " · L" + task.line : ""}
+      </span>
+    </>
+  );
   return (
     <form
-      className="task-form calendar-event-editor"
+      className="task-detail-form"
       aria-label={t("任务详情", "Task details")}
       onSubmit={(e) => {
         e.preventDefault();
@@ -137,161 +185,197 @@ export default function TaskForm({
         }
       }}
     >
-      <header>
-        <strong>
+      <header className="task-detail-heading">
+        <h2>
           {task ? t("任务详情", "Task details") : t("新增任务", "New task")}
-        </strong>
-        <span>
-          {doc.title}
-          {task ? " · L" + task.line : ""}
-        </span>
-      </header>
-      {stale && (
-        <p role="alert">
-          {t(
-            "原文已更改，请重开任务后核对。",
-            "The source changed. Reopen this task to review it.",
-          )}
-        </p>
-      )}
-      {task?.duplicate ? (
-        <p role="alert">
-          {t(
-            "此文档中有重复的任务 ID。为这一处重新编号后即可分别编辑。",
-            "This document contains duplicate task IDs. Give this occurrence a new ID to edit the tasks independently.",
-          )}
-        </p>
-      ) : (
-        <fieldset disabled={busy || saving || stale}>
-          <label>
-            {t("任务标题", "Task title")}
-            <input
-              value={title}
-              required
-              maxLength={1500}
-              onChange={(e) => setTitle(e.target.value)}
-              autoFocus
-            />
-          </label>
-          <div className="task-fields">
-            <label>
-              {t("截止日", "Due date")}
-              <input
-                type="date"
-                value={due}
-                onChange={(e) => setDue(e.target.value)}
-              />
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={waiting}
-                onChange={(e) => setWaiting(e.target.checked)}
-              />
-              {t("等回复", "Waiting for a reply")}
-            </label>
-            {waiting && (
-              <label>
-                {t("跟进日", "Follow-up date")}
-                <input
-                  type="date"
-                  value={followOn}
-                  onChange={(e) => setFollowOn(e.target.value)}
-                />
-              </label>
-            )}
-          </div>
-          <details open={task?.slot ? true : undefined}>
-            <summary>{t("安排执行时段", "Schedule a time slot")}</summary>
-            <div className="task-fields">
-              <label>
-                {t("开始", "Start")}
-                <input
-                  type="datetime-local"
-                  value={start}
-                  onChange={(e) => setStart(e.target.value)}
-                />
-              </label>
-              <label>
-                {t("结束", "End")}
-                <input
-                  type="datetime-local"
-                  value={end}
-                  onChange={(e) => setEnd(e.target.value)}
-                />
-              </label>
-              <label>
-                {t("时区", "Time zone")}
-                <input value={zone} onChange={(e) => setZone(e.target.value)} />
-              </label>
-            </div>
-          </details>
-          <label>
-            <input
-              type="checkbox"
-              checked={done}
-              onChange={(e) => setDone(e.target.checked)}
-            />
-            {t("已完成", "Completed")}
-          </label>
-        </fieldset>
-      )}
-      {task && <TaskOrigin documentId={doc.documentId} taskId={task.id} />}
-      {error && (
-        <p className="calendar-error" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="task-actions">
-        {task && !task.duplicate && (
+        </h2>
+        {onOpenSource ? (
           <button
             type="button"
-            disabled={busy || saving || stale}
-            onClick={() => void write("untrack")}
+            className="task-detail-source"
+            aria-label={sourceLabel}
+            title={sourceLabel + " · " + doc.title}
+            disabled={busy || saving}
+            onClick={onOpenSource}
           >
-            {t("取消跟踪", "Stop tracking")}
+            {source}
+            <ExternalLink size={12} aria-hidden="true" />
           </button>
+        ) : (
+          <span className="task-detail-source">{source}</span>
         )}
+      </header>
+      <div className="task-detail-body">
+        {stale && (
+          <p role="alert">
+            {t(
+              "原文已更改，请重开任务后核对。",
+              "The source changed. Reopen this task to review it.",
+            )}
+          </p>
+        )}
+        {task?.duplicate ? (
+          <p role="alert">
+            {t(
+              "此文档中有重复的任务 ID。为这一处重新编号后即可分别编辑。",
+              "This document contains duplicate task IDs. Give this occurrence a new ID to edit the tasks independently.",
+            )}
+          </p>
+        ) : (
+          <fieldset className="task-detail-fields" disabled={locked}>
+            <label className="task-detail-field">
+              {t("任务标题", "Task title")}
+              <input
+                value={title}
+                required
+                maxLength={1500}
+                onChange={(e) => setTitle(e.target.value)}
+                autoFocus
+              />
+            </label>
+            <div className="task-detail-status">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={done}
+                  onChange={(e) => setDone(e.target.checked)}
+                />
+                {t("已完成", "Completed")}
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={waiting}
+                  onChange={(e) => setWaiting(e.target.checked)}
+                />
+                {t("等回复", "Waiting for a reply")}
+              </label>
+              {task && (
+                <button
+                  type="button"
+                  className="task-detail-untrack"
+                  onClick={() => void write("untrack")}
+                >
+                  {t("取消跟踪", "Stop tracking")}
+                </button>
+              )}
+            </div>
+            <div className="task-detail-dates">
+              <label className="task-detail-field">
+                {t("截止日", "Due date")}
+                <TaskDateInput
+                  type="date"
+                  value={due}
+                  onChange={setDue}
+                  hint={t("未设置", "Not set")}
+                />
+              </label>
+              {waiting && (
+                <label className="task-detail-field">
+                  {t("跟进日", "Follow-up date")}
+                  <TaskDateInput
+                    type="date"
+                    value={followOn}
+                    onChange={setFollowOn}
+                    hint={t("未设置", "Not set")}
+                  />
+                </label>
+              )}
+            </div>
+            <div className="task-detail-schedule">
+              <details open={task?.slot ? true : undefined}>
+                <summary>
+                  <CalendarClock size={16} aria-hidden="true" />
+                  {t("安排执行时段", "Schedule a time slot")}
+                  <ChevronRight
+                    size={15}
+                    aria-hidden="true"
+                    className="task-detail-chevron"
+                  />
+                </summary>
+                <div className="task-detail-times">
+                  <label className="task-detail-field">
+                    {t("开始", "Start")}
+                    <TaskDateInput
+                      type="datetime-local"
+                      value={start}
+                      onChange={setStart}
+                      hint={t("选择开始时间", "Select start time")}
+                    />
+                  </label>
+                  <label className="task-detail-field">
+                    {t("结束", "End")}
+                    <TaskDateInput
+                      type="datetime-local"
+                      value={end}
+                      onChange={setEnd}
+                      hint={t("选择结束时间", "Select end time")}
+                    />
+                  </label>
+                  <label className="task-detail-field task-detail-zone">
+                    {t("时区", "Time zone")}
+                    <input
+                      value={zone}
+                      onChange={(e) => setZone(e.target.value)}
+                    />
+                  </label>
+                </div>
+              </details>
+              {onCalendar && (start || due || (waiting && followOn)) && (
+                <button
+                  type="button"
+                  className="task-detail-calendar"
+                  disabled={!title.trim()}
+                  onClick={() => void write("calendar")}
+                >
+                  {t("保存并在日历中查看", "Save and show in calendar")}
+                  <ExternalLink size={12} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          </fieldset>
+        )}
+        {task && <TaskOrigin documentId={doc.documentId} taskId={task.id} />}
+        {error && (
+          <p className="calendar-error" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+      <div className="task-detail-actions">
         {task && !task.duplicate && onAskForHelp && (
           <button
             type="button"
+            className="task-detail-help"
+            disabled={locked}
             onClick={() => onAskForHelp(task.title)}
-            disabled={busy || saving || stale}
           >
+            <Sparkles size={15} aria-hidden="true" />
             {t("请 AI 帮我拆解", "Break down with AI")}
           </button>
         )}
-        {onCalendar &&
-          !task?.duplicate &&
-          (start || due || (waiting && followOn)) && (
+        <div className="task-detail-submit">
+          <button type="button" onClick={onClose} disabled={saving}>
+            {t("取消", "Cancel")}
+          </button>
+          {task?.duplicate ? (
             <button
               type="button"
-              disabled={busy || saving || stale || !title.trim()}
-              onClick={() => void write("calendar")}
+              disabled={busy || saving || stale}
+              onClick={() => void write("rekey")}
             >
-              {t("保存并在日历中查看", "Save and show in calendar")}
+              {t("为这项重新编号", "Assign a new ID")}
+            </button>
+          ) : (
+            <button
+              className="task-detail-save"
+              type="submit"
+              disabled={busy || saving || stale || !title.trim()}
+            >
+              {t("保存任务", "Save task")}
             </button>
           )}
-        <button type="button" onClick={onClose} disabled={saving}>
-          {t("取消", "Cancel")}
-        </button>
-        {task?.duplicate ? (
-          <button
-            type="button"
-            disabled={busy || saving || stale}
-            onClick={() => void write("rekey")}
-          >
-            {t("为这项重新编号", "Assign a new ID")}
-          </button>
-        ) : (
-          <button
-            className="calendar-primary"
-            type="submit"
-            disabled={busy || saving || stale || !title.trim()}
-          >
-            {t("保存任务", "Save task")}
-          </button>
-        )}
+        </div>
       </div>
     </form>
   );

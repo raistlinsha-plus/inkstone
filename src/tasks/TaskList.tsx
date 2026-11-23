@@ -88,6 +88,7 @@ export default function TaskList({
   const [view, setView] = useState(() => initialView(spaceId));
   const [sort, setSort] = useState("date");
   const [title, setTitle] = useState("");
+  const titleInput = useRef<HTMLInputElement>(null);
   const [target, setTarget] = useState("");
   const [detail, setDetail] = useState<ProjectTask | null>(null);
   const [error, setError] = useState("");
@@ -297,29 +298,37 @@ export default function TaskList({
               className="task-quick-entry"
               onSubmit={(e) => {
                 e.preventDefault();
+                if (!title.trim() || locked || pending.current) return;
+                titleInput.current?.focus({ preventScroll: true });
                 void write(create);
               }}
             >
-              <div>
-                <Plus size={18} />
-                <input
-                  aria-label={t("任务标题", "Task title")}
-                  value={title}
-                  maxLength={1500}
-                  disabled={locked}
-                  placeholder={t("添加任务…", "Add a task…")}
-                  onChange={(e) => setTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && isImeEvent(e.nativeEvent))
-                      e.preventDefault();
-                  }}
-                />
+              <div className="task-quick-control">
+                <label className="task-quick-title">
+                  <Plus size={17} aria-hidden="true" />
+                  <input
+                    ref={titleInput}
+                    aria-label={t("任务标题", "Task title")}
+                    value={title}
+                    maxLength={1500}
+                    readOnly={locked}
+                    placeholder={t("添加任务…", "Add a task…")}
+                    onChange={(e) => setTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && isImeEvent(e.nativeEvent))
+                        e.preventDefault();
+                    }}
+                  />
+                </label>
                 <button
                   type="submit"
+                  className="task-quick-submit"
                   aria-label={t("添加任务", "Add task")}
+                  hidden={!title.trim()}
                   disabled={locked || !title.trim()}
                 >
-                  <CornerDownLeft size={15} />
+                  {t("添加", "Add")}
+                  <CornerDownLeft size={13} aria-hidden="true" />
                 </button>
               </div>
               {(title || target) && (
@@ -461,7 +470,7 @@ export default function TaskList({
       </div>
       {detail && (
         <ModalDialog
-          className="task-detail-sheet inkstone-calendar"
+          className="task-detail-sheet"
           label={t("任务详情", "Task details")}
           busy={locked}
           onClose={() => setDetail(null)}
@@ -469,6 +478,7 @@ export default function TaskList({
           <TaskForm
             document={detail.document}
             current={currentDetail}
+            onOpenSource={() => onOpen({ path: detail.document.path, line: detail.task.line })}
             origin={detail}
             onCalendar={onCalendar}
             onPatch={onPatch}
@@ -479,16 +489,6 @@ export default function TaskList({
               onAskForHelp(name);
             }}
           />
-          <footer>
-            <button
-              disabled={locked}
-              onClick={() =>
-                onOpen({ path: detail.document.path, line: detail.task.line })
-              }
-            >
-              <FileText size={15} /> {t("打开原文", "Open source document")}
-            </button>
-          </footer>
         </ModalDialog>
       )}
     </section>
