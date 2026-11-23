@@ -15,7 +15,9 @@ import {
   type MarkdownNode,
 } from "../content/blocks";
 import { replaceRange } from "../session";
-import { taskAnnotation } from "../content/tasks";
+import { scanTrackedTasks, taskAnnotation } from "../content/tasks";
+import { taskDetails, taskToggleLabel } from "../content/taskPresentation";
+import "./taskRows.css";
 import { isSafeBreak } from "../rich/markdown";
 import { blockTypes } from "../rich/blocks";
 import type { SearchResult } from "../types";
@@ -130,6 +132,7 @@ export default function Markdown({
   rejectedCharts?: number[];
 }) {
   const ast = useMemo(() => parseMarkdown(source), [source]);
+  const taskRows = useMemo(() => new Map(scanTrackedTasks(source, ast).map(row => [row.line, row])), [source, ast]);
   const blocks = useMemo(() => codeBlocks(source, ast), [source, ast]);
   const identities = useMemo(
     () => (readOnly ? [] : contentBlockIdentities(viewKey, source, ast)),
@@ -301,6 +304,21 @@ export default function Markdown({
       case "listItem": {
         const annotation = taskAnnotation(node);
         const first = node.children?.[0];
+        const row = taskRows.get(node.position.start.line);
+        if (row && annotation && first) {
+          const toggle = !readOnly && onApply && !row.duplicate ? () => {
+            onApply(source, source.slice(0, row.checkFrom) + (row.done ? " " : "x") + source.slice(row.checkFrom + 1));
+          } : undefined;
+          return (
+            <li key={key} className="document-task-row" data-complete={row.done}>
+              <input className="document-task-check" type="checkbox" checked={row.done} disabled={!toggle}
+                aria-label={taskToggleLabel(row.title, row.done)} onChange={toggle} />
+              {render({ ...first, children: first.children?.filter(n => n !== annotation.node) }, key + ":title", allowCitations)}
+              <span className="document-task-details">{taskDetails(row, row.done).map(detail => <span key={detail}>{detail}</span>)}</span>
+              {node.children!.slice(1).map((child, i) => render(child, key + ":child" + i, allowCitations))}
+            </li>
+          );
+        }
         return (
           <li key={key}>
             {typeof node.checked === "boolean" && (

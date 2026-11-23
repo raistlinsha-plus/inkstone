@@ -25,6 +25,7 @@ export interface CalendarData {
   [key: string]: unknown;
 }
 export interface CalendarDocument {
+  chatTaskIds?: string[];
   taskHash?: string;
   taskRows?: import("./tasks").TrackedTask[];
   documentId: string;

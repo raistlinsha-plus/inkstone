@@ -41,11 +41,13 @@ import { jsonParseLinter } from "@codemirror/lang-json";
 import type { EditorPosition } from "./document/editorSession";
 import type { DocumentSession } from "./session";
 import { Crepe } from "@milkdown/crepe";
+import type { Node as ProseNode } from "@milkdown/kit/prose/model";
 import { commandsCtx, editorViewCtx, parserCtx } from "@milkdown/kit/core";
 import { linkAttr } from "@milkdown/kit/preset/commonmark";
 import { invoke } from "@tauri-apps/api/core";
 import { trackSourceSelection, scanTrackedTasks, readTaskMarker } from "./content/tasks";
 import { configureTrackedTasks, taskClipboardPlugin } from "./rich/trackedTasks";
+import { taskRowsPlugin } from "./rich/taskRows";
 import { safeInlineBreaks } from "./rich/breaks";
 import {
   commandIcon,
@@ -512,7 +514,7 @@ export default function TextEditor({
             label: msg("列表"),
             bulletList: { label: msg("无序列表") },
             orderedList: { label: msg("有序列表") },
-            taskList: { label: msg("任务列表") },
+            taskList: { label: translate("复选清单", "Checklist") },
           },
           advancedGroup: {
             label: msg("内容块"),
@@ -615,6 +617,13 @@ export default function TextEditor({
     });
     crepe.editor.config(configureTrackedTasks);
     crepe.editor.use($prose(taskClipboardPlugin));
+    // Keep GFM spelling, blank lines and CRLF intact when the only edit is a check.
+    const checkedSources = new WeakMap<ProseNode, string>();
+    crepe.editor.use($prose(() => taskRowsPlugin((doc, id, checked) => {
+      const before = readCurrent.current();
+      const row = scanTrackedTasks(before).find(task => !task.duplicate && task.id === id);
+      if (row) checkedSources.set(doc, before.slice(0, row.checkFrom) + (checked ? "x" : " ") + before.slice(row.checkFrom + 1));
+    })));
     crepe.editor.use(safeInlineBreaks);
     crepe.editor.use($prose(() => identityPlugin(viewKey, content)));
     crepe.editor.use(
@@ -680,12 +689,10 @@ export default function TextEditor({
           (ctx) => ctx.get(editorViewCtx).state.doc,
         );
         readCurrent.current = () => {
-          if (
-            crepe.editor
-              .action((ctx) => ctx.get(editorViewCtx).state.doc)
-              .eq(baseline)
-          )
-            return content;
+          const doc = crepe.editor.action(ctx => ctx.get(editorViewCtx).state.doc);
+          const checked = checkedSources.get(doc);
+          if (checked !== undefined) return checked;
+          if (doc.eq(baseline)) return content;
           const next = adapter.current.serialize(crepe.getMarkdown());
           return next === serializedBaseline ? content : next;
         };

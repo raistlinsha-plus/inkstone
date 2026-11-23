@@ -29,7 +29,9 @@ Inkstone stores these keys in `~/Library/Preferences/local.inkstone.desktop/cred
 
 ## Track work in Markdown
 
-Open **Tasks & calendar** and choose **Tasks** to see tracked items in the current space. You can also open a document in the editor and use **Insert → Track as task**. A tracked item lives on a Markdown checklist line with its Inkstone metadata. A due date, scheduled work and a follow-up have distinct meanings. After editing a schedule, check the calendar and open the original document from the item.
+Hover over a navigation icon or focus it with Tab to see its label. Open **Tasks** in the main navigation. The first visit shows Today. Enter a title to add a task. The first quick capture creates a Markdown note named **Tasks.md** in that space. Renaming the note keeps future captures linked to it. Choose an existing document to save there instead. The built-in space is called **My Documents**. Custom space names are retained.
+
+Open **Calendar** for the week grid. Due dates and follow-ups appear in the all-day area. Scheduled tasks occupy their own time slots. A task without dates remains in the task list. In a note, use **Insert → Task** to add a tracked task. A tracked item lives on a Markdown checklist line with its Inkstone metadata. A due date, scheduled work and a follow-up have distinct meanings. After editing a schedule, check the calendar and open the original document from the item.
 
 To turn part of a chat into work, use the task action on your message or on the answer. Review the proposed entries, select the items to keep, edit the text and choose the destination document. Confirm to write them. You can request help on a task and edit the proposed question before sending it.
 

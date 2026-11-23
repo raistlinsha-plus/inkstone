@@ -8,6 +8,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import ProjectCalendar from "./ProjectCalendar";
+import { scanTrackedTasks, taskLine } from "../content/tasks";
 import {
   calendarTemplate,
   calendarBlocks,
@@ -15,8 +16,56 @@ import {
   type CalendarEvent,
 } from "../content/calendar";
 vi.mock("./CalendarBoard", () => ({
-  default: ({ anchor }: { anchor: string }) => (
-    <div data-testid="month-anchor">{anchor}</div>
+  default: ({
+    mode,
+    anchor,
+    rows,
+    onEdit,
+    onDate,
+    onMoveSlot,
+  }: {
+    mode: string;
+    anchor: string;
+    rows: { key: string; event: CalendarEvent; slotSourceHash?: string }[];
+    onMoveSlot?: (
+      key: string,
+      hash: string,
+      start: string,
+      end: string,
+    ) => void;
+    onEdit: (key: string) => void;
+    onDate: (date: string, time?: string) => void;
+  }) => (
+    <div data-testid="grid" data-view={mode}>
+      <span data-testid="calendar-anchor">{anchor}</span>
+      <button onClick={() => onDate(anchor, "23:30")}>empty time slot</button>
+      {rows
+        .filter((r) => r.slotSourceHash)
+        .map((r) => (
+          <button
+            key={"move" + r.key}
+            onClick={() =>
+              onMoveSlot?.(
+                r.key,
+                r.slotSourceHash!,
+                "2026-10-30T01:00:00Z",
+                "2026-10-30T02:00:00Z",
+              )
+            }
+          >
+            drag scheduled slot
+          </button>
+        ))}
+      {rows.map((row) => (
+        <button
+          key={row.key}
+          data-all-day={row.event.allDay}
+          onClick={() => onEdit(row.key)}
+        >
+          {row.event.title}
+        </button>
+      ))}
+    </div>
   ),
   CalendarAgenda: ({
     rows,
@@ -179,23 +228,143 @@ it("resets form state when imported copies share event IDs in different document
     "B事项1",
   );
 });
-it("moves the displayed month when a native date input selects a future range", () => {
+it("opens the week directly and switches month and date without changing Markdown", () => {
+  const patch = vi.fn();
   render(
     <ProjectCalendar
       documents={[document("A")]}
+      onPatch={patch}
+      onOpen={vi.fn()}
+      onError={vi.fn()}
+    />,
+  );
+  expect(screen.getByTestId("grid").getAttribute("data-view")).toBe("week");
+  expect(screen.queryByRole("button", { name: "任务" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "月历" }));
+  fireEvent.click(screen.getByText("筛选"));
+  fireEvent.change(screen.getByLabelText("日历转到日期"), {
+    target: { value: "2027-02-12" },
+  });
+  expect(screen.getByTestId("calendar-anchor").textContent).toBe("2027-02-12");
+  expect(patch).not.toHaveBeenCalled();
+});
+it("starts on the requested week and creates the first event only after confirming a time slot", async () => {
+  const create = vi.fn().mockResolvedValue(undefined);
+  render(
+    <ProjectCalendar
+      documents={[]}
+      initialDay="2027-02-12"
+      onCreateCalendar={create}
       onPatch={vi.fn()}
       onOpen={vi.fn()}
       onError={vi.fn()}
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "月历" }));
-  fireEvent.input(screen.getByLabelText("日历范围开始"), {
-    target: { value: "2027-02-12" },
+  fireEvent.click(screen.getByRole("button", { name: "empty time slot" }));
+  expect(create).not.toHaveBeenCalled();
+  expect((screen.getByLabelText("事项开始") as HTMLInputElement).value).toBe(
+    "2027-02-12T23:30",
+  );
+  expect((screen.getByLabelText("事项结束") as HTMLInputElement).value).toBe(
+    "2027-02-13T00:30",
+  );
+  fireEvent.change(screen.getByLabelText("事项标题"), {
+    target: { value: "First event" },
   });
-  expect(screen.getByTestId("month-anchor").textContent).toBe("2027-02-12");
+  fireEvent.click(screen.getByRole("button", { name: "保存事项" }));
+  await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+  expect(create.mock.calls[0][0]).toMatchObject({
+    title: "First event",
+    allDay: false,
+  });
+});
+it("projects due and execution independently and retains the source when editing either", async () => {
+  const id = crypto.randomUUID(),
+    write = vi.fn().mockResolvedValue(undefined);
+  const doc = {
+    ...document("T"),
+    content:
+      "Other text\n" +
+      taskLine({
+        id,
+        title: "Review transcript",
+        due: "2026-10-28",
+        slot: {
+          start: "2026-10-27T11:00:00Z",
+          end: "2026-10-27T12:00:00Z",
+          zone: "UTC",
+        },
+      }),
+  };
+  render(
+    <ProjectCalendar
+      documents={[doc]}
+      onPatch={write}
+      onOpen={vi.fn()}
+      onError={vi.fn()}
+    />,
+  );
   expect(
-    (screen.getByLabelText("日历范围结束") as HTMLInputElement).value,
-  ).toBe("2027-02-12");
+    screen.getByRole("button", { name: "到期 · Review transcript" }).dataset
+      .allDay,
+  ).toBe("true");
+  const slot = screen.getByRole("button", { name: "执行 · Review transcript" });
+  expect(slot.dataset.allDay).toBe("false");
+  fireEvent.click(slot);
+  fireEvent.click(screen.getByLabelText("已完成"));
+  fireEvent.click(screen.getByRole("button", { name: "保存任务" }));
+  await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+  expect(write.mock.calls[0][0]).toMatchObject({
+    documentId: "T",
+    expectedHash: "hash-T",
+  });
+  expect(write.mock.calls[0][0].content).toContain("- [x] Review transcript");
+  expect(write.mock.calls[0][0].content).toContain(id);
+});
+it("moves only the timed slot in its source document and preserves its original zone and due date", async () => {
+  const due = "2026-10-28",
+    id = crypto.randomUUID(),
+    onPatch = vi.fn().mockResolvedValue(undefined);
+  const doc = {
+    ...document("T"),
+    content:
+      "Preface\n" +
+      taskLine({
+        id,
+        title: "Submit",
+        due,
+        slot: {
+          start: "2026-10-27T11:00:00+08:00",
+          end: "2026-10-27T12:00:00+08:00",
+          zone: "Asia/Shanghai",
+        },
+      }),
+  };
+  render(
+    <ProjectCalendar
+      documents={[doc]}
+      onPatch={onPatch}
+      onOpen={vi.fn()}
+      onError={vi.fn()}
+    />,
+  );
+  expect(
+    screen.getAllByRole("button", { name: "drag scheduled slot" }),
+  ).toHaveLength(1);
+  fireEvent.click(screen.getByRole("button", { name: "drag scheduled slot" }));
+  await waitFor(() => expect(onPatch).toHaveBeenCalledTimes(1));
+  const [patch] = onPatch.mock.calls[0];
+  expect(patch.expectedHash).toBe("hash-T");
+  expect(patch.content).toContain("Preface");
+  expect(scanTrackedTasks(patch.content)[0]).toMatchObject({
+    id,
+    due,
+    slot: {
+      start: "2026-10-30T09:00:00+08:00",
+      end: "2026-10-30T10:00:00+08:00",
+      zone: "Asia/Shanghai",
+    },
+  });
 });
 it("keeps the current form while its save is pending and ignores other edit clicks", async () => {
   let finish!: () => void;

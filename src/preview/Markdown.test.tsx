@@ -244,3 +244,19 @@ test("anchors scroll and focus only the matching heading in this reading surface
   expect(scroll).toHaveBeenCalledWith({ block: "start" });
   expect(document.activeElement).toBe(heading);
 });
+
+test("tracked task preview exposes planning details and edits exactly the source checkbox; answers and quoted examples stay read-only", () => {
+  const marker = '<!--inkstone-task:v1 {"id":"58fddc4e-f74b-44eb-96ad-38110b402ca2","due":"2026-11-29"}-->';
+  const source = ['# Plan', '', '- [ ] **Visit**   '+marker, '', '> - [ ] Example '+marker, '', '- [ ] Regular'].join('\r\n');
+  const apply = vi.fn();
+  const { container, rerender } = render(<Markdown source={source} path="plan.md" onApply={apply}/>);
+  expect(container.querySelectorAll(".document-task-row")).toHaveLength(1);
+  expect(screen.getByText("截止 2026-11-29")).toBeTruthy();
+  const [tracked, quoted, regular] = screen.getAllByRole("checkbox") as HTMLInputElement[];
+  expect(quoted.disabled && regular.disabled).toBe(true);
+  fireEvent.click(tracked);
+  expect(apply).toHaveBeenCalledExactlyOnceWith(source, source.replace("- [ ] **Visit**", "- [x] **Visit**"));
+  rerender(<Markdown readOnly source={source} path="" onApply={apply}/>);
+  expect((screen.getAllByRole("checkbox")[0] as HTMLInputElement).disabled).toBe(true);
+  expect(container.textContent).not.toContain("inkstone-task");
+});

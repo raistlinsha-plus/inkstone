@@ -127,6 +127,14 @@ export interface Commands {
     { projectId: string },
     { documents: CalendarDocument[]; warnings: string[] }
   >;
+  task_note_append: Command<
+    { projectId: string; title: string; taskLine: string },
+    {
+      document: CalendarDocument;
+      beforeContent: string;
+      warning?: string | null;
+    }
+  >;
   calendar_save: Command<
     {
       projectId: string;

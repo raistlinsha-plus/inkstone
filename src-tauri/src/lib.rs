@@ -5,6 +5,7 @@ mod assistant_runtime;
 mod assistant_sources;
 mod calendar;
 mod calendar_commands;
+mod task_note;
 mod candidate_reading;
 mod companion;
 mod companion_commands;
@@ -2905,6 +2906,7 @@ pub fn run() {
             external_access::grants::external_grants,
             external_access::grants::external_grant_create,
             external_access::grants::external_grant_revoke,
+            task_note::task_note_append,
             calendar_commands::calendar_list,
             calendar_commands::calendar_save,
             calendar_commands::export_calendar_ics,

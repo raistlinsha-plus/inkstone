@@ -1,5 +1,7 @@
+import TaskList from "./tasks/TaskList";
+import { taskLine, type TaskDraft } from "./content/tasks";
 import ChatTaskDialog, { type ChatTaskMessage } from "./tasks/ChatTaskDialog";
-import { msg, systemMessage, type Message } from "./i18n";
+import { msg, translate as t, systemMessage, type Message } from "./i18n";
 import { dismissDetailsOnOutside, dismissOnOutside, focusMenuButton } from "./platform/menu";
 import { imeBoundary, isImeEvent } from "./platform/ime";
 import { isTauri } from "@tauri-apps/api/core";
@@ -46,7 +48,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Answer from "./Answer";
 import CompanionDock from "./companion/CompanionDock";
 import { useCompactWindow } from "./platform/useCompactWindow";
@@ -79,6 +81,8 @@ import type { AnswerSourceLink } from "./content/answerSourceLink";
 import { codeBlocks } from "./content/blocks";
 import {
   calendarTemplate,
+  saveCalendarEvent,
+  type CalendarEvent,
   currentTimeZone,
   dateQuery,
   type CalendarDocument,
@@ -107,6 +111,7 @@ import { documentKind } from "./session";
 import SettingsModal from "./SettingsModal";
 import Sources from "./shell/Sources";
 import SpaceNavigation from "./shell/SpaceNavigation";
+import WorkspaceRail from "./shell/WorkspaceRail";
 import Titlebar from "./shell/Titlebar";
 import KnowledgePanelResizer from "./shell/KnowledgePanelResizer";
 import Tree from "./shell/Tree";
@@ -164,7 +169,7 @@ const answerExecution = (snapshot: AnswerSnapshot) => {
 };
 
 export default function App() {
-  const [libraryView, setLibraryView] = useState<LibraryView>({
+  const [catalog, setLibraryView] = useState<LibraryView>({
     projects: [],
     documents: [],
     pendingImports: [],
@@ -173,7 +178,18 @@ export default function App() {
     [importPaths, setImportPaths] = useState<string[]>([]),
     [importTask, setImportTask] = useState<ImportTask | undefined>(),
     [importBusy, setImportBusy] = useState(false);
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [rawWorkspace, setWorkspace] = useState<Workspace | null>(null);
+  const defaultTitle = t("我的文档", "My Documents");
+  const libraryView = useMemo(() => ({
+    ...catalog,
+    projects: catalog.projects.map(p => p.systemTitle ? { ...p, title: defaultTitle } : p),
+  }), [catalog, defaultTitle]);
+  const workspace = useMemo(() => {
+    if (rawWorkspace?.managedProjectId === "inbox" && rawWorkspace.name === "我的文档" &&
+        catalog.projects.some(p => p.id === "inbox" && p.systemTitle))
+      return { ...rawWorkspace, name: defaultTitle };
+    return rawWorkspace;
+  }, [rawWorkspace, catalog.projects, defaultTitle]);
   const [mode, setMode] = useState<EditorMode>("visual");
   const editorModeRef = useRef(mode);
   editorModeRef.current = mode;
@@ -247,7 +263,9 @@ export default function App() {
   const [retrievalStatus, setRetrievalStatus] = useState("");
   const searchRequest = useRef("");
   const [chatTask, setChatTask] = useState<ChatTaskMessage | null>(null);
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [planningView, setPlanningView] = useState<"calendar" | "tasks" | null>(null);
+  const calendarOpen = planningView !== null;
+  const [calendarDay, setCalendarDay] = useState<string>();
   const [calendarDocuments, setCalendarDocuments] = useState<
     CalendarDocument[]
   >([]);
@@ -591,7 +609,7 @@ export default function App() {
     ++calendarLoadSequence.current;
     setCalendarBusy(false);
     setCalendarWriting(false);
-    setCalendarOpen(false);
+    setPlanningView(null);
     setCalendarDocuments([]);
     setCalendarWarnings([]);
     setCalendarRange(undefined);
@@ -1212,7 +1230,7 @@ export default function App() {
     setCompanionOpen(false);
     ++calendarLoadSequence.current;
     setCalendarBusy(false);
-    setCalendarOpen(false);
+    setPlanningView(null);
     setWelcome(true);
     revealDocumentPane();
   }
@@ -1549,7 +1567,7 @@ export default function App() {
       setDocument(next);
       docRef.current = next;
       setWelcome(false);
-      setCalendarOpen(false);
+      setPlanningView(null);
       setCompanionOpen(false);
       if (
         ["json", "mermaid"].includes(documentKind(path)) ||
@@ -1896,6 +1914,8 @@ export default function App() {
   async function loadCalendar(
     range?: DateRange,
     path?: string,
+    view: "tasks" | "calendar" = "calendar",
+    day?: string,
   ): Promise<boolean> {
     if (navigationBlocked()) return false;
     const projectId = workspaceRef.current?.managedProjectId;
@@ -1918,7 +1938,8 @@ export default function App() {
       rememberPosition();
       setCalendarRange(range);
       setCalendarScopePath(path);
-      setCalendarOpen(true);
+      setCalendarDay(day);
+      setPlanningView(view);
       setWelcome(false);
       setPanelOpen(false);
       const data = await invoke("calendar_list", { projectId });
@@ -1951,6 +1972,12 @@ export default function App() {
       );
     return loaded;
   }
+  function recordPlanningChange(documentId: string, before: string, afterHash: string) {
+    calendarHistory.current.push({documentId, before, afterHash});
+    while (calendarHistory.current.length > 30 ||
+      calendarHistory.current.reduce((n, h) => n + h.before.length, 0) > 8_000_000)
+      calendarHistory.current.shift();
+  }
   async function patchCalendar(patch: {
     documentId: string;
     expectedHash: string;
@@ -1962,7 +1989,7 @@ export default function App() {
       (d) => d.documentId === patch.documentId,
     );
     if (!before || before.hash !== patch.expectedHash)
-      throw Error(msg("原文已更新，请刷新日历后重试"));
+      throw Error(t("原文已更新，请刷新当前视图后重试。", "The source has changed. Refresh this view and try again."));
     const operation = beginCalendarWrite(projectId);
     try {
       const result = await invoke("calendar_save", {
@@ -1970,17 +1997,7 @@ export default function App() {
         ...patch,
       });
       if (!currentCalendarWrite(operation)) return;
-      calendarHistory.current.push({
-        documentId: patch.documentId,
-        before: before.content,
-        afterHash: result.hash,
-      });
-      while (
-        calendarHistory.current.length > 30 ||
-        calendarHistory.current.reduce((n, h) => n + h.before.length, 0) >
-          8_000_000
-      )
-        calendarHistory.current.shift();
+      recordPlanningChange(patch.documentId, before.content, result.hash);
       setCalendarDocuments((old) =>
         old.map((d) =>
           d.documentId === patch.documentId
@@ -1991,8 +2008,8 @@ export default function App() {
       const synced = syncCalendarSave(before, patch.content, result.hash);
       notify(
         !synced
-          ? "日程已保存；正文有较新的编辑，已保留草稿，请核对磁盘版本"
-          : result.warning || "日程已保存到原文",
+          ? t("修改已保存。正文有较新的草稿，请核对磁盘版本。", "Changes saved. A newer editor draft was preserved. Review the version on disk.")
+          : result.warning || t("修改已保存到原文", "Changes saved to the source document"),
       );
       setIndexDirty(result.indexStale);
       void refreshStats();
@@ -2034,8 +2051,8 @@ export default function App() {
       redrawCalendar((n) => n + 1);
       notify(
         synced
-          ? "已撤销日历修改"
-          : "已撤销日历修改；正文的新编辑已保留，请核对磁盘版本",
+          ? t("已撤销上次修改", "Last change undone")
+          : t("已撤销上次修改。正文的新编辑已保留，请核对磁盘版本。", "Last change undone. Newer edits were preserved. Review the version on disk."),
       );
       setIndexDirty(result.indexStale);
       void refreshStats();
@@ -2045,25 +2062,33 @@ export default function App() {
       endCalendarWrite(operation);
     }
   }
-  async function newCalendarDocument() {
+  async function newCalendarDocument(event?: CalendarEvent) {
     const projectId = workspaceRef.current?.managedProjectId;
-    if (!projectId || navigationBlocked()) return;
+    if (!projectId || navigationBlocked()) {
+      if (event) throw Error(msg("请等待当前操作完成后再修改日程"));
+      return;
+    }
     const operation = beginCalendarWrite(projectId),
       range = calendarRange;
     let created = false;
     try {
-      if (!(await mayLeave()) || !currentCalendarWrite(operation)) return;
+      if (!(await mayLeave()) || !currentCalendarWrite(operation)) {
+        if (event) throw Error(t("未保存日程。", "The event was not saved."));
+        return;
+      }
+      const title = t("日程安排", "Schedule");
+      const template = calendarTemplate("month");
       await invoke("library_create_document", {
         projectId,
-        title: "日程安排.md",
-        content:
-          "# 日程安排\n\n~~~calendar\n" + calendarTemplate("month") + "\n~~~\n",
+        title: title + ".md",
+        content: "# " + title + "\n\n~~~calendar\n" + (event ? saveCalendarEvent(template, event) : template) + "\n~~~\n",
       });
       if (!currentCalendarWrite(operation)) return;
       await refreshLibrary();
       await refreshFiles();
       created = currentCalendarWrite(operation);
     } catch (e) {
+      if (event) throw e;
       if (currentCalendarWrite(operation)) fail(e);
     } finally {
       endCalendarWrite(operation);
@@ -2073,7 +2098,62 @@ export default function App() {
       operation.epoch === workspaceEpoch.current &&
       projectId === workspaceRef.current?.managedProjectId
     )
-      await loadCalendar(range);
+      await loadCalendar(range, undefined, "calendar", event?.start.slice(0, 10));
+  }
+  async function appendQuickTask(draft: TaskDraft) {
+    const projectId = workspaceRef.current?.managedProjectId;
+    if (!projectId) throw Error(msg("请先打开本地项目"));
+    const operation = beginCalendarWrite(projectId);
+    try {
+      await saveCurrent();
+      if (!currentCalendarWrite(operation)) throw Error(t("空间已切换。", "The space has changed."));
+      const result = await invoke("task_note_append", {
+        projectId,
+        title: t("任务清单.md", "Tasks.md"),
+        taskLine: taskLine(draft),
+      });
+      if (!currentCalendarWrite(operation)) return;
+      const before = calendarDocuments.find(item => item.documentId === result.document.documentId);
+      const doc = {...result.document, chatTaskIds: before?.chatTaskIds ?? result.document.chatTaskIds};
+      if (doc.content !== result.beforeContent) {
+        recordPlanningChange(doc.documentId, result.beforeContent, doc.hash);
+      }
+      if (before) syncCalendarSave(before, doc.content, doc.hash);
+      setCalendarDocuments(old => old.some(item => item.documentId === doc.documentId)
+        ? old.map(item => item.documentId === doc.documentId ? doc : item)
+        : [...old, doc]);
+      setIndexDirty(true);
+      if (result.warning) notify(result.warning);
+      void refreshFiles().catch(fail);
+      void refreshStats();
+    } finally {
+      endCalendarWrite(operation);
+    }
+  }
+  async function openPlanning(view: "calendar" | "tasks", day?: string) {
+    if (!(await leaveGeneralForDocument())) return;
+    setCompanionOpen(false);
+    if (!workspaceRef.current?.managedProjectId && !(await useLibrary())) return;
+    await loadCalendar(undefined, undefined, view, day);
+  }
+  function openPlanningSource({ path, line }: { path: string; line: number }) {
+    void openPath(path).then((opened) => {
+      if (opened && docRef.current?.path === path) {
+        setLine(line);
+        setMode("visual");
+      }
+    });
+  }
+  async function askAboutTask(title: string) {
+    if (!(await newConversation())) return;
+    const draft = msg("请帮我拆解这项任务：") + title;
+    setScope("workspace");
+    setPanel("ask");
+    setPanelOpen(true);
+    questionRef.current = draft;
+    setQuestion(draft);
+    setFocusQuestion(true);
+    assistantRef.current.saveDraft(null, draft, draftContextRef.current);
   }
   async function runSearch() {
     if (
@@ -3134,6 +3214,7 @@ export default function App() {
       )}
     </SourcePreviewFrame>
   );
+  const planningVisible = calendarOpen && !companionOpen && !standaloneAskOpen;
   return (
     <div
       {...imeBoundary}
@@ -3172,11 +3253,14 @@ export default function App() {
       <div
         className={`main-layout ${focusedKnowledge && !companionOpen ? "assistant-expanded" : ""} ${standaloneAskOpen && !companionOpen ? "ask-workbench" : ""}`}
       >
-        <div className="workspace-rail">
-          <button
+        <WorkspaceRail location={[planningView, companionOpen, wikiOpen, standaloneAskOpen, panelOpen, panel, settingsOpen, indexOpen, workspace?.managedProjectId].join("/")}>
+          {!planningVisible && <button
             className="icon-button workspace-rail-toggle"
             type="button"
-            aria-label={`${sidebarClosed ? "展开" : "收起"}${companionOpen ? "同伴" : standaloneAskOpen ? "会话" : "文档"}列表`}
+            aria-label={t(
+              `${sidebarClosed ? "展开" : "收起"}${companionOpen ? "同伴" : standaloneAskOpen ? "会话" : "文档"}列表`,
+              `${sidebarClosed ? "Show" : "Hide"} ${companionOpen ? "companions" : standaloneAskOpen ? "conversations" : "documents"}`
+            )}
             aria-expanded={!sidebarClosed}
             onClick={() => setSidebarClosed(!sidebarClosed)}
           >
@@ -3185,13 +3269,14 @@ export default function App() {
             ) : (
               <PanelLeftClose size={17} />
             )}
-          </button>
+          </button>}
           <SpaceNavigation
             disabled={busy || booting || citationOpening}
             generalDisabled={generalBusy || citationOpening || !settings}
+            tasksOpen={planningVisible && planningView === "tasks" && !wikiOpen && !(panelOpen && panel === "search")}
             calendarOpen={
-              !companionOpen &&
-              calendarOpen &&
+              planningVisible &&
+              planningView === "calendar" &&
               !wikiOpen &&
               !(panelOpen && panel === "search")
             }
@@ -3213,18 +3298,12 @@ export default function App() {
               void leaveGeneralForDocument().then((ready) => {
                 if (!ready) return;
                 setCompanionOpen(false);
-                if (standaloneAskOpen && docRef.current) setCalendarOpen(false);
+                if (standaloneAskOpen && docRef.current) setPlanningView(null);
                 else void showLibraryHome();
               });
             }}
-            onCalendar={() =>
-              void leaveGeneralForDocument().then((ready) => {
-                if (ready) {
-                  setCompanionOpen(false);
-                  void loadCalendar();
-                }
-              })
-            }
+            onTasks={() => void openPlanning("tasks")}
+            onCalendar={() => void openPlanning("calendar")}
             onGeneralAsk={enableGeneralAsk ? openGeneralAsk : undefined}
             onWiki={
               workspace?.managedProjectId
@@ -3241,15 +3320,14 @@ export default function App() {
           />
           <button
             className="icon-button workspace-rail-settings"
-            title={msg("模型与设置")}
             aria-label={msg("模型与设置")}
             disabled={!settings || generalBusy || citationOpening}
             onClick={() => setSettingsOpen(true)}
           >
             <Settings2 size={17} />
           </button>
-        </div>
-        <aside
+        </WorkspaceRail>
+        {!planningVisible && <aside
           className="sidebar sidebar-compact"
           aria-label={
             companionOpen
@@ -3381,8 +3459,8 @@ export default function App() {
               </div>
             </>
           )}
-        </aside>
-        {!sidebarClosed && (
+        </aside>}
+        {!planningVisible && !sidebarClosed && (
           <div
             className="sidebar-resizer"
             role="separator"
@@ -3456,12 +3534,12 @@ export default function App() {
               onRetry={() => setStartupAttempt((n) => n + 1)}
             />
           ) : calendarOpen ? (
-            <div className="project-calendar-container">
+            <div className={`project-calendar-container ${planningView === "tasks" ? "task-surface" : ""}`}>
               <div className="calendar-project-picker">
                 <label>
                   {msg("空间")}{" "}
                   <select
-                    aria-label={msg("日历空间")}
+                    aria-label={planningView === "tasks" ? t("任务空间", "Task space") : msg("日历空间")}
                     value={workspace?.managedProjectId ?? ""}
                     disabled={busy || calendarBusy}
                     onChange={(e) => {
@@ -3471,7 +3549,7 @@ export default function App() {
                           entered &&
                           workspaceRef.current?.managedProjectId === id
                         )
-                          void loadCalendar();
+                          void loadCalendar(undefined, undefined, planningView ?? "calendar");
                       });
                     }}
                   >
@@ -3499,7 +3577,23 @@ export default function App() {
                   </button>
                 </div>
               )}
-              <ProjectCalendar
+              {planningView === "tasks" ? <TaskList
+                key={workspace?.managedProjectId}
+                spaceId={workspace?.managedProjectId ?? ""}
+                documents={calendarDocuments}
+                onPatch={patchCalendar}
+                onQuickAdd={appendQuickTask}
+                onOpen={openPlanningSource}
+                onCalendar={day => void openPlanning("calendar", day)}
+                onUndo={() => void undoCalendar()}
+                canUndo={calendarHistory.current.length > 0}
+                busy={calendarBusy}
+                onRefresh={() => void loadCalendar(undefined, undefined, "tasks")}
+                onAskForHelp={askAboutTask}
+              /> : <ProjectCalendar
+                spaceId={workspace?.managedProjectId ?? undefined}
+                initialDay={calendarDay}
+                onCreateCalendar={newCalendarDocument}
                 key={workspace?.managedProjectId}
                 documents={
                   calendarScopePath
@@ -3509,25 +3603,8 @@ export default function App() {
                     : calendarDocuments
                 }
                 onPatch={patchCalendar}
-                onAskForHelp={async (title) => {
-                  if (!(await newConversation())) return;
-                  const draft = msg("请帮我拆解这项任务：") + title;
-                  setScope("workspace");
-                  setPanel("ask");
-                  setPanelOpen(true);
-                  questionRef.current = draft;
-                  setQuestion(draft);
-                  setFocusQuestion(true);
-                  assistantRef.current.saveDraft(null, draft, draftContextRef.current);
-                }}
-                onOpen={({ path, line }) =>
-                  void openPath(path).then((opened) => {
-                    if (opened && docRef.current?.path === path) {
-                      setLine(line);
-                      setMode("visual");
-                    }
-                  })
-                }
+                onAskForHelp={askAboutTask}
+                onOpen={openPlanningSource}
                 onError={fail}
                 initialRange={calendarRange}
                 initialQuery={calendarRange?.terms}
@@ -3538,7 +3615,7 @@ export default function App() {
                   void loadCalendar(calendarRange, calendarScopePath)
                 }
                 onNewDocument={() => void newCalendarDocument()}
-              />
+              />}
             </div>
           ) : welcome || !document ? (
             workspace?.managedProjectId ? (

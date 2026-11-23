@@ -27,6 +27,7 @@ pub struct CalendarDocument {
     pub hash: String,
     pub task_hash: String,
     pub task_rows: Vec<tasks::TaskRow>,
+    pub chat_task_ids: Vec<String>,
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -388,6 +389,7 @@ fn refresh_project(data: &Path, project: &str) -> Result<CalendarView, String> {
                         tasks::rows(&content)
                     });
                 documents.push(CalendarDocument {
+                    chat_task_ids: Vec::new(),
                     task_hash: hash.clone(),
                     task_rows,
                     document_id: doc.id.clone(),
@@ -398,6 +400,11 @@ fn refresh_project(data: &Path, project: &str) -> Result<CalendarView, String> {
                 });
             }
             Err(e) => warnings.push(format!("{}：{e}", doc.title)),
+        }
+    }
+    if documents.iter().any(|doc| !doc.task_rows.is_empty()) {
+        if let Err(e) = crate::assistant::tasks::label_chat_tasks(data, project, &mut documents) {
+            warnings.push(format!("任务来源暂不可用：{e}"));
         }
     }
     let stored = (|| -> Result<(), String> {

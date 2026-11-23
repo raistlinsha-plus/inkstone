@@ -1,4 +1,4 @@
-import { msg, subscribeLocale } from "../i18n";
+import { msg, subscribeLocale, translate } from "../i18n";
 import { isImeEvent } from "../platform/ime";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -159,7 +159,7 @@ export function enhanceFormattingToolbar(
       bar.querySelectorAll<HTMLButtonElement>(".top-bar-item"),
     );
     buttons.forEach((button, i) => {
-      const label = msg(labels[i] ?? "排版操作");
+      const label = labels[i] === "任务列表" ? translate("复选清单", "Checklist") : msg(labels[i] ?? "排版操作");
       button.dataset.formatAction = i === 7 ? "link" : "format";
       button.setAttribute("aria-label", label);
       button.title = `${label}${shortcuts[i] ? ` · ${shortcuts[i]}` : ""}`;

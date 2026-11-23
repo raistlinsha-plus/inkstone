@@ -1,0 +1,187 @@
+.project-calendar.inkstone-calendar {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(16px, 2vw, 32px);
+}
+.calendar-workbench-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px 18px;
+  margin-bottom: 18px;
+}
+.calendar-workbench-heading h1 {
+  margin: 0;
+  font: var(--font-page-title);
+  color: var(--ui-text);
+}
+.calendar-workbench-period {
+  font-size: 12px;
+  color: var(--ui-muted);
+}
+.calendar-period-buttons,
+.calendar-layer-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.calendar-period-buttons button:not(:last-child) {
+  border: none;
+  background: transparent;
+  padding: 6px;
+}
+.calendar-workbench-heading .calendar-main-actions {
+  margin-inline-start: auto;
+}
+.calendar-workbench-heading .calendar-primary,
+.calendar-options summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.calendar-options {
+  position: relative;
+}
+.calendar-options summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 5px 9px;
+  border-radius: 6px;
+}
+.calendar-options summary::-webkit-details-marker {
+  display: none;
+}
+.calendar-options[open] summary,
+.calendar-options summary:hover {
+  background: var(--ui-hover);
+}
+.calendar-options-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 10;
+  width: min(330px, 80vw);
+  box-sizing: border-box;
+  padding: 14px;
+  border: 1px solid var(--ui-line);
+  border-radius: 9px;
+  background: var(--ui-paper);
+  color: var(--ui-text);
+  box-shadow: 0 8px 28px var(--ui-shadow);
+}
+.calendar-options-panel .calendar-heading-actions {
+  margin: 0 0 12px;
+}
+.calendar-layer-filters {
+  margin-bottom: 10px;
+}
+.calendar-layer-filters label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.calendar-options-panel .project-calendar-filters {
+  gap: 9px;
+}
+.calendar-options-panel .project-calendar-filters > label {
+  width: 100%;
+  justify-content: space-between;
+}
+.calendar-options-panel .project-calendar-filters .calendar-query {
+  flex: auto;
+}
+.inkstone-week {
+  flex: 1;
+  min-height: 400px;
+  position: relative;
+  overflow: auto;
+}
+.inkstone-week > div {
+  min-width: 580px;
+}
+.inkstone-calendar .calendar-status-done {
+  text-decoration: line-through;
+}
+.inkstone-calendar .calendar-task-slot {
+  font-weight: 600;
+  --fc-monarch-event: var(--ui-selected);
+  --fc-monarch-event-contrast: var(--ui-accent);
+}
+.inkstone-calendar .calendar-task-date {
+  --fc-monarch-event: var(--ui-warning-surface);
+  --fc-monarch-event-contrast: var(--ui-warning-text);
+}
+.inkstone-calendar .calendar-regular-event {
+  --fc-monarch-event: color-mix(in srgb, var(--ui-paper) 83%, #5082a7);
+  --fc-monarch-event-contrast: var(--ui-text);
+}
+@media (max-width: 680px) {
+  .calendar-workbench-heading {
+    gap: 8px;
+  }
+  .calendar-workbench-heading .calendar-main-actions {
+    margin-inline-start: 0;
+  }
+}
+.project-calendar {
+  container-type: inline-size;
+}
+.calendar-main-split {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: min-content;
+}
+.calendar-main-board {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.calendar-inspector {
+  grid-column: 2;
+  grid-row: 1;
+  width: clamp(258px, 28vw, 370px);
+  align-self: start;
+  margin: 0 0 0 16px;
+  border: 1px solid var(--ui-line);
+  border-radius: 8px;
+  background: var(--ui-surface);
+  padding: 12px 6px;
+  max-height: 70vh;
+  overflow: auto;
+}
+.calendar-inspector .calendar-event-editor {
+  padding: 10px;
+  margin: 0;
+  background: transparent;
+  border: 0;
+}
+@container (max-width:850px) {
+  .calendar-main-split:has(.calendar-inspector) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .calendar-inspector {
+    grid-column: 1;
+    grid-row: 1;
+    width: auto;
+    margin: 0;
+  }
+  .calendar-inspector + .calendar-main-board {
+    grid-row: 2;
+  }
+}
+.workspace-shell .project-calendar-container:not(.task-surface) {
+  display: flex;
+  flex-direction: column;
+  padding: 12px clamp(12px, 2vw, 26px) 16px;
+}
+.project-calendar-container:not(.task-surface) .calendar-project-picker {
+  margin-bottom: 8px;
+}
+.project-calendar-container .project-calendar {
+  padding: 10px 0 0;
+  min-height: 0;
+}

@@ -1,0 +1,73 @@
+/* The same row metrics apply in the editable document and the split preview. */
+.milkdown .ProseMirror .document-task-row,
+.markdown-preview li.document-task-row {
+  position: relative;
+  display: block;
+  list-style: none;
+  margin-block: 5px;
+  padding: 9px 12px 9px 40px;
+  border: 1px solid var(--ui-line);
+  border-radius: 8px;
+  background: var(--ui-surface);
+  color: var(--ui-text);
+}
+.document-task-row > .list-item > .label-wrapper,
+.milkdown .milkdown-list-item-block.document-task-row > li > .label-wrapper {
+  display: none;
+}
+.milkdown .document-task-row > li > .children {
+  min-width: 0;
+  flex: 1;
+}
+.milkdown .milkdown-list-item-block.document-task-row > li.list-item {
+  position: static;
+}
+.milkdown .document-task-row > li > .children > .content-dom > p:first-of-type,
+.milkdown .document-task-row > li,
+.markdown-preview li.document-task-row > p {
+  margin: 0;
+  padding: 0;
+}
+.document-task-row .document-task-check {
+  position: absolute;
+  inset-inline-start: 11px;
+  top: 14px;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+  width: 17px;
+  height: 17px;
+  accent-color: var(--ui-accent);
+  cursor: pointer;
+}
+.document-task-check:disabled {
+  cursor: default;
+}
+.document-task-check:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 3px;
+}
+.document-task-row .document-task-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-block: 2px;
+  color: var(--ui-muted);
+  font: 400 12px/1.55 var(--font-sans);
+  user-select: none;
+}
+.document-task-details > :first-child {
+  color: var(--ui-accent);
+  font-weight: 600;
+}
+.document-task-row[data-complete="true"] > p:first-of-type,
+.document-task-row[data-complete="true"]
+  > li
+  > .children
+  > .content-dom
+  > p:first-of-type {
+  text-decoration: line-through;
+  color: var(--ui-muted);
+}

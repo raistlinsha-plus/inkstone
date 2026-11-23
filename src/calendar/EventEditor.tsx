@@ -1,4 +1,5 @@
 import { msg } from "../i18n";
+import { Temporal } from "temporal-polyfill";
 import { useRef, useState } from "react";
 import {
   addDays,
@@ -16,6 +17,8 @@ import {
 interface Props {
   event?: CalendarEvent;
   date?: string;
+  initialTime?: string;
+  initialAllDay?: boolean;
   timeZone?: string;
   busy?: boolean;
   stale?: boolean;
@@ -39,6 +42,8 @@ const zones = [
 export default function EventEditor({
   event,
   date,
+  initialTime = "09:00",
+  initialAllDay = false,
   timeZone = currentTimeZone(),
   busy = false,
   stale = false,
@@ -51,20 +56,26 @@ export default function EventEditor({
     (event ? event.start.slice(0, 10) : dateInZone(new Date(), timeZone));
   const [title, setTitle] = useState(event?.title ?? "");
   const [zone, setZone] = useState(event?.timeZone ?? timeZone);
-  const [allDay, setAllDay] = useState(event?.allDay ?? false);
+  const [allDay, setAllDay] = useState(event?.allDay ?? initialAllDay);
   const [start, setStart] = useState(
     event
       ? event.allDay
         ? event.start
         : dateTimeInput(event.start, event.timeZone)
-      : initialDate + "T09:00",
+      : initialAllDay
+        ? initialDate
+        : initialDate + "T" + initialTime,
   );
   const [end, setEnd] = useState(
     event
       ? event.allDay
         ? addDays(event.end, -1)
         : dateTimeInput(event.end, event.timeZone)
-      : initialDate + "T10:00",
+      : initialAllDay
+        ? initialDate
+        : Temporal.PlainDateTime.from(initialDate + "T" + initialTime)
+            .add({ hours: 1 })
+            .toString({ smallestUnit: "minute" }),
   );
   const [startInstant, setStartInstant] = useState<string | null>(
     event && !event.allDay ? event.start : null,

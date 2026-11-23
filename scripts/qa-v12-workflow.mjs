@@ -10,7 +10,7 @@ const { chromium } = require(
 );
 const url = new URL(process.env.INKSTONE_QA_URL || "http://127.0.0.1:14932/");
 assert.equal(url.hostname, "127.0.0.1");
-const folder = resolve("artifacts/v1.2.0-beta.1/browser");
+const folder = resolve("artifacts/v1.2.0-beta.1/build-10203/browser");
 await mkdir(folder, { recursive: true });
 const browser = await chromium.launch({
   headless: true,
@@ -38,10 +38,18 @@ try {
       () => {
         const api = window.__TAURI_INTERNALS__;
         const base = api.invoke;
+        const originIds = new Map();
         api.invoke = async (command, args = {}) => {
+          if (command === "calendar_list") {
+            const view = await base(command, args);
+            for (const doc of view.documents)
+              doc.chatTaskIds = originIds.get(doc.documentId) ?? [];
+            return view;
+          }
           if (
             command === "task_document" ||
-            command === "task_save_from_chat"
+            command === "task_save_from_chat" ||
+            command === "calendar_save"
           ) {
             const { documents } = await base("library_list");
             const doc = documents.find(
@@ -52,11 +60,17 @@ try {
               return base("read_file", { path: doc.path });
             const prior = await base("read_file", { path: doc.path });
             if (prior.hash !== args.expectedHash) throw Error("stale fixture");
-            return base("save_file", {
+            const result = await base("save_file", {
               path: doc.path,
               expectedHash: args.expectedHash,
               content: args.content,
             });
+            if (command === "task_save_from_chat")
+              originIds.set(
+                doc.id,
+                args.quotes.map((q) => q.taskId),
+              );
+            return result;
           }
           if (command === "task_origin") return null;
           return base(command, args);
@@ -87,16 +101,139 @@ try {
     });
     await dialog.getByRole("button", { name: "添加所选原话" }).click();
     await dialog.getByLabel("任务标题").fill("完成发布手册");
-    await dialog.getByLabel("截止日").fill("2026-11-27");
+    const day = await page.evaluate(() => {
+      const date = new Date();
+      return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getDate()).padStart(2, "0"),
+      ].join("-");
+    });
+    await dialog.getByLabel("截止日").fill(day);
     await dialog.getByLabel("目标 Markdown 文档").selectOption("doc-1");
     await dialog.getByRole("button", { name: /保存到文档/ }).click();
     await dialog.waitFor({ state: "hidden" });
+    const rail = page.locator(".main-nav");
+    const taskButton = rail.getByRole("button", { name: "任务", exact: true });
+    const calendarButton = rail.getByRole("button", {
+      name: "日历",
+      exact: true,
+    });
+    async function assertIconRail() {
+      assert(
+        await rail
+          .locator("button")
+          .evaluateAll((buttons) =>
+            buttons.every(
+              (button) =>
+                !button.innerText.trim() &&
+                !button.title &&
+                button.getAttribute("aria-label")?.trim(),
+            ),
+          ),
+        "Navigation should expose accessible names and display only icons.",
+      );
+    }
+    await assertIconRail();
+    const hint = page.getByRole("tooltip");
+    await taskButton.hover();
+    await hint.filter({ hasText: /^任务$/ }).waitFor();
+    const buttonBox = await taskButton.boundingBox();
+    const bubbleBox = await hint.boundingBox();
+    assert(bubbleBox.x >= buttonBox.x + buttonBox.width);
+    assert(bubbleBox.y >= 0 && bubbleBox.y + bubbleBox.height <= 800);
+    await page.mouse.move(530, 60);
+    await hint.waitFor({ state: "hidden" });
+    await calendarButton.focus();
+    await page.keyboard.press("Shift+Tab");
+    await hint.filter({ hasText: /^任务$/ }).waitFor();
+    await page.keyboard.press("Escape");
+    await hint.waitFor({ state: "hidden" });
+    assert(
+      await taskButton.evaluate((button) => button === document.activeElement),
+    );
+    await taskButton.click();
+    await hint.waitFor({ state: "hidden" });
+    const task = page.getByRole("button", {
+      name: "完成发布手册",
+      exact: true,
+    });
+    await page.getByRole("button", { name: /来自问答/ }).click();
+    await task.waitFor();
+    await page.getByRole("button", { name: /^今天/ }).click();
+    await task.click();
+    const details = page.getByRole("dialog");
+    await details.getByText("安排执行时段", { exact: true }).click();
+    await details.getByLabel("开始", { exact: true }).fill(day + "T10:00");
+    await details.getByLabel("结束", { exact: true }).fill(day + "T11:00");
+    await details.getByRole("button", { name: "保存任务" }).click();
+    await details.waitFor({ state: "hidden" });
+    await calendarButton.click();
+    const week = page.locator(".inkstone-week");
+    await week.waitFor();
+    assert.equal(await page.locator(".sidebar-compact").count(), 0);
+    const projections = week
+      .locator(":is(.calendar-task-date, .calendar-task-slot)")
+      .filter({ hasText: "完成发布手册" });
+    await projections.nth(1).waitFor();
+    assert.equal(await projections.count(), 2);
+    await page.screenshot({
+      path: resolve(folder, "calendar-week-zh-dark.png"),
+    });
+    await taskButton.hover();
+    await hint.filter({ hasText: /^任务$/ }).waitFor();
+    await page.screenshot({
+      path: resolve(folder, "rail-tooltip-zh-dark.png"),
+      clip: {
+        x: 0,
+        y: Math.max(0, Math.floor(buttonBox.y - 55)),
+        width: 205,
+        height: 155,
+      },
+    });
+    await taskButton.click();
+    await task.click();
     await page
-      .getByRole("button", { name: /任务与日历|^日历$/ })
-      .first()
+      .getByRole("dialog")
+      .getByRole("button", { name: "打开原文" })
       .click();
-    await page.getByRole("button", { name: "任务", exact: true }).click();
-    await page.getByText("完成发布手册", { exact: true }).first().waitFor();
+    const rich = page
+      .locator(".ProseMirror .document-task-row")
+      .filter({ hasText: "完成发布手册" });
+    await rich.waitFor();
+    await rich.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: resolve(folder, "document-rich-task-zh-dark.png"),
+    });
+    await rich
+      .locator(".document-task-details")
+      .getByText(new RegExp(day), { exact: false })
+      .first()
+      .waitFor();
+    await rich.locator(".document-task-check").check();
+    await page.keyboard.press("Meta+s");
+    await taskButton.click();
+    await page
+      .getByRole("checkbox", { name: "完成发布手册", exact: true })
+      .waitFor();
+    assert(
+      await page
+        .getByRole("checkbox", { name: "完成发布手册", exact: true })
+        .isChecked(),
+      "Markdown checkbox must survive navigation",
+    );
+    await calendarButton.click();
+    await week
+      .locator(
+        ":is(.calendar-task-date, .calendar-task-slot).calendar-status-done",
+      )
+      .filter({ hasText: "完成发布手册" })
+      .nth(1)
+      .waitFor();
+    await taskButton.click();
+    results.push(
+      "Two first-level destinations, a chat task written to Markdown, independent deadline and scheduled projections in the week grid, rich-editor completion persisted into the task list and both calendar projections.",
+    );
     await page.screenshot({ path: resolve(folder, "tasks-zh-dark.png") });
     results.push(
       "Selected an original question passage, edited its title and date, wrote to the chosen note and found it in the task list.",
@@ -124,6 +261,14 @@ try {
     );
     await page.setViewportSize({ width: 960, height: 640 });
     await page.emulateMedia({ colorScheme: "light" });
+    await assertIconRail();
+    await rail.getByRole("button", { name: "Calendar", exact: true }).hover();
+    await hint.filter({ hasText: /^Calendar$/ }).waitFor();
+    await page.mouse.move(420, 40);
+    await hint.waitFor({ state: "hidden" });
+    results.push(
+      "Verified icon-only navigation in wide and compact windows, a right-hand hover label in both languages, pointer dismissal, and keyboard focus and Escape.",
+    );
     assert(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -134,7 +279,10 @@ try {
       "Inkstone",
     );
     const copy = await page.locator("body").innerText();
-    assert(!copy.includes("任务已保存到所选文档"), "Visible save confirmation should follow the active interface language");
+    assert(
+      !copy.includes("任务已保存到所选文档"),
+      "Visible save confirmation should follow the active interface language",
+    );
     assert(
       !/documents?Documents/.test(copy),
       "Document count repeats its noun",

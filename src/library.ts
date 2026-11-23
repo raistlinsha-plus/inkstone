@@ -1,4 +1,5 @@
 export interface LibraryProject {
+  systemTitle?: boolean;
   id: string;
   title: string;
 }

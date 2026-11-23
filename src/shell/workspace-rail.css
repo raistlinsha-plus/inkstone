@@ -1,0 +1,14 @@
+.workspace-rail-hint {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  max-width: min(260px, calc(100vw - 12px));
+  padding: 6px 10px;
+  border: 1px solid var(--ui-line);
+  border-radius: 7px;
+  background: var(--ui-overlay);
+  color: var(--ui-text);
+  box-shadow: 0 3px 12px rgb(0 0 0 / 12%);
+  font: 500 12px/1.4 var(--font-sans);
+  overflow-wrap: anywhere;
+}

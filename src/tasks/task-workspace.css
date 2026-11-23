@@ -1,0 +1,308 @@
+.workspace-shell .project-calendar-container.task-surface {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.task-surface > .calendar-project-picker {
+  min-height: 43px;
+  margin: 0;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--ui-line);
+}
+.task-workspace {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--ui-text);
+  background: var(--ui-paper);
+}
+.task-workspace :is(button, input, select) {
+  font-family: inherit;
+}
+.task-workspace button,
+.task-workspace select {
+  color: inherit;
+}
+.task-workspace button:focus-visible,
+.task-workspace input:focus-visible,
+.task-workspace select:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
+}
+.task-navigation {
+  flex: 0 0 clamp(153px, 17vw, 208px);
+  overflow: auto;
+  border-right: 1px solid var(--ui-line);
+  padding: 22px 12px;
+  background: var(--ui-surface);
+}
+.task-navigation h2 {
+  font-size: 19px;
+  margin: 0 10px 20px;
+}
+.task-navigation button {
+  border: 0;
+  background: transparent;
+  display: flex;
+  padding: 9px 10px;
+  gap: 9px;
+  align-items: center;
+  height: 38px;
+  width: 100%;
+  margin: 0 0 3px;
+  text-align: start;
+  border-radius: 7px;
+}
+.task-navigation button:hover,
+.task-tools button:hover,
+.task-row-source:hover {
+  background: var(--ui-hover);
+}
+.task-navigation button[aria-pressed="true"] {
+  background: var(--ui-selected);
+  color: var(--ui-accent);
+  font-weight: 600;
+}
+.task-navigation small {
+  margin-inline-start: auto;
+  color: var(--ui-muted);
+}
+.task-nav-divider {
+  margin: 14px 6px;
+  border-top: 1px solid var(--ui-line);
+}
+.task-desk {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: clamp(22px, 3.5vw, 52px) clamp(18px, 4.5vw, 70px);
+}
+.task-desk-inner {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.task-desk-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.task-desk-head h1 {
+  margin: 0 0 4px;
+  font: var(--font-page-title);
+}
+.task-desk-head p,
+.task-quiet {
+  color: var(--ui-muted);
+  margin: 0;
+}
+.task-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.task-tools button,
+.task-row-title,
+.task-row-source,
+.task-quick-entry button {
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+}
+.task-tools button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+}
+.task-workspace select {
+  max-width: 100%;
+  background: var(--ui-field);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-control-line);
+  padding: 3px 6px;
+  border-radius: 5px;
+}
+.task-quick-entry > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 13px;
+  min-height: 44px;
+  background: var(--ui-field);
+  border: 1px solid var(--ui-control-line);
+  border-radius: 8px;
+  color: var(--ui-accent);
+}
+.task-quick-entry > div:focus-within {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 1px;
+}
+.task-quick-entry input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--ui-text);
+  font-size: 14px;
+}
+.task-quick-entry input:focus-visible {
+  outline: none;
+}
+.task-quick-entry button {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  min-height: 26px;
+}
+.task-quick-entry > label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 8px 0;
+  color: var(--ui-muted);
+  font-size: 12px;
+}
+.task-quick-entry select {
+  max-width: min(280px, 60%);
+}
+.task-group,
+.task-quiet {
+  margin: 24px 0;
+}
+.task-group h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.task-group small {
+  font-size: 12px;
+  font-weight: 400;
+}
+.task-group h3 small {
+  margin-inline-start: 6px;
+  color: var(--ui-muted);
+}
+.task-group ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.task-group li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ui-line);
+}
+.task-group input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  margin: 3px 0 0;
+  flex: none;
+  accent-color: var(--ui-action);
+  cursor: pointer;
+}
+.task-group li > div:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+.task-row-title {
+  text-align: start;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 560;
+  overflow-wrap: anywhere;
+  padding: 0;
+}
+.task-complete .task-row-title {
+  text-decoration: line-through;
+  color: var(--ui-muted);
+}
+.task-workspace .task-row-source {
+  display: flex;
+  align-items: center;
+  max-width: 100%;
+  gap: 5px;
+  padding: 2px 0;
+  color: var(--ui-muted);
+  font-size: 12px;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+.task-row-source svg {
+  flex-shrink: 0;
+}
+.task-row-dates {
+  color: var(--ui-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+.task-row-dates.overdue {
+  color: var(--ui-danger);
+}
+.task-detail-sheet {
+  max-width: min(550px, 94vw);
+  max-height: 88vh;
+  overflow: auto;
+  background: var(--ui-paper);
+  color: var(--ui-text);
+}
+.task-detail-sheet .task-form {
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+.task-detail-sheet footer {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+}
+.task-detail-sheet footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+@media (max-width: 850px) {
+  .task-workspace {
+    flex-direction: column;
+  }
+  .task-navigation {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    padding: 7px;
+    border-right: 0;
+    border-bottom: 1px solid var(--ui-line);
+    gap: 3px;
+  }
+  .task-navigation h2,
+  .task-nav-divider {
+    display: none;
+  }
+  .task-navigation button {
+    width: auto;
+    flex: none;
+    margin: 0;
+  }
+}
+@media (max-width: 650px) {
+  .task-group li {
+    flex-wrap: wrap;
+  }
+  .task-row-dates {
+    width: 100%;
+    flex-direction: row;
+    gap: 8px;
+    padding-inline-start: 29px;
+  }
+}

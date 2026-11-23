@@ -1,5 +1,6 @@
 import {
   addDays,
+  dateInZone,
   type CalendarDocument,
   type CalendarEvent,
 } from "../content/calendar";
@@ -45,6 +46,52 @@ export function filterTasks(
         a.document.title.localeCompare(b.document.title) ||
         a.task.line - b.task.line,
     );
+}
+export type TaskView =
+  "today" | "upcoming" | "all" | "done" | "waiting" | "unscheduled" | "chat";
+
+export function taskDates(task: TrackedTask, zone: string) {
+  const start = task.slot && dateInZone(new Date(task.slot.start), zone);
+  // End is exclusive, including a slot ending exactly at midnight.
+  const end =
+    task.slot &&
+    dateInZone(new Date(new Date(task.slot.end).getTime() - 1), zone);
+  return {
+    due: task.due,
+    follow: task.waiting ? task.followOn : undefined,
+    start,
+    end,
+  };
+}
+
+export function taskViewState(
+  { task, document }: ProjectTask,
+  today: string,
+  zone: string,
+) {
+  const { due, follow, start, end } = taskDates(task, zone);
+  const overdue =
+    !task.done && Boolean((due && due < today) || (follow && follow < today));
+  const activeToday =
+    due === today ||
+    follow === today ||
+    Boolean(start && end && start <= today && end >= today);
+  const future = [due, follow, start]
+    .filter((date): date is string => !!date && date > today)
+    .sort()[0];
+  const fromChat = document.chatTaskIds?.includes(task.id) ?? false;
+  return {
+    overdue,
+    today: overdue || activeToday,
+    upcoming: !task.done && !!future,
+    all: true,
+    done: task.done,
+    waiting: !task.done && !!task.waiting,
+    unscheduled: !task.done && !task.slot,
+    chat: fromChat,
+    next: future,
+    sort: [due, follow, start].filter(Boolean).sort()[0] ?? "~",
+  };
 }
 export function taskCalendarRows(
   rows: ProjectTask[],

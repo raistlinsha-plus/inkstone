@@ -274,6 +274,34 @@ pub fn task_origin(
     }
     read_origin(data, &document_id, &task_id, &doc.project_id)
 }
+pub(crate) fn label_chat_tasks(
+    data: &Path,
+    project: &str,
+    documents: &mut [crate::calendar::CalendarDocument],
+) -> Result<(), String> {
+    if !data.join("assistant.sqlite3").exists() {
+        return Ok(());
+    }
+    let c = open(data)?;
+    let mut lookup = c.prepare("SELECT o.task_id FROM task_origins o JOIN conversations c ON c.id=o.conversation_id WHERE o.document_id=? AND c.workspace_id IN (?,?)").map_err(super::err)?;
+    let owner = format!("managed:{project}");
+    for doc in documents.iter_mut().filter(|doc| !doc.task_rows.is_empty()) {
+        let ids = lookup
+            .query_map(params![doc.document_id, owner, GENERAL_OWNER], |row| {
+                row.get::<_, String>(0)
+            })
+            .map_err(super::err)?
+            .collect::<Result<std::collections::HashSet<_>, _>>()
+            .map_err(super::err)?;
+        doc.chat_task_ids = doc
+            .task_rows
+            .iter()
+            .filter(|row| ids.contains(row.id()))
+            .map(|row| row.id().to_string())
+            .collect();
+    }
+    Ok(())
+}
 fn read_origin(
     data: &Path,
     document_id: &str,
@@ -683,6 +711,13 @@ mod workflow {
             save(saved.hash.clone(), "Draft a guide", 2).unwrap().hash,
             saved.hash
         );
+        let calendar = crate::calendar::refresh(data, &project.id).unwrap();
+        let projected = calendar
+            .documents
+            .iter()
+            .find(|row| row.document_id == doc.id)
+            .unwrap();
+        assert_eq!(projected.chat_task_ids, vec![task.clone()]);
         // A crash (or failed SQLite commit) can leave the verified Markdown file ahead of its provenance transaction.
         let db = open(data).unwrap();
         db.execute(

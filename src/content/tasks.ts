@@ -114,7 +114,7 @@ export function taskAnnotation(item: MarkdownNode) {
     meta = readTaskMarker(node.value);
   return meta ? { node, meta, index } : null;
 }
-export function scanTrackedTasks(content: string): TrackedTask[] {
+export function scanTrackedTasks(content: string, tree?: MarkdownNode): TrackedTask[] {
   if (!content.includes(prefix)) return [];
   const rows: TrackedTask[] = [];
   function visit(node: MarkdownNode) {
@@ -143,7 +143,7 @@ export function scanTrackedTasks(content: string): TrackedTask[] {
     }
     node.children?.forEach(visit);
   }
-  visit(parseMarkdown(content));
+  visit(tree ?? parseMarkdown(content));
   const ids = new Set<string>(),
     duplicates = new Set<string>();
   for (const task of rows) {

@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import {
   currentTimeZone,
+  dateInZone,
   dateTimeInput,
   zonedInput,
   type CalendarDocument,
@@ -23,6 +24,7 @@ export default function TaskForm({
   onPatch,
   onClose,
   busy,
+  onCalendar,
   onAskForHelp,
 }: {
   document: CalendarDocument;
@@ -31,6 +33,7 @@ export default function TaskForm({
   onPatch: (p: CalendarPatch) => Promise<void>;
   onClose: () => void;
   busy: boolean;
+  onCalendar?: (day: string) => void;
   onAskForHelp?: (title: string) => void;
 }) {
   useLocale();
@@ -52,13 +55,14 @@ export default function TaskForm({
   const [saving, setSaving] = useState(false);
   const submitting = useRef(false);
   const stale = !current || current.hash !== doc.hash;
-  async function write(action: "save" | "untrack" | "rekey") {
+  async function write(action: "save" | "calendar" | "untrack" | "rekey") {
     if (busy || submitting.current || stale) return;
     submitting.current = true;
     setSaving(true);
     setError("");
     try {
       let content: string;
+      let calendarDay: string | undefined;
       if (action === "rekey" && task?.duplicate) {
         content =
           doc.content.slice(0, task.markerFrom) +
@@ -95,6 +99,10 @@ export default function TaskForm({
                 }
               : undefined,
         };
+        if (action === "calendar")
+          calendarDay = draft.slot
+            ? dateInZone(new Date(draft.slot.start))
+            : (draft.due ?? draft.followOn);
         content = task
           ? changeTrackedTask(doc.content, task, draft)
           : appendTrackedTasks(doc.content, [draft]);
@@ -106,6 +114,7 @@ export default function TaskForm({
           content,
         });
       onClose();
+      if (calendarDay) onCalendar?.(calendarDay);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -252,6 +261,17 @@ export default function TaskForm({
             {t("请 AI 帮我拆解", "Break down with AI")}
           </button>
         )}
+        {onCalendar &&
+          !task?.duplicate &&
+          (start || due || (waiting && followOn)) && (
+            <button
+              type="button"
+              disabled={busy || saving || stale || !title.trim()}
+              onClick={() => void write("calendar")}
+            >
+              {t("保存并在日历中查看", "Save and show in calendar")}
+            </button>
+          )}
         <button type="button" onClick={onClose} disabled={saving}>
           {t("取消", "Cancel")}
         </button>
