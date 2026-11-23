@@ -1,8 +1,12 @@
-# Inkstone 技术栈 · v1.0.0-rc.4
+# Inkstone 技术栈 · v1.2.0-beta.1
 
 开发目标为 macOS 13 及以上版本、Apple Silicon。桌面包使用系统 WebKit。Node、npm、Rust 和 Apple 命令行开发工具用于从源代码构建。仓库固定 Node 24.14.0、npm 11.9.0、Rust 1.99.1，目标为 `aarch64-apple-darwin`。[工具链](../toolchain.json) · [桌面配置](../src-tauri/tauri.conf.json)
 
 CLI 是同一 Cargo workspace 中的独立二进制，复用 Rust 的本地关键词检索和版本核对。CLI 协议版本为 1；桌面设置管理外部工具的授权，存储凭据摘要。[构建和使用](EXTERNAL-TOOLS.zh-CN.md)
+
+## 编辑器与周历的联动
+
+Milkdown/ProseMirror 在正文直接渲染任务勾选框、标题和日期，分栏预览读取同一条任务。FullCalendar React 7.1.3 的周时间网格分别呈现全天的截止／跟进标记与有起止时间的任务。Rust 写回前检查空间、文档版本与恢复草稿，再更新本机索引。
 
 ## 主要组件
 
