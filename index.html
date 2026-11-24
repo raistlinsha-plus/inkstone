@@ -3,19 +3,49 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Try how Inkstone answers from local Markdown and opens the original passage behind a citation. Interactive walkthrough using fictional notes and simulated answers.">
+<meta name="description" content="Try a cited answer, save a follow-up in Markdown and schedule it on a calendar. A bilingual interactive walkthrough of Inkstone with fictional notes.">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'">
-<title>Inkstone — Try a cited answer</title>
+<title>Inkstone · From a note to a scheduled task</title>
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://raistlinsha-plus.github.io/inkstone/">
+<meta property="og:title" content="Try Inkstone · Ask your notes and schedule a follow-up">
+<meta property="og:description" content="Open the cited lines, turn a chat message into a Markdown task and schedule it. Try the English or 简体中文 demo in your browser.">
+<meta property="og:image" content="https://raistlinsha-plus.github.io/inkstone/share.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="Inkstone, a bilingual Markdown workspace for cited answers, tasks and calendars on macOS">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Inkstone · From a note to a scheduled task">
+<meta name="twitter:description" content="Try a cited answer and a Markdown task in the interactive English and 简体中文 demo.">
+<meta name="twitter:image" content="https://raistlinsha-plus.github.io/inkstone/share.png">
 <style>
 :root{color-scheme:light;--paper:#f8f7f2;--surface:#fffefa;--ink:#192e25;--muted:#495d52;--rule:#d1d9ce;--accent:#1e624a;--soft:#e8f1e9;--warm:#f6eddb;--warn:#654a23;--focus:#994328;--serif:Georgia,"Songti SC","STSong",serif;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;--mono:ui-monospace,SFMono-Regular,Consolas,monospace}
 *,*::before,*::after{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--sans)}a{color:var(--accent);text-underline-offset:.2em}button{font:inherit;cursor:pointer}button,a{touch-action:manipulation}button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--focus);outline-offset:3px}.shell{max-width:1158px;margin:0 auto;padding:0 clamp(17px,4.2vw,52px)}header{border-bottom:1px solid var(--rule)}.top{min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:14px}.wordmark{display:flex;align-items:center;gap:9px;font:700 23px/1 var(--serif);text-decoration:none;color:var(--ink);white-space:nowrap}.wordmark span{display:grid;place-items:center;width:30px;height:30px;border-radius:7px;background:var(--accent);color:white;font:16px/1 var(--serif)}.navlinks{display:flex;align-items:center;gap:clamp(12px,3vw,24px);font-size:14px}.navlinks button{padding:4px 9px;border:1px solid var(--rule);border-radius:7px;background:var(--surface);color:var(--ink);min-height:38px}.intro{padding:42px 0 25px;max-width:720px}.eyebrow,.section-label{text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:700;color:var(--accent);margin:0}.intro h1{font:700 clamp(35px,6vw,64px)/1.03 var(--serif);letter-spacing:-.03em;margin:13px 0 15px}.intro p:last-child{font-size:clamp(16px,2vw,19px);color:var(--muted);margin:0;max-width:650px}.questions{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}.questions button{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:9px 13px;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:9px;text-align:left;font-weight:600;font-size:14px}.questions button[aria-pressed="true"]{background:var(--soft);border-color:#68917c;color:#153d2c}.ordinal{font:600 11px/1 var(--mono);color:var(--accent);min-width:19px}.workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);gap:14px;align-items:stretch}.panel{border:1px solid var(--rule);border-radius:14px;background:var(--surface);min-width:0;overflow:hidden}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 21px;background:#f1f3ec;border-bottom:1px solid var(--rule)}.panel-head h2{font-size:14px;margin:0;font-weight:700}.panel-head span{font-size:12px;color:var(--muted);text-align:end}.answer{padding:22px;min-height:275px}.answer h3{font:700 clamp(23px,4vw,32px)/1.15 var(--serif);margin:0 0 11px}.answer p{margin:0 0 14px;color:var(--muted)}.result-chart{margin:16px 0}.bar-row{display:grid;grid-template-columns:22px 1fr 46px;align-items:center;gap:8px;font-size:13px;margin:7px 0}.bar-row i{height:7px;background:#3b8166;border-radius:9px;display:block}.bar-row:nth-child(2) i{width:66.67%;background:#6b957f}.bar-row strong{font:600 13px/1 var(--mono);text-align:end;margin-right:2px}.citation{border:1px solid #8db3a1;background:var(--soft);color:var(--accent);border-radius:8px;padding:8px 12px;font-weight:700;font-size:14px;text-align:left;min-height:44px;max-width:100%}.citation:hover,.questions button:hover{border-color:var(--accent)}.note{background:var(--warm);color:var(--warn)!important;padding:11px 13px;border-radius:7px;font-size:14px;margin:11px 0 17px!important}.source-empty{padding:22px;color:var(--muted);margin:0}.source-meta{padding:14px 18px 9px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:3px 13px;color:var(--muted);font-size:13px}.source-meta strong{color:var(--ink)}.source-meta a{font-size:12px}.source-lines{padding:0;margin:0 0 11px;list-style:none;font:13px/1.55 var(--mono)}.source-lines li{padding:5px 12px 5px 0;display:grid;grid-template-columns:38px 1fr;align-items:baseline;overflow-wrap:anywhere;min-height:30px;border-left:3px solid transparent}.source-lines li mark{background:none;color:inherit}.source-lines li.match{background:var(--soft);border-left-color:#398768}.line-no{text-align:center;user-select:none;color:#526b5e;font-size:11px}.footer{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin:21px 0 29px;padding:18px 0;border-top:1px solid var(--rule);color:var(--muted);font-size:13px}.footer p{margin:0;max-width:620px}.footer a{white-space:normal}.footer nav{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline}.status{min-height:1.6em;font-size:13px;color:var(--muted);margin:9px 0 0}.visually-hidden{clip-path:inset(50%);width:1px;height:1px;overflow:hidden;position:absolute;white-space:nowrap}[hidden]{display:none!important}
 @media(max-width:690px){.workspace{grid-template-columns:1fr}.intro{padding-top:32px}.answer{min-height:0}.panel-head,.answer,.source-empty{padding-inline:17px}.source-lines{font-size:12px}.navlinks{font-size:13px}.top{min-height:58px}}@media(prefers-reduced-motion:no-preference){.citation,.questions button{transition:background-color .12s,border-color .12s}}
+
+.intro .jump {display:inline-block; margin-top:9px; font-size:14px; font-weight:650}
+.intro p[data-i="lead"] {color:var(--muted); margin:0; font-size:clamp(16px,2vw,19px)}
+.followup {margin:14px 0 0; padding:clamp(18px,3vw,30px); background:var(--surface); border:1px solid var(--rule); border-radius:14px; scroll-margin-top:14px}
+.followup h2 {font:700 clamp(24px,4vw,32px)/1.15 var(--serif); margin:0 0 14px}
+.followup blockquote {border-inline-start:3px solid var(--rule); margin:5px 0 16px; padding-inline-start:12px}
+.followup label {display:inline-flex; gap:9px; align-items:center; font-weight:600}
+.followup input[type="checkbox"] {accent-color:var(--accent); inline-size:18px; block-size:18px}
+.task-meta {color:var(--muted); font-size:13px}
+.task-note {display:block; background:var(--paper); padding:12px; border-radius:6px; margin:8px 0 14px; overflow-wrap:anywhere; font:14px/1.5 var(--mono)}
+.scheduling {display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:7px 0}
+.scheduling select {max-width:100%; border:1px solid var(--rule); border-radius:7px; min-height:44px; padding:6px 10px; background:var(--surface); color:var(--ink); font:inherit}
+.followup .primary:disabled {background:var(--soft); color:var(--muted); border-color:var(--rule); cursor:default}
+.followup .primary {border:1px solid var(--accent); border-radius:8px; background:var(--accent); color:white; padding:8px 14px; font-size:14px; font-weight:650; min-height:44px}
+.calendar-event {display:grid; gap:2px; border-inline-start:4px solid var(--accent); padding:9px 12px; margin:10px 0; background:var(--soft); border-radius:4px}
+.calendar-event span {color:var(--muted); font-size:13px}
+.sample-links {display:flex; flex-wrap:wrap; align-items:center; gap:9px 20px; font-size:14px; margin-top:15px}
+.sample-links a {padding-block:5px}
 </style>
 </head>
 <body>
 <header><div class="shell top"><a class="wordmark" href="https://github.com/raistlinsha-plus/inkstone"><span aria-hidden="true">砚</span> Inkstone</a><nav class="navlinks" aria-label="Project"><a href="https://github.com/raistlinsha-plus/inkstone" data-i="repo">GitHub</a><button id="language" type="button" lang="zh-CN" aria-label="切换到中文">中文</button></nav></div></header>
 <main class="shell">
-  <div class="intro"><p class="eyebrow" data-i="eyebrow">Interactive walkthrough</p><h1 data-i="heading">Ask your notes.<br>Open the source.</h1><p data-i="lead">Try two questions about a fictional reading program. One has a clear answer in the notes. The other remains open.</p></div>
+  <div class="intro"><p class="eyebrow" data-i="eyebrow">Interactive walkthrough</p><h1 data-i="heading">Ask your notes.<br>Open the source.</h1><p data-i="lead">Try two questions about a fictional reading program. One has a clear answer in the notes. The other remains open.</p><a class="jump" href="#task-demo" data-i="jump">Try the task and calendar demo ↓</a></div>
   <div class="questions" id="questions" role="group" aria-label="Choose a question">
     <button class="question" type="button" aria-pressed="true" aria-controls="response" data-mode="attendance"><span class="ordinal" aria-hidden="true">01</span><span data-i="attendance">Compare attendance</span></button>
     <button class="question" type="button" aria-pressed="false" aria-controls="response" data-mode="satisfaction"><span class="ordinal" aria-hidden="true">02</span><span data-i="satisfaction">Which event had higher satisfaction?</span></button>
@@ -29,21 +59,61 @@
       <div class="panel-head" tabindex="-1" id="source-focus"><h2 id="source-heading" data-i="source">Source</h2><span data-i="markdown">Fictional Markdown note</span></div>
       <p id="source-empty" class="source-empty" data-i="sourceHint">Open the citation to see the lines in the original note.</p>
       <div id="source-body" hidden>
-        <div class="source-meta"><strong data-i="filename">Reading activity plans.md</strong><a href="https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.1/examples/v0.7/%E9%98%85%E8%AF%BB%E6%B4%BB%E5%8A%A8%E6%96%B9%E6%A1%88.md" data-i="viewFile">View full note on GitHub</a></div>
+        <div class="source-meta"><strong data-i="filename">Reading activity plans.md</strong><a id="source-file" href="https://github.com/raistlinsha-plus/inkstone/blob/main/examples/quick-tour/en/reading-activity.md#L7-L10" data-i="viewFile">View full note on GitHub</a></div>
         <ol class="source-lines" id="source-lines"></ol>
       </div>
     </section>
   </div>
   <div id="status" class="status" role="status"></div>
-  <footer class="footer"><p data-i="scope">This walkthrough uses a fictional note and fixed answers. In the desktop beta you can open a citation, turn a passage into a Markdown task and schedule it in Calendar. Build from source on an Apple Silicon Mac running macOS 13 or later.</p><nav id="resources" aria-label="Desktop resources"><a href="https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.1" data-i="release">Get the 1.2 beta source</a><a id="product" href="https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.1/docs/PRODUCT.en.md" data-i="product">Product overview</a><a id="manual" href="https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.1/docs/USER-MANUAL.en.md" data-i="manual">User manual</a></nav></footer>
+  <section class="followup" id="task-demo" aria-labelledby="task-heading">
+    <h2 id="task-heading" tabindex="-1" data-i="taskHeading">Turn a follow-up into a task</h2>
+    <div id="message-step">
+      <span class="task-meta" data-i="messageLabel">A message from the reading group</span>
+      <blockquote data-i="taskTitle">Send the satisfaction survey</blockquote>
+      <button class="primary" type="button" id="capture-task" data-i="capture">Save as a Markdown task</button>
+    </div>
+    <div id="note-step" hidden>
+      <label><input type="checkbox" id="completed"><span data-i="taskTitle">Send the satisfaction survey</span></label>
+      <div class="task-meta" data-i="destination">Markdown · reading-activity.md</div>
+      <code class="task-note" id="markdown-line"></code>
+      <div class="scheduling">
+        <label for="slot" id="slot-label"></label>
+        <select id="slot"><option value="09:00">09:00–09:30</option><option value="14:00">14:00–14:30</option></select>
+        <button class="primary" type="button" id="schedule-task" data-i="schedule">Add to calendar</button>
+      </div>
+      <div id="calendar-event" hidden class="calendar-event" tabindex="-1">
+        <span id="calendar-time"></span><strong id="calendar-task"></strong>
+      </div>
+    </div>
+    <p class="visually-hidden" id="task-status" role="status"></p>
+    <nav class="sample-links" id="sample-links" aria-label="Sample notes">
+      <a id="sample-download" download href="./downloads/inkstone-quick-tour-en.zip" data-i="download">Download sample notes (.zip)</a>
+      <a id="sample-source" href="https://github.com/raistlinsha-plus/inkstone/tree/main/examples/quick-tour/en/" data-i="browse">Browse the notes on GitHub</a>
+    </nav>
+  </section>
+  <footer class="footer"><p data-i="scope">This walkthrough uses fictional notes and fixed answers. Demo tasks last until you reload the page. To use Inkstone with your own notes, build the desktop beta on an Apple Silicon Mac running macOS 13 or later.</p><nav id="resources" aria-label="Desktop resources"><a href="https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.1" data-i="release">Get the 1.2 beta source</a><a id="product" href="https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.1/docs/PRODUCT.en.md" data-i="product">Product overview</a><a id="manual" href="https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.1/docs/USER-MANUAL.en.md" data-i="manual">User manual</a></nav></footer>
   <noscript><p>This walkthrough needs JavaScript for switching questions and opening citations. <a href="https://github.com/raistlinsha-plus/inkstone">View the source project</a>.</p></noscript>
 </main>
 <script>
 'use strict';
 const copy={
-  en:{repo:'GitHub',eyebrow:'Interactive walkthrough',heading:'Ask your notes.<br>Open the source.',lead:'Try two questions about a fictional reading program. One has a clear answer in the notes. The other remains open.',attendance:'Compare attendance',satisfaction:'Which event had higher satisfaction?',answer:'Answer',simulated:'Simulated',source:'Source',markdown:'Fictional Markdown note',sourceHint:'Open the citation to see the lines in the original note.',filename:'Reading activity plans.md · translated excerpt',viewFile:'View full note on GitHub',scope:'This walkthrough uses a fictional note and fixed answers. In the desktop beta you can open a citation, turn a passage into a Markdown task and schedule it in Calendar. Build from source on an Apple Silicon Mac running macOS 13 or later.',release:'Get the 1.2 beta source',resources:'Desktop resources',product:'Product overview',manual:'User manual',questions:'Choose a question',switchLang:'切换到中文',title:'Inkstone — Try a cited answer',firstTitle:'Plan A had more attendees.',firstBody:'Plan A recorded 120 attendees and Plan B recorded 80. The difference was 40 people.',sourceFirst:'Open citation · lines 7–10',secondTitle:'The notes do not say.',secondBody:'Attendance is recorded for each event. The notes do not report a satisfaction measure for either plan.',next:'Add survey results before comparing satisfaction.',sourceSecond:'Open citation · line 12',updated:'Selected question: ',revealedFirst:'Lines 7–10 are highlighted in the original note.',revealedSecond:'Line 12 is highlighted in the original note.'},
-  'zh-CN':{repo:'GitHub',eyebrow:'交互演示',heading:'向笔记提问，<br>打开原文核对。',lead:'试问两条关于虚构阅读活动的问题。一条能从笔记里找到答案，另一条还缺少依据。',attendance:'比较两场活动的参与人数',satisfaction:'哪场活动的满意度更高？',answer:'回答',simulated:'模拟回答',source:'来源',markdown:'虚构的 Markdown 笔记',sourceHint:'点击引用，查看它指向的笔记原文。',filename:'阅读活动方案.md',viewFile:'在 GitHub 查看完整原文',scope:'本演示使用虚构笔记和固定回答。在桌面测试版中，你可以核对引文，把一句话存成 Markdown 任务，再到日历里安排执行时段。支持在配备 Apple 芯片、运行 macOS 13 或更高版本的 Mac 上从源码构建。',release:'获取 1.2 测试版源码',resources:'桌面版资源',product:'产品与功能',manual:'操作手册',questions:'选择问题',switchLang:'Switch to English',title:'砚台 Inkstone · 问答引用演示',firstTitle:'甲方案参与人数更多。',firstBody:'甲方案记录了 120 人，乙方案记录了 80 人。两者相差 40 人。',sourceFirst:'打开引用 · 第 7–10 行',secondTitle:'资料没有提供满意度。',secondBody:'笔记记录了两场活动的参与人数，未提供任一方案的满意度结果。',next:'补充满意度调查结果后，再比较两场活动。',sourceSecond:'打开引用 · 第 12 行',updated:'已选择问题：',revealedFirst:'原文第 7–10 行已标记。',revealedSecond:'原文第 12 行已标记。'}
+  en:{repo:'GitHub',eyebrow:'Interactive walkthrough',heading:'Ask your notes.<br>Open the source.',lead:'Try two questions about a fictional reading program. One has a clear answer in the notes. The other remains open.',attendance:'Compare attendance',satisfaction:'Which event had higher satisfaction?',answer:'Answer',simulated:'Simulated',source:'Source',markdown:'Fictional Markdown note',sourceHint:'Open the citation to see the lines in the original note.',filename:'reading-activity.md',viewFile:'View full note on GitHub',scope:'This walkthrough uses fictional notes and fixed answers. Demo tasks last until you reload the page. To use Inkstone with your own notes, build the desktop beta on an Apple Silicon Mac running macOS 13 or later.',release:'Get the 1.2 beta source',resources:'Desktop resources',product:'Product overview',manual:'User manual',questions:'Choose a question',switchLang:'切换到中文',title:'Inkstone · From a note to a scheduled task',firstTitle:'Plan A had more attendees.',firstBody:'Plan A recorded 120 attendees and Plan B recorded 80. The difference was 40 people.',sourceFirst:'Open citation · lines 7–10',secondTitle:'The notes do not say.',secondBody:'Attendance is recorded for each event. The notes do not report a satisfaction measure for either plan.',next:'Add survey results before comparing satisfaction.',sourceSecond:'Open citation · line 12',updated:'Selected question: ',revealedFirst:'Lines 7–10 are highlighted in the original note.',revealedSecond:'Line 12 is highlighted in the original note.'},
+  'zh-CN':{repo:'GitHub',eyebrow:'交互演示',heading:'向笔记提问，<br>打开原文核对。',lead:'试问两条关于虚构阅读活动的问题。一条能从笔记里找到答案，另一条还缺少依据。',attendance:'比较两场活动的参与人数',satisfaction:'哪场活动的满意度更高？',answer:'回答',simulated:'模拟回答',source:'来源',markdown:'虚构的 Markdown 笔记',sourceHint:'点击引用，查看它指向的笔记原文。',filename:'reading-activity.md',viewFile:'在 GitHub 查看完整原文',scope:'本演示使用虚构笔记和固定回答，刷新页面后演示任务会重置。要处理自己的笔记，可在配备 Apple 芯片、运行 macOS 13 或更高版本的 Mac 上从源码构建桌面测试版。',release:'获取 1.2 测试版源码',resources:'桌面版资源',product:'产品与功能',manual:'操作手册',questions:'选择问题',switchLang:'Switch to English',title:'砚台 Inkstone · 从笔记引用到任务排期',firstTitle:'甲方案参与人数更多。',firstBody:'甲方案记录了 120 人，乙方案记录了 80 人。两者相差 40 人。',sourceFirst:'打开引用 · 第 7–10 行',secondTitle:'资料没有提供满意度。',secondBody:'笔记记录了两场活动的参与人数，未提供任一方案的满意度结果。',next:'补充满意度调查结果后，再比较两场活动。',sourceSecond:'打开引用 · 第 12 行',updated:'已选择问题：',revealedFirst:'原文第 7–10 行已标记。',revealedSecond:'原文第 12 行已标记。'}
 };
+Object.assign(copy.en, {
+  jump:'Try the task and calendar demo ↓', taskHeading:'Turn a follow-up into a task',
+  messageLabel:'A message from the reading group', taskTitle:'Send the satisfaction survey', capture:'Save as a Markdown task',
+  destination:'Markdown · reading-activity.md', schedule:'Add to calendar', reschedule:'Update time',
+  dateLabel:'Work session', calendar:'Calendar', done:'Completed', taskSaved:'Task added to the sample note.',
+  sampleLinks:'Sample notes', download:'Download sample notes (.zip)', browse:'Browse the notes on GitHub'
+});
+Object.assign(copy['zh-CN'], {
+  jump:'体验任务与日历 ↓', taskHeading:'把后续行动存成任务',
+  messageLabel:'读书会的一条消息', taskTitle:'发放满意度问卷', capture:'保存为 Markdown 任务',
+  destination:'Markdown · reading-activity.md', schedule:'安排到日历', reschedule:'更新时段',
+  dateLabel:'执行时段', calendar:'日历', done:'已完成', taskSaved:'任务已加入示例笔记。',
+  sampleLinks:'示例笔记', download:'下载示例笔记（ZIP）', browse:'在 GitHub 浏览笔记'
+});
 const sourceText={
   en:['## Two activities','', '| Plan | Day | Attendance |','| --- | --- | --- |','| A | Tuesday | 120 |','| B | Thursday | 80 |','','Plan A is at the North Shore Reading Room. Plan B is at the Community Book House. The notes do not provide satisfaction, cost or long-term outcomes.'],
   'zh-CN':['## 两种活动','', '| 方案 | 时间 | 人数 |','| --- | --- | --- |','| 甲 | 周二 | 120 |','| 乙 | 周四 | 80 |','','甲方案安排在北岸阅览室，乙方案安排在社区书屋。资料没有提供满意度、费用或长期效果。']
@@ -70,6 +140,7 @@ function shapeAnswer(){
 }
 function showSource(){
   el('source-empty').hidden=opened;el('source-body').hidden=!opened;
+  el('source-file').href='https://github.com/raistlinsha-plus/inkstone/blob/main/examples/quick-tour/'+lang+'/reading-activity.md'+(mode==='attendance'?'#L7-L10':'#L12');
   if(!opened)return;
   const lines=el('source-lines');const fragment=document.createDocumentFragment();
   sourceText[lang].forEach((text,offset)=>{
@@ -80,6 +151,44 @@ function showSource(){
   });
   lines.replaceChildren(fragment);
 }
+// All task changes exist only in this page. Both views read the same sample task.
+const trialDate = new Date();
+trialDate.setDate(trialDate.getDate() + 1);
+let taskCreated = false;
+let scheduledSlot = '';
+function renderTask() {
+  el('task-status').textContent = '';
+  el('message-step').hidden = taskCreated;
+  el('note-step').hidden = !taskCreated;
+  const checked = el('completed').checked;
+  el('markdown-line').textContent = '- [' + (checked ? 'x' : ' ') + '] ' + t('taskTitle');
+  const date = trialDate.toLocaleDateString(lang, {weekday:'short', month:'short', day:'numeric'});
+  el('slot-label').textContent = t('dateLabel') + ' · ' + date;
+  el('schedule-task').textContent = t(scheduledSlot ? 'reschedule' : 'schedule');
+  el('schedule-task').disabled = Boolean(scheduledSlot && scheduledSlot === el('slot').value);
+  el('calendar-event').hidden = !scheduledSlot;
+  if (scheduledSlot) {
+    const slot = Array.from(el('slot').options).find(option => option.value === scheduledSlot);
+    el('calendar-time').textContent = t('calendar') + ' · ' + date + ' · ' + slot.textContent;
+    el('calendar-task').textContent = t('taskTitle') + (checked ? ' · ' + t('done') : '');
+  }
+  el('sample-links').setAttribute('aria-label', t('sampleLinks'));
+  el('sample-download').href = './downloads/inkstone-quick-tour-' + lang + '.zip';
+  el('sample-source').href = 'https://github.com/raistlinsha-plus/inkstone/tree/main/examples/quick-tour/' + lang + '/';
+}
+el('capture-task').addEventListener('click', () => {
+  taskCreated = true;
+  renderTask();
+  el('completed').focus();
+  el('task-status').textContent = t('taskSaved');
+});
+el('slot').addEventListener('change', renderTask);
+el('schedule-task').addEventListener('click', () => {
+  scheduledSlot = el('slot').value;
+  renderTask();
+  el('calendar-event').focus();
+});
+el('completed').addEventListener('change', renderTask);
 function render(){
   document.documentElement.lang=lang;document.title=t('title');
   document.querySelectorAll('[data-i]').forEach(node=>{if(node.dataset.i==='heading'){const [first,second]=t('heading').split('<br>');node.replaceChildren(first,document.createElement('br'),second);}else node.textContent=t(node.dataset.i)});
@@ -89,7 +198,7 @@ function render(){
   el('product').href='https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.1/'+(lang==='en'?'docs/PRODUCT.en.md':'docs/PRODUCT.md');
   el('questions').setAttribute('aria-label',t('questions'));
   document.querySelectorAll('.question').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
-  shapeAnswer();showSource();
+  shapeAnswer();showSource();renderTask();
 }
 document.querySelectorAll('.question').forEach(b=>b.addEventListener('click',()=>{if(mode===b.dataset.mode)return;mode=b.dataset.mode;opened=false;render();el('status').textContent=t('updated')+t(mode);}));
 el('language').addEventListener('click',()=>{lang=lang==='en'?'zh-CN':'en';render();el('status').textContent='';});
