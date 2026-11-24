@@ -4,7 +4,9 @@
 
 砚台是面向 **macOS 13 及以上 Apple Silicon Mac** 的本地 Markdown 工作台。读项目笔记时，可以直接向资料提问，点引用核对原句，再把对话中决定要做的事写成笔记里的任务。安排好执行时段后，在日历点开任务就能回到那一行继续写。
 
-[获取 v1.2.0-beta.1 源码](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.1) · [快速开始](QUICKSTART.md) · [操作手册](USER-MANUAL.zh-CN.md) · [用示例笔记体验浏览器演示](https://raistlinsha-plus.github.io/inkstone/?lang=zh-CN)
+[**在浏览器里体验**](https://raistlinsha-plus.github.io/inkstone/?lang=zh-CN) · [在 Mac 上试用同一份笔记](../examples/quick-tour/README.zh-CN.md) · [获取测试版源码](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.1)
+
+两场阅读活动，哪场来的人更多？点开回答的引用，核对原文中的人数，再把后续要做的事排进日历。网页演示使用虚构笔记和预设回答，打开就能试，无需安装或填写模型密钥。
 
 ![简体中文界面的 Markdown 笔记，正文内嵌数据图表](assets/v1.2.0-beta.1/zh-CN/workspace.png)
 
@@ -53,7 +55,7 @@ npm run desktop
 | 版本变化与评测 | [交付与验证](DELIVERY-v1.2.0-beta.1.md) | [Release notes](DELIVERY-v1.2.0-beta.1.en.md) |
 | 后续计划 | [路线图](ROADMAP.zh-CN.md) | [Roadmap](ROADMAP.md) |
 
-[架构说明](ARCHITECTURE-4A.md) · [已知限制](KNOWN-LIMITATIONS.md) · [反馈问题](https://github.com/raistlinsha-plus/inkstone/issues) · [参与贡献](../CONTRIBUTING.md)
+[架构说明](ARCHITECTURE-4A.md) · [已知限制](KNOWN-LIMITATIONS.md) · [分享试用感受](https://github.com/raistlinsha-plus/inkstone/discussions/11) · [反馈问题](https://github.com/raistlinsha-plus/inkstone/issues) · [参与贡献](../CONTRIBUTING.md)
 
 ## 许可
 

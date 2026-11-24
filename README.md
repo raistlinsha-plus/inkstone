@@ -4,7 +4,9 @@
 
 Inkstone is a local Markdown workspace for **macOS 13 or later on Apple Silicon**. Ask a question about your notes, open the cited lines, and turn an action from the conversation into a task in the original project. Schedule the work in Calendar and return to the same Markdown line when you are ready to write.
 
-[Get v1.2.0-beta.1 source](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.1) · [Quickstart](docs/QUICKSTART.en.md) · [User manual](docs/USER-MANUAL.en.md) · [Browser demo with sample notes](https://raistlinsha-plus.github.io/inkstone/)
+[**Try the browser demo**](https://raistlinsha-plus.github.io/inkstone/?lang=en) · [Try the same note on your Mac](examples/quick-tour/README.md) · [Get the beta source](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.1)
+
+Two reading events, one question: which drew more people? Open the citation, check the figures, then turn the follow-up into a scheduled task. The browser demo uses a fictional note and preset answers. You can try it without installing Inkstone or entering a model key.
 
 ![A Markdown note with an embedded data chart in the English editor](docs/assets/v1.2.0-beta.1/en/workspace.png)
 
@@ -53,7 +55,7 @@ Provider keys live in an owner-only local preferences file. Portable backups omi
 | Beta changes and evaluation | [Release notes](docs/DELIVERY-v1.2.0-beta.1.en.md) | [交付与验证](docs/DELIVERY-v1.2.0-beta.1.md) |
 | Future work | [Roadmap](docs/ROADMAP.md) | [路线图](docs/ROADMAP.zh-CN.md) |
 
-[Architecture](docs/PUBLIC-ARCHITECTURE.md) · [Known limitations](docs/KNOWN-LIMITATIONS.md) · [Report an issue](https://github.com/raistlinsha-plus/inkstone/issues) · [Contributing](CONTRIBUTING.md)
+[Architecture](docs/PUBLIC-ARCHITECTURE.md) · [Known limitations](docs/KNOWN-LIMITATIONS.md) · [Share feedback on the walkthrough](https://github.com/raistlinsha-plus/inkstone/discussions/11) · [Report an issue](https://github.com/raistlinsha-plus/inkstone/issues) · [Contributing](CONTRIBUTING.md)
 
 ## License
 
