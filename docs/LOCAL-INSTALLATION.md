@@ -6,6 +6,12 @@
 
 **v1.0.0-rc.4** 的 macOS 构建号为 10004。由 v0.9.6 原位升级后，标题栏应显示 v1.0.0-rc.4。打开原有空间，选择一篇笔记并点「问这篇文档」即可体验逐项取证。升级前的应用和资料快照随本次事务保存。[本轮交付与验证](DELIVERY-v1.0.0-rc.4.md)
 
+## v1.2.0-beta.1 构建 10207
+
+在正文或分栏中，用鼠标悬停在数据图表上，或用 Tab 聚焦，即可切换数据表、编辑或导出。
+
+此构建沿用原应用路径、Bundle ID 和构建 10202 的本机凭据配置。可在 Finder 选中「应用程序」中的 Inkstone 并查看简介，核对版本。打开默认空间「我的文档」，从左侧分别进入任务清单和周历，悬停图标可查看名称。
+
 ## 唯一日常入口
 
 | 位置 | 用途 |
@@ -57,7 +63,7 @@ python3 scripts/local-upgrade.py apply --state "$inkstone_upgrade_state"
 python3 scripts/local-upgrade.py rollback --state "$inkstone_upgrade_state"
 ```
 
-回退会把当前资料保留在私有事务的 `return-stage`，恢复后活跃资料回到升级前时点。系统偏好和 WebKit 界面状态仅随原始快照备查。该目录、原始快照和便携备份均位于本机 Git 忽略的 `artifacts` 下。API 密钥仍由 macOS 钥匙串管理。可用 `python3 scripts/local-upgrade.test.py` 在临时目录验证故障和回退。
+回退会把当前资料保留在私有事务的 `return-stage`，恢复后活跃资料回到升级前时点。系统偏好和 WebKit 界面状态仅随原始快照备查。该目录、原始快照和便携备份均位于本机 Git 忽略的 `artifacts` 下。从 v1.2.0-beta.1 构建 10202 起，API 密钥由 Inkstone 私有配置管理，路径为 `~/Library/Preferences/local.inkstone.desktop/credentials.json`。升级前已有的钥匙串项目可在服务设置中单独导入；旧版应用回退后仍使用原钥匙串。此私有配置独立于资料快照及便携备份。可用 `python3 scripts/local-upgrade.test.py` 在临时目录验证故障和回退。
 
 ## 2026-11-07 历史整理记录
 

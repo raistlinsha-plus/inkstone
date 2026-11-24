@@ -9,7 +9,7 @@ use crate::{
 use std::{collections::HashSet, sync::atomic::Ordering, time::Duration};
 use tauri::Emitter;
 
-const GENERAL_SYSTEM: &str = "你是砚台 AI 助手。按当前用户请求进行解释、写作、翻译、代码示例或对话。使用清晰的 Markdown。上轮回答仅作编辑与追问语境，不代表已核验事实。不要伪造引用、声称已经联网或执行操作。输出不要包含 HTML 和远程图片。";
+const GENERAL_SYSTEM: &str = "你是砚台 AI 助手。按当前用户请求进行解释、写作、翻译、代码示例或对话。优先遵守本轮指定的目标语言（含翻译要求）；其次遵守经应用确认的回答语言偏好，默认使用当前问题的语言，简短追问可沿用上轮语言。使用清晰的 Markdown。上轮回答仅作编辑与追问语境，不代表已核验事实。不要伪造引用、声称已经联网或执行操作。输出不要包含 HTML 和远程图片。";
 
 #[derive(Default)]
 pub struct WebTurn {
@@ -217,6 +217,7 @@ pub async fn web(
             r#"只根据当前问题判断是否需要查询公开网页。最新公开事实、官网核对、外部对照需要查。写作、翻译、概念解释和内部材料问题通常不需要。用户限定仅用指定材料或不联网时返回 false。仅输出 JSON {"search":true,"query":"可公开查询的短语"} 或 {"search":false,"query":""}。查询词应取自用户当前问题，去除私人信息、路径和标识；无法提取安全的公开目标时返回 false。"#,
             &question.chars().take(1500).collect::<String>(), cancel).await
     };
+    let plan = crate::request_receipt::structured(crate::request_receipt::Service::WebPlan, plan);
     let plan = match tokio::time::timeout(Duration::from_secs(5), plan).await {
         Ok(Ok(value)) => value,
         _ => return unavailable("联网规划不可用，公开资料未核验。"),
@@ -470,6 +471,26 @@ fn local_item(
         },
         text,
     }
+}
+
+fn local_excerpt(original: &Evidence, excerpt: &SearchResult) -> Result<Evidence, String> {
+    let mut item = original.clone();
+    let metadata = &mut item.metadata;
+    let id = metadata
+        .document_id
+        .as_deref()
+        .or(metadata.attachment_id.as_deref())
+        .ok_or("所选资料缺少身份")?;
+    metadata.id = format!("{id}:{}-{}", excerpt.start_line, excerpt.end_line);
+    metadata.label = local_label(
+        excerpt.title.as_deref().unwrap_or(id),
+        excerpt.start_line,
+        excerpt.end_line,
+    );
+    metadata.excerpt =
+        (metadata.kind == "document").then(|| excerpt.text.chars().take(3000).collect());
+    item.text.clone_from(&excerpt.text);
+    Ok(item)
 }
 
 fn document(
@@ -917,7 +938,7 @@ pub async fn general(
         rank_used,
         read_selected,
         ranked,
-        related,
+        mut related,
     ) = local;
     let mut trace = Trace {
         steps,
@@ -1004,34 +1025,42 @@ pub async fn general(
             let mut ids = Vec::new();
             for q in &facet.quotes {
                 let quote = crate::candidate_reading::verified_quote(&passages[q.source_index], q)?;
-                let mut item = evidence[q.source_index].clone();
-                let m = &mut item.metadata;
-                let id = m
-                    .document_id
-                    .as_ref()
-                    .or(m.attachment_id.as_ref())
-                    .ok_or("所选资料缺少身份")?;
-                m.id = format!("{id}:{}-{}", quote.start_line, quote.end_line);
-                m.label = local_label(
-                    quote.title.as_deref().unwrap_or(id),
-                    quote.start_line,
-                    quote.end_line,
-                );
-                // Distinguish two sentences on the same line without letting the model assign an ID.
-                let ref_key = (m.id.clone(), quote.text.clone());
+                let item = local_excerpt(&evidence[q.source_index], &quote)?;
+                // Distinguish two sentences on one line without delegating IDs to a model.
+                let ref_key = (item.metadata.id.clone(), item.text.clone());
                 if !selected
                     .iter()
-                    .any(|e| e.metadata.id == m.id && e.text == quote.text)
+                    .any(|e| e.metadata.id == ref_key.0 && e.text == ref_key.1)
                 {
-                    if m.kind == "document" {
-                        m.excerpt = Some(quote.text.chars().take(3000).collect());
-                    }
-                    item.text = quote.text;
                     selected.push(item);
                 }
                 ids.push(ref_key);
             }
             facet_refs.push((facet.question.clone(), ids));
+        }
+        if selected.is_empty()
+            && related.is_empty()
+            && explicit
+            && single_selected
+            && clock.is_none()
+            && resolved_day.is_none()
+            && started.followup_sources.is_none()
+        {
+            if let Some(frame) = crate::evidence_reader::scoped_clause::Frame::parse(question) {
+                for (original, passage) in evidence.iter().zip(&passages) {
+                    for excerpt in frame.related(passage) {
+                        let item = local_excerpt(original, &excerpt)?;
+                        if related.len() < 6
+                            && !related.iter().any(|r| r.metadata.id == item.metadata.id)
+                        {
+                            related.push(item);
+                        }
+                    }
+                    if related.len() == 6 {
+                        break;
+                    }
+                }
+            }
         }
         if selected.is_empty() && !related.is_empty() {
             used_related = true;
@@ -1207,15 +1236,19 @@ pub async fn general(
     if let Some(app) = app {
         progress(app, request, "generating", "正在生成回答");
     }
-    let mut output = providers::stream_chat(
-        &state.client,
-        &config,
-        key.as_deref(),
-        system,
-        &user,
-        &state.cancel_chat,
-        app,
-        request,
+    let mut output = crate::request_receipt::with_sources(
+        &[],
+        &external,
+        providers::stream_chat(
+            &state.client,
+            &config,
+            key.as_deref(),
+            system,
+            &user,
+            &state.cancel_chat,
+            app,
+            request,
+        ),
     )
     .await?;
     if provider_reviewed && !crate::candidate_reading::provider_allowed(state, &config)? {

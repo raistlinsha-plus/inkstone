@@ -1,3 +1,4 @@
+import { msg } from "./i18n";
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { History, RefreshCw, X } from "lucide-react";
@@ -133,7 +134,7 @@ export default function SourceReviewDialog({
   };
   return (
     <ModalDialog
-      label="来源更新与历史版本"
+      label={msg("来源更新与历史版本")}
       className="source-review-modal"
       busy={busy}
       onClose={onClose}
@@ -141,12 +142,12 @@ export default function SourceReviewDialog({
       <div className="modal-heading">
         <div>
           <h2>{document.title}</h2>
-          {spaceName && <p>所属空间：{spaceName}</p>}
-          <p>比较外部原件与当前副本；更新前保留可恢复版本。</p>
+          {spaceName && <p>{msg("所属空间：")}{spaceName}</p>}
+          <p>{msg("比较外部原件与当前副本；更新前保留可恢复版本。")}</p>
         </div>
         <button
           className="icon-button"
-          aria-label="关闭来源比较"
+          aria-label={msg("关闭来源比较")}
           disabled={busy}
           onClick={onClose}
         >
@@ -159,17 +160,17 @@ export default function SourceReviewDialog({
           onClick={() => setTab("source")}
         >
           <RefreshCw size={16} />
-          来源更新
+          {msg("来源更新")}
         </button>
         <button
           aria-pressed={tab === "history"}
           onClick={() => setTab("history")}
         >
           <History size={16} />
-          历史版本
+          {msg("历史版本")}
         </button>
         <button disabled={busy} onClick={() => void load()}>
-          重新检查
+          {msg("重新检查")}
         </button>
       </div>
       {error && (
@@ -177,7 +178,7 @@ export default function SourceReviewDialog({
           {error}
         </p>
       )}
-      {busy && <p role="status">正在检查或保存，请稍候…</p>}
+      {busy && <p role="status">{msg("正在检查或保存，请稍候…")}</p>}
       {tab === "source" && preview && (
         <>
           <p role="status" className="source-update-status">
@@ -190,7 +191,7 @@ export default function SourceReviewDialog({
           ))}
           {!!preview.attachmentChanges.length && (
             <details open>
-              <summary>附件变化（{preview.attachmentChanges.length}）</summary>
+              <summary>{msg("附件变化（")}{preview.attachmentChanges.length}）</summary>
               <ul>
                 {preview.attachmentChanges.map((s, i) => (
                   <li key={i}>{s}</li>
@@ -200,25 +201,25 @@ export default function SourceReviewDialog({
           )}
           <div className="source-comparison">
             <label>
-              当前副本
+              {msg("当前副本")}
               <textarea
                 readOnly
-                aria-label="当前副本内容"
+                aria-label={msg("当前副本内容")}
                 value={preview.currentContent}
               />
             </label>
             <label>
-              原件更新后的内容
+              {msg("原件更新后的内容")}
               <textarea
                 readOnly
-                aria-label="原件更新后的内容"
+                aria-label={msg("原件更新后的内容")}
                 value={preview.sourceContent ?? "原件当前不可读取"}
               />
             </label>
           </div>
           <div className="modal-actions">
             <button className="button" onClick={onClose} disabled={busy}>
-              取消
+              {msg("取消")}
             </button>
             <div />
             <button
@@ -232,23 +233,23 @@ export default function SourceReviewDialog({
               }
               onClick={() => void mutate("copy")}
             >
-              保留两份
+              {msg("保留两份")}
             </button>
             <button
               className="button primary"
               disabled={busy || committed || !preview.canUpdate}
               onClick={() => void mutate("update")}
             >
-              更新已有文档
+              {msg("更新已有文档")}
             </button>
           </div>
         </>
       )}
       {tab === "history" && (
         <div className="source-history">
-          <p>更新或恢复前的正文与附件一并保留；恢复不会修改外部原件。</p>
+          <p>{msg("更新或恢复前的正文与附件一并保留；恢复不会修改外部原件。")}</p>
           {!busy && !versions.length && (
-            <p>尚无历史版本。首次更新后会在这里保留旧版本。</p>
+            <p>{msg("尚无历史版本。首次更新后会在这里保留旧版本。")}</p>
           )}
           {versions.map((v) => (
             <div className="source-version" key={v.id}>
@@ -256,10 +257,10 @@ export default function SourceReviewDialog({
                 <strong>
                   {new Date(
                     v.created * (v.created < 1e12 ? 1000 : 1),
-                  ).toLocaleString("zh-CN")}
+                  ).toLocaleString()}
                 </strong>
                 <small>
-                  {v.reason} · {v.attachmentCount} 个附件
+                  {v.reason} · {v.attachmentCount} {msg("个附件")}
                 </small>
               </span>
               <button
@@ -267,26 +268,26 @@ export default function SourceReviewDialog({
                 disabled={busy || committed || !preview}
                 onClick={() => setRestore(v.id)}
               >
-                选择恢复
+                {msg("选择恢复")}
               </button>
             </div>
           ))}
           {restore && (
             <div className="panel-warning">
-              <p>将恢复所选版本，当前副本先保留为另一历史版本。</p>
+              <p>{msg("将恢复所选版本，当前副本先保留为另一历史版本。")}</p>
               <button
                 className="button"
                 disabled={busy}
                 onClick={() => setRestore(null)}
               >
-                取消恢复
+                {msg("取消恢复")}
               </button>
               <button
                 className="button primary"
                 disabled={busy || committed || !preview}
                 onClick={() => void mutate("restore")}
               >
-                确认恢复此版本
+                {msg("确认恢复此版本")}
               </button>
             </div>
           )}

@@ -1,3 +1,4 @@
+import { msg } from "./i18n";
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { RefreshCw, X } from "lucide-react";
@@ -69,7 +70,7 @@ export default function RecoveryDialog({
   };
   return (
     <ModalDialog
-      label="恢复与诊断"
+      label={msg("恢复与诊断")}
       onClose={onClose}
       busy={busy}
       className="recovery-modal"
@@ -77,45 +78,45 @@ export default function RecoveryDialog({
       <div className="modal-heading">
         <div>
           <span className="eyebrow">LOCAL RECOVERY</span>
-          <h2>恢复与诊断</h2>
+          <h2>{msg("恢复与诊断")}</h2>
         </div>
         <button
           className="icon-button"
           disabled={busy}
-          aria-label="关闭恢复与诊断"
+          aria-label={msg("关闭恢复与诊断")}
           onClick={onClose}
         >
           <X size={18} />
         </button>
       </div>
       <p className="muted">
-        每项独立核对。重试只补齐可以确认的操作，不会用旧正文覆盖当前内容。
+        {msg("每项独立核对。重试只补齐可以确认的操作，不会用旧正文覆盖当前内容。")}
       </p>
       {error && (
         <p className="panel-warning" role="alert">
           {error}
         </p>
       )}
-      {busy && <p role="status">正在核对恢复记录…</p>}
+      {busy && <p role="status">{msg("正在核对恢复记录…")}</p>}
       {report?.items.length === 0 && (
-        <p className="empty-state">没有待处理的恢复记录。</p>
+        <p className="empty-state">{msg("没有待处理的恢复记录。")}</p>
       )}
       <div className="recovery-items">
         {report?.items.map((item) => (
           <article key={item.operationId}>
             <div className="section-heading">
               <strong>{labels[item.status]}</strong>
-              <small>{item.retryable ? "可安全重试" : "核对结果"}</small>
+              <small>{item.retryable ? msg("可安全重试") : msg("核对结果")}</small>
             </div>
             <p>{item.message}</p>
             <details>
-              <summary>诊断身份</summary>
+              <summary>{msg("诊断身份")}</summary>
               <p>
-                操作：{item.operationId}
+                {msg("操作：")}{item.operationId}
                 <br />
-                类型：{item.kind}
+                {msg("类型：")}{item.kind}
                 <br />
-                文档：{item.documentId ?? "未关联"}
+                {msg("文档：")}{item.documentId ?? msg("未关联")}
               </p>
             </details>
           </article>
@@ -124,7 +125,7 @@ export default function RecoveryDialog({
       <div className="modal-actions">
         <button className="button" disabled={busy} onClick={() => void load()}>
           <RefreshCw size={14} />
-          重新核对
+          {msg("重新核对")}
         </button>
         <div />
         <button
@@ -132,7 +133,7 @@ export default function RecoveryDialog({
           disabled={busy || !report?.items.some((i) => i.retryable)}
           onClick={() => void load(true)}
         >
-          重试可恢复项
+          {msg("重试可恢复项")}
         </button>
       </div>
     </ModalDialog>

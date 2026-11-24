@@ -1,3 +1,7 @@
+import TaskList from "./tasks/TaskList";
+import { taskLine, type TaskDraft } from "./content/tasks";
+import ChatTaskDialog, { type ChatTaskMessage } from "./tasks/ChatTaskDialog";
+import { msg, translate as t, systemMessage, type Message } from "./i18n";
 import { dismissDetailsOnOutside, dismissOnOutside, focusMenuButton } from "./platform/menu";
 import { imeBoundary, isImeEvent } from "./platform/ime";
 import { isTauri } from "@tauri-apps/api/core";
@@ -8,7 +12,7 @@ import ExternalSourcePreview from "./assistant/ExternalSourcePreview";
 import SourcePreviewFrame from "./assistant/SourcePreviewFrame";
 import { answerCitations, documentCitation } from "./assistant/sourceDisplay";
 import WebSearchSettings from "./assistant/WebSearchSettings";
-import { retrievalLabels, rerankLabel } from "./knowledge/retrievalLabels";
+import { retrievalLabel, rerankLabel } from "./knowledge/retrievalLabels";
 import RetrievalOptions, { retrievalDisclosure } from "./knowledge/RetrievalOptions";
 import WikiPanel from "./knowledge/WikiPanel";
 import { listen } from "@tauri-apps/api/event";
@@ -44,7 +48,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Answer from "./Answer";
 import CompanionDock from "./companion/CompanionDock";
 import { useCompactWindow } from "./platform/useCompactWindow";
@@ -77,6 +81,8 @@ import type { AnswerSourceLink } from "./content/answerSourceLink";
 import { codeBlocks } from "./content/blocks";
 import {
   calendarTemplate,
+  saveCalendarEvent,
+  type CalendarEvent,
   currentTimeZone,
   dateQuery,
   type CalendarDocument,
@@ -105,6 +111,7 @@ import { documentKind } from "./session";
 import SettingsModal from "./SettingsModal";
 import Sources from "./shell/Sources";
 import SpaceNavigation from "./shell/SpaceNavigation";
+import WorkspaceRail from "./shell/WorkspaceRail";
 import Titlebar from "./shell/Titlebar";
 import KnowledgePanelResizer from "./shell/KnowledgePanelResizer";
 import Tree from "./shell/Tree";
@@ -162,7 +169,7 @@ const answerExecution = (snapshot: AnswerSnapshot) => {
 };
 
 export default function App() {
-  const [libraryView, setLibraryView] = useState<LibraryView>({
+  const [catalog, setLibraryView] = useState<LibraryView>({
     projects: [],
     documents: [],
     pendingImports: [],
@@ -171,7 +178,18 @@ export default function App() {
     [importPaths, setImportPaths] = useState<string[]>([]),
     [importTask, setImportTask] = useState<ImportTask | undefined>(),
     [importBusy, setImportBusy] = useState(false);
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [rawWorkspace, setWorkspace] = useState<Workspace | null>(null);
+  const defaultTitle = t("我的文档", "My Documents");
+  const libraryView = useMemo(() => ({
+    ...catalog,
+    projects: catalog.projects.map(p => p.systemTitle ? { ...p, title: defaultTitle } : p),
+  }), [catalog, defaultTitle]);
+  const workspace = useMemo(() => {
+    if (rawWorkspace?.managedProjectId === "inbox" && rawWorkspace.name === "我的文档" &&
+        catalog.projects.some(p => p.id === "inbox" && p.systemTitle))
+      return { ...rawWorkspace, name: defaultTitle };
+    return rawWorkspace;
+  }, [rawWorkspace, catalog.projects, defaultTitle]);
   const [mode, setMode] = useState<EditorMode>("visual");
   const editorModeRef = useRef(mode);
   editorModeRef.current = mode;
@@ -244,7 +262,10 @@ export default function App() {
   const [answerWarning, setAnswerWarning] = useState("");
   const [retrievalStatus, setRetrievalStatus] = useState("");
   const searchRequest = useRef("");
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [chatTask, setChatTask] = useState<ChatTaskMessage | null>(null);
+  const [planningView, setPlanningView] = useState<"calendar" | "tasks" | null>(null);
+  const calendarOpen = planningView !== null;
+  const [calendarDay, setCalendarDay] = useState<string>();
   const [calendarDocuments, setCalendarDocuments] = useState<
     CalendarDocument[]
   >([]);
@@ -453,7 +474,7 @@ export default function App() {
   const [stats, setStats] = useState<Stats>(emptyStats);
   const statsRefreshSequence = useRef(0);
   const [indexDirty, setIndexDirty] = useState(false);
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState<string | { key: Message }>("");
   const [error, setError] = useState("");
   const [position, setPosition] = useState<EditorPosition>();
   const workspaceEpoch = useRef(0);
@@ -562,7 +583,7 @@ export default function App() {
     nameDialog,
   };
   const native = isTauri();
-  function notify(message: string) {
+  function notify(message: string | { key: Message }) {
     setToast(message);
   }
   function fail(e: unknown) {
@@ -588,7 +609,7 @@ export default function App() {
     ++calendarLoadSequence.current;
     setCalendarBusy(false);
     setCalendarWriting(false);
-    setCalendarOpen(false);
+    setPlanningView(null);
     setCalendarDocuments([]);
     setCalendarWarnings([]);
     setCalendarRange(undefined);
@@ -596,7 +617,7 @@ export default function App() {
     calendarHistory.current = [];
   }
   function beginCalendarWrite(projectId: string): PendingMutation {
-    if (navigationBlocked()) throw Error("请等待当前操作完成后再修改日程");
+    if (navigationBlocked()) throw Error(msg("请等待当前操作完成后再修改日程"));
     let finish!: () => void;
     const operation: PendingMutation = {
       epoch: workspaceEpoch.current,
@@ -943,7 +964,7 @@ export default function App() {
         const pendingCalendar = calendarWrite.current,
           pendingName = nameMutation.current;
         if (pendingCalendar || pendingName)
-          notify("正在完成文档保存，随后退出…");
+          notify({ key: "正在完成文档保存，随后退出…" });
         await libraryMutation.current?.done;
         await pendingCalendar?.done;
         await pendingName?.done;
@@ -961,8 +982,8 @@ export default function App() {
         }
         if (indexBusy || chatBusy || importBusyRef.current) {
           const leave = await confirm(
-            "正在进行的导入、建库或问答将停止，已完成内容会保留。确定退出？",
-            { title: "退出砚台", kind: "warning" },
+            msg("正在进行的导入、建库或问答将停止，已完成内容会保留。确定退出？"),
+            { title: msg("退出砚台"), kind: "warning" },
           );
           if (!leave) {
             closingRef.current = false;
@@ -1021,7 +1042,7 @@ export default function App() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
         void saveCurrent()
-          .then(() => notify("已保存"))
+          .then(() => notify({ key: "已保存" }))
           .catch(fail);
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "o") {
@@ -1059,14 +1080,14 @@ export default function App() {
         return false;
       }
       return confirm(`${displayError(e)}。继续切换会保留恢复草稿。`, {
-        title: "保留草稿并继续？",
+        title: msg("保留草稿并继续？"),
         kind: "warning",
       });
     }
   }
   async function chooseWorkspace() {
     if (!native) {
-      notify("请使用桌面应用打开本地目录");
+      notify({ key: "请使用桌面应用打开本地目录" });
       return;
     }
     if (navigationBlocked()) return;
@@ -1087,7 +1108,7 @@ export default function App() {
       const root = await open({
         directory: true,
         multiple: false,
-        title: "选择你的笔记文件夹",
+        title: msg("选择你的笔记文件夹"),
       });
       if (!root || typeof root !== "string") return;
       epoch = ++workspaceEpoch.current;
@@ -1209,7 +1230,7 @@ export default function App() {
     setCompanionOpen(false);
     ++calendarLoadSequence.current;
     setCalendarBusy(false);
-    setCalendarOpen(false);
+    setPlanningView(null);
     setWelcome(true);
     revealDocumentPane();
   }
@@ -1242,14 +1263,14 @@ export default function App() {
     });
     if (!current()) return;
     if (!match) {
-      notify("引用的原文已不可用，可核对文档里的生成时摘录");
+      notify({ key: "引用的原文已不可用，可核对文档里的生成时摘录" });
       return;
     }
     const { document, hash, lines } = match;
     if (hash !== source.hash || lines < source.endLine) {
       const openCurrent = await confirm(
-        "当前正文与引用快照无法匹配。打开当前文档时将跳过原引用行号。",
-        { title: "引用版本不匹配", kind: "warning" },
+        msg("当前正文与引用快照无法匹配。打开当前文档时将跳过原引用行号。"),
+        { title: msg("引用版本不匹配"), kind: "warning" },
       );
       if (openCurrent && current()) await openLibraryDocument(document);
       return;
@@ -1274,7 +1295,7 @@ export default function App() {
       state.importOpen ||
       state.nameDialog
     ) {
-      notify("请先完成或关闭当前窗口，再导入文档");
+      notify({ key: "请先完成或关闭当前窗口，再导入文档" });
       return;
     }
     setImportTask(task);
@@ -1360,7 +1381,7 @@ export default function App() {
           state.importOpen ||
           state.nameDialog
         ) {
-          notify("请先完成或关闭当前窗口，再拖入文档");
+          notify({ key: "请先完成或关闭当前窗口，再拖入文档" });
           return;
         }
         setImportPaths(e.payload.paths);
@@ -1421,7 +1442,7 @@ export default function App() {
         d.projectId === workspaceRef.current?.managedProjectId
           ? (await refreshFiles(), await openPath(d.path, undefined, true))
           : await useLibrary(d.projectId, d.path, true);
-      if (!entered) throw Error("已保存，但目标文档未能重新打开");
+      if (!entered) throw Error(msg("已保存，但目标文档未能重新打开"));
       setIndexDirty(true);
     },
     onSpaceRename: (id: string, title: string) => {
@@ -1475,8 +1496,8 @@ export default function App() {
         file.draft &&
         (file.missing ||
           (await confirm(
-            "发现此文件的未保存草稿，是否恢复？原文件不会被立即覆盖。",
-            { title: "恢复草稿" },
+            msg("发现此文件的未保存草稿，是否恢复？原文件不会被立即覆盖。"),
+            { title: msg("恢复草稿") },
           )))
       ) {
         content = file.draft.content;
@@ -1509,7 +1530,7 @@ export default function App() {
         (target.requireVersion || target.external?.kind === "document")
       ) {
         if (file.missing) {
-          notify("引用的原文已不可用，仍可核对回答保存的摘录");
+          notify({ key: "引用的原文已不可用，仍可核对回答保存的摘录" });
           return false;
         }
         if (
@@ -1518,8 +1539,8 @@ export default function App() {
           target.endLine > content.split("\n").length
         ) {
           const openCurrent = await confirm(
-            "当前正文与引用快照无法匹配。打开当前文档时将跳过原引用行号。",
-            { title: "引用版本不匹配", kind: "warning" },
+            msg("当前正文与引用快照无法匹配。打开当前文档时将跳过原引用行号。"),
+            { title: msg("引用版本不匹配"), kind: "warning" },
           );
           if (!openCurrent || !current()) return false;
           target = undefined;
@@ -1546,7 +1567,7 @@ export default function App() {
       setDocument(next);
       docRef.current = next;
       setWelcome(false);
-      setCalendarOpen(false);
+      setPlanningView(null);
       setCompanionOpen(false);
       if (
         ["json", "mermaid"].includes(documentKind(path)) ||
@@ -1567,7 +1588,7 @@ export default function App() {
             ? "visual"
             : "source";
         if (target.hash !== file.hash)
-          notify("来源已更新，行号仅供参考，请核对当前原文");
+          notify({ key: "来源已更新，行号仅供参考，请核对当前原文" });
       } else
         nextMode =
           restore?.mode ??
@@ -1602,7 +1623,7 @@ export default function App() {
       await invoke("discard_draft", { path: doc.path });
       await refreshFiles();
       await openPath(doc.path, undefined, true);
-      notify("已恢复原位置");
+      notify({ key: "已恢复原位置" });
     } catch (e) {
       fail(e);
     }
@@ -1610,7 +1631,7 @@ export default function App() {
   async function reloadDisk() {
     if (
       !document ||
-      !(await confirm("放弃当前编辑并载入磁盘版本？", {
+      !(await confirm(msg("放弃当前编辑并载入磁盘版本？"), {
         title: "载入磁盘版本",
         kind: "warning",
       }))
@@ -1752,7 +1773,7 @@ export default function App() {
     const current = syncEditor();
     if (!document || next === mode) return;
     if (next === "visual" && document.content.length > 300000) {
-      notify("大文档请使用源码模式，以保持编辑流畅");
+      notify({ key: "大文档请使用源码模式，以保持编辑流畅" });
       return;
     }
     setMode(next);
@@ -1791,7 +1812,7 @@ export default function App() {
           !local &&
           !(await confirm(
             `所选范围的文本切片将发送到 ${settings.embedding.baseUrl} 进行向量化，可能产生 API 费用。是否开始？`,
-            { title: "建立语义索引" },
+            { title: msg("建立语义索引") },
           ))
         )
           return;
@@ -1893,11 +1914,13 @@ export default function App() {
   async function loadCalendar(
     range?: DateRange,
     path?: string,
+    view: "tasks" | "calendar" = "calendar",
+    day?: string,
   ): Promise<boolean> {
     if (navigationBlocked()) return false;
     const projectId = workspaceRef.current?.managedProjectId;
     if (!projectId) {
-      notify("请先进入我的文档中的项目，再查看项目日历");
+      notify({ key: "请先进入我的文档中的项目，再查看项目日历" });
       return false;
     }
     const epoch = workspaceEpoch.current,
@@ -1915,7 +1938,8 @@ export default function App() {
       rememberPosition();
       setCalendarRange(range);
       setCalendarScopePath(path);
-      setCalendarOpen(true);
+      setCalendarDay(day);
+      setPlanningView(view);
       setWelcome(false);
       setPanelOpen(false);
       const data = await invoke("calendar_list", { projectId });
@@ -1948,18 +1972,24 @@ export default function App() {
       );
     return loaded;
   }
+  function recordPlanningChange(documentId: string, before: string, afterHash: string) {
+    calendarHistory.current.push({documentId, before, afterHash});
+    while (calendarHistory.current.length > 30 ||
+      calendarHistory.current.reduce((n, h) => n + h.before.length, 0) > 8_000_000)
+      calendarHistory.current.shift();
+  }
   async function patchCalendar(patch: {
     documentId: string;
     expectedHash: string;
     content: string;
   }) {
     const projectId = workspaceRef.current?.managedProjectId;
-    if (!projectId) throw Error("请先打开本地项目");
+    if (!projectId) throw Error(msg("请先打开本地项目"));
     const before = calendarDocuments.find(
       (d) => d.documentId === patch.documentId,
     );
     if (!before || before.hash !== patch.expectedHash)
-      throw Error("原文已更新，请刷新日历后重试");
+      throw Error(t("原文已更新，请刷新当前视图后重试。", "The source has changed. Refresh this view and try again."));
     const operation = beginCalendarWrite(projectId);
     try {
       const result = await invoke("calendar_save", {
@@ -1967,17 +1997,7 @@ export default function App() {
         ...patch,
       });
       if (!currentCalendarWrite(operation)) return;
-      calendarHistory.current.push({
-        documentId: patch.documentId,
-        before: before.content,
-        afterHash: result.hash,
-      });
-      while (
-        calendarHistory.current.length > 30 ||
-        calendarHistory.current.reduce((n, h) => n + h.before.length, 0) >
-          8_000_000
-      )
-        calendarHistory.current.shift();
+      recordPlanningChange(patch.documentId, before.content, result.hash);
       setCalendarDocuments((old) =>
         old.map((d) =>
           d.documentId === patch.documentId
@@ -1988,8 +2008,8 @@ export default function App() {
       const synced = syncCalendarSave(before, patch.content, result.hash);
       notify(
         !synced
-          ? "日程已保存；正文有较新的编辑，已保留草稿，请核对磁盘版本"
-          : result.warning || "日程已保存到原文",
+          ? t("修改已保存。正文有较新的草稿，请核对磁盘版本。", "Changes saved. A newer editor draft was preserved. Review the version on disk.")
+          : result.warning || t("修改已保存到原文", "Changes saved to the source document"),
       );
       setIndexDirty(result.indexStale);
       void refreshStats();
@@ -2031,8 +2051,8 @@ export default function App() {
       redrawCalendar((n) => n + 1);
       notify(
         synced
-          ? "已撤销日历修改"
-          : "已撤销日历修改；正文的新编辑已保留，请核对磁盘版本",
+          ? t("已撤销上次修改", "Last change undone")
+          : t("已撤销上次修改。正文的新编辑已保留，请核对磁盘版本。", "Last change undone. Newer edits were preserved. Review the version on disk."),
       );
       setIndexDirty(result.indexStale);
       void refreshStats();
@@ -2042,25 +2062,33 @@ export default function App() {
       endCalendarWrite(operation);
     }
   }
-  async function newCalendarDocument() {
+  async function newCalendarDocument(event?: CalendarEvent) {
     const projectId = workspaceRef.current?.managedProjectId;
-    if (!projectId || navigationBlocked()) return;
+    if (!projectId || navigationBlocked()) {
+      if (event) throw Error(msg("请等待当前操作完成后再修改日程"));
+      return;
+    }
     const operation = beginCalendarWrite(projectId),
       range = calendarRange;
     let created = false;
     try {
-      if (!(await mayLeave()) || !currentCalendarWrite(operation)) return;
+      if (!(await mayLeave()) || !currentCalendarWrite(operation)) {
+        if (event) throw Error(t("未保存日程。", "The event was not saved."));
+        return;
+      }
+      const title = t("日程安排", "Schedule");
+      const template = calendarTemplate("month");
       await invoke("library_create_document", {
         projectId,
-        title: "日程安排.md",
-        content:
-          "# 日程安排\n\n~~~calendar\n" + calendarTemplate("month") + "\n~~~\n",
+        title: title + ".md",
+        content: "# " + title + "\n\n~~~calendar\n" + (event ? saveCalendarEvent(template, event) : template) + "\n~~~\n",
       });
       if (!currentCalendarWrite(operation)) return;
       await refreshLibrary();
       await refreshFiles();
       created = currentCalendarWrite(operation);
     } catch (e) {
+      if (event) throw e;
       if (currentCalendarWrite(operation)) fail(e);
     } finally {
       endCalendarWrite(operation);
@@ -2070,7 +2098,62 @@ export default function App() {
       operation.epoch === workspaceEpoch.current &&
       projectId === workspaceRef.current?.managedProjectId
     )
-      await loadCalendar(range);
+      await loadCalendar(range, undefined, "calendar", event?.start.slice(0, 10));
+  }
+  async function appendQuickTask(draft: TaskDraft) {
+    const projectId = workspaceRef.current?.managedProjectId;
+    if (!projectId) throw Error(msg("请先打开本地项目"));
+    const operation = beginCalendarWrite(projectId);
+    try {
+      await saveCurrent();
+      if (!currentCalendarWrite(operation)) throw Error(t("空间已切换。", "The space has changed."));
+      const result = await invoke("task_note_append", {
+        projectId,
+        title: t("任务清单.md", "Tasks.md"),
+        taskLine: taskLine(draft),
+      });
+      if (!currentCalendarWrite(operation)) return;
+      const before = calendarDocuments.find(item => item.documentId === result.document.documentId);
+      const doc = {...result.document, chatTaskIds: before?.chatTaskIds ?? result.document.chatTaskIds};
+      if (doc.content !== result.beforeContent) {
+        recordPlanningChange(doc.documentId, result.beforeContent, doc.hash);
+      }
+      if (before) syncCalendarSave(before, doc.content, doc.hash);
+      setCalendarDocuments(old => old.some(item => item.documentId === doc.documentId)
+        ? old.map(item => item.documentId === doc.documentId ? doc : item)
+        : [...old, doc]);
+      setIndexDirty(true);
+      if (result.warning) notify(result.warning);
+      void refreshFiles().catch(fail);
+      void refreshStats();
+    } finally {
+      endCalendarWrite(operation);
+    }
+  }
+  async function openPlanning(view: "calendar" | "tasks", day?: string) {
+    if (!(await leaveGeneralForDocument())) return;
+    setCompanionOpen(false);
+    if (!workspaceRef.current?.managedProjectId && !(await useLibrary())) return;
+    await loadCalendar(undefined, undefined, view, day);
+  }
+  function openPlanningSource({ path, line }: { path: string; line: number }) {
+    void openPath(path).then((opened) => {
+      if (opened && docRef.current?.path === path) {
+        setLine(line);
+        setMode("visual");
+      }
+    });
+  }
+  async function askAboutTask(title: string) {
+    if (!(await newConversation())) return;
+    const draft = msg("请帮我拆解这项任务：") + title;
+    setScope("workspace");
+    setPanel("ask");
+    setPanelOpen(true);
+    questionRef.current = draft;
+    setQuestion(draft);
+    setFocusQuestion(true);
+    assistantRef.current.saveDraft(null, draft, draftContextRef.current);
   }
   async function runSearch() {
     if (
@@ -2083,7 +2166,7 @@ export default function App() {
     const previousEpoch = workspaceEpoch.current,
       navigation = openSequence.current;
     if (panelScope === "current" && !visibleDocument) {
-      notify("请打开文档，或选择当前空间。");
+      notify({ key: "请打开文档，或选择当前空间。" });
       return;
     }
     const range = calendarQueryRange(query);
@@ -2118,7 +2201,7 @@ export default function App() {
       setResults(response.results);
       setSearched(true);
       setQueryWarning(response.warning ?? "");
-      const actualMode = retrievalLabels.get(response.retrievalMode) ?? response.retrievalMode;
+      const actualMode = retrievalLabel(response.retrievalMode);
       setRetrievalStatus(
         response.rerankStatus && response.rerankStatus !== "not-requested"
           ? actualMode + " · " + rerankLabel(response.rerankStatus)
@@ -2331,7 +2414,7 @@ export default function App() {
     const epoch = workspaceEpoch.current,
       navigation = openSequence.current;
     if (!options?.retry && documentScopeMissing) {
-      notify("请打开文档，或选择当前空间。");
+      notify({ key: "请打开文档，或选择当前空间。" });
       return;
     }
     if (!options?.retry && !generalAsk) {
@@ -2397,7 +2480,7 @@ export default function App() {
     try {
       await chatEventsReady.current;
       if (stoppedRequest.current === id)
-        throw Error("已停止生成，问题未发送。");
+        throw Error(msg("已停止生成，问题未发送。"));
       const next = await assistant.start(
         frozenScope,
         {
@@ -2535,7 +2618,7 @@ export default function App() {
           },
         ),
       );
-      notify("已复制 Markdown 与来源记录");
+      notify({ key: "已复制 Markdown 与来源记录" });
     } catch (e) {
       fail(e);
     }
@@ -2556,7 +2639,7 @@ export default function App() {
     )
       return;
     if (kind === "save" && generalAsk && !libraryView.projects.length) {
-      notify("请先创建一个文档空间，也可复制回答为 Markdown。");
+      notify({ key: "请先创建一个文档空间，也可复制回答为 Markdown。" });
       return;
     }
     try {
@@ -2570,7 +2653,7 @@ export default function App() {
         ? (record.externalSources ?? [])
         : answerExternalSources;
       if (kind === "insert" && (!live || !target))
-        throw Error("请先选择正文中的插入位置。");
+        throw Error(msg("请先选择正文中的插入位置。"));
       const transfer = {
         kind,
         root: workspace?.root ?? "",
@@ -2625,11 +2708,11 @@ export default function App() {
           !transfer.target ||
           !editorHandle.current
         )
-          throw Error("目标文档已变化，请重新选择插入位置。");
+          throw Error(msg("目标文档已变化，请重新选择插入位置。"));
         editorHandle.current.insertMarkdown(transfer.content, transfer.target);
         syncEditor();
         closeAnswerTransfer();
-        notify("已插入正文，可一次撤销");
+        notify({ key: "已插入正文，可一次撤销" });
       } catch (e) {
         setAnswerTransferError(displayError(e));
       }
@@ -2657,7 +2740,7 @@ export default function App() {
     try {
       let path = title;
       const projectId = transfer.general ? answerProject : ws?.managedProjectId;
-      if (transfer.general && !projectId) throw Error("请选择保存空间。");
+      if (transfer.general && !projectId) throw Error(msg("请选择保存空间。"));
       if (projectId) {
         const created = await invoke("library_create_document", {
           projectId,
@@ -2669,7 +2752,7 @@ export default function App() {
       if (current()) {
         setAnswerSavedPath(path);
         setIndexDirty(true);
-        notify("回答已保存为本地文档");
+        notify({ key: "回答已保存为本地文档" });
         try {
           if (projectId) await refreshLibrary();
           if (ws && (!projectId || ws.managedProjectId === projectId))
@@ -2735,21 +2818,21 @@ export default function App() {
         : assistantActivity;
   const assistantActivityText = chatBusy
     ? chatStopping
-      ? "正在停止生成…"
-      : chatStage || "正在组织回答…"
+      ? msg("正在停止生成…")
+      : chatStage || msg("正在组织回答…")
     : assistantActivity === "blocked"
-      ? "问答暂未完成，请查看原因"
+      ? msg("问答暂未完成，请查看原因")
       : activeAssistantCandidate?.status === "stopped"
-        ? "生成已停止，可重试"
+        ? msg("生成已停止，可重试")
         : activeAssistantCandidate?.response?.finishReason === "no_evidence"
-          ? "资料不足，可补充资料"
+          ? msg("资料不足，可补充资料")
           : assistantActivity === "needs_input"
-            ? "回答尚未完成，可重新生成"
+            ? msg("回答尚未完成，可重新生成")
             : assistantActivity === "ready"
               ? activeAssistantCandidate?.response?.sources.length ||
                 activeAssistantCandidate?.response?.externalSources?.length
-                ? "回答已就绪，可查看来源"
-                : "回答已就绪"
+                ? msg("回答已就绪，可查看来源")
+                : msg("回答已就绪")
               : "安静陪读";
 
   const searchMode = exampleSearch ? "keyword" : retrievalMode;
@@ -2773,26 +2856,26 @@ export default function App() {
         onClick={() => openKnowledgePanel("search")}
       >
         <Search size={15} />
-        检索
+        {msg("检索")}
       </button>
       <button
         aria-pressed={panel === "ask"}
         className={panel === "ask" ? "active" : ""}
-        aria-label={generalAsk ? "通用问答当前页" : undefined}
+        aria-label={generalAsk ? msg("通用问答当前页") : undefined}
         onClick={() => openKnowledgePanel("ask", true)}
       >
         <Sparkles size={15} />
-        {generalAsk ? "AI 问答" : "问答"}
+        {generalAsk ? msg("AI 问答") : msg("问答")}
       </button>
     </>
   );
   const retrievalControls = (
-    <section className="knowledge-context" aria-label="检索范围与设置">
+    <section className="knowledge-context" aria-label={msg("检索范围与设置")}>
       <div className="knowledge-scope">
         {panelScope === "workspace" ? <FolderOpen size={15} /> : <FileText size={15} />}
         <select
-          aria-label="资料范围"
-          title={panelScope === "current" ? scopeDocument ?? "尚未打开文档" : workspace?.name}
+          aria-label={msg("资料范围")}
+          title={panelScope === "current" ? scopeDocument ?? msg("尚未打开文档") : workspace?.name}
           value={separateFixedScope ? "fixed" : panelScope}
           disabled={chatBusy || exampleSearch || !workspace}
           onChange={(e) => {
@@ -2813,10 +2896,10 @@ export default function App() {
               );
           }}
         >
-          <option value="workspace">空间 · {workspace?.name ?? "未选择"}</option>
-          {separateFixedScope && <option value="fixed">会话文档 · {basename(fixedScope)}</option>}
+          <option value="workspace">{msg("空间 ·")} {workspace?.name ?? msg("未选择")}</option>
+          {separateFixedScope && <option value="fixed">{msg("会话文档 ·")} {basename(fixedScope)}</option>}
           <option value="current" disabled={!visibleDocument}>
-            {visibleDocument ? "文档 · " + basename(visibleDocument.path) : "文档 · 未选择"}
+            {visibleDocument ? "文档 · " + basename(visibleDocument.path) : msg("文档 · 未选择")}
           </option>
         </select>
       </div>
@@ -2840,13 +2923,13 @@ export default function App() {
       />
       <small className="knowledge-data-flow">
         {missingScope
-          ? "请打开一篇文档，或在资料范围中选择空间。"
-          : retrievalDisclosure[searchMode][panel]}
+          ? msg("请打开一篇文档，或在资料范围中选择空间。")
+          : msg(retrievalDisclosure[searchMode][panel])}
       </small>
       {panel === "ask" && (dirty || indexDirty) && (
         <p className="knowledge-index-note" role="status">
-          {dirty ? "当前编辑尚未保存。" : "索引待更新。"}回答使用已入库版本。
-          <button type="button" onClick={() => setIndexOpen(true)} disabled={chatBusy}>查看索引</button>
+          {dirty ? msg("当前编辑尚未保存。") : msg("索引待更新。")}{msg("回答使用已入库版本。")}
+          <button type="button" onClick={() => setIndexOpen(true)} disabled={chatBusy}>{msg("查看索引")}</button>
         </p>
       )}
     </section>
@@ -2909,18 +2992,16 @@ export default function App() {
   const turnControls = (
     <>
       <label
-        className={generalAsk ? "assistant-skip-preference" : "composer-web-toggle"}
+        className="composer-web-toggle"
         title={
-          generalAsk
-            ? "仍可向已配置的聊天模型发送问题和所选资料"
-            : localOnlyTurn
-              ? "本轮不搜索网页。点击恢复自动判断。"
-              : "本轮允许模型按需搜索网页，受联网设置限制。点击关闭。"
+          localOnlyTurn
+            ? msg("本轮不搜索网页。点击恢复自动判断。")
+            : msg("本轮允许模型按需搜索网页，受联网设置限制。点击关闭。")
         }
       >
         <input
           type="checkbox"
-          aria-label="本轮不搜索网页"
+          aria-label={msg("本轮不搜索网页")}
           checked={localOnlyTurn}
           disabled={chatBusy || composerLocked}
           onChange={(event) => {
@@ -2930,12 +3011,8 @@ export default function App() {
             else if (webAccess) changeDraftContext(context);
           }}
         />
-        {generalAsk ? "本轮不搜索网页" : (
-          <>
-            {localOnlyTurn ? <GlobeLock size={15} /> : <Globe size={15} />}
-            {localOnlyTurn ? "不搜网页" : "按需搜索网页"}
-          </>
-        )}
+        {localOnlyTurn ? <GlobeLock size={15} /> : <Globe size={15} />}
+        {localOnlyTurn ? msg("不搜网页") : msg("按需搜索网页")}
       </label>
       <details
         className="assistant-composer-options"
@@ -2953,10 +3030,10 @@ export default function App() {
         }}
       >
         <summary
-          aria-label={skipPreferences ? "更多选项，已停用回答偏好" : "更多选项"}
-          title={skipPreferences ? "更多选项，已停用回答偏好" : "更多选项"}
+          aria-label={skipPreferences ? msg("更多选项，已停用回答偏好") : msg("更多选项")}
+          title={skipPreferences ? msg("更多选项，已停用回答偏好") : msg("更多选项")}
         >
-          {generalAsk ? (skipPreferences ? "已停用回答偏好" : "更多选项") : <MoreHorizontal size={17} />}
+          <MoreHorizontal size={17} />
         </summary>
         <div>
           <label className="assistant-skip-preference">
@@ -2966,10 +3043,10 @@ export default function App() {
               disabled={chatBusy || composerLocked}
               onChange={(event) => setSkipPreferences(event.target.checked)}
             />
-            本轮停用回答偏好
+            {msg("本轮停用回答偏好")}
           </label>
-          <p>所选资料可发给聊天模型。本轮选项随发送重置。</p>
-          {!generalAsk && <p><kbd>Enter</kbd> 发送 · <kbd>Shift+Enter</kbd> 换行</p>}
+          <p>{msg("所选资料可发给聊天模型。本轮选项随发送重置。")}</p>
+          <p><kbd>Enter</kbd> {msg("发送 ·")} <kbd>Shift+Enter</kbd> {msg("换行")}</p>
         </div>
       </details>
     </>
@@ -2996,7 +3073,7 @@ export default function App() {
   const citationControls = citationPreview &&
     citationPreview.choices.length > 1 && (
       <label className="workbench-citation-switch">
-        本轮引用
+        {msg("本轮引用")}
         <select
           value={Math.max(0, citationSelection)}
           disabled={citationOpening}
@@ -3082,7 +3159,7 @@ export default function App() {
   }
   const citationContent = !citationReturn && citedSource && (
     <SourcePreviewFrame
-      label={externalCitation ? "查看来源" : "本轮来源预览"}
+      label={externalCitation ? msg("查看来源") : msg("本轮来源预览")}
       title={
         externalCitation?.label ||
         citedSource.title ||
@@ -3131,6 +3208,7 @@ export default function App() {
       )}
     </SourcePreviewFrame>
   );
+  const planningVisible = calendarOpen && !companionOpen && !standaloneAskOpen;
   return (
     <div
       {...imeBoundary}
@@ -3154,12 +3232,12 @@ export default function App() {
           <div className="recovery-summary" role="status">
             <span>
               {recoveryError
-                ? "恢复诊断暂不可读取，请查看并重试。"
+                ? msg("恢复诊断暂不可读取，请查看并重试。")
                 : `有 ${recoveryReport?.items.filter((item) => item.status !== "recovered").length ?? 0} 项恢复记录需要核对，当前内容已保留。`}
             </span>
-            <button onClick={() => setRecoveryOpen(true)}>查看诊断</button>
+            <button onClick={() => setRecoveryOpen(true)}>{msg("查看诊断")}</button>
             <button
-              aria-label="收起恢复提示"
+              aria-label={msg("收起恢复提示")}
               onClick={() => setRecoveryHidden(true)}
             >
               <X size={14} />
@@ -3169,11 +3247,14 @@ export default function App() {
       <div
         className={`main-layout ${focusedKnowledge && !companionOpen ? "assistant-expanded" : ""} ${standaloneAskOpen && !companionOpen ? "ask-workbench" : ""}`}
       >
-        <div className="workspace-rail">
-          <button
+        <WorkspaceRail location={[planningView, companionOpen, wikiOpen, standaloneAskOpen, panelOpen, panel, settingsOpen, indexOpen, workspace?.managedProjectId].join("/")}>
+          {!planningVisible && <button
             className="icon-button workspace-rail-toggle"
             type="button"
-            aria-label={`${sidebarClosed ? "展开" : "收起"}${companionOpen ? "同伴" : standaloneAskOpen ? "会话" : "文档"}列表`}
+            aria-label={t(
+              `${sidebarClosed ? "展开" : "收起"}${companionOpen ? "同伴" : standaloneAskOpen ? "会话" : "文档"}列表`,
+              `${sidebarClosed ? "Show" : "Hide"} ${companionOpen ? "companions" : standaloneAskOpen ? "conversations" : "documents"}`
+            )}
             aria-expanded={!sidebarClosed}
             onClick={() => setSidebarClosed(!sidebarClosed)}
           >
@@ -3182,13 +3263,14 @@ export default function App() {
             ) : (
               <PanelLeftClose size={17} />
             )}
-          </button>
+          </button>}
           <SpaceNavigation
             disabled={busy || booting || citationOpening}
             generalDisabled={generalBusy || citationOpening || !settings}
+            tasksOpen={planningVisible && planningView === "tasks" && !wikiOpen && !(panelOpen && panel === "search")}
             calendarOpen={
-              !companionOpen &&
-              calendarOpen &&
+              planningVisible &&
+              planningView === "calendar" &&
               !wikiOpen &&
               !(panelOpen && panel === "search")
             }
@@ -3210,18 +3292,12 @@ export default function App() {
               void leaveGeneralForDocument().then((ready) => {
                 if (!ready) return;
                 setCompanionOpen(false);
-                if (standaloneAskOpen && docRef.current) setCalendarOpen(false);
+                if (standaloneAskOpen && docRef.current) setPlanningView(null);
                 else void showLibraryHome();
               });
             }}
-            onCalendar={() =>
-              void leaveGeneralForDocument().then((ready) => {
-                if (ready) {
-                  setCompanionOpen(false);
-                  void loadCalendar();
-                }
-              })
-            }
+            onTasks={() => void openPlanning("tasks")}
+            onCalendar={() => void openPlanning("calendar")}
             onGeneralAsk={enableGeneralAsk ? openGeneralAsk : undefined}
             onWiki={
               workspace?.managedProjectId
@@ -3238,28 +3314,27 @@ export default function App() {
           />
           <button
             className="icon-button workspace-rail-settings"
-            title="模型与设置"
-            aria-label="模型与设置"
+            aria-label={msg("模型与设置")}
             disabled={!settings || generalBusy || citationOpening}
             onClick={() => setSettingsOpen(true)}
           >
             <Settings2 size={17} />
           </button>
-        </div>
-        <aside
+        </WorkspaceRail>
+        {!planningVisible && <aside
           className="sidebar sidebar-compact"
           aria-label={
             companionOpen
-              ? "同伴导航"
+              ? msg("同伴导航")
               : standaloneAskOpen
-                ? "会话导航"
-                : "文档空间导航"
+                ? msg("会话导航")
+                : msg("文档空间导航")
           }
           hidden={sidebarClosed}
         >
           {!companionOpen && (
             <div className="space-sidebar-heading">
-              <strong>{standaloneAskOpen ? "问答" : "文档"}</strong>
+              <strong>{standaloneAskOpen ? msg("问答") : msg("文档")}</strong>
             </div>
           )}
           {companionOpen ? (
@@ -3281,14 +3356,14 @@ export default function App() {
               <div className="file-tree">
                 {booting || startupError ? (
                   <div className="tree-empty">
-                    <p>{booting ? "正在读取文档列表…" : "资料暂不可读取"}</p>
+                    <p>{booting ? msg("正在读取文档列表…") : msg("资料暂不可读取")}</p>
                   </div>
                 ) : workspace?.managedProjectId ? (
                   <LibraryBrowser {...libraryProps} compact />
                 ) : workspace ? (
                   <>
                     <div className="external-mode-note">
-                      外部目录 · 直接编辑原件
+                      {msg("外部目录 · 直接编辑原件")}
                     </div>
                     <Tree
                       files={workspace.files}
@@ -3304,54 +3379,54 @@ export default function App() {
                       disabled={busy}
                       onClick={() => nameAction("new")}
                     >
-                      新建文件
+                      {msg("新建文件")}
                     </button>
                   </>
                 ) : (
                   <div className="tree-empty">
-                    <p>创建空间，汇集不同位置的文档。</p>
+                    <p>{msg("创建空间，汇集不同位置的文档。")}</p>
                     <button
                       disabled={busy || booting}
                       onClick={() => void useLibrary()}
                     >
-                      进入我的文档
+                      {msg("进入我的文档")}
                     </button>
                   </div>
                 )}
               </div>
               <div className="sidebar-bottom space-footer">
                 <details className="space-advanced">
-                  <summary>空间与文件</summary>
+                  <summary>{msg("空间与文件")}</summary>
                   <div>
                     <button
                       disabled={busy || booting}
                       onClick={() => void showLibraryHome()}
                     >
-                      文档空间首页
+                      {msg("文档空间首页")}
                     </button>
                     <button
                       disabled={busy || booting}
                       onClick={() => showImport()}
                     >
-                      导入本地资料
+                      {msg("导入本地资料")}
                     </button>
                     <button
                       disabled={busy || booting}
                       onClick={() => setBackupOpen(true)}
                     >
-                      备份与恢复预演
+                      {msg("备份与恢复预演")}
                     </button>
                     <button
                       disabled={busy || booting}
                       onClick={() => setRecoveryOpen(true)}
                     >
-                      恢复与诊断
+                      {msg("恢复与诊断")}
                     </button>
                     <button
                       disabled={busy || booting}
                       onClick={() => void chooseWorkspace()}
                     >
-                      打开本地目录（编辑原件）
+                      {msg("打开本地目录（编辑原件）")}
                     </button>
                     {workspace?.managedProjectId && (
                       <>
@@ -3362,10 +3437,10 @@ export default function App() {
                             }).catch(fail)
                           }
                         >
-                          在访达中显示空间
+                          {msg("在访达中显示空间")}
                         </button>
                         <button onClick={() => openKnowledgePanel("search")}>
-                          搜索空间资料
+                          {msg("搜索空间资料")}
                         </button>
                       </>
                     )}
@@ -3373,22 +3448,22 @@ export default function App() {
                 </details>
                 <span className="local-note">
                   <ShieldCheck size={12} />
-                  文档保存在本机
+                  {msg("文档保存在本机")}
                 </span>
               </div>
             </>
           )}
-        </aside>
-        {!sidebarClosed && (
+        </aside>}
+        {!planningVisible && !sidebarClosed && (
           <div
             className="sidebar-resizer"
             role="separator"
             aria-label={
               companionOpen
-                ? "调整同伴列表宽度"
+                ? msg("调整同伴列表宽度")
                 : standaloneAskOpen
-                  ? "调整会话列表宽度"
-                  : "调整文档列表宽度"
+                  ? msg("调整会话列表宽度")
+                  : msg("调整文档列表宽度")
             }
             aria-orientation="vertical"
             aria-valuemin={240}
@@ -3437,14 +3512,14 @@ export default function App() {
           {error && (
             <div className="error-banner">
               <span>{error}</span>
-              <button aria-label="关闭错误提示" onClick={() => setError("")}>
+              <button aria-label={msg("关闭错误提示")} onClick={() => setError("")}>
                 <X size={14} />
               </button>
             </div>
           )}
           {!native && (
             <div className="browser-banner">
-              界面预览模式 · 本地文件和资料索引功能请使用桌面应用。
+              {msg("界面预览模式 · 本地文件和资料索引功能请使用桌面应用。")}
             </div>
           )}
           {booting || startupError ? (
@@ -3453,12 +3528,12 @@ export default function App() {
               onRetry={() => setStartupAttempt((n) => n + 1)}
             />
           ) : calendarOpen ? (
-            <div className="project-calendar-container">
+            <div className={`project-calendar-container ${planningView === "tasks" ? "task-surface" : ""}`}>
               <div className="calendar-project-picker">
                 <label>
-                  空间{" "}
+                  {msg("空间")}{" "}
                   <select
-                    aria-label="日历空间"
+                    aria-label={planningView === "tasks" ? t("任务空间", "Task space") : msg("日历空间")}
                     value={workspace?.managedProjectId ?? ""}
                     disabled={busy || calendarBusy}
                     onChange={(e) => {
@@ -3468,7 +3543,7 @@ export default function App() {
                           entered &&
                           workspaceRef.current?.managedProjectId === id
                         )
-                          void loadCalendar();
+                          void loadCalendar(undefined, undefined, planningView ?? "calendar");
                       });
                     }}
                   >
@@ -3479,11 +3554,10 @@ export default function App() {
                     ))}
                   </select>
                 </label>
-                <span>日程保存在所属文档，可点击返回原文</span>
               </div>
               {calendarWarnings.length > 0 && (
                 <details className="calendar-warnings">
-                  <summary>有 {calendarWarnings.length} 条日历提示</summary>
+                  <summary>{msg("有")} {calendarWarnings.length} {msg("条日历提示")}</summary>
                   {calendarWarnings.map((w, i) => (
                     <p key={i}>{w}</p>
                   ))}
@@ -3491,13 +3565,29 @@ export default function App() {
               )}
               {calendarScopePath && (
                 <div className="panel-warning">
-                  日期查询范围：当前文档 · {titleOf(calendarScopePath)}{" "}
+                  {msg("日期查询范围：当前文档 ·")} {titleOf(calendarScopePath)}{" "}
                   <button onClick={() => setCalendarScopePath(undefined)}>
-                    查看整个空间
+                    {msg("查看整个空间")}
                   </button>
                 </div>
               )}
-              <ProjectCalendar
+              {planningView === "tasks" ? <TaskList
+                key={workspace?.managedProjectId}
+                spaceId={workspace?.managedProjectId ?? ""}
+                documents={calendarDocuments}
+                onPatch={patchCalendar}
+                onQuickAdd={appendQuickTask}
+                onOpen={openPlanningSource}
+                onCalendar={day => void openPlanning("calendar", day)}
+                onUndo={() => void undoCalendar()}
+                canUndo={calendarHistory.current.length > 0}
+                busy={calendarBusy}
+                onRefresh={() => void loadCalendar(undefined, undefined, "tasks")}
+                onAskForHelp={askAboutTask}
+              /> : <ProjectCalendar
+                spaceId={workspace?.managedProjectId ?? undefined}
+                initialDay={calendarDay}
+                onCreateCalendar={newCalendarDocument}
                 key={workspace?.managedProjectId}
                 documents={
                   calendarScopePath
@@ -3507,14 +3597,8 @@ export default function App() {
                     : calendarDocuments
                 }
                 onPatch={patchCalendar}
-                onOpen={({ path, line }) =>
-                  void openPath(path).then((opened) => {
-                    if (opened && docRef.current?.path === path) {
-                      setLine(line);
-                      setMode("visual");
-                    }
-                  })
-                }
+                onAskForHelp={askAboutTask}
+                onOpen={openPlanningSource}
                 onError={fail}
                 initialRange={calendarRange}
                 initialQuery={calendarRange?.terms}
@@ -3525,7 +3609,7 @@ export default function App() {
                   void loadCalendar(calendarRange, calendarScopePath)
                 }
                 onNewDocument={() => void newCalendarDocument()}
-              />
+              />}
             </div>
           ) : welcome || !document ? (
             workspace?.managedProjectId ? (
@@ -3551,7 +3635,7 @@ export default function App() {
                     className="workbench-return-citation"
                     onClick={returnToCitation}
                   >
-                    <ArrowLeft size={15} /> 返回本轮问答
+                    <ArrowLeft size={15} /> {msg("返回本轮问答")}
                   </button>
                 )}
                 <div className="document-title">
@@ -3563,14 +3647,14 @@ export default function App() {
                   <span title={document.path}>{titleOf(document.path)}</span>
                   {dirty && <span className="unsaved-dot" />}
                 </div>
-                <div className="mode-switch" role="group" aria-label="文档视图">
+                <div className="mode-switch" role="group" aria-label={msg("文档视图")}>
                   <button
                     className={mode === "source" ? "active" : ""}
                     aria-pressed={mode === "source"}
                     onClick={() => changeMode("source")}
                   >
                     <Code2 size={13} />
-                    源码
+                    {msg("源码")}
                   </button>
                   <button
                     disabled={documentKind(document.path) !== "markdown"}
@@ -3579,14 +3663,14 @@ export default function App() {
                     onClick={() => changeMode("visual")}
                   >
                     <PenLine size={13} />
-                    正文
+                    {msg("正文")}
                   </button>
                   <button
                     className={mode === "split" ? "active" : ""}
                     aria-pressed={mode === "split"}
                     onClick={() => changeMode("split")}
                   >
-                    分栏
+                    {msg("分栏")}
                   </button>
                   <button
                     disabled={documentKind(document.path) !== "markdown"}
@@ -3594,7 +3678,7 @@ export default function App() {
                     aria-pressed={mode === "mindmap"}
                     onClick={() => changeMode("mindmap")}
                   >
-                    大纲脑图
+                    {msg("大纲脑图")}
                   </button>
                 </div>
                 <div className="file-actions">
@@ -3602,8 +3686,8 @@ export default function App() {
                     <button
                       className="button small"
                       type="button"
-                      title={searchingExample ? "继续离线体验" : "问这篇文档"}
-                      aria-label={searchingExample ? "继续离线体验" : "问这篇文档"}
+                      title={searchingExample ? msg("继续离线体验") : msg("问这篇文档")}
+                      aria-label={searchingExample ? msg("继续离线体验") : msg("问这篇文档")}
                       disabled={busy || composerLocked}
                       onClick={() =>
                         searchingExample
@@ -3613,17 +3697,17 @@ export default function App() {
                     >
                       <Sparkles size={15} />
                       <span className="ask-document-label">
-                        {searchingExample ? "继续离线体验" : "问这篇文档"}
+                        {searchingExample ? msg("继续离线体验") : msg("问这篇文档")}
                       </span>
                     </button>
                   )}
                   <button
                     className="icon-button"
-                    title="保存 ⌘S"
-                    aria-label="保存文件"
+                    title={msg("保存 ⌘S")}
+                    aria-label={msg("保存文件")}
                     onClick={() =>
                       void saveCurrent()
-                        .then(() => notify("已保存"))
+                        .then(() => notify({ key: "已保存" }))
                         .catch(fail)
                     }
                   >
@@ -3636,7 +3720,7 @@ export default function App() {
                   <button
                     className="icon-button"
                     ref={fileTrigger}
-                    aria-label="文件操作"
+                    aria-label={msg("文件操作")}
                     aria-haspopup="menu"
                     aria-expanded={fileMenu}
                     onKeyDown={(e) => {
@@ -3654,7 +3738,7 @@ export default function App() {
                   </button>
                   {fileMenu && (
                     <div
-                      className="dropdown" role="menu" aria-label="文件操作" ref={fileMenuRoot}
+                      className="dropdown" role="menu" aria-label={msg("文件操作")} ref={fileMenuRoot}
                       onKeyDown={(e) => {
                         if (isImeEvent(e.nativeEvent)) return;
                         if (["Escape", "Tab"].includes(e.key)) {
@@ -3673,10 +3757,10 @@ export default function App() {
                         disabled={busy}
                         onClick={() => nameAction("rename")}
                       >
-                        重命名文件
+                        {msg("重命名文件")}
                       </button>
                       <button role="menuitem" tabIndex={-1} onClick={() => nameAction("copy")}>
-                        另存为新文件
+                        {msg("另存为新文件")}
                       </button>
                     </div>
                   )}
@@ -3685,21 +3769,21 @@ export default function App() {
               {document.conflict && (
                 <div className="conflict-banner">
                   <span>
-                    {document.missing ? "原文件已移走。" : "磁盘文件已变化。"}
+                    {document.missing ? msg("原文件已移走。") : msg("磁盘文件已变化。")}
                     {document.draftSaved === document.content
-                      ? "当前编辑已保留为草稿。"
-                      : "当前编辑尚未保存草稿，请保留窗口并重试或另存。"}
+                      ? msg("当前编辑已保留为草稿。")
+                      : msg("当前编辑尚未保存草稿，请保留窗口并重试或另存。")}
                   </span>
                   {document.missing ? (
                     <button onClick={() => void restoreOriginal()}>
-                      恢复原位置
+                      {msg("恢复原位置")}
                     </button>
                   ) : (
                     <button onClick={() => void reloadDisk()}>
-                      载入磁盘版本
+                      {msg("载入磁盘版本")}
                     </button>
                   )}
-                  <button onClick={() => nameAction("copy")}>另存为</button>
+                  <button onClick={() => nameAction("copy")}>{msg("另存为")}</button>
                 </div>
               )}
               {saveWarning && (
@@ -3707,26 +3791,26 @@ export default function App() {
               )}
               {draftError && (
                 <div className="conflict-banner">
-                  草稿保存失败：{draftError}
+                  {msg("草稿保存失败：")}{draftError}
                   <button onClick={() => void persistDraft().catch(fail)}>
-                    重试草稿
+                    {msg("重试草稿")}
                   </button>
-                  <button onClick={() => nameAction("copy")}>另存为</button>
+                  <button onClick={() => nameAction("copy")}>{msg("另存为")}</button>
                   <button
                     onClick={() =>
                       void navigator.clipboard
                         .writeText(syncEditor()?.content ?? "")
-                        .then(() => notify("已复制当前编辑"))
+                        .then(() => notify({ key: "已复制当前编辑" }))
                         .catch(fail)
                     }
                   >
-                    复制内容
+                    {msg("复制内容")}
                   </button>
                 </div>
               )}
               {document.recovered && !document.conflict && (
                 <div className="recovery-banner">
-                  已恢复未保存草稿，保存后写入原文件。
+                  {msg("已恢复未保存草稿，保存后写入原文件。")}
                 </div>
               )}
               <div className="editor-container">
@@ -3766,38 +3850,38 @@ export default function App() {
                     title={`返回写作位置 · ${basename(writingReturn.path)}`}
                     onClick={() => void resumeWriting()}
                   >
-                    <ArrowLeft size={13} /> 返回写作位置
+                    <ArrowLeft size={13} /> {msg("返回写作位置")}
                   </button>
                 )}
                 <span>
                   {saving ? (
-                    "正在保存…"
+                    msg("正在保存…")
                   ) : dirty ? (
                     document.conflict ? (
                       document.draftSaved === document.content ? (
-                        "草稿已保留"
+                        msg("草稿已保留")
                       ) : (
-                        "草稿未保存"
+                        msg("草稿未保存")
                       )
                     ) : (
-                      "等待自动保存"
+                      msg("等待自动保存")
                     )
                   ) : (
                     <>
                       <Check size={12} />
-                      已保存
+                      {msg("已保存")}
                     </>
                   )}
                 </span>
                 <span>
-                  {Array.from(document.content).length.toLocaleString()} 字符
+                  {Array.from(document.content).length.toLocaleString()} {msg("字符")}
                 </span>
-                <span>{document.content.split("\n").length} 行</span>
+                <span>{document.content.split("\n").length} {msg("行")}</span>
                 <div />
                 <span>UTF-8</span>
                 <span>
                   {document.path.toLowerCase().endsWith(".txt")
-                    ? "纯文本"
+                    ? msg("纯文本")
                     : documentKind(document.path) === "json"
                       ? "JSON"
                       : documentKind(document.path) === "mermaid"
@@ -3806,7 +3890,7 @@ export default function App() {
                 </span>
                 {indexDirty && (
                   <button onClick={() => setIndexOpen(true)}>
-                    索引待更新 <Circle size={7} fill="currentColor" />
+                    {msg("索引待更新")} <Circle size={7} fill="currentColor" />
                   </button>
                 )}
               </footer>
@@ -3853,11 +3937,11 @@ export default function App() {
                   <button
                     type="button"
                     className="open-general-ask"
-                    title="进入独立问答工作台"
+                    title={msg("进入独立问答工作台")}
                     onClick={openGeneralAsk}
                     disabled={chatBusy}
                   >
-                    通用问答 <ArrowUpRight size={13} />
+                    {msg("通用问答")} <ArrowUpRight size={13} />
                   </button>
                 )}
                 {compactWindow && (
@@ -3866,12 +3950,12 @@ export default function App() {
                     onClick={closeKnowledge}
                   >
                     <PenLine size={15} />
-                    返回编辑
+                    {msg("返回编辑")}
                   </button>
                 )}
                 <button
                   className="icon-button"
-                  aria-label="收起知识侧栏"
+                  aria-label={msg("收起知识侧栏")}
                   onClick={closeKnowledge}
                 >
                   <PanelRightClose size={15} />
@@ -3891,8 +3975,8 @@ export default function App() {
                     <Search size={16} />
                     <input
                       ref={searchInput}
-                      aria-label="搜索资料"
-                      placeholder="搜索关键词或原文…"
+                      aria-label={msg("搜索资料")}
+                      placeholder={msg("搜索关键词或原文…")}
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       maxLength={1500}
@@ -3900,7 +3984,7 @@ export default function App() {
                     <button
                       className="icon-button"
                       disabled={!workspace || missingScope || queryBusy || !query.trim()}
-                      aria-label="执行搜索"
+                      aria-label={msg("执行搜索")}
                     >
                       {queryBusy ? (
                         <LoaderCircle size={15} className="spin" />
@@ -3916,7 +4000,7 @@ export default function App() {
                       onClick={cancelSearch}
                     >
                       <Square size={12} />
-                      停止检索
+                      {msg("停止检索")}
                     </button>
                   )}
                 </form>
@@ -3951,8 +4035,8 @@ export default function App() {
                   {searched ? (
                     <>
                       <div className="results-label">
-                        {results.filter((r) => r.evidence).length} 条可用证据 ·{" "}
-                        {results.filter((r) => !r.evidence).length} 条待核实候选
+                        {results.filter((r) => r.evidence).length} {msg("条可用证据 ·")}{" "}
+                        {results.filter((r) => !r.evidence).length} {msg("条待核实候选")}
                       </div>
                       {retrievalStatus && (
                         <div className="retrieval-status">
@@ -3962,7 +4046,7 @@ export default function App() {
                       {!results.some((r) => r.evidence) &&
                         results.length > 0 && (
                           <div className="panel-warning">
-                            仅找到可能相关的候选，资料不足以支持回答。
+                            {msg("仅找到可能相关的候选，资料不足以支持回答。")}
                           </div>
                         )}
                       <Sources
@@ -3981,21 +4065,21 @@ export default function App() {
                             disabled={busy}
                             onClick={() => void askAboutDocument()}
                           >
-                            对样例提问
+                            {msg("对样例提问")}
                           </button>
-                          <small>使用已配置的模型生成真实回答</small>
+                          <small>{msg("使用已配置的模型生成真实回答")}</small>
                         </div>
                       )}
                       {!results.length && (
                         <div className="empty-results">
-                          暂无匹配资料。试试更具体的关键词，或更新资料索引。
+                          {msg("暂无匹配资料。试试更具体的关键词，或更新资料索引。")}
                         </div>
                       )}
                     </>
                   ) : (!queryBusy && !queryWarning && !searchingExample && (
                     <div className="knowledge-search-hint">
-                      <h3>查找原文</h3>
-                      <p>输入关键词，按 Enter 查看匹配段落。</p>
+                      <h3>{msg("查找原文")}</h3>
+                      <p>{msg("输入关键词，按 Enter 查看匹配段落。")}</p>
                     </div>
                   ))}
                 </div>
@@ -4043,7 +4127,7 @@ export default function App() {
                 )}
                 {assistantRunError && (
                   <div className="panel-warning" role="alert">
-                    {assistantRunError.message}
+                    {systemMessage(assistantRunError.message)}
                     {canRetryUnsent && (
                       <button
                         type="button"
@@ -4056,14 +4140,14 @@ export default function App() {
                           )
                         }
                       >
-                        {assistantRunError.retry ? "重试原问题" : "重试发送"}
+                        {assistantRunError.retry ? msg("重试原问题") : msg("重试发送")}
                       </button>
                     )}
                   </div>
                 )}
                 {branchParent !== undefined && (
                   <div className="assistant-draft-hint">
-                    正在修改问题，发送后保留原分支。
+                    {msg("正在修改问题，发送后保留原分支。")}
                     <button
                       disabled={composerLocked}
                       onClick={() => {
@@ -4071,7 +4155,7 @@ export default function App() {
                         if (branch) changeDraftContext(context);
                       }}
                     >
-                      取消分支编辑
+                      {msg("取消分支编辑")}
                     </button>
                   </div>
                 )}
@@ -4082,7 +4166,7 @@ export default function App() {
                     mode={retrievalMode}
                     busy={chatBusy}
                     switching={composerLocked}
-                    progress={chatStopping ? "正在停止生成…" : chatStage}
+                    progress={chatStopping ? msg("正在停止生成…") : chatStage}
                     live={
                       chatBusy
                         ? {
@@ -4115,6 +4199,20 @@ export default function App() {
                     allowInsert={!generalAsk}
                     onCopy={(record) => void copyAnswer(record)}
                     onTransfer={prepareAnswerTransfer}
+                    onCreateTasks={(turn, candidate, selection) => {
+                      if (!assistant.conversation || navigationBlocked()) return;
+                      setChatTask({
+                        source: {
+                          conversationId: assistant.conversation.id,
+                          turnId: turn.id,
+                          candidateId: candidate?.id ?? null,
+                          general: generalAsk,
+                        },
+                        text: candidate?.response?.text ?? turn.question,
+                        question: candidate ? turn.question : undefined,
+                        selection,
+                      });
+                    }}
                     onRetry={(turn) => void ask({ retry: turn })}
                     onEdit={(turn) => {
                       if (assistant.conversation?.archived) return;
@@ -4153,18 +4251,13 @@ export default function App() {
                 ) : (
                   <div className="panel-scroll ask-scroll">
                     <div className="panel-empty">
-                      {generalAsk && <div className="orbit-icon">
-                        <Sparkles size={26} strokeWidth={1.4} />
-                        <span />
-                        <i />
-                      </div>}
                       <h3>
-                        {generalAsk ? "今天想做些什么？" : "问问这些资料"}
+                        {generalAsk ? msg("今天想做些什么？") : msg("问问这些资料")}
                       </h3>
                       <p>
                         {generalAsk
-                          ? "直接聊天、写作或解释。需要时可添加文件和知识空间。"
-                          : "回答附有可打开的原文引用。"}
+                          ? msg("直接聊天、写作或解释。需要时可添加文件和知识空间。")
+                          : msg("回答附有可打开的原文引用。")}
                       </p>
                       {!generalAsk && !stats.documents && workspace && (
                         <div className="assistant-first-use">
@@ -4173,32 +4266,32 @@ export default function App() {
                               className="button small"
                               onClick={() => showImport()}
                             >
-                              复制导入资料
+                              {msg("复制导入资料")}
                             </button>
                           )}
                           <button
                             className="button small"
                             onClick={() => setIndexOpen(true)}
                           >
-                            建立本地索引
+                            {msg("建立本地索引")}
                           </button>
                           <small>
-                            关键词检索可以离线使用。生成回答需要聊天模型。
+                            {msg("关键词检索可以离线使用。生成回答需要聊天模型。")}
                           </small>
                         </div>
                       )}
                       <div className="example-searches">
                         {(generalAsk
                           ? [
-                              "解释一下什么是 BM25",
-                              "帮我把这段话改成一封邮件",
-                              "给我三个不同的写作开头",
+                              msg("解释一下什么是 BM25"),
+                              msg("帮我把这段话改成一封邮件"),
+                              msg("给我三个不同的写作开头"),
                             ]
                           : searchingExample
-                            ? ["社区读书会计划开展几场阅读活动？"]
+                            ? [msg("社区读书会计划开展几场阅读活动？")]
                             : [
-                                "总结资料要点，并注明出处",
-                                "哪些事项还需要确认？",
+                                msg("总结资料要点，并注明出处"),
+                                msg("哪些事项还需要确认？"),
                               ]
                         ).map((text) => (
                           <button
@@ -4221,14 +4314,14 @@ export default function App() {
                           disabled={!settings}
                           onClick={openFirstUseModelSettings}
                         >
-                          连接问答模型
+                          {msg("连接问答模型")}
                         </button>
                       )}
                     </div>
                   </div>
                 )}
                 <form
-                  className={generalAsk ? "ask-form" : "ask-form document-composer"}
+                  className={`ask-form agent-composer ${generalAsk ? "general-composer" : "document-composer"}`}
                   aria-busy={openingConversation || undefined}
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -4238,39 +4331,42 @@ export default function App() {
                   {historyBackground && (
                     <section
                       className="assistant-background-chip"
-                      aria-label="本轮历史背景"
+                      aria-label={msg("本轮历史背景")}
                     >
-                      <strong>历史背景 · {historyBackground.title}</strong>
+                      <strong>{msg("历史背景 ·")} {historyBackground.title}</strong>
                       <button
                         type="button"
                         disabled={chatBusy || composerLocked}
                         onClick={() => setHistoryBackground(undefined)}
                       >
-                        移除
+                        {msg("移除")}
                       </button>
                       <p>{historyBackground.excerpt}</p>
-                      <small>发送时会将以上背景一并发给聊天模型。</small>
+                      <small>{msg("发送时会将以上背景一并发给聊天模型。")}</small>
                     </section>
                   )}
-                  <div className={generalAsk ? "general-composer-field" : "document-composer-field"}>
-                    {!generalAsk && (
-                      <span className="composer-text-measure" aria-hidden="true" data-value={question} />
-                    )}
+                  <div className="agent-composer-field">
+                    <span className="composer-text-measure" aria-hidden="true" data-value={question} />
                     <textarea
                       ref={questionInput}
-                      aria-label={generalAsk ? "向 AI 提问" : separateFixedScope ? `向会话文档 ${basename(fixedScope)} 提问` : panelScope === "current" ? "向当前文档提问" : "向当前空间提问"}
-                      rows={generalAsk ? 2 : 1}
+                      aria-label={
+                        generalAsk ? msg("向 AI 提问")
+                          : separateFixedScope
+                            ? t(`向会话文档 ${basename(fixedScope)} 提问`, `Ask about conversation document ${basename(fixedScope)}`)
+                            : panelScope === "current" ? msg("向当前文档提问") : msg("向当前空间提问")
+                      }
+                      rows={1}
                       value={question}
                       maxLength={1500}
                       disabled={composerLocked || documentScopeMissing}
                       placeholder={
                         generalAsk
-                          ? "写下你的问题或想法…"
+                          ? msg("写下你的问题或想法…")
                           : documentScopeMissing
-                            ? "请先选择资料…"
+                            ? msg("请先选择资料…")
                             : panelScope === "current"
-                              ? "就这篇文档提问…"
-                              : "询问这个空间的资料…"
+                              ? msg("就这篇文档提问…")
+                              : msg("询问这个空间的资料…")
                       }
                       onChange={(e) => {
                         questionRef.current = e.target.value;
@@ -4336,21 +4432,19 @@ export default function App() {
                   ) : (
                     <section
                       className="question-source-chips"
-                      aria-label="本轮选项"
+                      aria-label={msg("本轮选项")}
                     >
                       {turnControls}
                     </section>
                   )}
                   <div className="composer-send-row">
-                    {(generalAsk || (chatBusy && question.trim())) && (
-                      <span>{chatBusy && question.trim() ? "下一问草稿自动保存" : "Enter 发送 / Shift+Enter 换行"}</span>
-                    )}
+                    {chatBusy && question.trim() && <span>{msg("下一问草稿自动保存")}</span>}
                     {chatBusy ? (
                       <button
                         type="button"
                         className="send-button"
-                        title={chatStopping ? "正在停止生成" : "停止生成"}
-                        aria-label={chatStopping ? "正在停止生成" : "停止生成"}
+                        title={chatStopping ? msg("正在停止生成") : msg("停止生成")}
+                        aria-label={chatStopping ? msg("正在停止生成") : msg("停止生成")}
                         aria-disabled={chatStopping}
                         onClick={() => void stopChat()}
                       >
@@ -4359,8 +4453,8 @@ export default function App() {
                     ) : (
                       <button
                         className="send-button"
-                        title="发送问题（Enter），Shift+Enter 换行"
-                        aria-label="发送问题"
+                        title={msg("发送问题（Enter），Shift+Enter 换行")}
+                        aria-label={msg("发送问题")}
                         disabled={
                           (!workspace && !generalAsk) ||
                           documentScopeMissing ||
@@ -4384,12 +4478,12 @@ export default function App() {
                 <span>
                   {stats.documents
                     ? `${stats.documents} 篇文档 · ${stats.chunks} 个片段`
-                    : "还没有加入资料索引的资料"}
+                    : msg("还没有加入资料索引的资料")}
                 </span>
                 <button
-                  title="管理资料索引"
+                  title={msg("管理资料索引")}
                   disabled={!workspace}
-                  aria-label="管理资料索引"
+                  aria-label={msg("管理资料索引")}
                   onClick={() => setIndexOpen(true)}
                 >
                   <Database size={13} />
@@ -4403,7 +4497,7 @@ export default function App() {
       {toast && (
         <div className="toast">
           <Check size={15} />
-          {toast}
+          {typeof toast === "string" ? toast : msg(toast.key)}
         </div>
       )}
       {!companionOpen && !inlineCitation && citationContent}
@@ -4449,6 +4543,7 @@ export default function App() {
             setWebSettingsOpen(true);
           }}
           value={settings}
+          onKeyImported={setSettings}
           onClose={() => {
             if (settingsFromFirstUse) setFocusQuestion(true);
             setSettingsFromFirstUse(false);
@@ -4463,8 +4558,41 @@ export default function App() {
             setSettingsFromFirstUse(false);
             setSettingsOpen(false);
             if (indexSettingsChanged) setIndexDirty(true);
-            notify("模型设置已保存");
+            notify({ key: "模型设置已保存" });
             if (workspace) void refreshStats();
+          }}
+        />
+      )}
+      {chatTask && (
+        <ChatTaskDialog
+          message={chatTask}
+          library={libraryView}
+          currentProject={workspace?.managedProjectId ?? ""}
+          currentPath={generalAsk ? undefined : visibleDocument?.path}
+          onClose={() => setChatTask(null)}
+          beforeSave={(id) => {
+            if (navigationBlocked() || assistant.conversation?.id !== chatTask.source.conversationId)
+              throw Error(msg("会话已变化，请重新预览。"));
+            const target = libraryView.documents.find((doc) => doc.id === id);
+            const live = syncEditor();
+            if (
+              live && target && target.projectId === workspaceRef.current?.managedProjectId &&
+              target.path === live.path && (live.conflict || live.content !== live.saved || saveInFlight.current)
+            ) throw Error(msg("请先保存目标文档的编辑。"));
+          }}
+          onSaved={({ projectId, documentId, before, after, result }) => {
+            if (projectId === workspaceRef.current?.managedProjectId) {
+              syncCalendarSave({ ...before, documentId, title: before.path }, after, result.hash);
+              setIndexDirty(result.indexStale);
+              void refreshStats();
+              setCalendarDocuments((old) => old.map((doc) =>
+                doc.documentId === documentId ? { ...doc, content: after, hash: result.hash } : doc
+              ));
+            }
+            void refreshLibrary();
+            notify(result.warning || {
+              key: before.content === after ? "此任务已在所选文档中。" : "任务已保存到所选文档",
+            });
           }}
         />
       )}
@@ -4492,7 +4620,7 @@ export default function App() {
       )}
       {indexOpen && (
         <ModalDialog
-          label="资料索引管理"
+          label={msg("资料索引管理")}
           className="index-modal"
           busy={indexBusy}
           onClose={() => setIndexOpen(false)}
@@ -4500,11 +4628,11 @@ export default function App() {
           <div className="modal-heading">
             <div>
               <span className="eyebrow">YOUR LOCAL KNOWLEDGE</span>
-              <h2>当前空间的资料索引</h2>
+              <h2>{msg("当前空间的资料索引")}</h2>
             </div>
             <button
               className="icon-button"
-              aria-label="关闭资料索引管理"
+              aria-label={msg("关闭资料索引管理")}
               disabled={indexBusy}
               onClick={() => setIndexOpen(false)}
             >
@@ -4512,38 +4640,37 @@ export default function App() {
             </button>
           </div>
           <p className="muted">
-            为本地文本与图表源码建立索引。当前空间默认跳过独立 JSON；仅选择当前
-            JSON 文档时纳入，Markdown 内的代码块随文档处理。
+            {msg("为本地文本与图表源码建立索引。当前空间默认跳过独立 JSON；仅选择当前 JSON 文档时纳入，Markdown 内的代码块随文档处理。")}
           </p>
           <div className="stat-grid">
             <div>
               <strong>{stats.documents}</strong>
-              <span>关键词已入库文档</span>
+              <span>{msg("关键词已入库文档")}</span>
             </div>
             <div>
               <strong>{stats.chunks}</strong>
-              <span>文本片段</span>
+              <span>{msg("文本片段")}</span>
             </div>
             <div>
               <strong>{stats.vectors}</strong>
-              <span>有效向量</span>
+              <span>{msg("有效向量")}</span>
             </div>
           </div>
           <div className="index-state-detail">
             <p>
-              <strong>关键词：</strong>
-              {stats.documents ? `${stats.documents} 篇文档已入库` : "尚未建立"}
+              <strong>{msg("关键词：")}</strong>
+              {stats.documents ? `${stats.documents} 篇文档已入库` : msg("尚未建立")}
             </p>
             <p>
-              <strong>向量：</strong>
+              <strong>{msg("向量：")}</strong>
               {!settings?.embedding.enabled
-                ? "未启用"
+                ? msg("未启用")
                 : `${stats.vectorDocuments ?? "—"} 篇文档具有当前模型向量 · ${stats.vectors} 个有效向量`}
             </p>
             <p>
               {indexDirty
-                ? "本次会话有保存或来源更新，请更新索引。"
-                : "统计来自索引；保存后的来源仍会进行版本校验。"}
+                ? msg("本次会话有保存或来源更新，请更新索引。")
+                : msg("统计来自索引；保存后的来源仍会进行版本校验。")}
             </p>
           </div>
           <IndexStatusPanel
@@ -4555,23 +4682,23 @@ export default function App() {
             onUpdate={(path) => void runIndex(path)}
           />
           <label className="index-scope">
-            建库范围
+            {msg("建库范围")}
             <select
               disabled={indexBusy}
               value={indexScope}
               onChange={(e) => setIndexScope(e.target.value)}
             >
-              <option value="">当前空间</option>
+              <option value="">{msg("当前空间")}</option>
               {document && (
                 <option value={document.path}>
-                  当前文档 · {titleOf(document.path)}
+                  {msg("当前文档 ·")} {titleOf(document.path)}
                 </option>
               )}
               {workspace?.files
                 .filter((f) => f.directory)
                 .map((f) => (
                   <option value={f.path} key={f.path}>
-                    目录 · {f.name}
+                    {msg("目录 ·")} {f.name}
                   </option>
                 ))}
             </select>
@@ -4581,7 +4708,7 @@ export default function App() {
             <span>
               {settings?.embedding.enabled
                 ? `文本切片将发送至 ${settings.embedding.baseUrl}。索引保存在本机；未变化文件自动跳过。`
-                : "当前建立关键词索引，无需调用模型。配置向量化服务后，再更新即可加入语义检索。"}
+                : msg("当前建立关键词索引，无需调用模型。配置向量化服务后，再更新即可加入语义检索。")}
             </span>
           </div>
           {indexBusy && (
@@ -4591,7 +4718,7 @@ export default function App() {
                 <span>
                   {indexProgress.path
                     ? titleOf(indexProgress.path)
-                    : "扫描资料…"}
+                    : msg("扫描资料…")}
                 </span>
                 <strong>
                   {indexProgress.done}/{indexProgress.total}
@@ -4616,7 +4743,7 @@ export default function App() {
               disabled={busy || !stats.documents}
               onClick={async () => {
                 if (
-                  await confirm("清空当前空间的索引？原始文件会保留。", {
+                  await confirm(msg("清空当前空间的索引？原始文件会保留。"), {
                     title: "清空索引",
                     kind: "warning",
                   })
@@ -4627,7 +4754,7 @@ export default function App() {
                     setIndexDirty(false);
                     setResults([]);
                     setSearched(false);
-                    notify("索引已清空，原文件保留");
+                    notify({ key: "索引已清空，原文件保留" });
                   } catch (e) {
                     fail(e);
                   }
@@ -4635,7 +4762,7 @@ export default function App() {
               }}
             >
               <Trash2 size={14} />
-              清空索引
+              {msg("清空索引")}
             </button>
             <div />
             {indexBusy ? (
@@ -4647,7 +4774,7 @@ export default function App() {
                 }}
               >
                 <Square size={13} />
-                停止建库
+                {msg("停止建库")}
               </button>
             ) : (
               <button
@@ -4656,7 +4783,7 @@ export default function App() {
                 onClick={() => void runIndex()}
               >
                 <RefreshCw size={15} />
-                {stats.documents ? "更新索引" : "开始建库"}
+                {stats.documents ? msg("更新索引") : msg("开始建库")}
               </button>
             )}
           </div>
@@ -4664,15 +4791,15 @@ export default function App() {
       )}
       {answerExpanded && (
         <ModalDialog
-          label="展开阅读回答"
+          label={msg("展开阅读回答")}
           className="answer-reading-modal"
           onClose={() => setAnswerExpanded(false)}
         >
           <div className="modal-heading">
-            <h2>{asked || "资料问答"}</h2>
+            <h2>{asked || msg("资料问答")}</h2>
             <button
               className="icon-button"
-              aria-label="关闭展开阅读"
+              aria-label={msg("关闭展开阅读")}
               onClick={() => setAnswerExpanded(false)}
             >
               <X size={19} />
@@ -4685,13 +4812,13 @@ export default function App() {
           )}
           <div className="answer-actions">
             <button disabled={chatBusy} onClick={() => void copyAnswer()}>
-              复制 Markdown
+              {msg("复制 Markdown")}
             </button>
             <button
               disabled={chatBusy}
               onClick={() => prepareAnswerTransfer("save")}
             >
-              保存为文档
+              {msg("保存为文档")}
             </button>
             <button
               disabled={
@@ -4701,7 +4828,7 @@ export default function App() {
               }
               onClick={() => prepareAnswerTransfer("insert")}
             >
-              插入正文
+              {msg("插入正文")}
             </button>
           </div>
           <Answer
@@ -4723,7 +4850,7 @@ export default function App() {
               } else void openPath(source.path, source);
             }}
           />
-          {answerWarning && <p className="panel-warning">{answerWarning}</p>}
+          {answerWarning && <p className="panel-warning">{systemMessage(answerWarning)}</p>}
           {answerChartWarnings.map((warning, i) => (
             <p className="panel-warning" key={i}>
               {warning}
@@ -4734,7 +4861,7 @@ export default function App() {
       {answerTransfer && (
         <ModalDialog
           label={
-            answerTransfer.kind === "save" ? "保存回答为文档" : "预览插入回答"
+            answerTransfer.kind === "save" ? msg("保存回答为文档") : msg("预览插入回答")
           }
           className="answer-reading-modal"
           busy={nameBusy}
@@ -4742,11 +4869,11 @@ export default function App() {
         >
           <div className="modal-heading">
             <h2>
-              {answerTransfer.kind === "save" ? "保存回答为文档" : "插入正文"}
+              {answerTransfer.kind === "save" ? msg("保存回答为文档") : msg("插入正文")}
             </h2>
             <button
               className="icon-button"
-              aria-label="关闭回答预览"
+              aria-label={msg("关闭回答预览")}
               disabled={nameBusy}
               onClick={closeAnswerTransfer}
             >
@@ -4755,12 +4882,12 @@ export default function App() {
           </div>
           <p className="muted">
             {answerTransfer.kind === "save"
-              ? "保存原始 Markdown、结构数据与来源版本。"
+              ? msg("保存原始 Markdown、结构数据与来源版本。")
               : `插入到 ${basename(answerTransfer.path ?? "")} 的原光标位置，可一次撤销。`}
           </p>
           {answerTransfer.general && answerTransfer.kind === "save" && (
             <label className="answer-file-label">
-              保存空间
+              {msg("保存空间")}
               <select
                 value={answerProject}
                 disabled={nameBusy || !!answerSavedPath}
@@ -4776,9 +4903,9 @@ export default function App() {
           )}
           {answerTransfer.kind === "save" && (
             <label className="answer-file-label">
-              文件名
+              {msg("文件名")}
               <input
-                aria-label="回答文档文件名"
+                aria-label={msg("回答文档文件名")}
                 value={answerTitle}
                 disabled={nameBusy || !!answerSavedPath}
                 onChange={(event) => setAnswerTitle(event.target.value)}
@@ -4786,7 +4913,7 @@ export default function App() {
             </label>
           )}
           <details className="answer-source-preview">
-            <summary>预览 Markdown 内容</summary>
+            <summary>{msg("预览 Markdown 内容")}</summary>
             <pre>{answerTransfer.content}</pre>
           </details>
           <div className="answer-transfer-preview">
@@ -4796,7 +4923,7 @@ export default function App() {
               readOnly
               citations={answerTransfer.citations}
               onError={setAnswerTransferError}
-              label="回答转存预览"
+              label={msg("回答转存预览")}
             />
           </div>
           {answerTransferError && (
@@ -4805,7 +4932,7 @@ export default function App() {
             </p>
           )}
           {answerSavedPath && (
-            <p role="status">已保存：{basename(answerSavedPath)}</p>
+            <p role="status">{msg("已保存：")}{basename(answerSavedPath)}</p>
           )}
           <div className="modal-actions">
             <button
@@ -4820,8 +4947,8 @@ export default function App() {
               }}
             >
               {answerSavedPath && !answerTransfer.general && visibleDocument
-                ? "继续编辑原文"
-                : answerSavedPath ? "完成" : "取消"}
+                ? msg("继续编辑原文")
+                : answerSavedPath ? msg("完成") : msg("取消")}
             </button>
             {answerSavedPath ? (
               <button
@@ -4843,7 +4970,7 @@ export default function App() {
                   });
                 }}
               >
-                打开新文档
+                {msg("打开新文档")}
               </button>
             ) : (
               <button
@@ -4852,10 +4979,10 @@ export default function App() {
                 onClick={() => void commitAnswerTransfer()}
               >
                 {nameBusy
-                  ? "正在保存…"
+                  ? msg("正在保存…")
                   : answerTransfer.kind === "save"
-                    ? "保存新文档"
-                    : "确认插入"}
+                    ? msg("保存新文档")
+                    : msg("确认插入")}
               </button>
             )}
           </div>
@@ -4893,7 +5020,7 @@ export default function App() {
       )}
       {nameDialog && (
         <ModalDialog
-          label="文件名称"
+          label={msg("文件名称")}
           className="name-modal"
           busy={nameBusy}
           dismissOnBackdrop={false}
@@ -4908,15 +5035,15 @@ export default function App() {
             <div className="modal-heading">
               <h2>
                 {nameDialog === "new"
-                  ? "新建笔记"
+                  ? msg("新建笔记")
                   : nameDialog === "copy"
-                    ? "另存为新文件"
-                    : "重命名文件"}
+                    ? msg("另存为新文件")
+                    : msg("重命名文件")}
               </h2>
               <button
                 type="button"
                 className="icon-button"
-                aria-label="取消文件操作"
+                aria-label={msg("取消文件操作")}
                 disabled={nameBusy}
                 onClick={closeNameDialog}
               >
@@ -4924,19 +5051,18 @@ export default function App() {
               </button>
             </div>
             <label>
-              文件名
+              {msg("文件名")}
               <input
                 autoFocus
                 disabled={nameBusy}
                 value={fileName}
                 onChange={(e) => setFileName(e.target.value)}
                 onFocus={(e) => e.target.select()}
-                placeholder="我的笔记.md"
+                placeholder={msg("我的笔记.md")}
               />
             </label>
             <p className="muted">
-              支持 .md、.markdown、.txt、.json 和
-              .mmd；可填写已有子目录中的相对路径。
+              {msg("支持 .md、.markdown、.txt、.json 和 .mmd；可填写已有子目录中的相对路径。")}
             </p>
             {nameError && (
               <div className="inline-message error">{nameError}</div>
@@ -4949,10 +5075,10 @@ export default function App() {
                 disabled={nameBusy}
                 onClick={closeNameDialog}
               >
-                取消
+                {msg("取消")}
               </button>
               <button className="button primary" disabled={nameBusy}>
-                {nameBusy ? "正在保存…" : "确定"}
+                {nameBusy ? msg("正在保存…") : msg("确定")}
               </button>
             </div>
           </form>

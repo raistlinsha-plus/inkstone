@@ -1,3 +1,4 @@
+import { msg, subscribeLocale, translate } from "../i18n";
 import { isImeEvent } from "../platform/ime";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -38,7 +39,7 @@ const labels = [
   "有序列表",
   "任务列表",
   "链接",
-];
+] as const;
 const shortcuts = ["⌘B", "⌘I", "", "⌘E", "", "", "", "⌘K"];
 
 /** Overflow forwards to Crepe's original controls; it never edits the document itself. */
@@ -49,15 +50,15 @@ export function enhanceFormattingToolbar(
   const trigger = document.createElement("button");
   trigger.type = "button";
   trigger.className = "format-overflow-button";
-  trigger.setAttribute("aria-label", "更多文字格式");
+
   trigger.setAttribute("aria-haspopup", "menu");
   trigger.setAttribute("aria-expanded", "false");
-  trigger.title = "更多文字格式";
+
   trigger.innerHTML = svg(MoreHorizontal);
   const menu = document.createElement("div");
   menu.className = "format-overflow-menu";
   menu.setAttribute("role", "menu");
-  menu.setAttribute("aria-label", "更多文字格式");
+
   menu.hidden = true;
   bar.append(trigger, menu);
   let hiddenItems: HTMLButtonElement[] = [];
@@ -143,20 +144,25 @@ export function enhanceFormattingToolbar(
     }
   };
   const refresh = () => {
+    trigger.title = msg("更多文字格式");
+    trigger.setAttribute("aria-label", trigger.title);
+    menu.setAttribute("aria-label", trigger.title);
     const wasMenuFocused =
       menu.contains(document.activeElement) ||
       document.activeElement === trigger;
     const heading = bar.querySelector<HTMLButtonElement>(
       ".top-bar-heading-button",
     );
-    heading?.setAttribute("aria-label", "标题样式");
-    if (heading) heading.title = "正文与标题样式";
+    heading?.setAttribute("aria-label", msg("标题样式"));
+    if (heading) heading.title = msg("正文与标题样式");
     const buttons = Array.from(
       bar.querySelectorAll<HTMLButtonElement>(".top-bar-item"),
     );
     buttons.forEach((button, i) => {
-      button.setAttribute("aria-label", labels[i] ?? "排版操作");
-      button.title = `${labels[i] ?? "排版操作"}${shortcuts[i] ? ` · ${shortcuts[i]}` : ""}`;
+      const label = labels[i] === "任务列表" ? translate("复选清单", "Checklist") : msg(labels[i] ?? "排版操作");
+      button.dataset.formatAction = i === 7 ? "link" : "format";
+      button.setAttribute("aria-label", label);
+      button.title = `${label}${shortcuts[i] ? ` · ${shortcuts[i]}` : ""}`;
       button.setAttribute(
         "aria-pressed",
         String(button.classList.contains("active")),
@@ -265,9 +271,11 @@ export function enhanceFormattingToolbar(
     typeof ResizeObserver !== "undefined" ? new ResizeObserver(refresh) : null;
   resize?.observe(bar);
   refresh();
+  const stopLocale = subscribeLocale(refresh);
   return {
     refresh,
     destroy: () => {
+      stopLocale();
       resize?.disconnect();
       document.removeEventListener("pointerdown", outside, true);
       window.removeEventListener("resize", refresh);

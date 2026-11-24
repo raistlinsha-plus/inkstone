@@ -1,4 +1,5 @@
 import { parseMarkdown, type MarkdownNode } from "../content/blocks";
+import { taskAnnotation } from "../content/tasks";
 const rawTypes = new Set([
   "html",
   "definition",
@@ -43,7 +44,12 @@ const unsupported = (
     (rawTypes.has(n.type) &&
       !resolved &&
       !(n.type === "html" && isSafeBreak(n.value))) ||
-    !!n.children?.some((child) => unsupported(child, definitions))
+    !!n.children?.some((child, i) => {
+      const task = i === 0 && n.type === "listItem" ? taskAnnotation(n) : null;
+      return task && child.children
+        ? child.children.some(inline => inline !== task.node && unsupported(inline, definitions))
+        : unsupported(child, definitions);
+    })
   );
 };
 function inlineReference(

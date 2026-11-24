@@ -1,3 +1,4 @@
+import { msg } from "./i18n";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import ModalDialog from "./ModalDialog";
@@ -73,14 +74,14 @@ export default function ExternalToolsDialog({
 
   return (
     <ModalDialog
-      label="外部工具"
+      label={msg("外部工具")}
       className="settings-modal web-search-settings"
       busy={busy}
       onClose={onClose}
     >
-      <h2>外部工具</h2>
+      <h2>{msg("外部工具")}</h2>
       <p>
-        允许一个本机工具搜索所选空间、读取原文片段。检索在本机完成，工具取得的内容可能会发送给它自己的模型。
+        {msg("允许一个本机工具搜索所选空间、读取原文片段。检索在本机完成，工具取得的内容可能会发送给它自己的模型。")}
       </p>
       <form
         onSubmit={(event) => {
@@ -89,23 +90,23 @@ export default function ExternalToolsDialog({
         }}
       >
         <label className="web-search-key">
-          工具名称
+          {msg("工具名称")}
           <input
             required
             value={name}
             maxLength={60}
             onChange={(e) => setName(e.target.value)}
-            placeholder="例如：周报助手"
+            placeholder={msg("例如：周报助手")}
           />
         </label>
         <label className="web-search-key">
-          允许读取的空间
+          {msg("允许读取的空间")}
           <select
             required
             value={space}
             onChange={(e) => setSpace(e.target.value)}
           >
-            <option value="">选择空间…</option>
+            <option value="">{msg("选择空间…")}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.title}
@@ -118,17 +119,17 @@ export default function ExternalToolsDialog({
           className="button"
           disabled={busy || !space || !name.trim()}
         >
-          创建只读连接
+          {msg("创建只读连接")}
         </button>
       </form>
       {issued && (
-        <section className="web-search-diagnostic" aria-label="新连接">
+        <section className="web-search-diagnostic" aria-label={msg("新连接")}>
           <p>
-            在工具的环境变量中设置 <code>INKSTONE_CLI_TOKEN</code>
-            。凭据只显示这一次。
+            {msg("在工具的环境变量中设置")} <code>INKSTONE_CLI_TOKEN</code>
+            {msg("。凭据只显示这一次。")}
           </p>
           <label className="web-search-key">
-            连接凭据
+            {msg("连接凭据")}
             <input
               readOnly
               type={reveal ? "text" : "password"}
@@ -142,10 +143,10 @@ export default function ExternalToolsDialog({
             className="button small"
             onClick={() => setReveal(!reveal)}
           >
-            {reveal ? "隐藏凭据" : "显示凭据以复制"}
+            {reveal ? msg("隐藏凭据") : msg("显示凭据以复制")}
           </button>
           <label className="web-search-key">
-            空间 ID
+            {msg("空间 ID")}
             <input
               readOnly
               value={issued.space}
@@ -154,14 +155,14 @@ export default function ExternalToolsDialog({
           </label>
         </section>
       )}
-      <section className="web-search-diagnostic" aria-label="已授权连接">
-        <h3>已授权连接</h3>
-        {!busy && !error && !grants.length && <p>尚无连接。</p>}
+      <section className="web-search-diagnostic" aria-label={msg("已授权连接")}>
+        <h3>{msg("已授权连接")}</h3>
+        {!busy && !error && !grants.length && <p>{msg("尚无连接。")}</p>}
         {grants.map((g) => (
           <div key={g.id} className="settings-utilities">
             <span>
               {g.name} ·{" "}
-              {projects.find((p) => p.id === g.space)?.title ?? "空间不可用"}
+              {projects.find((p) => p.id === g.space)?.title ?? msg("空间不可用")}
             </span>
             <button
               className="button small"
@@ -169,7 +170,7 @@ export default function ExternalToolsDialog({
               onClick={() => void revoke(g.id)}
               aria-label={`撤销 ${g.name}`}
             >
-              撤销
+              {msg("撤销")}
             </button>
           </div>
         ))}
@@ -181,7 +182,7 @@ export default function ExternalToolsDialog({
       )}
       <div className="modal-actions">
         <button className="button" disabled={busy} onClick={onClose}>
-          完成
+          {msg("完成")}
         </button>
       </div>
     </ModalDialog>

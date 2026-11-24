@@ -418,10 +418,13 @@ fn live_causal_dev() -> Result<(), &'static str> {
         .enable_all()
         .build()
         .map_err(|_| "runtime-setup-failed")?;
-    let out = runtime.block_on(live_with_settings(
-        &report_path()?,
-        evaluation_v086::saved_settings()?,
-        CredentialReader::default(),
+    let out = runtime.block_on(evaluation_v086::CREDENTIAL_DIRECTORY.scope(
+        evaluation_v086::saved_credential_directory()?,
+        live_with_settings(
+            &report_path()?,
+            evaluation_v086::saved_settings()?,
+            CredentialReader::default(),
+        ),
     ));
     runtime.shutdown_background();
     out

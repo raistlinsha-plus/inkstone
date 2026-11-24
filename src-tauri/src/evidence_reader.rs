@@ -9,7 +9,10 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 mod binding;
 mod calculation;
 pub(crate) use calculation::calculation_note;
+pub(crate) mod named_value;
+mod quantity;
 mod records;
+pub(crate) mod scoped_clause;
 mod semantic;
 use binding::Question;
 
@@ -76,6 +79,22 @@ impl Sentence {
     }
 
     fn support(&self, query: &BoundQuestion) -> binding::Support {
+        if self.header.is_none()
+            && query
+                .quantity
+                .as_ref()
+                .is_some_and(|q| q.supports(&self.row.text))
+        {
+            return binding::Support::Exact;
+        }
+        if self.header.is_none()
+            && query
+                .naming
+                .as_ref()
+                .is_some_and(|n| n.value(&self.row.text).is_some())
+        {
+            return binding::Support::Exact;
+        }
         if !query
             .semantic
             .conditions_match(&self.row.text, self.section.as_ref())
@@ -115,6 +134,8 @@ impl Sentence {
 }
 
 struct BoundQuestion {
+    naming: Option<named_value::Naming>,
+    quantity: Option<quantity::Request>,
     lexical: Question,
     semantic: semantic::Request,
     record: Option<records::Request>,
@@ -224,6 +245,14 @@ pub(crate) fn compatible_original_lines(question: &str, hit: &SearchResult) -> V
     if binding::speculative(&hit.heading) || hit.title.as_deref().is_some_and(binding::speculative)
     {
         return vec![];
+    }
+    if let Some(frame) = scoped_clause::Frame::parse(question) {
+        // When the question gives both an object and a condition, citing the
+        // entire mixed passage would also attach neighboring objects or dates.
+        let related = frame.related(hit);
+        if !related.is_empty() || hit.match_kind == "scoped-related" {
+            return related;
+        }
     }
     let facets = split_facets(question);
     let conditions = semantic::Request::new(question, question);
@@ -399,6 +428,8 @@ pub(crate) fn prepare_facets(
         .map(|q| {
             let body = semantic::shared_condition(q).map_or(q.as_str(), |(_, body)| body);
             BoundQuestion {
+                naming: named_value::Naming::parse(q),
+                quantity: quantity::Request::parse(q),
                 lexical: Question::new(body),
                 semantic: semantic::Request::new(q, body),
                 record: records::Request::parse(body, &sentences),

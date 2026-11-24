@@ -1,3 +1,4 @@
+import { trackFramePointer } from "./framePointer";
 import * as echarts from "echarts/core";
 import { BarChart, LineChart, PieChart } from "echarts/charts";
 import {
@@ -8,7 +9,7 @@ import {
 } from "echarts/components";
 import { SVGRenderer } from "echarts/renderers";
 import { parseChart, chartOption, type ChartData } from "../content/chart";
-import { applyPreviewTheme, previewTheme } from "./theme";
+import { applyPreviewTheme, previewTheme, type PreviewTheme } from "./theme";
 
 echarts.use([
   BarChart,
@@ -27,11 +28,16 @@ let chart: echarts.EChartsType | null = null;
 let validated: ChartData | null = null;
 let source = "";
 let ready = false;
+let theme: PreviewTheme = "light";
 let resizeTimer: ReturnType<typeof setTimeout>;
 const host = document.getElementById("graph")!;
 function notify(type: string, payload: object = {}) {
   parent.postMessage({ type, channel, requestId, revision, ...payload }, "*");
 }
+
+const framePointer = trackFramePointer((inside) => {
+  if (requestId) notify("diagram-pointer", { inside });
+});
 
 function exportChart(live: echarts.EChartsType, data: ChartData) {
   const output = echarts.init(null, undefined, {
@@ -41,7 +47,7 @@ function exportChart(live: echarts.EChartsType, data: ChartData) {
     height: live.getHeight(),
   });
   try {
-    const option = chartOption(data, "export");
+    const option = chartOption(data, "export", live.getWidth());
     const legend = live.getOption().legend as
       | {
           selected?: Record<string, boolean>;
@@ -70,14 +76,12 @@ window.addEventListener("message", (event) => {
     return;
   channel = data.channel;
   if (data.type === "command") {
-    if (
-      !ready ||
-      !chart ||
-      !validated ||
-      data.requestId !== requestId ||
-      data.revision !== revision
-    )
+    if (data.requestId !== requestId || data.revision !== revision) return;
+    if (data.action === "pointer-left-frame") {
+      framePointer.reset();
       return;
+    }
+    if (!ready || !chart || !validated) return;
     if (data.action === "export") {
       try {
         notify("export", {
@@ -98,7 +102,7 @@ window.addEventListener("message", (event) => {
   ready = false;
   try {
     if (data.kind !== "chart") throw new Error("不支持的图表类型。");
-    const theme = previewTheme(data.theme);
+    theme = previewTheme(data.theme);
     applyPreviewTheme(theme);
     if (!preserve || !chart || !validated) {
       chart?.dispose();
@@ -108,18 +112,18 @@ window.addEventListener("message", (event) => {
       source = data.source;
       const chartHost = document.createElement("div");
       chartHost.style.width = "100%";
-      chartHost.style.height = `${Math.max(300, window.innerHeight - 4)}px`;
+      chartHost.style.height = "100%";
       host.append(chartHost);
       chart = echarts.init(chartHost, undefined, { renderer: "svg" });
     }
     chart.setOption(
-      chartOption(validated, theme) as echarts.EChartsCoreOption,
+      chartOption(validated, theme, chart.getWidth()) as echarts.EChartsCoreOption,
       {
         notMerge: !preserve,
       },
     );
     ready = true;
-    notify("ready");
+    notify("ready", { pointerInside: framePointer.inside });
   } catch (error) {
     chart?.dispose();
     chart = null;
@@ -133,8 +137,14 @@ window.addEventListener("message", (event) => {
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
-    if (chart && ready)
-      chart.resize({ height: Math.max(300, window.innerHeight - 4) });
+    if (!chart || !validated || !ready) return;
+    const oldWidth = chart.getWidth();
+    chart.resize();
+    if (chart.getWidth() !== oldWidth) {
+      chart.setOption(
+        chartOption(validated, theme, chart.getWidth()) as echarts.EChartsCoreOption,
+      );
+    }
   }, 100);
 });
 window.addEventListener("pagehide", () => {

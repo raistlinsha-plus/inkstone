@@ -638,3 +638,117 @@ test("opening a changed source rechecks permission and opens today's document wi
   ).toHaveLength(1);
   expect(jump).not.toHaveBeenCalled();
 });
+
+test("selects a whole space and clears only matching sources through the removal preview", async () => {
+  const manual = view.documents[0];
+  const docs = Array.from({ length: 268 }, (_, index) => ({
+    ...manual,
+    id: String(index),
+    title: index < 2 ? `专题${index}.md` : `普通${index}.md`,
+  }));
+  const catalog = {
+    ...view,
+    documents: [
+      manual,
+      ...docs,
+      { ...manual, id: "other", projectId: "elsewhere" },
+      { ...manual, id: "trash", status: "trashed" as const },
+    ],
+  };
+  let saved = status;
+  api.listen.mockResolvedValue(vi.fn());
+  api.invoke.mockImplementation(async (command, args) => {
+    if (command === "wiki_status") return saved;
+    if (command === "wiki_removal_impact")
+      return { pages: 1, revisions: 2, pending: 0, token: "scope-preview" };
+    if (command === "wiki_set_policy") {
+      saved = {
+        ...saved,
+        policy: {
+          ...saved.policy,
+          documentIds: args.input.documentIds,
+          revision: saved.policy.revision + 1,
+        },
+      };
+      return saved;
+    }
+    throw Error(command);
+  });
+
+  const panel = openPanel(vi.fn(), catalog);
+  fireEvent.click(await panel.findByRole("button", { name: "资料范围" }));
+  const all = panel.getByRole("checkbox", {
+    name: /全选 269/,
+  }) as HTMLInputElement;
+  expect(all.indeterminate).toBe(true);
+  fireEvent.click(all);
+  expect(all.checked).toBe(true);
+  fireEvent.click(panel.getByRole("button", { name: "保存范围与维护" }));
+  await waitFor(() =>
+    expect(saved.policy.documentIds).toEqual([
+      "manual",
+      ...docs.map((doc) => doc.id),
+    ]),
+  );
+  fireEvent.click(panel.getByRole("button", { name: "资料范围" }));
+  const filter = panel.getByRole("searchbox", { name: "筛选资料" });
+  fireEvent.change(filter, { target: { value: "缺失" } });
+  expect(
+    (panel.getByRole("checkbox", { name: /全选筛选结果/ }) as HTMLInputElement)
+      .disabled,
+  ).toBe(true);
+  fireEvent.change(filter, { target: { value: "专题" } });
+  const matches = panel.getByRole("checkbox", {
+    name: /全选筛选结果/,
+  }) as HTMLInputElement;
+  expect(matches.checked).toBe(true);
+  fireEvent.click(panel.getByRole("button", { name: "清除筛选内已选" }));
+  expect(matches.checked).toBe(false);
+  fireEvent.click(matches);
+  fireEvent.click(panel.getByRole("checkbox", { name: "专题1.md" }));
+  expect(matches.indeterminate).toBe(true);
+
+  fireEvent.click(panel.getByRole("button", { name: "查看清除范围" }));
+  const retained = [
+    "manual",
+    ...docs.filter((doc) => doc.id !== "1").map((doc) => doc.id),
+  ];
+  expect(api.invoke).toHaveBeenCalledWith("wiki_removal_impact", {
+    projectId: "space",
+    expectedRevision: 2,
+    documentIds: expect.arrayContaining(retained),
+  });
+  fireEvent.click(await panel.findByRole("button", { name: "确认保存并清除" }));
+  await waitFor(() =>
+    expect(api.invoke).toHaveBeenCalledWith("wiki_set_policy", {
+      input: expect.objectContaining({
+        expectedRevision: 2,
+        removalToken: "scope-preview",
+      }),
+    }),
+  );
+  expect([...saved.policy.documentIds].sort()).toEqual(retained.sort());
+});
+
+test("clear selection can revoke a previously selected document that is no longer listed", async () => {
+  api.listen.mockResolvedValue(vi.fn());
+  api.invoke.mockImplementation(async (command) => {
+    if (command === "wiki_status") return status;
+    if (command === "wiki_removal_impact")
+      return { pages: 0, revisions: 0, pending: 0, token: "clear-all" };
+    throw Error(command);
+  });
+  const panel = openPanel(vi.fn(), { ...view, documents: [] });
+  fireEvent.click(await panel.findByRole("button", { name: "资料范围" }));
+  fireEvent.click(panel.getByRole("button", { name: "清除已选" }));
+  fireEvent.click(panel.getByRole("checkbox", { name: "启用当前空间的 Wiki" }));
+  fireEvent.click(panel.getByRole("button", { name: "查看清除范围" }));
+  expect(
+    await panel.findByRole("button", { name: "确认保存并清除" }),
+  ).toBeTruthy();
+  expect(api.invoke).toHaveBeenCalledWith("wiki_removal_impact", {
+    projectId: "space",
+    expectedRevision: 1,
+    documentIds: [],
+  });
+});

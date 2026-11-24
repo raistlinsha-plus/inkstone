@@ -427,3 +427,42 @@ test("candidate reading requires opt-in and resets when the chat endpoint change
   fireEvent.change(ui.getByLabelText(/服务地址 · Base URL/), { target: { value: "https://another.example/v1" } });
   expect(consent.checked).toBe(false);
 });
+
+
+test.each(["chat", "embedding", "rerank"] as const)(
+  "%s migration is explicit, limited to its saved address and returns only a presence flag",
+  async (kind) => {
+    const value = {
+      ...settings, hasChatKey: false, hasEmbeddingKey: false,
+      rerank: { ...settings.rerank, endpoint: "https://example.com/rerank" },
+    };
+    const onKeyImported = vi.fn(), onSave = vi.fn();
+    const ui = render(
+      <SettingsModal value={value} initialTab={kind} onClose={vi.fn()} onSave={onSave} onKeyImported={onKeyImported} />,
+    );
+    const action = { name: "从旧钥匙串导入" };
+    const address = ui.getByLabelText(kind === "rerank" ? /重排接口地址/ : /Base URL/);
+    expect(ui.getByRole("button", action)).toBeTruthy();
+    fireEvent.change(address, { target: { value: "https://other.example/v1" } });
+    expect(ui.queryByRole("button", action)).toBeNull();
+    const original = kind === "rerank" ? value.rerank.endpoint : value[kind].baseUrl;
+    fireEvent.change(address, { target: { value: original } });
+    const key = ui.container.querySelector('input[type="password"]') as HTMLInputElement;
+    fireEvent.change(key, { target: { value: "replacement" } });
+    expect(ui.queryByRole("button", action)).toBeNull();
+    fireEvent.change(key, { target: { value: "" } });
+    expect(invoke).not.toHaveBeenCalled();
+    invoke.mockResolvedValueOnce(false);
+    fireEvent.click(ui.getByRole("button", action));
+    await ui.findByText(/未找到可导入的旧密钥/);
+    expect(onKeyImported).not.toHaveBeenCalled();
+    invoke.mockResolvedValueOnce(true);
+    fireEvent.click(ui.getByRole("button", action));
+    await ui.findByText("密钥已导入本机，可直接使用。");
+    expect(invoke).toHaveBeenLastCalledWith("import_legacy_model_key", { kind });
+    expect(ui.queryByRole("button", action)).toBeNull();
+    expect(onKeyImported).toHaveBeenCalledTimes(1);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(key.value).toBe("");
+  },
+);

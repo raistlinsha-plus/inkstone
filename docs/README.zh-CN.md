@@ -1,50 +1,60 @@
 # 砚台 · Inkstone
 
-Inkstone 是面向 **macOS 13 及以上 Apple Silicon Mac** 的本地 Markdown 工作台。把分散在不同目录的项目笔记导入一个空间，选出几篇整理成 Wiki，或直接问「原来计划几场，实际办了几场？」。点回答里的引用就能核对原句，把有用的结论保存成文档后，还能回到刚才写到的位置。
+**简体中文** · [English](../README.md)
 
-[浏览器交互演示](https://raistlinsha-plus.github.io/inkstone/) · [English](../README.md) · [获取 RC.4 源码预发布版](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.0.0-rc.4) · [操作手册](USER-MANUAL.zh-CN.md)
+砚台是面向 **macOS 13 及以上 Apple Silicon Mac** 的本地 Markdown 工作台。读项目笔记时，可以直接向资料提问，点引用核对原句，再把对话中决定要做的事写成笔记里的任务。安排好执行时段后，在日历点开任务就能回到那一行继续写。
 
-![v0.9.6 编辑器中的 Markdown 阅读活动方案，以及正文页边的墨团菜单](assets/v0.9.6/workspace.png)
+[获取 v1.2.0-beta.1 源码](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.1) · [快速开始](QUICKSTART.md) · [操作手册](USER-MANUAL.zh-CN.md) · [用示例笔记体验浏览器演示](https://raistlinsha-plus.github.io/inkstone/?lang=zh-CN)
 
-图中是 v0.9.6 编辑器和虚构的活动笔记。开启书房同伴后，保存文档可以从页边记录一次经历。
+![简体中文界面的 Markdown 笔记，正文内嵌数据图表](assets/v1.2.0-beta.1/zh-CN/workspace.png)
 
-**试用 RC.4** 时，可以打开一篇笔记，一次问两件事，然后逐条点开引用，看看原文能回答哪一项。你也可以启用模型辅助选句，授权其他工具只读搜索一个空间，或在撤回 Wiki 来源前查看受影响的版本。这一版仍会漏答有原文依据的问题。独立 AI 盲评中，40 道目标题有 15 道同时满足作答与引用要求，与 RC.3 持平。[RC.4 交付与验证](DELIVERY-v1.0.0-rc.4.md) · [外部工具接入](EXTERNAL-TOOLS.zh-CN.md)
+截图来自 **v1.2.0-beta.1**，使用虚构项目资料。图表在阅读时收起工具栏。鼠标移入或用 Tab 聚焦，即可切换到数据表核对数字，或导出 SVG、PNG。
 
-## 可以怎样使用
+## 从笔记到行动
 
-- **把资料放在一起，保留原件。** 从不同目录复制导入 Markdown、TXT、JSON、Mermaid 文件到同一空间。用正文、源码或分栏模式写作，在正文插入表格、JSON 树、Mermaid、脑图、日程和数据图表。原件有变化时可比较差异，也可导出空间。
-- **写到哪里，问到哪里。** 点「问这篇文档」，核对回答中的原文引用，点「返回写作位置」继续写。另起任务时可用独立 AI 问答翻译、改写，或为这一轮选择同一空间的资料及本地文本附件。
-- **检查 Wiki 怎样得出结论。** 在「知识 Wiki」选择允许整理的文档，查看主题页提案，逐项核对来源、行号与原句。不同笔记记载不同时可并排查看，缺少依据时可仅发布已核验摘录。关键词、可选向量、Wiki 来源和可选重排帮助后续问答定位原文。
-- **让同伴在页边陪读。** 墨团、砚舟和知微都有自己的像素形象，可停在编辑器任一侧，窄窗下收成书签。文档问答完成时角色会有短暂回应。确认经历后可逐步解锁故事、信物和插画。同伴支持专注、减少动态和关闭。[三位同伴的深浅色形象](assets/v0.9.6/companions.png)
+| 你想做什么 | 在砚台里怎么做 |
+| --- | --- |
+| 收集资料，写一篇笔记 | 将不同目录的 Markdown、TXT、JSON 或 Mermaid 文件复制导入一个空间。可以用正文编辑，也可以分栏对照源码。表格、脑图、流程图和数据图表都能放在正文里。 |
+| 核对一个说法 | 在编辑器点「问这篇文档」，从回答引用跳到原段落，查看本轮实际使用的资料。需要换个话题时，进入「AI 问答」并为本轮单独添加文件。 |
+| 跟进对话里的行动项 | 从对话选取原话，核对任务标题并选定目标笔记。在「任务」设截止日、安排执行时段，在「日历」拖动时段即可改期，点击来源可回到 Markdown 原行。 |
+| 长期整理一个主题 | 选择允许 Wiki 使用的笔记，逐条核对拟修改的内容和引文。可以发布主题，也可以只发布已核验的摘录。笔记变化后可重新整理。 |
+| 在页边留个同伴 | 选择像素角色陪读，确认一次完成的工作后可逐步解锁故事和插画。需要安静时可切到专注模式。 |
 
-## 开始试用
+[查看任务清单](assets/v1.2.0-beta.1/zh-CN/tasks.png) · [查看日历](assets/v1.2.0-beta.1/zh-CN/calendar.png) · [产品与功能总览](PRODUCT.md)
 
-GitHub 提供源码归档和 SHA-256 校验文件。在 Mac 上准备 Apple 命令行开发工具、Node **24.14.0**、npm **11.9.0** 和 Rust **1.99.1**，然后运行下面的命令。[工具版本](../toolchain.json)
+## 从源码开始
+
+这个预发布版提供源码。在 Apple Silicon Mac 上准备 Apple 命令行开发工具、Node **24.14.0**、npm **11.9.0** 和 Rust **1.99.1**，然后运行下面的命令。[工具版本](../toolchain.json)
 
 ```sh
-git clone --branch v1.0.0-rc.4 https://github.com/raistlinsha-plus/inkstone.git
+git clone --branch v1.2.0-beta.1 https://github.com/raistlinsha-plus/inkstone.git
 cd inkstone
 npm ci --registry=https://registry.npmjs.org
 npm run desktop
 ```
 
-1. **先试离线检索。** 在空间首页打开「从资料到第一条回答 → 用示例体验」，搜索「阅读活动」并从结果跳到原文。这一步无需模型密钥。浏览器演示也可以直接试，使用虚构笔记及模拟回答。
-2. **再用自己的模型试问答。** 配置兼容的问答 API，导入两份样例笔记，分别核对计划场次和实际场次，再问笔记中有没有记录满意度。[两份笔记及示例问题](../examples/v0.7.3/README.md)
-3. **日常独立运行。** 用 `npm run bundle` 构建本机临时签名应用，可独立于开发服务器运行。已有安装和资料时，先按本机升级流程备份和校验。[安装、备份与回退](LOCAL-INSTALLATION.md)
+1. 打开「我的文档」，在空间首页选择「从资料到第一条回答 → 用示例体验」。即使还没配置模型，也可以用关键词搜索笔记并打开原段落。
+2. 使用 AI 时，在「模型与设置」添加兼容的问答服务。导入一份活动计划和一份复盘，提问“实际与计划差在哪里？”，点开引用核对。界面可切换简体中文或英文，回答语言可另行设置。
+3. 运行 `npm run bundle` 可在本机构建独立应用，构建采用临时签名。已有日常安装时，先备份并校验资料，再进行替换。[安装、备份与回退](LOCAL-INSTALLATION.md)
 
-## 哪些内容会发给模型
+## 哪些资料留在本机
 
-编辑、关键词检索、同伴故事和资料备份都可以离线使用。文档、索引、Wiki、会话和同伴进度保存在这台 Mac 上。提问、整理 Wiki 或准备向量时，会向你配置的服务发送完成当前任务所需的问题、片段或选定材料。重排使用独立的 Cohere 兼容端点。服务商可能按调用量计费。
+编辑、任务、关键词检索和同伴故事均可离线使用。文档、索引、Wiki 和会话保存在这台 Mac。调用问答、Wiki 整理、向量和重排时，配置的服务会收到相应任务所需的问题或资料。启用 Brave Search 后可向 Brave 发送公开查询。费用取决于所用的服务账号。
 
-配置并授权 Brave Search 后，模型可按题决定是否搜索公开网页，Brave 接收经过校验的公开查询。也可以对单轮禁用搜索。服务密钥保存在 macOS 钥匙串。[安全策略](../SECURITY.md) · [检索与引用的适用范围](KNOWN-LIMITATIONS.md)
+服务密钥存放在仅本机账号可读写的配置文件中，便携备份会排除密钥。旧安装可在设置中按服务从钥匙串导入。若需在终端或其他 AI 工具中检索，可单独授权其只读访问指定空间。[安全策略](../SECURITY.md) · [外部工具接入](EXTERNAL-TOOLS.zh-CN.md)
 
-## 文档导航
+## 手册、版本与反馈
 
-| 想了解什么 | 阅读入口 |
-| --- | --- |
-| 入门与日常操作 | [快速开始](QUICKSTART.md) · [用户操作手册](USER-MANUAL.zh-CN.md) · [产品与功能总览](PRODUCT.md) |
-| 实现与评测 | [4A 架构](ARCHITECTURE-4A.md) · [技术栈](TECH-STACK.md) · [文档问答配对评测](../evals/v1.0/rc4/README.md) |
-| 版本进展 | [RC.4 实测结果与限制](DELIVERY-v1.0.0-rc.4.md) · [变更日志](../CHANGELOG.md) · [路线图](ROADMAP.zh-CN.md) |
-| 反馈与贡献 | [试用交流](https://github.com/raistlinsha-plus/inkstone/discussions/11) · [贡献指南](../CONTRIBUTING.md) · [已知限制](KNOWN-LIMITATIONS.md) |
+| | 简体中文 | English |
+| --- | --- | --- |
+| 入门 | [快速开始](QUICKSTART.md) | [Quickstart](QUICKSTART.en.md) |
+| 日常操作 | [操作手册](USER-MANUAL.zh-CN.md) | [User manual](USER-MANUAL.en.md) |
+| 产品功能 | [产品介绍](PRODUCT.md) | [Product tour](PRODUCT.en.md) |
+| 版本变化与评测 | [交付与验证](DELIVERY-v1.2.0-beta.1.md) | [Release notes](DELIVERY-v1.2.0-beta.1.en.md) |
+| 后续计划 | [路线图](ROADMAP.zh-CN.md) | [Roadmap](ROADMAP.md) |
 
-Inkstone 源码采用 Apache-2.0，上游组件保留各自许可，其中包含未修改的 MPL-2.0 组件。二进制分发所需的许可文本与美术来源复核进度可在项目中查阅。[许可证](../LICENSE) · [第三方清单](../THIRD_PARTY_NOTICES.md) · [角色素材说明](../src/companion/assets/README.md)
+[架构说明](ARCHITECTURE-4A.md) · [已知限制](KNOWN-LIMITATIONS.md) · [反馈问题](https://github.com/raistlinsha-plus/inkstone/issues) · [参与贡献](../CONTRIBUTING.md)
+
+## 许可
+
+Inkstone 源码采用 **Apache-2.0**，依赖组件保留各自的许可。[许可证](../LICENSE) · [第三方清单](../THIRD_PARTY_NOTICES.md) · [角色素材说明](../src/companion/assets/README.md)

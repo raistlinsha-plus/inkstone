@@ -1,3 +1,5 @@
+import { msg } from "../i18n";
+import { Temporal } from "temporal-polyfill";
 import { useRef, useState } from "react";
 import {
   addDays,
@@ -15,6 +17,8 @@ import {
 interface Props {
   event?: CalendarEvent;
   date?: string;
+  initialTime?: string;
+  initialAllDay?: boolean;
   timeZone?: string;
   busy?: boolean;
   stale?: boolean;
@@ -38,6 +42,8 @@ const zones = [
 export default function EventEditor({
   event,
   date,
+  initialTime = "09:00",
+  initialAllDay = false,
   timeZone = currentTimeZone(),
   busy = false,
   stale = false,
@@ -50,20 +56,26 @@ export default function EventEditor({
     (event ? event.start.slice(0, 10) : dateInZone(new Date(), timeZone));
   const [title, setTitle] = useState(event?.title ?? "");
   const [zone, setZone] = useState(event?.timeZone ?? timeZone);
-  const [allDay, setAllDay] = useState(event?.allDay ?? false);
+  const [allDay, setAllDay] = useState(event?.allDay ?? initialAllDay);
   const [start, setStart] = useState(
     event
       ? event.allDay
         ? event.start
         : dateTimeInput(event.start, event.timeZone)
-      : initialDate + "T09:00",
+      : initialAllDay
+        ? initialDate
+        : initialDate + "T" + initialTime,
   );
   const [end, setEnd] = useState(
     event
       ? event.allDay
         ? addDays(event.end, -1)
         : dateTimeInput(event.end, event.timeZone)
-      : initialDate + "T10:00",
+      : initialAllDay
+        ? initialDate
+        : Temporal.PlainDateTime.from(initialDate + "T" + initialTime)
+            .add({ hours: 1 })
+            .toString({ smallestUnit: "minute" }),
   );
   const [startInstant, setStartInstant] = useState<string | null>(
     event && !event.allDay ? event.start : null,
@@ -177,7 +189,7 @@ export default function EventEditor({
   return (
     <form
       className="calendar-event-editor"
-      aria-label={event ? "编辑事项" : "新增事项"}
+      aria-label={event ? msg("编辑事项") : msg("新增事项")}
       onSubmit={(e) => {
         e.preventDefault();
         void save();
@@ -190,25 +202,25 @@ export default function EventEditor({
       }}
     >
       <div className="calendar-form-heading">
-        <h3>{event ? "编辑事项" : "新增事项"}</h3>
+        <h3>{event ? msg("编辑事项") : msg("新增事项")}</h3>
         <button
           type="button"
           onClick={onCancel}
           disabled={waiting}
-          aria-label="关闭事项编辑"
+          aria-label={msg("关闭事项编辑")}
         >
-          关闭
+          {msg("关闭")}
         </button>
       </div>
       {stale && (
         <p className="calendar-error" role="alert">
-          原文已变化。请取消并重新选择事项，避免覆盖新内容。
+          {msg("原文已变化。请取消并重新选择事项，避免覆盖新内容。")}
         </p>
       )}
       <label>
-        事项标题
+        {msg("事项标题")}
         <input
-          aria-label="事项标题"
+          aria-label={msg("事项标题")}
           autoFocus
           required
           maxLength={400}
@@ -224,13 +236,13 @@ export default function EventEditor({
           onChange={(e) => changeAllDay(e.target.checked)}
           disabled={waiting}
         />
-        全天事项
+        {msg("全天事项")}
       </label>
       <div className="calendar-form-grid">
         <label>
-          开始
+          {msg("开始")}
           <input
-            aria-label="事项开始"
+            aria-label={msg("事项开始")}
             type={allDay ? "date" : "datetime-local"}
             value={start}
             onInput={(e) => changeStart(e.currentTarget.value)}
@@ -240,9 +252,9 @@ export default function EventEditor({
           />
         </label>
         <label>
-          {allDay ? "结束日期（含当天）" : "结束"}
+          {allDay ? msg("结束日期（含当天）") : msg("结束")}
           <input
-            aria-label="事项结束"
+            aria-label={msg("事项结束")}
             type={allDay ? "date" : "datetime-local"}
             value={end}
             onInput={(e) => changeEnd(e.currentTarget.value)}
@@ -252,9 +264,9 @@ export default function EventEditor({
           />
         </label>
         <label>
-          时区
+          {msg("时区")}
           <select
-            aria-label="事项时区"
+            aria-label={msg("事项时区")}
             value={zone}
             onChange={(e) => changeZone(e.target.value)}
             disabled={waiting}
@@ -267,25 +279,25 @@ export default function EventEditor({
           </select>
         </label>
         <label>
-          状态
+          {msg("状态")}
           <select
-            aria-label="事项状态"
+            aria-label={msg("事项状态")}
             value={status}
             onChange={(e) =>
               setStatus(e.target.value as CalendarEvent["status"])
             }
             disabled={waiting}
           >
-            <option value="planned">待办</option>
-            <option value="done">已完成</option>
-            <option value="cancelled">已取消</option>
+            <option value="planned">{msg("待办")}</option>
+            <option value="done">{msg("已完成")}</option>
+            <option value="cancelled">{msg("已取消")}</option>
           </select>
         </label>
       </div>
       <label>
-        备注
+        {msg("备注")}
         <textarea
-          aria-label="事项备注"
+          aria-label={msg("事项备注")}
           value={notes}
           maxLength={40_000}
           onChange={(e) => setNotes(e.target.value)}
@@ -300,14 +312,14 @@ export default function EventEditor({
       )}
       <div className="calendar-form-actions">
         <button type="button" onClick={onCancel} disabled={waiting}>
-          取消
+          {msg("取消")}
         </button>
         <button
           type="submit"
           className="calendar-primary"
           disabled={waiting || stale}
         >
-          {waiting ? "正在保存…" : "保存事项"}
+          {waiting ? msg("正在保存…") : msg("保存事项")}
         </button>
         {onDelete && (
           <button
@@ -316,19 +328,19 @@ export default function EventEditor({
             disabled={waiting || stale}
             onClick={() => setConfirmDelete(true)}
           >
-            删除事项
+            {msg("删除事项")}
           </button>
         )}
       </div>
       {confirmDelete && (
         <div className="calendar-delete-confirm" role="alert">
-          <span>删除此事项？可通过文档撤销恢复。</span>
+          <span>{msg("删除此事项？可通过文档撤销恢复。")}</span>
           <button
             type="button"
             onClick={() => setConfirmDelete(false)}
             disabled={waiting}
           >
-            保留
+            {msg("保留")}
           </button>
           <button
             type="button"
@@ -348,7 +360,7 @@ export default function EventEditor({
               }
             }}
           >
-            确认删除事项
+            {msg("确认删除事项")}
           </button>
         </div>
       )}

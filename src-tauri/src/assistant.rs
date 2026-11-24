@@ -15,12 +15,14 @@ use std::{
 };
 use uuid::Uuid;
 
-pub(crate) const SCHEMA: i64 = 4;
+pub(crate) const SCHEMA: i64 = 5;
 pub const GENERAL_OWNER: &str = "general";
 #[path = "assistant_attachments.rs"]
 pub mod attachments;
 #[path = "assistant_memory.rs"]
 pub mod memory;
+#[path = "assistant_tasks.rs"]
+pub mod tasks;
 const MAX_TURNS: i64 = 200;
 const MAX_CANDIDATES: i64 = 12;
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -33,6 +35,8 @@ pub struct Candidate {
     pub created_at: String,
     pub error: Option<String>,
     pub response: Option<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_receipt: Option<crate::request_receipt::Receipt>,
 }
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -222,8 +226,19 @@ fn open(data: &Path) -> Result<Connection, String> {
                  CHECK (web_access IN ('auto','local-only'));",
             )
             .map_err(err)?;
-            tx.pragma_update(None, "user_version", SCHEMA)
+            tx.pragma_update(None, "user_version", 4)
                 .map_err(err)?;
+        }
+        tx.commit().map_err(err)?;
+    }
+    if version < 5 {
+        let tx = c.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate).map_err(err)?;
+        let current: i64 = tx.pragma_query_value(None, "user_version", |r| r.get(0)).map_err(err)?;
+        if current < 5 {
+            let has_receipt:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM pragma_table_info('candidates') WHERE name='context_receipt')",[],|r|r.get(0)).map_err(err)?;
+            if !has_receipt { tx.execute_batch("ALTER TABLE candidates ADD COLUMN context_receipt TEXT").map_err(err)?; }
+            tx.execute_batch(tasks::CREATE_LINKS).map_err(err)?;
+            tx.pragma_update(None, "user_version", SCHEMA).map_err(err)?;
         }
         tx.commit().map_err(err)?;
     }
@@ -337,7 +352,8 @@ fn read_versioned(
         if workspace == GENERAL_OWNER {
             t.sources = attachments::selection(c, &t.id)?;
         }
-        let mut st=c.prepare("SELECT id,request_id,status,created_at,error,response,requested_mode FROM candidates WHERE turn_id=? ORDER BY rowid").map_err(err)?;
+        let receipt_column = if version >= 5 { "context_receipt" } else { "NULL" };
+        let mut st=c.prepare(&format!("SELECT id,request_id,status,created_at,error,response,requested_mode,{receipt_column} FROM candidates WHERE turn_id=? ORDER BY rowid")).map_err(err)?;
         let rows = st
             .query_map([&t.id], |r| {
                 Ok((
@@ -348,16 +364,18 @@ fn read_versioned(
                     r.get::<_, Option<String>>(4)?,
                     r.get::<_, Option<String>>(5)?,
                     r.get::<_, String>(6)?,
+                    r.get::<_, Option<String>>(7)?,
                 ))
             })
             .map_err(err)?;
         for row in rows {
-            let (id, request_id, status, created_at, error, response, requested_mode) =
+            let (id, request_id, status, created_at, error, response, requested_mode, receipt) =
                 row.map_err(err)?;
             t.candidates.push(Candidate {
                 id,
                 request_id,
                 requested_mode,
+                context_receipt: receipt.map(|raw| serde_json::from_str(&raw).map_err(err)).transpose()?,
                 status,
                 created_at,
                 error,
@@ -928,7 +946,14 @@ pub fn finish(
     if response.as_ref().is_some_and(|s| s.len() > 2 * 1024 * 1024) {
         return Err("会话答案超过2MB保护限制".into());
     }
-    let changed=tx.execute("UPDATE candidates SET status=?,error=?,response=? WHERE id=? AND turn_id=? AND status='generating' AND process_id=?",params![status,error,response,started.candidate_id,started.turn_id,process_id()]).map_err(err)?;
+    let receipt = crate::request_receipt::snapshot().map(|mut receipt| {
+        if let Ok(answer)=result {
+            let total=answer.sources.len()+answer.external_sources.len();
+            receipt.cited_sources=Some(crate::answer_validation::cited_numbers(&answer.text).into_iter().filter(|id| (1..=total).contains(id)).count());
+        }
+        serde_json::to_string(&receipt)
+    }).transpose().map_err(err)?;
+    let changed=tx.execute("UPDATE candidates SET status=?,error=?,response=?,context_receipt=? WHERE id=? AND turn_id=? AND status='generating' AND process_id=?",params![status,error,response,receipt,started.candidate_id,started.turn_id,process_id()]).map_err(err)?;
     if changed != 1 {
         return Err("生成所属会话已变化，未保存晚到回答".into());
     }

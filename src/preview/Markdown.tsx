@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import {
   useEffect,
   useId,
@@ -7,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import { Copy, FilePenLine } from "lucide-react";
 import {
   codeBlocks,
   parseMarkdown,
@@ -14,6 +16,9 @@ import {
   type MarkdownNode,
 } from "../content/blocks";
 import { replaceRange } from "../session";
+import { scanTrackedTasks, taskAnnotation } from "../content/tasks";
+import { taskDetails, taskToggleLabel } from "../content/taskPresentation";
+import "./taskRows.css";
 import { isSafeBreak } from "../rich/markdown";
 import { blockTypes } from "../rich/blocks";
 import type { SearchResult } from "../types";
@@ -80,7 +85,7 @@ function LocalImage({
     <img src={src} alt={alt} onError={() => setFailed(true)} />
   ) : (
     <span className="preview-help">
-      [{failed ? "图片不可读取" : readOnly ? "图片未自动加载" : "本地图片"}：
+      [{failed ? msg("图片不可读取") : readOnly ? msg("图片未自动加载") : msg("本地图片")}：
       {alt || url}]
     </span>
   );
@@ -128,6 +133,7 @@ export default function Markdown({
   rejectedCharts?: number[];
 }) {
   const ast = useMemo(() => parseMarkdown(source), [source]);
+  const taskRows = useMemo(() => new Map(scanTrackedTasks(source, ast).map(row => [row.line, row])), [source, ast]);
   const blocks = useMemo(() => codeBlocks(source, ast), [source, ast]);
   const identities = useMemo(
     () => (readOnly ? [] : contentBlockIdentities(viewKey, source, ast)),
@@ -296,7 +302,24 @@ export default function Markdown({
         ) : (
           <ul key={key}>{children()}</ul>
         );
-      case "listItem":
+      case "listItem": {
+        const annotation = taskAnnotation(node);
+        const first = node.children?.[0];
+        const row = taskRows.get(node.position.start.line);
+        if (row && annotation && first) {
+          const toggle = !readOnly && onApply && !row.duplicate ? () => {
+            onApply(source, source.slice(0, row.checkFrom) + (row.done ? " " : "x") + source.slice(row.checkFrom + 1));
+          } : undefined;
+          return (
+            <li key={key} className="document-task-row" data-complete={row.done}>
+              <input className="document-task-check" type="checkbox" checked={row.done} disabled={!toggle}
+                aria-label={taskToggleLabel(row.title, row.done)} onChange={toggle} />
+              {render({ ...first, children: first.children?.filter(n => n !== annotation.node) }, key + ":title", allowCitations)}
+              <span className="document-task-details">{taskDetails(row, row.done).map(detail => <span key={detail}>{detail}</span>)}</span>
+              {node.children!.slice(1).map((child, i) => render(child, key + ":child" + i, allowCitations))}
+            </li>
+          );
+        }
         return (
           <li key={key}>
             {typeof node.checked === "boolean" && (
@@ -305,12 +328,14 @@ export default function Markdown({
                 checked={node.checked}
                 readOnly
                 disabled
-                aria-label={node.checked ? "已完成任务" : "未完成任务"}
+                aria-label={node.checked ? msg("已完成任务") : msg("未完成任务")}
               />
             )}{" "}
-            {children()}
+            {annotation && first ? [render({...first, children:first.children?.filter(n=>n!==annotation.node)},key+":title",allowCitations),
+              ...node.children!.slice(1).map((child,i)=>render(child,key+":child"+i,allowCitations))] : children()}
           </li>
         );
+      }
       case "table": {
         const rows = node.children ?? [];
         return (
@@ -445,33 +470,55 @@ export default function Markdown({
             : -1;
         const rejected =
           language === "chart" && rejectedCharts?.includes(chartIndex);
-        return (
-          <section key={key} className="code-preview-block">
-            <div className="block-label">
-              <span>
-                {known
-                  ? blockTypes[language as keyof typeof blockTypes].label
-                  : language}{" "}
-                · 第 {node.position.start.line} 行
-              </span>
-              {!readOnly && onLocate && (
-                <button onClick={() => onLocate(node.position.start.line)}>
-                  编辑源码
-                </button>
-              )}
+        const diagram =
+          (language === "mermaid" ||
+            language === "mindmap" ||
+            language === "chart") &&
+          !!block &&
+          !rejected &&
+          !pending;
+        const chartControls = diagram && language === "chart";
+        const blockLabel = (
+          <div className="block-label">
+            <span>
+              {known
+                ? blockTypes[language as keyof typeof blockTypes].label
+                : language}{" "}
+              {msg("· 第")} {node.position.start.line} {msg("行")}
+            </span>
+            {!readOnly && onLocate && (
               <button
-                onClick={() =>
-                  void navigator.clipboard
-                    .writeText(node.value ?? "")
-                    .catch((e) => onError?.(String(e)))
-                }
+                title={msg("编辑源码")}
+                aria-label={msg("编辑源码")}
+                onClick={() => onLocate(node.position.start.line)}
               >
-                复制
+                {chartControls ? <FilePenLine size={15} /> : msg("编辑源码")}
               </button>
-            </div>
+            )}
+            <button
+              title={msg("复制")}
+              aria-label={msg("复制")}
+              onClick={() =>
+                void navigator.clipboard
+                  .writeText(node.value ?? "")
+                  .catch((e) => onError?.(String(e)))
+              }
+            >
+              {chartControls ? <Copy size={15} /> : msg("复制")}
+            </button>
+          </div>
+        );
+        return (
+          <section
+            key={key}
+            className="code-preview-block"
+            data-diagram={diagram || undefined}
+          >
+            {!diagram && blockLabel}
             {known && block && !pending && !rejected ? (
               <ContentBlock
                 kind={language}
+                toolbarExtras={diagram ? blockLabel : undefined}
                 source={block.text}
                 viewKey={`${viewKey}:block:${identities[blocks.indexOf(block)] ?? block.id}`}
                 readOnly={readOnly}
@@ -502,10 +549,10 @@ export default function Markdown({
                 {known && (
                   <p className="preview-help">
                     {rejected
-                      ? "图表数值或来源待核实，暂以原文显示。"
+                      ? msg("图表数值或来源待核实，暂以原文显示。")
                       : pending
-                        ? "内容尚未完成，暂以原文显示。"
-                        : "代码围栏尚未闭合，原文已保留。"}
+                        ? msg("内容尚未完成，暂以原文显示。")
+                        : msg("代码围栏尚未闭合，原文已保留。")}
                   </p>
                 )}
                 <pre>

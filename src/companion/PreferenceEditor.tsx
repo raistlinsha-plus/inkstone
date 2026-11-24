@@ -1,7 +1,8 @@
+import { msg } from "../i18n";
 import { useState } from "react";
 import type { Workspace } from "../types";
 import {
-  characters,
+  characterProfiles,
   contextOf,
   preferenceLabels,
   type Snapshot,
@@ -63,19 +64,19 @@ export default function PreferenceEditor({
   };
   return (
     <>
-      <h3>你确认的偏好</h3>
+      <h3>{msg("你确认的偏好")}</h3>
       {snapshot.preferences.map((p) => (
         <article className="companion-preference" key={p.id}>
           <p>
-            {preferenceLabels[p.key] ?? p.key}：{p.value}
+            {preferenceLabels[p.key] ? msg(preferenceLabels[p.key]) : p.key}：{p.value}
           </p>
           <small>
             {p.scope === "global"
-              ? "全局"
+              ? msg("全局")
               : p.scope === "character"
-                ? characters[p.scopeId as CharacterId]?.name
-                : "指定空间"}{" "}
-            · {p.enabled ? "启用" : "停用"}
+                ? characterProfiles()[p.scopeId as CharacterId]?.name
+                : msg("指定空间")}{" "}
+            · {p.enabled ? msg("启用") : msg("停用")}
           </small>
           <button
             disabled={busy || p.key === "nickname"}
@@ -86,22 +87,22 @@ export default function PreferenceEditor({
               setScope(p.scope);
             }}
           >
-            编辑
+            {msg("编辑")}
           </button>
           <button
             disabled={busy || p.key === "nickname"}
             onClick={() => void save(p)}
           >
-            {p.enabled ? "停用" : "启用"}
+            {p.enabled ? msg("停用") : msg("启用")}
           </button>
           <button disabled={busy} onClick={() => void save(p, true)}>
-            删除
+            {msg("删除")}
           </button>
         </article>
       ))}
       <div className="companion-preference-form">
         <label>
-          偏好类别
+          {msg("偏好类别")}
           <select
             value={key}
             onChange={(e) => {
@@ -119,34 +120,34 @@ export default function PreferenceEditor({
           </select>
         </label>
         <label>
-          内容
+          {msg("内容")}
           <input
             value={value}
             maxLength={100}
-            placeholder="例如：先给结论，再列依据"
+            placeholder={msg("例如：先给结论，再列依据")}
             onChange={(e) => setValue(e.target.value)}
           />
         </label>
         <label>
-          范围
+          {msg("范围")}
           <select value={scope} onChange={(e) => setScope(e.target.value)}>
-            <option value="global">全局</option>
+            <option value="global">{msg("全局")}</option>
             {key === "nickname" ? (
-              <option value="character">当前角色</option>
+              <option value="character">{msg("当前角色")}</option>
             ) : (
               workspace?.managedProjectId && (
-                <option value="space">当前空间</option>
+                <option value="space">{msg("当前空间")}</option>
               )
             )}
           </select>
         </label>
         <button disabled={busy || !value.trim()} onClick={() => void save()}>
-          {editing ? "保存偏好修改" : "确认保存偏好"}
+          {editing ? msg("保存偏好修改") : msg("确认保存偏好")}
         </button>
-        {editing && <button onClick={reset}>取消修改</button>}
+        {editing && <button onClick={reset}>{msg("取消修改")}</button>}
       </div>
       <p className="companion-note">
-        偏好限于回答表达，不改变资料、权限和证据充分性。旧称呼值保留并可删除；本版暂不应用称呼。故事与经历不会成为检索资料。
+        {msg("偏好限于回答表达，不改变资料、权限和证据充分性。旧称呼值保留并可删除；本版暂不应用称呼。故事与经历不会成为检索资料。")}
       </p>
     </>
   );

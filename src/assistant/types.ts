@@ -1,5 +1,32 @@
 import type { ChatResponse } from "../types";
+export interface TransportReceipt {
+  attempts: {
+    service:
+      | "answer"
+      | "webPlan"
+      | "reviewPassages"
+      | "structured"
+      | "embedding"
+      | "rerank"
+      | "webSearch"
+      | "webPage";
+    inputChars: number;
+    sources?: {
+      documents: number;
+      wiki: number;
+      attachments: number;
+      web: number;
+    } | null;
+    httpStatus: number | null;
+    inputTokens: number | null;
+    outputTokens: number | null;
+  }[];
+  overflow: number;
+  citedSources?: number | null;
+}
+
 export interface Candidate {
+  contextReceipt?: TransportReceipt | null;
   id: string;
   requestId: string;
   requestedMode?: "keyword" | "hybrid" | "rerank";

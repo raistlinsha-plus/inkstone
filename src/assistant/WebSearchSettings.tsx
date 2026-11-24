@@ -1,3 +1,4 @@
+import { msg, systemMessage } from "../i18n";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import ModalDialog from "../ModalDialog";
@@ -13,7 +14,7 @@ const diagnosticMessages = {
   missing_key: "未找到可用密钥，请输入 Brave Search API 密钥后重试。",
   invalid_key: "密钥格式不正确，请检查复制的内容后重试。",
   keychain:
-    "暂时无法读取已保存的密钥。请检查 macOS 钥匙串授权，或用新输入的密钥测试。",
+    "暂时无法读取本地搜索密钥。请检查本地配置或填写密钥后再测试。",
   timeout: "连接 Brave Search 超时。请检查网络或系统代理后重试。",
   connection: "未能与 Brave Search 建立连接。请检查网络、DNS 或系统代理。",
   unauthorized: "Brave Search 未接受该密钥。请检查密钥是否有效。",
@@ -47,6 +48,7 @@ export default function WebSearchSettings({
   const [clear, setClear] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [importMessage, setImportMessage] = useState("");
   const [testing, setTesting] = useState(false);
   const [diagnostic, setDiagnostic] = useState<BraveDiagnostic>();
   useEffect(() => {
@@ -83,6 +85,26 @@ export default function WebSearchSettings({
     }
   }
 
+  async function importLegacyKey() {
+    if (!settings || settings.hasKey || busy || testing || clear || key.trim()) return;
+    setBusy(true);
+    setError("");
+    setImportMessage("");
+    setDiagnostic(undefined);
+    try {
+      if (await invoke<boolean>("import_legacy_model_key", { kind: "web-brave" })) {
+        setSettings({ ...settings, hasKey: true });
+        setImportMessage(msg("密钥已导入本机，可直接使用。"));
+      } else {
+        setError(msg("未找到可导入的旧密钥。请填写 API 密钥后保存。"));
+      }
+    } catch {
+      setError(msg("未能导入旧密钥。可重试并允许这次钥匙串读取，或填写 API 密钥后保存。"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function testConnection() {
     if (busy || testing || clear) return;
     setTesting(true);
@@ -108,17 +130,16 @@ export default function WebSearchSettings({
 
   return (
     <ModalDialog
-      label="自动联网设置"
+      label={msg("自动联网设置")}
       className="settings-modal web-search-settings"
       busy={busy}
       onClose={onClose}
     >
-      <h2>自动联网</h2>
+      <h2>{msg("自动联网")}</h2>
       <p>
-        配置 Brave Search
-        后，模型按问题判断是否查公开资料。搜索接口可使用系统代理，候选网页只允许安全直连。
+        {msg("配置 Brave Search 后，模型按问题判断是否查公开资料。搜索接口可使用系统代理，候选网页只允许安全直连。")}
       </p>
-      {!settings && !error && <p role="status">正在读取搜索设置…</p>}
+      {!settings && !error && <p role="status">{msg("正在读取搜索设置…")}</p>}
       {settings && (
         <form
           onSubmit={(event) => {
@@ -133,22 +154,34 @@ export default function WebSearchSettings({
               onChange={(e) => setEnabled(e.target.checked)}
               disabled={busy || testing}
             />
-            允许模型按需联网
+            {msg("允许模型按需联网")}
           </label>
           <label className="web-search-key">
-            Brave Search API 密钥
+            {msg("Brave Search API 密钥")}
             <input
               type="password"
               autoComplete="off"
               value={key}
-              placeholder={settings.hasKey ? "已保存 · 留空保留" : "输入密钥"}
+              placeholder={settings.hasKey ? msg("已保存 · 留空保留") : msg("输入密钥")}
               disabled={busy || testing || clear}
               onChange={(e) => {
                 setKey(e.target.value);
+                setImportMessage("");
+                setError("");
                 setDiagnostic(undefined);
               }}
             />
           </label>
+          <small>{msg("API 密钥保存在当前 Mac 用户的本地配置中。")}</small>
+          {!settings.hasKey && !key.trim() && !clear && (
+            <div>
+              <button type="button" className="button small" disabled={busy || testing} onClick={importLegacyKey}>
+                {msg("从旧钥匙串导入")}
+              </button>{" "}
+              <small>{msg("仅导入时可能弹出 macOS 授权提示。")}</small>
+            </div>
+          )}
+          {importMessage && <p role="status">{importMessage}</p>}
           {settings.hasKey && (
             <label className="web-search-toggle">
               <input
@@ -164,10 +197,10 @@ export default function WebSearchSettings({
                   }
                 }}
               />
-              删除已保存的搜索密钥
+              {msg("删除已保存的搜索密钥")}
             </label>
           )}
-          <section className="web-search-diagnostic" aria-label="连接诊断">
+          <section className="web-search-diagnostic" aria-label={msg("连接诊断")}>
             <button
               type="button"
               className="button"
@@ -175,17 +208,16 @@ export default function WebSearchSettings({
               aria-describedby="web-search-test-description"
               onClick={() => void testConnection()}
             >
-              测试连接
+              {msg("测试连接")}
             </button>
             <p id="web-search-test-description">
-              发送一条固定的公开查询，并尝试读取候选网页的正文。测试可能计入
-              Brave 用量，可在自动联网关闭时运行，且不会保存密钥或设置。
+              {msg("发送一条固定的公开查询，并尝试读取候选网页的正文。测试可能计入 Brave 用量，可在自动联网关闭时运行，且不会保存密钥或设置。")}
             </p>
             <div role="status" aria-atomic="true">
-              {testing && <p>正在测试 Brave Search…</p>}
+              {testing && <p>{msg("正在测试 Brave Search…")}</p>}
               {diagnostic && (
                 <>
-                  <p>{diagnosticMessages[diagnostic.status]}</p>
+                  <p>{systemMessage(diagnosticMessages[diagnostic.status])}</p>
                   {(diagnostic.httpStatus != null ||
                     diagnostic.searchElapsedMs != null ||
                     diagnostic.candidateCount != null ||
@@ -195,13 +227,13 @@ export default function WebSearchSettings({
                         <li>HTTP {diagnostic.httpStatus}</li>
                       )}
                       {diagnostic.searchElapsedMs != null && (
-                        <li>搜索耗时 {diagnostic.searchElapsedMs} ms</li>
+                        <li>{msg("搜索耗时")} {diagnostic.searchElapsedMs} ms</li>
                       )}
                       {diagnostic.candidateCount != null && (
-                        <li>{diagnostic.candidateCount} 条可尝试的候选</li>
+                        <li>{diagnostic.candidateCount} {msg("条可尝试的候选")}</li>
                       )}
                       {diagnostic.pageElapsedMs != null && (
-                        <li>网页读取 {diagnostic.pageElapsedMs} ms</li>
+                        <li>{msg("网页读取")} {diagnostic.pageElapsedMs} ms</li>
                       )}
                     </ul>
                   )}
@@ -216,7 +248,7 @@ export default function WebSearchSettings({
               disabled={busy}
               onClick={onClose}
             >
-              取消
+              {msg("取消")}
             </button>
             <button
               type="submit"
@@ -227,7 +259,7 @@ export default function WebSearchSettings({
                 (enabled && (clear || (!settings.hasKey && !key.trim())))
               }
             >
-              保存
+              {msg("保存")}
             </button>
           </div>
         </form>

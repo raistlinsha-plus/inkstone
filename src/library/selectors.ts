@@ -11,10 +11,7 @@ export const defaultView: ViewPreferences = {
   sort: "nameAsc",
   pinnedCollapsed: false,
 };
-const names = new Intl.Collator("zh-CN", {
-  numeric: true,
-  sensitivity: "base",
-});
+
 export function selectDocuments(
   documents: LibraryDocument[],
   project: string,
@@ -24,6 +21,7 @@ export function selectDocuments(
   pins: string[],
   type = "all",
 ) {
+  const names = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
   const pinned = new Set(pins);
   return documents
     .filter(

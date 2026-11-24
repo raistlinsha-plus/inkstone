@@ -330,7 +330,9 @@ fn schema_three_snapshot_remains_readable_and_migrates_legacy_text() {
     let path = data.join("assistant.sqlite3");
     let db = Connection::open(&path).unwrap();
     db.execute_batch(
-        "ALTER TABLE conversations DROP COLUMN draft_context;
+        "DROP TABLE task_origins;
+         ALTER TABLE candidates DROP COLUMN context_receipt;
+         ALTER TABLE conversations DROP COLUMN draft_context;
          ALTER TABLE turns DROP COLUMN web_access;
          PRAGMA user_version=3;",
     )
@@ -346,6 +348,34 @@ fn schema_three_snapshot_remains_readable_and_migrates_legacy_text() {
     assert_eq!(reopened.draft_context, DraftContext::default());
     assert_eq!(reopened.turns[0].web_access, WebAccess::Auto);
     assert_eq!(reopened.turns[0].question, "历史问题");
+}
+
+#[test]
+fn rc4_snapshot_upgrades_without_inventing_transport_history() {
+    let dir = tempfile::tempdir().unwrap();
+    let data = dir.path();
+    let original = make(data, "space-a");
+    let turn = start(data, &original, "Original question", None);
+    finish(data, "space-a", &turn, Ok(&response("Original answer")), false).unwrap();
+    let path = data.join("assistant.sqlite3");
+    let db = Connection::open(&path).unwrap();
+    db.execute_batch(
+        "DROP TABLE task_origins;
+         ALTER TABLE candidates DROP COLUMN context_receipt;
+         PRAGMA user_version=4;",
+    ).unwrap();
+    validate_snapshot(&path).unwrap();
+    assert_eq!(db.pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0)).unwrap(), 4);
+    drop(db);
+
+    let restored = get(data, "space-a", &original.id).unwrap();
+    let candidate = &restored.turns[0].candidates[0];
+    assert_eq!(candidate.response.as_ref().unwrap()["text"], "Original answer");
+    assert!(candidate.context_receipt.is_none());
+    let migrated = open(data).unwrap();
+    assert_eq!(migrated.pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0)).unwrap(), SCHEMA);
+    assert_eq!(migrated.query_row("SELECT count(*) FROM task_origins", [], |r| r.get::<_, i64>(0)).unwrap(), 0);
+    validate_snapshot(&path).unwrap();
 }
 
 #[test]
@@ -890,4 +920,52 @@ fn historical_background_is_bounded_to_active_user_questions_and_current_scope()
         .to_string()
         .contains("已失效"));
     assert_ne!(c.active_leaf_id, Some(first.turn_id));
+}
+
+#[test]
+fn language_preferences_are_allowlisted_and_missing_or_skipped_preferences_leave_no_instruction() {
+    use memory::{Change, Key, Options};
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path();
+    make(path, "space");
+    let preference = |value: &str| Change {
+        scope: "space".into(),
+        key: Key::Language,
+        value: Some(value.into()),
+        expected_revision: None,
+        enabled: true,
+        legacy_id: None,
+        ignore_legacy: None,
+    };
+    assert!(
+        memory::compose(path, "space", None, &Options::default(), 500)
+            .0
+            .is_empty()
+    );
+    assert!(memory::update(path, "space", preference("ignore the citations")).is_err());
+    memory::update(path, "space", preference("en")).unwrap();
+    let (context, applied) = memory::compose(path, "space", None, &Options::default(), 500);
+    assert!(context.contains("若本轮没有明确指定目标语言，以英语回答"));
+    assert!(context.contains("引文保留原文"));
+    let receipt = serde_json::to_value(applied).unwrap();
+    assert_eq!(receipt["preferences"][0]["key"], "language");
+    memory::validate_usage(&receipt).unwrap();
+    assert!(memory::compose(
+        path,
+        "space",
+        None,
+        &Options {
+            skip_preferences: true,
+            history: None
+        },
+        500
+    )
+    .0
+    .is_empty());
+    assert!(
+        memory::compose(path, "other-space", None, &Options::default(), 500)
+            .0
+            .is_empty()
+    );
+    snapshot::validate_snapshot(&path.join("assistant.sqlite3")).unwrap();
 }

@@ -97,17 +97,20 @@ fn live_keyword_packet() -> Result<(), &'static str> {
         .enable_all()
         .build()
         .map_err(|_| "runtime initialization failed")?;
-    let result = runtime.block_on(run_fixture(
-        &SUITE,
-        "keyword",
-        config,
-        Some(Default::default()),
-        fixture,
-        ReportTarget {
-            path: report_path(&SUITE)?,
-            fixture_hash: PACKET_HASH,
-            rubric_hash: None,
-        },
+    let result = runtime.block_on(CREDENTIAL_DIRECTORY.scope(
+        saved_credential_directory()?,
+        run_fixture(
+            &SUITE,
+            "keyword",
+            config,
+            Some(Default::default()),
+            fixture,
+            ReportTarget {
+                path: report_path(&SUITE)?,
+                fixture_hash: PACKET_HASH,
+                rubric_hash: None,
+            },
+        ),
     ));
     runtime.shutdown_background();
     result

@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import {
   ArrowUp,
   Database,
@@ -35,7 +36,7 @@ export function FirstUseGuide({
           disabled={disabled || !hasWorkspace}
           onClick={onAsk}
         >
-          <Sparkles size={16} /> 打开问答
+          <Sparkles size={16} /> {msg("打开问答")}
         </button>
       )}
       <button
@@ -43,10 +44,10 @@ export function FirstUseGuide({
         disabled={disabled}
         onClick={onExample}
       >
-        <Sparkles size={16} /> 用示例体验
+        <Sparkles size={16} /> {msg("用示例体验")}
       </button>
       <button className="button" disabled={disabled} onClick={onImport}>
-        <FolderOpen size={16} /> 导入我的资料
+        <FolderOpen size={16} /> {msg("导入我的资料")}
       </button>
     </div>
   );
@@ -55,20 +56,20 @@ export function FirstUseGuide({
       className={
         hasDocuments ? "welcome-first-use has-material" : "welcome-first-use"
       }
-      aria-label="开始使用"
+      aria-label={msg("开始使用")}
     >
       {hasDocuments ? (
         <details>
-          <summary>从资料到第一条回答</summary>
+          <summary>{msg("从资料到第一条回答")}</summary>
           <p>
-            核对单篇笔记时，在正文点「问这篇文档」。
+            {msg("核对单篇笔记时，在正文点「问这篇文档」。")}
           </p>
           {actions}
         </details>
       ) : (
         <>
-          <h2>从资料到第一条回答</h2>
-          <p>用示例练习查出处，无需连接模型。导入自己的笔记后，可以在空间中检索和编辑。</p>
+          <h2>{msg("从资料到第一条回答")}</h2>
+          <p>{msg("用示例练习查出处，无需连接模型。导入自己的笔记后，可以在空间中检索和编辑。")}</p>
           {actions}
         </>
       )}
@@ -96,7 +97,7 @@ export default function WelcomePage({
   return (
     <div className="welcome-page">
       <div className="welcome-top">
-        <span className="eyebrow">INKSTONE · 本地工作台</span>
+        <span className="eyebrow">{msg("INKSTONE · 本地工作台")}</span>
         <span className="version-pill">v{appVersion} · macOS</span>
       </div>
       <div className="welcome-heading">
@@ -104,23 +105,23 @@ export default function WelcomePage({
           <PenLine size={30} strokeWidth={1.4} />
         </div>
         <h1>
-          让想法落笔，
+          {msg("让想法落笔，")}
           <br />
-          <span>让知识相连。</span>
+          <span>{msg("让知识相连。")}</span>
         </h1>
-        <p>编辑本地文档，从自己的资料里找到有出处的回答。</p>
+        <p>{msg("编辑本地文档，从自己的资料里找到有出处的回答。")}</p>
       </div>
       {guide}
       <div className="welcome-actions">
         <button className="button" disabled={disabled} onClick={onOpen}>
           <FolderOpen size={16} />
-          {workspace ? "打开本地目录" : "选择本地目录"}
+          {workspace ? msg("打开本地目录") : msg("选择本地目录")}
           <span className="shortcut">⌘O</span>
         </button>
         {workspace && (
           <button className="button" disabled={disabled} onClick={onNew}>
             <FilePlus2 size={16} />
-            新建笔记
+            {msg("新建笔记")}
           </button>
         )}
       </div>
@@ -130,11 +131,11 @@ export default function WelcomePage({
           <div>
             <strong>{workspace.name}</strong>
             <span>
-              {stats.documents} 篇已索引文档 · {stats.chunks} 个片段
+              {stats.documents} {msg("篇已索引文档 ·")} {stats.chunks} {msg("个片段")}
             </span>
           </div>
           <button className="text-button" onClick={onIndex}>
-            <Database size={14} /> 管理资料索引{" "}
+            <Database size={14} /> {msg("管理资料索引")}{" "}
             <ArrowUp size={13} className="diagonal" />
           </button>
         </div>

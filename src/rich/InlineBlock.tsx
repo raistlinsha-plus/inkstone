@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { useEffect, useRef, useState } from "react";
 import { MoreHorizontal } from "lucide-react";
 import ContentBlock from "../preview/ContentBlock";
@@ -23,6 +24,8 @@ export default function InlineBlock({
   const kind = language.toLowerCase(),
     known = Object.hasOwn(blockTypes, kind),
     raw = language.startsWith("inkstone-raw-");
+  const diagram = kind === "mermaid" || kind === "mindmap" || kind === "chart";
+  const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
   const [editing, setEditing] = useState(!known && !raw && !source),
     [large, setLarge] = useState(false),
     [error, setError] = useState(""),
@@ -104,7 +107,7 @@ export default function InlineBlock({
   return (
     <section
       ref={ref}
-      className={`inline-content-block ${large ? "expanded" : ""} ${editing ? "is-editing" : ""}`}
+      className={`inline-content-block ${diagram ? "diagram-block" : ""} ${large ? "expanded" : ""} ${editing || (kind === "chart" && activeInteraction) ? "is-editing" : ""}`}
       data-kind={language}
       aria-label={`${known ? blockTypes[kind as BlockKind].label : raw ? "原始 Markdown" : language || "代码"}内容块`}
     >
@@ -113,13 +116,16 @@ export default function InlineBlock({
           {known
             ? blockTypes[kind as BlockKind].label
             : raw
-              ? "原始 Markdown"
-              : language || "代码"}
+              ? msg("原始 Markdown")
+              : language || msg("代码")}
         </button>
+        {diagram && <div className="diagram-tool-slot" ref={setToolbarHost} />}
         <div className="block-actions">
-          <button onClick={() => setEditing(!editing)}>
-            {editing ? "完成编辑" : "编辑代码"}
-          </button>
+          {(kind !== "chart" || editing) && (
+            <button onClick={() => setEditing(!editing)}>
+              {editing ? msg("完成编辑") : msg("编辑代码")}
+            </button>
+          )}
           <details
             className="block-menu"
             ref={menu}
@@ -135,17 +141,36 @@ export default function InlineBlock({
               }
             }}
           >
-            <summary aria-label="内容块操作">
+            <summary aria-label={msg("内容块操作")}>
               <MoreHorizontal size={17} />
             </summary>
-            <div role="group" aria-label="内容块操作">
-              <button aria-label="上移内容块" onClick={() => run("up")}>
-                上移
+            <div role="group" aria-label={msg("内容块操作")}>
+              {kind === "chart" && !editing && (
+                <button
+                  disabled={activeInteraction}
+                  onClick={() => {
+                    setEditing(true);
+                    if (menu.current) menu.current.open = false;
+                  }}
+                >
+                  {msg("编辑代码")}
+                </button>
+              )}
+              {diagram && (
+                <button onClick={() => run("after")}>
+                  {msg("在块后继续写作")}
+                </button>
+              )}
+              <button aria-label={msg("上移内容块")} onClick={() => run("up")}>
+                {msg("上移")}
               </button>
-              <button aria-label="下移内容块" onClick={() => run("down")}>
-                下移
+              <button
+                aria-label={msg("下移内容块")}
+                onClick={() => run("down")}
+              >
+                {msg("下移")}
               </button>
-              <button onClick={() => run("duplicate")}>复制块</button>
+              <button onClick={() => run("duplicate")}>{msg("复制块")}</button>
               <button
                 onClick={() => {
                   void navigator.clipboard
@@ -157,7 +182,7 @@ export default function InlineBlock({
                   if (menu.current) menu.current.open = false;
                 }}
               >
-                复制内容
+                {msg("复制内容")}
               </button>
               <button
                 onClick={() => {
@@ -165,7 +190,7 @@ export default function InlineBlock({
                   if (menu.current) menu.current.open = false;
                 }}
               >
-                {large ? "收起" : "放大"}
+                {large ? msg("收起") : msg("放大")}
               </button>
               <button
                 className="danger"
@@ -174,18 +199,20 @@ export default function InlineBlock({
                   if (menu.current) menu.current.open = false;
                 }}
               >
-                删除块
+                {msg("删除块")}
               </button>
             </div>
           </details>
-          {large && <button onClick={() => setLarge(false)}>收起</button>}
+          {large && (
+            <button onClick={() => setLarge(false)}>{msg("收起")}</button>
+          )}
         </div>
       </header>
       {deleting && (
         <div className="preview-error" role="alert">
-          删除整个内容块？可撤销。
-          <button onClick={() => run("delete")}>确认删除块</button>
-          <button onClick={() => setDeleting(false)}>取消</button>
+          {msg("删除整个内容块？可撤销。")}
+          <button onClick={() => run("delete")}>{msg("确认删除块")}</button>
+          <button onClick={() => setDeleting(false)}>{msg("取消")}</button>
         </div>
       )}
       {error && (
@@ -195,7 +222,7 @@ export default function InlineBlock({
       )}
       {editing && (
         <label className="inline-code-editor">
-          {known ? "块内代码" : "代码"}
+          {known ? msg("块内代码") : msg("代码")}
           <textarea
             ref={code}
             data-document-editor="true"
@@ -218,18 +245,19 @@ export default function InlineBlock({
       )}
       {!known && !editing && (
         <div className="inline-code-reading">
-          {raw && <p className="preview-help">此段格式以原文保留</p>}
+          {raw && <p className="preview-help">{msg("此段格式以原文保留")}</p>}
           <pre
             tabIndex={0}
             aria-label={`${raw ? "原始 Markdown" : language || "文本"}内容`}
           >
-            <code>{source || "（空代码块）"}</code>
+            <code>{source || msg("（空代码块）")}</code>
           </pre>
         </div>
       )}
       {known && (visible || large || activeInteraction) ? (
         <div className="inline-block-preview" ref={preview}>
           <ContentBlock
+            toolbarHost={diagram ? toolbarHost : undefined}
             kind={kind}
             source={source}
             viewKey={viewKey}
@@ -244,12 +272,14 @@ export default function InlineBlock({
           className="block-placeholder"
           style={{ height: placeholderHeight }}
         >
-          滚动到此处后本地呈现
+          {msg("滚动到此处后本地呈现")}
         </div>
       ) : null}
-      <footer>
-        <button onClick={() => run("after")}>在块后继续写作</button>
-      </footer>
+      {!diagram && (
+        <footer>
+          <button onClick={() => run("after")}>{msg("在块后继续写作")}</button>
+        </footer>
+      )}
     </section>
   );
 }

@@ -1,3 +1,4 @@
+import { msg } from "./i18n";
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -191,24 +192,24 @@ export default function ImportDialog({
     items.length > 0;
   return (
     <ModalDialog
-      label="导入本地文档"
+      label={msg("导入本地文档")}
       className="import-modal"
       busy={locked}
       onClose={close}
     >
       <div className="modal-heading">
         <div>
-          <h2>导入本地文档</h2>
-          <p>复制到当前文档空间，保留外部原件。</p>
+          <h2>{msg("导入本地文档")}</h2>
+          <p>{msg("复制到当前文档空间，保留外部原件。")}</p>
         </div>
-        <button disabled={locked} aria-label="关闭导入" onClick={close}>
+        <button disabled={locked} aria-label={msg("关闭导入")} onClick={close}>
           <X size={18} />
         </button>
       </div>
       <label>
-        导入到空间
+        {msg("导入到空间")}
         <select
-          aria-label="导入目标空间"
+          aria-label={msg("导入目标空间")}
           value={project}
           disabled={locked}
           onChange={(e) => {
@@ -226,20 +227,20 @@ export default function ImportDialog({
       </label>
       <div className="import-pick">
         <Upload size={26} />
-        <p>选择文件或文件夹，也可以直接拖入应用</p>
+        <p>{msg("选择文件或文件夹，也可以直接拖入应用")}</p>
         <button
           className="button"
           disabled={locked}
           onClick={() => void choose(false)}
         >
-          选择文件（可多选）
+          {msg("选择文件（可多选）")}
         </button>
         <button
           className="button"
           disabled={locked}
           onClick={() => void choose(true)}
         >
-          选择文件夹
+          {msg("选择文件夹")}
         </button>
       </div>
       {paths.length > 0 && (
@@ -257,7 +258,7 @@ export default function ImportDialog({
             disabled={locked}
             onChange={(e) => setSkip(e.target.checked)}
           />
-          跳过相同内容；同名不同内容自动保存副本
+          {msg("跳过相同内容；同名不同内容自动保存副本")}
         </label>
         <label>
           <input
@@ -266,24 +267,23 @@ export default function ImportDialog({
             disabled={locked}
             onChange={(e) => setAttachments(e.target.checked)}
           />
-          一并复制源目录范围内的相对图片
+          {msg("一并复制源目录范围内的相对图片")}
         </label>
       </div>
       <p className="preview-help">
-        支持 MD、TXT、JSON、MMD；文本每篇最多 2 MB，图片最多 8
-        MB。导入不会自动发送到远程模型。
+        {msg("支持 MD、TXT、JSON、MMD；文本每篇最多 2 MB，图片最多 8 MB。导入不会自动发送到远程模型。")}
       </p>
       {busy && (
         <div role="status">
-          正在复制 {progress.done} / {progress.total || "准备中"}
+          {msg("正在复制")} {progress.done} / {progress.total || msg("准备中")}
           <progress value={progress.done} max={progress.total || 1} />
         </div>
       )}
       {(result || items.length > 0) && (
         <div className="import-results">
           <strong>
-            {result?.cancelled ? "已停止，可重试 · " : ""}成功 {imported.length}{" "}
-            · 跳过 {skipped.length} · 失败 {failed.length}
+            {result?.cancelled ? msg("已停止，可重试 · ") : ""}{msg("成功")} {imported.length}{" "}
+            {msg("· 跳过")} {skipped.length} {msg("· 失败")} {failed.length}
           </strong>
           {items.map((i, n) => (
             <div className={"import-item " + i.status} key={i.source + n}>
@@ -293,7 +293,7 @@ export default function ImportDialog({
                 (i.status === "imported" || i.status === "skipped") &&
                 !busy && (
                   <button onClick={() => onOpen(i.documentId!)}>
-                    {i.status === "skipped" ? "打开已有副本" : "打开副本"}
+                    {i.status === "skipped" ? msg("打开已有副本") : msg("打开副本")}
                   </button>
                 )}
             </div>
@@ -316,7 +316,7 @@ export default function ImportDialog({
           disabled={locked}
           onClick={close}
         >
-          {result ? "完成" : "取消"}
+          {result ? msg("完成") : msg("取消")}
         </button>
         {busy ? (
           <button
@@ -324,7 +324,7 @@ export default function ImportDialog({
             disabled={stopping}
             onClick={() => void stop()}
           >
-            {stopping ? "正在停止…" : "停止导入"}
+            {stopping ? msg("正在停止…") : msg("停止导入")}
           </button>
         ) : (
           !complete && (
@@ -334,10 +334,10 @@ export default function ImportDialog({
               onClick={() => void run(retryFailed ? failed : [])}
             >
               {retryFailed
-                ? "重试失败文件"
+                ? msg("重试失败文件")
                 : result
-                  ? "重新检查并导入"
-                  : "复制导入"}
+                  ? msg("重新检查并导入")
+                  : msg("复制导入")}
             </button>
           )
         )}

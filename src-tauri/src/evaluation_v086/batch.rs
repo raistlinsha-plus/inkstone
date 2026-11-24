@@ -1,9 +1,15 @@
-//! One opt-in process and one OS-backed credential cache; each workload keeps its own trace.
+//! One opt-in process with address-bound local credentials and separate workload traces.
 use super::*;
 use crate::credentials::CredentialReader;
 
 const PHASES: &[&str] = &["hybrid-40", "rerank-40", "keyword-52", "wiki"];
-const READER_PHASES: &[&str] = &["keyword-52", "causal-dev", "keyword-40", "hybrid-40", "rerank-40"];
+const READER_PHASES: &[&str] = &[
+    "keyword-52",
+    "causal-dev",
+    "keyword-40",
+    "hybrid-40",
+    "rerank-40",
+];
 const AUTH_SECONDS: u64 = 300;
 
 #[test]
@@ -40,14 +46,9 @@ fn live_saved_services() -> Result<(), &'static str> {
         settings.candidate_reading = reader_trial;
         settings
     });
-    let outcome = runtime.block_on(DEFAULT_AUTH_WAIT_SECONDS.scope(
-        AUTH_SECONDS,
-        run(
-            &path,
-            config,
-            CredentialReader::default(),
-            &phases,
-        ),
+    let outcome = runtime.block_on(CREDENTIAL_DIRECTORY.scope(
+        saved_credential_directory()?,
+        run(&path, config, CredentialReader::default(), &phases),
     ));
     runtime.shutdown_background();
     outcome
@@ -150,7 +151,7 @@ async fn run(
                 "report":path.is_file().then_some(file), "error":outcome.as_ref().err(),
                 "elapsedMs":start.elapsed().as_millis()});
             if let Err(error) = outcome {
-                if matches!(error, "keychain-authorization-pending" | "keychain-read-failed" | "authorization-time-budget-exhausted"
+                if matches!(error, "local-credential-read-failed" | "authorization-time-budget-exhausted"
                         | "saved-address-bound-key-missing" | "provider-authorization-denied") {
                     return Err(error);
                 }
@@ -188,30 +189,27 @@ async fn offline_missing_bound_key_stops_batch_before_any_stage() {
         endpoint: "https://offline.invalid/rerank".into(),
         ..Default::default()
     };
-    // Seed only the process cache. The OS/keychain and all model providers stay out of this test.
-    let cancel = AtomicBool::new(false);
-    for (role, address, value) in [
-        (
-            "chat",
-            config.chat.base_url.as_str(),
-            Some("SYNTHETIC_MEMORY_ONLY"),
-        ),
-        ("embedding", config.embedding.base_url.as_str(), None),
-    ] {
-        let identity = crate::credentials::Identity::new(role, address, false);
-        reader
-            .read(identity, &cancel, move || Ok(value.map(str::to_owned)))
-            .await
-            .unwrap();
-    }
+    crate::local_credentials::save(
+        dir.path(),
+        "chat",
+        &config.chat.base_url,
+        Some("SYNTHETIC_LOCAL_ONLY"),
+        false,
+    )
+    .unwrap();
     assert_eq!(
-        run(&out, Ok(config), reader, PHASES).await,
+        CREDENTIAL_DIRECTORY
+            .scope(
+                dir.path().to_path_buf(),
+                run(&out, Ok(config), reader, PHASES)
+            )
+            .await,
         Err("saved-address-bound-key-missing")
     );
     let files: Vec<_> = fs::read_dir(&out).unwrap().collect();
     assert_eq!(files.len(), 1);
     let raw = fs::read_to_string(out.join("batch.json")).unwrap();
-    assert!(!raw.contains("SYNTHETIC_MEMORY_ONLY") && !raw.contains("offline.invalid"));
+    assert!(!raw.contains("SYNTHETIC_LOCAL_ONLY") && !raw.contains("offline.invalid"));
     let result: Value = serde_json::from_str(&raw).unwrap();
     assert_eq!(result["stage"], "read-embedding-key");
     assert_eq!(result["status"], "incomplete");
@@ -228,20 +226,19 @@ async fn offline_stage_workspaces_share_only_the_role_and_address_bound_reader()
     let dir = tempfile::tempdir().unwrap();
     let config = Settings::default();
     let reader = CredentialReader::default();
-    let cancel = AtomicBool::new(false);
     for (role, address) in [
         ("chat", config.chat.base_url.as_str()),
         ("embedding", config.embedding.base_url.as_str()),
         ("rerank", config.rerank.endpoint.as_str()),
     ] {
-        reader
-            .read(
-                crate::credentials::Identity::new(role, address, false),
-                &cancel,
-                move || Ok(Some(format!("synthetic-{role}"))),
-            )
-            .await
-            .unwrap();
+        crate::local_credentials::save(
+            dir.path(),
+            role,
+            address,
+            Some(&format!("synthetic-{role}")),
+            false,
+        )
+        .unwrap();
     }
     for (mode, expected) in [
         ("hybrid", vec!["synthetic-chat", "synthetic-embedding"]),
@@ -254,7 +251,11 @@ async fn offline_stage_workspaces_share_only_the_role_and_address_bound_reader()
         let state = isolated_state(&dir.path().join(mode), config.clone(), reader.clone()).unwrap();
         let mut observed = Vec::new();
         let mut stage = "start";
-        check_keys(&state, &config, mode, &mut stage, &mut observed)
+        CREDENTIAL_DIRECTORY
+            .scope(
+                dir.path().to_path_buf(),
+                check_keys(&state, &config, mode, &mut stage, &mut observed),
+            )
             .await
             .unwrap();
         assert_eq!(observed, expected);

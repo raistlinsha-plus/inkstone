@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 import ModalDialog from "../ModalDialog";
@@ -38,7 +39,7 @@ export default function SourcePreviewFrame({
           <button
             type="button"
             className="icon-button"
-            aria-label="关闭来源预览"
+            aria-label={msg("关闭来源预览")}
             disabled={busy}
             onClick={onClose}
           >
@@ -76,12 +77,12 @@ export default function SourcePreviewFrame({
       }}
     >
       <header>
-        <strong>回答引用</strong>
+        <strong>{msg("回答引用")}</strong>
         <button
           ref={close}
           type="button"
           className="icon-button"
-          aria-label="收起引用侧栏"
+          aria-label={msg("收起引用侧栏")}
           aria-disabled={busy}
           onClick={onClose}
         >

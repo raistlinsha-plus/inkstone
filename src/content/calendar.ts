@@ -25,6 +25,9 @@ export interface CalendarData {
   [key: string]: unknown;
 }
 export interface CalendarDocument {
+  chatTaskIds?: string[];
+  taskHash?: string;
+  taskRows?: import("./tasks").TrackedTask[];
   documentId: string;
   title: string;
   path: string;
@@ -100,7 +103,7 @@ export function monthRange(date: string): DateRange {
     terms: "",
   };
 }
-function validateInstant(value: string, zone: string) {
+export function validateInstant(value: string, zone: string) {
   if (
     !instantPattern.test(value) ||
     value.startsWith("0000") ||
@@ -304,6 +307,7 @@ export function cloneCalendarSource(source: string) {
   return next;
 }
 export function calendarBlocks(content: string): CalendarContentBlock[] {
+  if (!content.includes("```") && !content.includes("~~~")) return [];
   const parsed: CalendarContentBlock[] = [];
   const visit = (node: MarkdownNode) => {
     if (node.type === "code" && node.lang?.toLowerCase() === "calendar") {

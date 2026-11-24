@@ -107,3 +107,22 @@ test("pending key deletion prevents probing and IPC errors render a fixed messag
   await screen.findByText(/暂时无法运行连接测试/);
   expect(screen.queryByText(/internal secret/)).toBeNull();
 });
+
+
+test("Brave imports only on request, handles denial and leaves search disabled", async () => {
+  const { close } = await openSettings(false);
+  const action = { name: "从旧钥匙串导入" };
+  expect(api.invoke).toHaveBeenCalledExactlyOnceWith("web_search_settings");
+  api.invoke.mockRejectedValueOnce("sensitive OS diagnostic");
+  fireEvent.click(screen.getByRole("button", action));
+  expect((await screen.findByRole("alert")).textContent).toContain("未能导入");
+  expect(screen.queryByText(/sensitive OS diagnostic/)).toBeNull();
+  api.invoke.mockResolvedValueOnce(true);
+  fireEvent.click(screen.getByRole("button", action));
+  await screen.findByText("密钥已导入本机，可直接使用。");
+  expect(api.invoke).toHaveBeenLastCalledWith("import_legacy_model_key", { kind: "web-brave" });
+  expect(screen.queryByRole("button", action)).toBeNull();
+  expect((screen.getByLabelText("允许模型按需联网") as HTMLInputElement).checked).toBe(false);
+  expect((screen.getByLabelText("Brave Search API 密钥") as HTMLInputElement).value).toBe("");
+  expect(close).not.toHaveBeenCalled();
+});

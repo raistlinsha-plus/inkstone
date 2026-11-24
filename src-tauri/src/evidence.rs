@@ -718,6 +718,7 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
         && predicate.is_none())
     .then(|| facets::Request::parse(&query, results));
     let clock = dated_clock::Request::parse(&query);
+    let frame = crate::evidence_reader::scoped_clause::Frame::parse(&query);
     let typed = facets
         .as_ref()
         .is_some_and(facets::Request::has_typed_clause);
@@ -813,6 +814,14 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
                         request.supports(r.title.as_deref(), &r.heading, &r.text)
                     }))
         };
+        let framed = !admitted
+            && !typed
+            && clock.is_none()
+            && !wiki
+            && r.bm25_rank.is_some()
+            && frame
+                .as_ref()
+                .is_some_and(|scope| !scope.related(r).is_empty());
         r.evidence = (r.bm25_rank.is_some() || wiki)
             && has_body
             && year.is_none_or(|year| years(&text).any(|seen| seen == year))
@@ -820,6 +829,8 @@ pub fn mark(query: &str, results: &mut [SearchResult]) {
             && admitted;
         r.match_kind = if wiki {
             "wiki"
+        } else if framed {
+            "scoped-related"
         } else if r.evidence {
             "keyword"
         } else {

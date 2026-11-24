@@ -562,7 +562,6 @@
   min-height: 48px;
 }
 .graph-actions button,
-.chart-tabs button,
 .structure-form button,
 .node-actions button {
   min-height: 32px;
@@ -675,24 +674,6 @@
   min-height: 28px;
   padding: 4px 8px;
 }
-.data-chart .chart-tabs {
-  padding: 12px 16px;
-  gap: 8px;
-  align-items: center;
-}
-.data-chart .chart-tabs button {
-  border-color: transparent;
-}
-.data-chart .chart-tabs .chart-edit-button {
-  border-color: var(--control-border);
-}
-.data-chart .graph-actions {
-  padding: 8px 16px;
-  justify-content: flex-end;
-}
-.data-chart .graph-actions > span {
-  display: none;
-}
 .data-chart .chart-summary,
 .data-chart .chart-source-note,
 .data-chart > .preview-help,
@@ -789,8 +770,7 @@
     padding-left: 24px !important;
     padding-right: 24px !important;
   }
-  .graph-actions,
-  .data-chart .chart-tabs {
+  .graph-actions {
     padding: 10px 12px;
   }
   .structure-form {
@@ -1026,6 +1006,7 @@
   gap: 5px;
 }
 .app-version {
+  margin-inline-start: 8px;
   font-size: 10px;
   color: #586c52;
   padding: 3px 7px;

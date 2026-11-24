@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { useEffect, useMemo, useState } from "react";
 import {
   addDays,
@@ -71,12 +72,12 @@ export default function CalendarBlock({
   if (!state.data)
     return (
       <div className="inkstone-calendar calendar-invalid" role="alert">
-        <strong>日历内容暂时无法显示</strong>
+        <strong>{msg("日历内容暂时无法显示")}</strong>
         <p>{state.error}</p>
         <p>
           {readOnly
-            ? "原文仍可复制或保存为文档后修正。"
-            : "原文仍可保存，点击内容块的“编辑代码”修正后会重新显示。"}
+            ? msg("原文仍可复制或保存为文档后修正。")
+            : msg("原文仍可保存，点击内容块的“编辑代码”修正后会重新显示。")}
         </p>
       </div>
     );
@@ -109,7 +110,7 @@ export default function CalendarBlock({
     <section
       ref={focus.scope}
       className="inkstone-calendar"
-      aria-label="正文日程日历"
+      aria-label={msg("正文日程日历")}
     >
       <CalendarTools
         view={readOnly ? (readingView ?? data.view) : data.view}
@@ -146,10 +147,10 @@ export default function CalendarBlock({
       />
       <div className="calendar-range-description">
         <span>
-          {rows.length} 个事项 · {zone}
+          {rows.length} {msg("个事项 ·")} {zone}
         </span>
         <span>
-          当前月：{range.start} 至 {addDays(range.end, -1)}
+          {msg("当前月：")}{range.start} {msg("至")} {addDays(range.end, -1)}
         </span>
       </div>
       {!readOnly && editing && (
@@ -180,13 +181,13 @@ export default function CalendarBlock({
         />
       )}
       {readOnly && inspecting && (
-        <section className="calendar-inspection" aria-label="事项详情">
+        <section className="calendar-inspection" aria-label={msg("事项详情")}>
           <strong>{inspecting.title}</strong>
           <p>
             {inspecting.start} — {inspecting.end} · {inspecting.timeZone}
           </p>
           {inspecting.notes && <p>{inspecting.notes}</p>}
-          <button onClick={() => setInspecting(null)}>关闭详情</button>
+          <button onClick={() => setInspecting(null)}>{msg("关闭详情")}</button>
         </section>
       )}
       {(readOnly ? (readingView ?? data.view) : data.view) === "month" ? (

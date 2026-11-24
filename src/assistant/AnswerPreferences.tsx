@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import ModalDialog from "../ModalDialog";
@@ -14,6 +15,10 @@ const fields = {
   length: {
     label: "回答篇幅",
     choices: { standard: "标准", short: "精简", detailed: "详细" },
+  },
+  language: {
+    label: "回答语言",
+    choices: { question: "随提问", "zh-CN": "中文（简体）", en: "英语" },
   },
   original_units: {
     label: "资料单位",
@@ -92,23 +97,23 @@ function PreferenceRow({
     >
       {legacy && (
         <p>
-          旧偏好 · {scope === "space" ? "当前空间" : "全部空间"} ·{" "}
+          {msg("旧偏好 ·")} {scope === "space" ? msg("当前空间") : msg("全部空间")} ·{" "}
           {legacy.value}
         </p>
       )}
       <label>
-        {definition.label}
+        {msg(definition.label)}
         <select
           value={value}
           disabled={busy}
           onChange={(event) => setValue(event.target.value)}
         >
           <option value="" disabled>
-            请选择
+            {msg("请选择")}
           </option>
           {Object.entries(definition.choices).map(([key, label]) => (
             <option key={key} value={key}>
-              {label}
+              {msg(label)}
             </option>
           ))}
         </select>
@@ -120,7 +125,7 @@ function PreferenceRow({
           disabled={busy}
           onChange={(event) => setEnabled(event.target.checked)}
         />
-        启用
+        {msg("启用")}
       </label>
       <div className="answer-preference-actions">
         <button
@@ -133,7 +138,7 @@ function PreferenceRow({
               enabled === preference.enabled)
           }
         >
-          {legacy ? "确认采用" : "保存"}
+          {legacy ? msg("确认采用") : msg("保存")}
         </button>
         {legacy ? (
           <button
@@ -143,7 +148,7 @@ function PreferenceRow({
               onSave({ ...change, value: null, ignoreLegacy: true })
             }
           >
-            忽略旧偏好
+            {msg("忽略旧偏好")}
           </button>
         ) : (
           preference && (
@@ -152,7 +157,7 @@ function PreferenceRow({
               disabled={busy}
               onClick={() => onSave({ ...change, value: null })}
             >
-              删除
+              {msg("删除")}
             </button>
           )
         )}
@@ -208,23 +213,23 @@ export default function AnswerPreferences({
   }
   return (
     <ModalDialog
-      label="回答偏好"
+      label={msg("回答偏好")}
       className="assistant-history-dialog"
       busy={busy}
       onClose={onClose}
     >
       <div className="modal-heading">
-        <h2>回答偏好</h2>
+        <h2>{msg("回答偏好")}</h2>
         <button disabled={busy} onClick={onClose}>
-          关闭
+          {msg("关闭")}
         </button>
       </div>
       <p>
-        偏好只影响表达方式。发送问答时，启用的选项会随请求发送给聊天模型。
-        {general ? "通用问答" : "当前空间"}的启用项优先。
+        {msg("偏好只影响表达方式。发送问答时，启用的选项会随请求发送给聊天模型。")}
+        {general ? msg("通用问答") : msg("当前空间")}{msg("的启用项优先。")}
       </p>
       <label>
-        编辑范围
+        {msg("编辑范围")}
         <select
           value={scope}
           disabled={busy}
@@ -232,16 +237,16 @@ export default function AnswerPreferences({
             setScope(event.target.value === "global" ? "global" : "space")
           }
         >
-          <option value="space">{general ? "通用问答" : "当前空间"}</option>
-          <option value="global">全部空间</option>
+          <option value="space">{general ? msg("通用问答") : msg("当前空间")}</option>
+          <option value="global">{msg("全部空间")}</option>
         </select>
       </label>
       {error && (
         <p role="alert">
-          {error} <button onClick={() => setRefresh(refresh + 1)}>刷新</button>
+          {error} <button onClick={() => setRefresh(refresh + 1)}>{msg("刷新")}</button>
         </p>
       )}
-      {!data && !error && <p role="status">正在读取偏好…</p>}
+      {!data && !error && <p role="status">{msg("正在读取偏好…")}</p>}
       {data &&
         (Object.keys(fields) as Key[]).map((field) => {
           const preference = data.preferences.find(
@@ -260,9 +265,9 @@ export default function AnswerPreferences({
         })}
       {!!data?.legacy.length && (
         <section>
-          <h3>旧偏好待确认</h3>
+          <h3>{msg("旧偏好待确认")}</h3>
           <p>
-            可以重新选择受支持的表达选项，或忽略这条记录。旧文字仅在本机展示。
+            {msg("可以重新选择受支持的表达选项，或忽略这条记录。旧文字仅在本机展示。")}
           </p>
           {data.legacy.map((legacy) => {
             const field = legacyKeys[legacy.key];

@@ -394,6 +394,15 @@ pub fn refresh_lexical(
 }
 /// Bounded local-only slicing for immediate keyword visibility; semantic indexing keeps its richer worker parser.
 pub fn local_chunks(content: &str, path: &str, max: usize) -> Vec<ChunkInput> {
+    let visible;
+    let content = if content.contains("<!--inkstone-task:v1 ")
+        && (path.to_lowercase().ends_with(".md") || path.to_lowercase().ends_with(".markdown"))
+    {
+        visible = crate::calendar::tasks::retrieval_text(content);
+        visible.as_ref()
+    } else {
+        content
+    };
     let max = max.clamp(128, 12000);
     let mut chunks = vec![];
     let mut buffer = String::new();

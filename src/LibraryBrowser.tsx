@@ -1,3 +1,4 @@
+import { msg, documentCount } from "./i18n";
 import { dismissOnOutside, focusMenuButton } from "./platform/menu";
 import { isImeEvent } from "./platform/ime";
 import {
@@ -218,7 +219,7 @@ export default function LibraryBrowser({
   return (
     <section
       className={`library-browser ${compact ? "compact" : ""}`}
-      aria-label={compact ? "文档库侧栏" : "我的文档"}
+      aria-label={compact ? msg("文档库侧栏") : msg("我的文档")}
       onKeyDown={(e) => {
         if (isImeEvent(e.nativeEvent)) return;
         if (menu && (e.key === "Escape" || e.key === "Tab")) {
@@ -237,40 +238,40 @@ export default function LibraryBrowser({
       {!compact && (
         <header className="library-heading">
           <div>
-            <h1>{project?.title ?? "我的文档"}</h1>
+            <h1>{project?.title ?? msg("我的文档")}</h1>
             <p>
-              {readyDocuments.length} 篇文档
+              {documentCount(readyDocuments.length)}
               {" · "}
-              {readyDocuments.filter((doc) => pins.includes(doc.id)).length} 篇置顶
+              {readyDocuments.filter((doc) => pins.includes(doc.id)).length} {msg("篇置顶")}
             </p>
           </div>
           <div className="library-heading-actions">
             <button className="button primary" disabled={busy} onClick={onNew}>
-              <Plus size={15} /> 新建文档
+              <Plus size={15} /> {msg("新建文档")}
             </button>
             {!showingFirstUse && (
               <button className="button" disabled={busy} onClick={() => onImport()}>
-                <Upload size={15} /> 导入文档
+                <Upload size={15} /> {msg("导入文档")}
               </button>
             )}
           </div>
         </header>
       )}
       {!compact && (
-        <div className="library-space-tools" role="group" aria-label="空间工具">
+        <div className="library-space-tools" role="group" aria-label={msg("空间工具")}>
           {onSearch && readyDocuments.length > 0 && (
             <button disabled={busy} onClick={onSearch}>
-              <Search size={15} /> 搜索这些资料
+              <Search size={15} /> {msg("搜索这些资料")}
             </button>
           )}
           <button disabled={busy || !onIndex} onClick={onIndex}>
-            <Database size={15} /> 查看逐文档索引
+            <Database size={15} /> {msg("查看逐文档索引")}
           </button>
           <button disabled={busy} onClick={() => void exportDoc()}>
-            <Download size={15} /> 导出空间
+            <Download size={15} /> {msg("导出空间")}
           </button>
           <button disabled={busy || !onBackup} onClick={onBackup}>
-            <Archive size={15} /> 备份与恢复预演
+            <Archive size={15} /> {msg("备份与恢复预演")}
           </button>
         </div>
       )}
@@ -279,7 +280,7 @@ export default function LibraryBrowser({
         {compact && (
           <div className="library-project">
             <select
-              aria-label={compact ? "当前空间" : "文档空间"}
+              aria-label={compact ? msg("当前空间") : msg("文档空间")}
               disabled={busy}
               value={projectId}
               onChange={(e) => {
@@ -294,8 +295,8 @@ export default function LibraryBrowser({
               ))}
             </select>
             <button
-              title="新建空间"
-              aria-label="新建空间"
+              title={msg("新建空间")}
+              aria-label={msg("新建空间")}
               disabled={busy}
               onClick={() => {
                 setRenamingSpace(false);
@@ -307,8 +308,8 @@ export default function LibraryBrowser({
             </button>
             <button
               className="icon-button"
-              title="重命名空间"
-              aria-label="重命名空间"
+              title={msg("重命名空间")}
+              aria-label={msg("重命名空间")}
               disabled={busy}
               onClick={() => {
                 setRenamingSpace(true);
@@ -326,7 +327,7 @@ export default function LibraryBrowser({
                   onClick={() => void exportDoc()}
                 >
                   <Download size={14} />
-                  导出空间
+                  {msg("导出空间")}
                 </button>
                 <button
                   className="text-button"
@@ -335,7 +336,7 @@ export default function LibraryBrowser({
                   }
                 >
                   <FolderOpen size={14} />
-                  在访达中显示
+                  {msg("在访达中显示")}
                 </button>
               </>
             )}
@@ -384,8 +385,8 @@ export default function LibraryBrowser({
           >
             <input
               autoFocus
-              aria-label="空间名称"
-              placeholder="空间名称"
+              aria-label={msg("空间名称")}
+              placeholder={msg("空间名称")}
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
             />
@@ -394,10 +395,10 @@ export default function LibraryBrowser({
               disabled={spaceSaving}
               onClick={() => setAdding(false)}
             >
-              取消
+              {msg("取消")}
             </button>
             <button type="submit" disabled={spaceSaving || busy}>
-              {renamingSpace ? "保存名称" : "创建"}
+              {renamingSpace ? msg("保存名称") : msg("创建")}
             </button>
           </form>
         )}
@@ -405,19 +406,19 @@ export default function LibraryBrowser({
           <div className="library-shortcuts">
             <button disabled={busy} onClick={onNew}>
               <Plus size={16} strokeWidth={2} aria-hidden="true" />
-              <span>新建</span>
+              <span>{msg("新建")}</span>
             </button>
             <button disabled={busy} onClick={() => onImport()}>
               <Upload size={16} strokeWidth={2} aria-hidden="true" />
-              <span>导入文档</span>
+              <span>{msg("导入文档")}</span>
             </button>
           </div>
         )}
         {compact && (
           <input
             className="library-search"
-            aria-label={compact ? "查找文档" : "搜索我的文档"}
-            placeholder="查找文档标题…"
+            aria-label={compact ? msg("查找文档") : msg("搜索我的文档")}
+            placeholder={msg("查找文档标题…")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -425,15 +426,15 @@ export default function LibraryBrowser({
         <div className="library-tabs">
           {(compact
             ? [
-                ["all", "空间文档"],
-                ["recent", "最近"],
-                ["trash", "回收站"],
+                ["all", msg("空间文档")],
+                ["recent", msg("最近")],
+                ["trash", msg("回收站")],
               ]
             : [
-                ["recent", "最近"],
-                ["pinned", "置顶"],
-                ["all", "全部资料"],
-                ["trash", "回收站"],
+                ["recent", msg("最近")],
+                ["pinned", msg("置顶")],
+                ["all", msg("全部资料")],
+                ["trash", msg("回收站")],
               ]
           ).map(([id, label]) => (
             <button
@@ -453,12 +454,12 @@ export default function LibraryBrowser({
           <div
             className="workbench-type-filter"
             role="group"
-            aria-label="文档类型筛选"
+            aria-label={msg("文档类型筛选")}
           >
             {[
-              ["all", "全部类型"],
+              ["all", msg("全部类型")],
               ["md", "Markdown"],
-              ["txt", "纯文本"],
+              ["txt", msg("纯文本")],
               ["json", "JSON"],
               ["mmd", "Mermaid"],
             ].map(([id, label]) => (
@@ -474,14 +475,14 @@ export default function LibraryBrowser({
         )}
         <div className="library-list-meta">
           <span>
-            {docs.length} 篇{tab === "trash" ? "已移除文档" : "文档"}
-            {query ? "匹配" : ""}
+            {documentCount(docs.length, tab === "trash")}
+            {query && <> · {msg("匹配")}</>}
           </span>
           {tab !== "recent" && tab !== "trash" && (
             <label>
-              排序
+              {msg("排序")}
               <select
-                aria-label="文档排序"
+                aria-label={msg("文档排序")}
                 value={sortBy}
                 onChange={(e) =>
                   updateView({
@@ -490,9 +491,9 @@ export default function LibraryBrowser({
                   })
                 }
               >
-                <option value="nameAsc">名称 A–Z</option>
-                <option value="nameDesc">名称 Z–A</option>
-                <option value="updatedDesc">修改时间</option>
+                <option value="nameAsc">{msg("名称 A–Z")}</option>
+                <option value="nameDesc">{msg("名称 Z–A")}</option>
+                <option value="updatedDesc">{msg("修改时间")}</option>
               </select>
             </label>
           )}
@@ -505,23 +506,23 @@ export default function LibraryBrowser({
       )}
       {!compact && pendingImports.length > 0 && (
         <div className="import-recovery">
-          <strong>有可重试的导入记录</strong>
+          <strong>{msg("有可重试的导入记录")}</strong>
           {pendingImports.slice(0, 3).map((t) => (
             <div key={t.id}>
               <span>
                 {view.projects.find((p) => p.id === t.projectId)?.title} ·{" "}
                 {t.status === "cancelled"
-                  ? "已停止"
+                  ? msg("已停止")
                   : t.status === "partial"
-                    ? "有失败项"
-                    : "上次中断"}
+                    ? msg("有失败项")
+                    : msg("上次中断")}
               </span>
               <button disabled={busy} onClick={() => onImport(t)}>
-                重试未完成项
+                {msg("重试未完成项")}
               </button>
               <button
                 disabled={busy}
-                aria-label="归档导入记录"
+                aria-label={msg("归档导入记录")}
                 onClick={() =>
                   void (async () => {
                     if (onArchiveImport) await onArchiveImport(t);
@@ -530,7 +531,7 @@ export default function LibraryBrowser({
                   })().catch(onError)
                 }
               >
-                归档
+                {msg("归档")}
               </button>
             </div>
           ))}
@@ -555,14 +556,14 @@ export default function LibraryBrowser({
                     })
                   }
                 >
-                  置顶 · {preferences.pinnedCollapsed ? "展开" : "收起"}
+                  {msg("置顶 ·")} {preferences.pinnedCollapsed ? msg("展开") : msg("收起")}
                 </button>
               )}
               {tab === "all" &&
                 !pins.includes(d.id) &&
                 i > 0 &&
                 pins.includes(docs[i - 1].id) && (
-                  <div className="library-pin-heading">空间文档</div>
+                  <div className="library-pin-heading">{msg("空间文档")}</div>
                 )}
               {!(
                 tab === "all" &&
@@ -586,7 +587,7 @@ export default function LibraryBrowser({
                     }}
                   >
                     {pins.includes(d.id) ? (
-                      <Pin size={compact ? 14 : 20} aria-label="已置顶" />
+                      <Pin size={compact ? 14 : 20} aria-label={msg("已置顶")} />
                     ) : (
                       <FileText size={compact ? 14 : 20} />
                     )}
@@ -602,10 +603,10 @@ export default function LibraryBrowser({
                           {d.opened
                             ? "最近打开 " +
                               new Date(d.opened * 1000).toLocaleDateString(
-                                "zh-CN",
+                                undefined,
                               )
-                            : "本地文档"}
-                          {d.source ? " · 已导入副本" : ""}
+                            : msg("本地文档")}
+                          {d.source ? msg(" · 已导入副本") : ""}
                         </small>
                       )}
                     </span>
@@ -617,7 +618,7 @@ export default function LibraryBrowser({
                         aria-label={"恢复 " + d.title}
                         onClick={() => void onTrash(d, true).catch(onError)}
                       >
-                        恢复
+                        {msg("恢复")}
                       </button>
                       <button
                         aria-label={"回收站操作 " + d.title}
@@ -625,7 +626,7 @@ export default function LibraryBrowser({
                         onClick={() => setTrashDetail(d)}
                       >
                         {d.status === "purging" ? (
-                          "删除未完成"
+                          msg("删除未完成")
                         ) : (
                           <MoreHorizontal size={15} />
                         )}
@@ -687,7 +688,7 @@ export default function LibraryBrowser({
                           }
                         >
                           <Pin size={14} />
-                          {pins.includes(d.id) ? "取消置顶" : "置顶文档"}
+                          {pins.includes(d.id) ? msg("取消置顶") : msg("置顶文档")}
                         </button>
                       )}
                       {d.source && (
@@ -701,7 +702,7 @@ export default function LibraryBrowser({
                           }
                         >
                           <Link2 size={14} />
-                          重新关联链接
+                          {msg("重新关联链接")}
                         </button>
                       )}
                       <button role="menuitem" tabIndex={-1}
@@ -710,7 +711,7 @@ export default function LibraryBrowser({
                           setTitle(d.title);
                         }}
                       >
-                        重命名标题
+                        {msg("重命名标题")}
                       </button>
                       {d.source && (
                         <button role="menuitem" tabIndex={-1}
@@ -723,7 +724,7 @@ export default function LibraryBrowser({
                           }
                         >
                           <RefreshCw size={14} />
-                          检查来源更新
+                          {msg("检查来源更新")}
                         </button>
                       )}
                       <button role="menuitem" tabIndex={-1}
@@ -736,13 +737,13 @@ export default function LibraryBrowser({
                         }
                       >
                         <History size={14} />
-                        历史版本
+                        {msg("历史版本")}
                       </button>
                       <button role="menuitem" tabIndex={-1} onClick={() => void exportDoc(d, false)}>
-                        导出文件
+                        {msg("导出文件")}
                       </button>
                       <button role="menuitem" tabIndex={-1} onClick={() => void exportDoc(d, true)}>
-                        导出含附件包
+                        {msg("导出含附件包")}
                       </button>
                       <button role="menuitem" tabIndex={-1}
                         onClick={() =>
@@ -751,7 +752,7 @@ export default function LibraryBrowser({
                         }
                       >
                         <Trash2 size={12} />
-                        移到回收站
+                        {msg("移到回收站")}
                       </button>
                     </div>
                   )}
@@ -762,12 +763,12 @@ export default function LibraryBrowser({
         ) : (
           <div className="library-empty">
             <FileText size={25} />
-            <p>{filtered ? "没有匹配的文档" : tab === "trash" ? "回收站为空" : tab === "recent" ? "还没有最近打开的文档" : tab === "pinned" ? "还没有置顶文档" : "空间里还没有文档"}</p>
+            <p>{filtered ? msg("没有匹配的文档") : tab === "trash" ? msg("回收站为空") : tab === "recent" ? msg("还没有最近打开的文档") : tab === "pinned" ? msg("还没有置顶文档") : msg("空间里还没有文档")}</p>
             {filtered ? (
-              <button onClick={() => { setQuery(""); setTypeFilter("all"); }}>清除筛选</button>
+              <button onClick={() => { setQuery(""); setTypeFilter("all"); }}>{msg("清除筛选")}</button>
             ) : tab === "all" && !showingFirstUse && (
               <button disabled={busy} onClick={() => onImport()}>
-                导入本地文件
+                {msg("导入本地文件")}
               </button>
             )}
           </div>
@@ -827,18 +828,18 @@ export default function LibraryBrowser({
           }}
         >
           <label>
-            文档标题
+            {msg("文档标题")}
             <input
               autoFocus
-              aria-label="新文档标题"
+              aria-label={msg("新文档标题")}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
           </label>
           <button type="button" onClick={() => setRename(null)}>
-            取消
+            {msg("取消")}
           </button>
-          <button type="submit">保存标题</button>
+          <button type="submit">{msg("保存标题")}</button>
         </form>
       )}
     </section>

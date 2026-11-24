@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useState } from "react";
 import { publicCitationUrl, sourceKind } from "./sourceDisplay";
@@ -49,14 +50,14 @@ export default function ExternalSourcePreview({
         </blockquote>
       )}
       {unavailable && (
-        <p role="status">此附件当前不可用。已保存的回答仍保留。</p>
+        <p role="status">{msg("此附件当前不可用。已保存的回答仍保留。")}</p>
       )}
       {source.kind === "web" && !source.excerpt && (
-        <p>本轮只保存了出处，打开网页可核对当前版本。</p>
+        <p>{msg("本轮只保存了出处，打开网页可核对当前版本。")}</p>
       )}
       {source.kind === "document" && !onOpenDocument && (
         <p role="status">
-          当前无法定位到引用版本。以上摘录来自回答保存时的快照。
+          {msg("当前无法定位到引用版本。以上摘录来自回答保存时的快照。")}
         </p>
       )}
       {url && <p className="assistant-source-url">{new URL(url).hostname}</p>}
@@ -71,7 +72,7 @@ export default function ExternalSourcePreview({
               else window.open(url, "_blank", "noopener,noreferrer");
             }}
           >
-            打开网页
+            {msg("打开网页")}
           </button>
         )}
         {source.kind === "attachment" &&
@@ -85,7 +86,7 @@ export default function ExternalSourcePreview({
               disabled={opening}
               onClick={() => void openAttachment()}
             >
-              {opening ? "正在读取…" : "打开附件"}
+              {opening ? msg("正在读取…") : msg("打开附件")}
             </button>
           )}
         {onOpenDocument && (
@@ -95,11 +96,11 @@ export default function ExternalSourcePreview({
             disabled={busy}
             onClick={onOpenDocument}
           >
-            打开文档
+            {msg("打开文档")}
           </button>
         )}
         <button type="button" disabled={busy} onClick={onClose}>
-          关闭
+          {msg("关闭")}
         </button>
       </div>
     </>

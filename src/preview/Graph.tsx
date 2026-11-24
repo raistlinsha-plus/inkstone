@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import {
   useCallback,
   useEffect,
@@ -6,8 +7,17 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { createPortal } from "react-dom";
 import { invoke, isTauri } from "@tauri-apps/api/core";
-import { ZoomIn, ZoomOut, Download, Expand, Minimize2 } from "lucide-react";
+import {
+  ZoomIn,
+  ZoomOut,
+  Download,
+  Expand,
+  Minimize2,
+  Scan,
+  Ratio,
+} from "lucide-react";
 import DOMPurify from "dompurify";
 import type { MindNode } from "../content/mindmap";
 import { graphViewport, loadViewport, saveViewport } from "./viewport";
@@ -23,6 +33,8 @@ interface Props {
   onLocate?: (line: number) => void;
   startLine?: number;
   viewKey?: string;
+  toolbarHost?: HTMLElement | null;
+  toolbarExtras?: React.ReactNode;
 }
 export function diagramProblem(source: string): string | null {
   if (source.length > 50000) return "图表超过 50 KB，请缩小内容后预览。";
@@ -137,6 +149,8 @@ export default function Graph({
   onLocate,
   startLine = 1,
   viewKey,
+  toolbarHost,
+  toolbarExtras,
 }: Props) {
   const frame = useRef<HTMLIFrameElement>(null);
   const frameLoaded = useRef(false);
@@ -148,6 +162,7 @@ export default function Graph({
   const viewport = useRef(loadViewport(viewKey));
   const [zoom, setZoom] = useState(100);
   const [canvasExpanded, setCanvasExpanded] = useState(false);
+  const [frameHover, setFrameHover] = useState(false);
   const [measuredHeight, setMeasuredHeight] = useState(240);
   const compactHeight = useMemo(() => {
     if (kind !== "mindmap" || !tree) return measuredHeight;
@@ -155,7 +170,7 @@ export default function Graph({
       node.children.length
         ? node.children.reduce((sum, child) => sum + leaves(child), 0)
         : 1;
-    return Math.min(440, Math.max(200, leaves(tree) * 32 + 72));
+    return Math.max(200, leaves(tree) * 32 + 72);
   }, [kind, tree, measuredHeight]);
   const token = useMemo(() => crypto.randomUUID(), []);
   const [attempt, setAttempt] = useState(0);
@@ -213,10 +228,29 @@ export default function Graph({
       "*",
     );
   useEffect(() => {
+    if (!frameHover) return;
+    // An opaque iframe may never receive pointerleave. The next pointer event
+    // in the outer document (or another diagram) identifies the real target.
+    const leave = (event: Event) => {
+      if (event.target === frame.current) return;
+      setFrameHover(false);
+      send({ type: "command", action: "pointer-left-frame" });
+    };
+    document.addEventListener("pointerover", leave, true);
+    document.addEventListener("pointermove", leave, true);
+    document.addEventListener("inkstone-diagram-enter", leave, true);
+    return () => {
+      document.removeEventListener("pointerover", leave, true);
+      document.removeEventListener("pointermove", leave, true);
+      document.removeEventListener("inkstone-diagram-enter", leave, true);
+    };
+  }, [frameHover]);
+  useEffect(() => {
     if (problem) return;
     const id = crypto.randomUUID();
     active.current = { id, revision: active.current.revision + 1 };
     setFailed(false);
+    setFrameHover(false);
     setErrorLine(null);
     setStatus("正在本地绘制…");
     let timer: ReturnType<typeof setTimeout>;
@@ -267,7 +301,12 @@ export default function Graph({
         typeof data.height === "number" &&
         Number.isFinite(data.height)
       ) {
-        setMeasuredHeight(Math.max(180, Math.min(440, data.height)));
+        setMeasuredHeight(
+          Math.max(180, Math.min(16384, Math.ceil(data.height))),
+        );
+      } else if (data.type === "diagram-pointer" && typeof data.inside === "boolean") {
+        setFrameHover(data.inside);
+        if (data.inside) frame.current?.dispatchEvent(new Event("inkstone-diagram-enter", { bubbles: true }));
       } else if (data.type === "viewport") {
         const next = graphViewport(data);
         if (next) {
@@ -278,6 +317,7 @@ export default function Graph({
           }
         }
       } else if (data.type === "ready") {
+        setFrameHover(data.pointerInside === true);
         clearTimeout(timer);
         setStatus("");
         setElapsed(Math.round(performance.now() - started));
@@ -322,87 +362,113 @@ export default function Graph({
       window.removeEventListener("message", handler);
     };
   }, [debounced, kind, token, attempt, problem, theme]);
+  const toolbar = (
+    <div
+      className={
+        kind === "chart" ? "chart-exports" : "graph-actions diagram-tools"
+      }
+      role="group"
+      aria-label={msg("操作")}
+    >
+      {toolbarExtras}
+      {kind !== "chart" && (
+        <span className="graph-kind">
+          {kind === "mermaid" ? msg("Mermaid 图表") : msg("脑图")}
+        </span>
+      )}
+      {kind !== "chart" && (
+        <>
+          <button
+            onClick={() => send({ type: "command", action: "in" })}
+            title={msg("放大图表")}
+            aria-label={msg("放大图表")}
+          >
+            <ZoomIn size={16} aria-hidden="true" />
+          </button>
+          <button
+            onClick={() => send({ type: "command", action: "out" })}
+            title={msg("缩小图表")}
+            aria-label={msg("缩小图表")}
+          >
+            <ZoomOut size={16} aria-hidden="true" />
+          </button>
+          <button
+            title={msg("适应窗口")}
+            aria-label={msg("适应窗口")}
+            onClick={() => send({ type: "command", action: "fit" })}
+          >
+            <Scan size={16} aria-hidden="true" />
+          </button>
+          {kind === "mindmap" && (
+            <>
+              <button
+                title={msg("原始比例")}
+                aria-label={msg("原始比例")}
+                onClick={() => send({ type: "command", action: "actual" })}
+              >
+                <Ratio size={16} aria-hidden="true" />
+              </button>
+              <output aria-label={msg("脑图缩放比例")}>{zoom}%</output>
+            </>
+          )}
+        </>
+      )}
+      {kind !== "chart" && (
+        <button
+          title={canvasExpanded ? msg("收起画布") : msg("展开画布")}
+          aria-label={canvasExpanded ? msg("收起画布") : msg("展开画布")}
+          aria-pressed={canvasExpanded}
+          onClick={() => setCanvasExpanded(!canvasExpanded)}
+        >
+          {canvasExpanded ? <Minimize2 size={15} /> : <Expand size={15} />}
+        </button>
+      )}
+      <button
+        disabled={stale || !!status || !!problem}
+        title={msg("导出 SVG")}
+        aria-label={msg("导出 SVG")}
+        onClick={() => send({ type: "command", action: "export" })}
+      >
+        <Download size={15} aria-hidden="true" />
+        {kind === "chart" && "SVG"}
+      </button>
+      {kind === "chart" && (
+        <button
+          disabled={stale || !!status || !!problem}
+          title={msg("导出 PNG")}
+          aria-label={msg("导出 PNG")}
+          onClick={() =>
+            send({ type: "command", action: "export", format: "png" })
+          }
+        >
+          <Download size={15} aria-hidden="true" />
+          PNG
+        </button>
+      )}
+    </div>
+  );
   return (
     <div
-      className="graph-preview"
+      className={
+        kind === "chart" ? "graph-preview" : "graph-preview diagram-preview"
+      }
       data-kind={kind}
+      data-frame-hover={frameHover || undefined}
       style={
         kind === "chart"
           ? undefined
           : ({
-              "--graph-height": `${canvasExpanded ? 560 : compactHeight}px`,
+              "--graph-height": `${canvasExpanded ? Math.max(560, compactHeight + 160) : compactHeight}px`,
             } as CSSProperties)
       }
       data-render-ms={elapsed ?? undefined}
     >
-      <div className="graph-actions">
-        <span className="graph-kind">
-          {kind === "mermaid"
-            ? "Mermaid 图表"
-            : kind === "chart"
-              ? "数据图表"
-              : "脑图"}
-        </span>
-        {kind !== "chart" && (
-          <>
-            <button
-              onClick={() => send({ type: "command", action: "in" })}
-              aria-label="放大图表"
-            >
-              <ZoomIn size={16} aria-hidden="true" />
-            </button>
-            <button
-              onClick={() => send({ type: "command", action: "out" })}
-              aria-label="缩小图表"
-            >
-              <ZoomOut size={16} aria-hidden="true" />
-            </button>
-            <button onClick={() => send({ type: "command", action: "fit" })}>
-              适应窗口
-            </button>
-            {kind === "mindmap" && (
-              <>
-                <button
-                  onClick={() => send({ type: "command", action: "actual" })}
-                >
-                  原始比例
-                </button>
-                <output aria-label="脑图缩放比例">{zoom}%</output>
-              </>
-            )}
-          </>
-        )}
-        {kind !== "chart" && (
-          <button
-            aria-pressed={canvasExpanded}
-            onClick={() => setCanvasExpanded(!canvasExpanded)}
-          >
-            {canvasExpanded ? <Minimize2 size={15} /> : <Expand size={15} />}
-            {canvasExpanded ? "收起画布" : "展开画布"}
-          </button>
-        )}
-        <button
-          disabled={stale || !!status || !!problem}
-          onClick={() => send({ type: "command", action: "export" })}
-        >
-          <Download size={15} aria-hidden="true" />
-          导出 SVG
-        </button>
-        {kind === "chart" && (
-          <button
-            disabled={stale || !!status || !!problem}
-            onClick={() =>
-              send({ type: "command", action: "export", format: "png" })
-            }
-          >
-            <Download size={15} aria-hidden="true" />
-            导出 PNG
-          </button>
-        )}
-      </div>
+      {toolbarHost === undefined
+        ? toolbar
+        : toolbarHost && createPortal(toolbar, toolbarHost)}
       {stale && (
         <div className="preview-status" role="status">
-          正在更新；下方为上次预览，完成前不可导出。
+          {msg("正在更新；下方为上次预览，完成前不可导出。")}
         </div>
       )}
       {(problem || status) && (
@@ -413,11 +479,13 @@ export default function Graph({
           {problem || status}
           {errorLine !== null && onLocate && (
             <button onClick={() => onLocate(startLine + errorLine - 1)}>
-              定位源码第 {startLine + errorLine - 1} 行
+              {msg("定位源码第")} {startLine + errorLine - 1} {msg("行")}
             </button>
           )}
           {failed && (
-            <button onClick={() => setAttempt((n) => n + 1)}>重新预览</button>
+            <button onClick={() => setAttempt((n) => n + 1)}>
+              {msg("重新预览")}
+            </button>
           )}
         </div>
       )}
@@ -432,10 +500,10 @@ export default function Graph({
           sandbox="allow-scripts"
           title={
             kind === "mermaid"
-              ? "Mermaid 本地预览"
+              ? msg("Mermaid 本地预览")
               : kind === "chart"
-                ? "数据图表本地预览"
-                : "Markdown 脑图"
+                ? msg("数据图表本地预览")
+                : msg("Markdown 脑图")
           }
           src={
             kind === "chart"

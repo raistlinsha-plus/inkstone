@@ -1,3 +1,4 @@
+import { msg, translate } from "../i18n";
 import { ExternalLink } from "lucide-react";
 
 export interface WikiRef {
@@ -29,15 +30,15 @@ const labels = {
   conflict: "原文取值不同",
   missing: "依据不足",
   sourceChanged: "来源已变",
-};
+} as const;
 
 export function sourceLines({
   startLine,
   endLine,
 }: Pick<WikiRef, "startLine" | "endLine">) {
   return startLine === endLine
-    ? `第 ${startLine} 行`
-    : `第 ${startLine}–${endLine} 行`;
+    ? translate(`第 ${startLine} 行`, `Line ${startLine}`)
+    : translate(`第 ${startLine}–${endLine} 行`, `Lines ${startLine}–${endLine}`);
 }
 
 export function WikiSourceLink({
@@ -71,16 +72,16 @@ export function WikiClaimEvidence({
 }) {
   const previousText = new Set(previousClaims?.map((row) => row.claim));
   return (
-    <section className="wiki-claim-evidence" aria-label="结论与依据">
-      <h3>结论与依据</h3>
+    <section className="wiki-claim-evidence" aria-label={msg("结论与依据")}>
+      <h3>{msg("结论与依据")}</h3>
       <ol className="wiki-claims">
         {claims.map((row, position) => (
           <li key={position} data-status={row.status}>
             <div className="wiki-claim-label">
-              <strong>{labels[row.status]}</strong>
+              <strong>{msg(labels[row.status])}</strong>
               {previousClaims && (
                 <span>
-                  {previousText.has(row.claim) ? "沿用表述" : "本次新增表述"}
+                  {previousText.has(row.claim) ? msg("沿用表述") : msg("本次新增表述")}
                 </span>
               )}
             </div>

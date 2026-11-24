@@ -1,3 +1,4 @@
+import { trackFramePointer } from "./framePointer";
 import mermaid from "mermaid";
 import { Markmap } from "markmap-view";
 import DOMPurify from "dompurify";
@@ -93,6 +94,9 @@ const notify = (
     "*",
   );
 };
+const framePointer = trackFramePointer((inside) => {
+  if (requestId) notify("diagram-pointer", { inside });
+});
 const escape = (s: string) =>
   s
     .replaceAll("&", "&amp;")
@@ -106,6 +110,22 @@ function tree(node: any): any {
     children: (node.children ?? []).map(tree),
   };
 }
+// Report the same dimensions used to paint the SVG. Tall, narrow diagrams
+// retain their intrinsic size instead of being enlarged to fill the page.
+function layoutMermaid() {
+  const svg = host.querySelector("svg");
+  const box = svg?.viewBox?.baseVal;
+  if (!svg || !box || !(box.width > 0 && box.height > 0)) return;
+  const availableWidth = Math.max(1, host.clientWidth - 24);
+  const fit = Math.min(1, availableWidth / box.width, 16336 / box.height);
+  const width = Math.ceil(box.width * fit * scale);
+  const height = Math.ceil(box.height * fit * scale);
+  svg.style.maxWidth = "none";
+  svg.style.width = `${width}px`;
+  svg.style.height = `${height}px`;
+  svg.style.margin = "12px auto";
+  notify("size", { height: height + 28 + (width > host.clientWidth ? 16 : 0) });
+}
 function refreshPanCursor() {
   const overflow =
     host.scrollWidth > host.clientWidth + 1 ||
@@ -118,6 +138,7 @@ function refreshPanCursor() {
 if (typeof ResizeObserver !== "undefined")
   new ResizeObserver(() => {
     if (map) map.svg.attr("height", Math.max(160, window.innerHeight - 4));
+    if (kind === "mermaid" && renderedGeneration === generation) layoutMermaid();
     refreshPanCursor();
   }).observe(host);
 let drag: {
@@ -171,12 +192,12 @@ window.addEventListener("message", async (event) => {
   if (channel && channel !== data.channel) return;
   channel = data.channel;
   if (data.type === "command") {
-    if (
-      data.requestId !== requestId ||
-      data.revision !== revision ||
-      renderedGeneration !== generation
-    )
+    if (data.requestId !== requestId || data.revision !== revision) return;
+    if (data.action === "pointer-left-frame") {
+      framePointer.reset();
       return;
+    }
+    if (renderedGeneration !== generation) return;
     if (data.action === "export") {
       const job = { generation, channel, requestId, revision };
       const format = data.format === "png" ? "png" : "svg";
@@ -209,7 +230,7 @@ window.addEventListener("message", async (event) => {
             ? 1
             : scale * (data.action === "in" ? 1.25 : 0.8);
         scale = Math.max(0.2, Math.min(4, scale));
-        svg.style.width = `${scale * 100}%`;
+        layoutMermaid();
         refreshPanCursor();
       }
     }
@@ -235,7 +256,7 @@ window.addEventListener("message", async (event) => {
   ) {
     colorMindmap(map.svg.node()!, theme);
     renderedGeneration = job.generation;
-    notify("ready", {}, job);
+    notify("ready", { pointerInside: framePointer.inside }, job);
     return;
   }
   const preserveMermaidView =
@@ -268,27 +289,11 @@ window.addEventListener("message", async (event) => {
         if (styleNonce) style.nonce = styleNonce;
       });
       host.replaceChildren(fragment);
-      const svg = host.querySelector("svg")!;
-      svg.style.maxWidth = "none";
-      svg.style.width = `${scale * 100}%`;
-      svg.style.minHeight = "140px";
+      layoutMermaid();
       if (preserveMermaidView) {
         host.scrollLeft = scroll.left;
         host.scrollTop = scroll.top;
       }
-      const box = svg.viewBox?.baseVal;
-      if (box?.width > 0 && box.height > 0)
-        notify(
-          "size",
-          {
-            height: Math.ceil(
-              box.height *
-                Math.min(1, Math.max(120, window.innerWidth - 32) / box.width) +
-                40,
-            ),
-          },
-          job,
-        );
     } else if (data.kind === "mindmap") {
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.style.width = "100%";
@@ -360,7 +365,7 @@ window.addEventListener("message", async (event) => {
     if (!current()) return;
     refreshPanCursor();
     renderedGeneration = job.generation;
-    notify("ready", {}, job);
+    notify("ready", { pointerInside: framePointer.inside }, job);
   } catch (error) {
     if (!current()) return;
     host.replaceChildren();

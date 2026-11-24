@@ -103,17 +103,34 @@ CREATE TABLE IF NOT EXISTS purge_previews(token TEXT PRIMARY KEY,document TEXT N
     migration
         .pragma_update(None, "user_version", 4)
         .map_err(err)?;
+    let inserted = migration
+        .execute(
+            "INSERT OR IGNORE INTO projects VALUES('inbox','我的文档',?)",
+            [now()],
+        )
+        .map_err(err)?;
+    // Infer the built-in title only once. A user's later rename may reuse any string.
+    let initialized = migration.execute(
+        "INSERT OR IGNORE INTO preferences(key,value)
+         SELECT 'library.inbox-title.v1',CASE WHEN ? OR title='收件箱' THEN 'system' ELSE 'custom' END
+         FROM projects WHERE id='inbox'", [inserted > 0],
+    ).map_err(err)?;
+    if initialized > 0 {
+        migration
+            .execute(
+                "UPDATE projects SET title='我的文档' WHERE id='inbox' AND title='收件箱'",
+                [],
+            )
+            .map_err(err)?;
+    }
     migration.commit().map_err(err)?;
-    c.execute(
-        "INSERT OR IGNORE INTO projects VALUES('inbox','收件箱',?)",
-        [now()],
-    )
-    .map_err(err)?;
     Ok(c)
 }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Project {
+    #[serde(default)]
+    pub system_title: bool,
     pub id: String,
     pub title: String,
 }
@@ -239,10 +256,11 @@ pub fn set_view(data: &Path, project: &str, p: &ViewPreferences) -> Result<(), S
 pub fn list(data: &Path) -> Result<LibraryView, String> {
     let c = conn(data)?;
     let projects = c
-        .prepare("SELECT id,title FROM projects ORDER BY created,id")
+        .prepare("SELECT id,title,(id='inbox' AND EXISTS (SELECT 1 FROM preferences WHERE key='library.inbox-title.v1' AND value='system')) FROM projects ORDER BY created,id")
         .map_err(err)?
         .query_map([], |r| {
             Ok(Project {
+                system_title: r.get(2)?,
                 id: r.get(0)?,
                 title: r.get(1)?,
             })
@@ -348,31 +366,48 @@ pub fn create_project(data: &Path, name: &str) -> Result<Project, String> {
         )
         .map_err(err)?;
     project_root(data, &id)?;
-    Ok(Project { id, title })
+    Ok(Project {
+        id,
+        title,
+        system_title: false,
+    })
 }
 pub fn rename_project(data: &Path, id: &str, name: &str) -> Result<Project, String> {
     let name = title(name)?;
-    let c = conn(data)?;
-    if c.execute("UPDATE projects SET title=? WHERE id=?", params![name, id])
+    let mut c = conn(data)?;
+    let tx = c.transaction().map_err(err)?;
+    if tx
+        .execute("UPDATE projects SET title=? WHERE id=?", params![name, id])
         .map_err(err)?
         == 0
     {
         return Err("文档空间不存在".into());
     }
+    if id == "inbox" {
+        tx.execute(
+            "UPDATE preferences SET value='custom' WHERE key='library.inbox-title.v1'",
+            [],
+        )
+        .map_err(err)?;
+    }
+    tx.commit().map_err(err)?;
     Ok(Project {
+        system_title: false,
         id: id.into(),
         title: name,
     })
 }
 pub fn get(data: &Path, id: &str) -> Result<Document, String> {
-    conn(data)?
-        .query_row(
-            &format!("SELECT {DOC_COLS} FROM documents WHERE id=?"),
-            [id],
-            doc_row,
-        )
+    get_with_connection(&conn(data)?, id)
+}
+
+pub(crate) fn get_with_connection(c: &Connection, id: &str) -> Result<Document, String> {
+    c.prepare_cached(&format!("SELECT {DOC_COLS} FROM documents WHERE id=?"))
+        .map_err(err)?
+        .query_row([id], doc_row)
         .map_err(|_| "文档不存在".into())
 }
+
 fn unique_title(c: &Connection, project: &str, name: &str) -> String {
     let name = name.to_string();
     let p = Path::new(&name);
@@ -399,16 +434,30 @@ pub fn create_document(
     name: &str,
     content: &str,
 ) -> Result<Document, String> {
-    create_managed_document(data, project, name, content, None)
+    create_managed_document(data, project, name, content, None).map(|(doc, _)| doc)
 }
 
-fn create_managed_document(
+#[derive(Clone, Copy)]
+pub(crate) enum RememberedNote {
+    OfflineExample,
+    TaskList,
+}
+impl RememberedNote {
+    fn key(self, project: &str) -> String {
+        match self {
+            Self::OfflineExample => format!("library.local-example.v1:{project}"),
+            Self::TaskList => format!("tasks.default-note.v1:{project}"),
+        }
+    }
+}
+
+pub(crate) fn create_managed_document(
     data: &Path,
     project: &str,
     name: &str,
     content: &str,
-    remembered: Option<&str>,
-) -> Result<Document, String> {
+    remembered: Option<RememberedNote>,
+) -> Result<(Document, bool), String> {
     let mut name = title(name)?;
     if Path::new(&name).extension().is_none() {
         name.push_str(".md")
@@ -424,25 +473,27 @@ fn create_managed_document(
     let tx = c
         .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
         .map_err(err)?;
-    if let Some(key) = remembered {
+    let preference_key = remembered.map(|kind| kind.key(project));
+    if let Some(key) = &preference_key {
         let existing = tx.query_row(
             &format!("SELECT {} FROM documents WHERE project=? AND id=(SELECT value FROM preferences WHERE key=?)", DOC_COLS),
             params![project, key],
             doc_row,
         ).optional().map_err(err)?;
         if let Some(existing) = existing {
-            return match existing.status.as_str() {
-                "ready" => Ok(existing),
-                "trashed" => Err("离线样例在回收站中，请先恢复该文档。".into()),
-                _ => Err("离线样例仍在保存或清理中，请稍后重试。".into()),
-            };
+            match existing.status.as_str() {
+                "ready" => return Ok((existing, false)),
+                "trashed" if matches!(remembered, Some(RememberedNote::TaskList)) => {}
+                "trashed" => return Err("离线样例在回收站中，请先恢复该文档。".into()),
+                _ => return Err("文档仍在保存或清理中，请稍后重试。".into()),
+            }
         }
     }
     let id = uuid::Uuid::new_v4().to_string();
     let name = unique_title(&tx, project, &name);
     let path = format!("documents/{id}/{name}");
     tx.execute("INSERT INTO documents(id,project,path,title,original_hash,source,updated,status) VALUES(?,?,?,?,?,'',?,'pending')",params![id,project,path,name,files::hash(content),now()]).map_err(err)?;
-    if let Some(key) = remembered {
+    if let Some(key) = &preference_key {
         tx.execute(
             "INSERT OR REPLACE INTO preferences(key,value) VALUES(?,?)",
             params![key, id],
@@ -460,16 +511,16 @@ fn create_managed_document(
     }
     c.execute("UPDATE documents SET status='ready' WHERE id=?", [&id])
         .map_err(err)?;
-    get(data, &id)
+    get(data, &id).map(|doc| (doc, true))
 }
 
 pub(crate) fn prepare_local_example(data: &Path, project: &str) -> Result<Document, String> {
-    let document = create_managed_document(
+    let (document, _) = create_managed_document(
         data,
         project,
         "离线体验：社区阅读活动.md",
         include_str!("../../examples/v0.8.5/离线体验：社区阅读活动.md"),
-        Some(&format!("library.local-example.v1:{project}")),
+        Some(RememberedNote::OfflineExample),
     )?;
     let ws = crate::documents::library_workspace(data, project)?;
     let path = files::resolve(&ws.root, &document.path, false)?;
@@ -590,6 +641,10 @@ fn inputs(paths: &[String], warnings: &mut Vec<String>) -> Vec<Input> {
             continue;
         }
         let Ok(p) = p.canonicalize() else { continue };
+        if let Err(reason) = files::require_document_path(&p) {
+            warnings.push(reason);
+            continue;
+        }
         let allowed = if p.is_dir() {
             p.clone()
         } else {
@@ -599,7 +654,10 @@ fn inputs(paths: &[String], warnings: &mut Vec<String>) -> Vec<Input> {
             .follow_links(false)
             .max_depth(13)
             .into_iter()
-            .filter_entry(|e| e.depth() == 0 || !excluded(&e.file_name().to_string_lossy()))
+            .filter_entry(|e| {
+                (e.depth() == 0 || !excluded(&e.file_name().to_string_lossy()))
+                    && !crate::local_credentials::is_private_document_path(e.path())
+            })
         {
             let e = match entry {
                 Ok(e) => e,
@@ -804,6 +862,7 @@ fn import_fingerprint(input: &Input, text: &str, original_hash: &str, attachment
     )
 }
 fn read_attachment(path: &Path) -> Result<Vec<u8>, String> {
+    files::require_document_path(path)?;
     use std::io::Read;
     let mut bytes = vec![];
     fs::File::open(path)
@@ -1338,6 +1397,40 @@ pub fn export_bundle(
 mod tests {
     use super::*;
     #[test]
+    fn only_the_builtin_default_title_migrates_once() {
+        let data = tempfile::tempdir().unwrap();
+        let root = data.path();
+        assert_eq!(project_title(root, "inbox").unwrap(), "我的文档");
+        let other = create_project(root, "收件箱").unwrap();
+        let db = conn(root).unwrap();
+        db.execute(
+            "DELETE FROM preferences WHERE key='library.inbox-title.v1'",
+            [],
+        )
+        .unwrap();
+        db.execute("UPDATE projects SET title='收件箱' WHERE id='inbox'", [])
+            .unwrap();
+        let projects = list(root).unwrap().projects;
+        assert!(projects
+            .iter()
+            .any(|p| p.id == "inbox" && p.system_title && p.title == "我的文档"));
+        assert!(projects
+            .iter()
+            .any(|p| p.id == other.id && !p.system_title && p.title == "收件箱"));
+        rename_project(root, "inbox", "收件箱").unwrap();
+        assert_eq!(project_title(root, "inbox").unwrap(), "收件箱");
+        assert!(
+            !list(root)
+                .unwrap()
+                .projects
+                .into_iter()
+                .find(|p| p.id == "inbox")
+                .unwrap()
+                .system_title
+        );
+    }
+
+    #[test]
     fn offline_example_is_idempotent_in_a_separate_space() {
         let data = tempfile::tempdir().unwrap();
         let own = create_document(data.path(), "inbox", "我的资料.md", "# 原文").unwrap();
@@ -1364,9 +1457,11 @@ mod tests {
         let first = prepare_local_example(data.path(), "inbox").unwrap();
         let workspace = crate::documents::library_workspace(data.path(), "inbox").unwrap();
         let connection = crate::db::open(&workspace.db).unwrap();
-        assert!(!crate::db::lexical_scored(&connection, "阅读活动", Some(&first.path))
-            .unwrap()
-            .is_empty());
+        assert!(
+            !crate::db::lexical_scored(&connection, "阅读活动", Some(&first.path))
+                .unwrap()
+                .is_empty()
+        );
         let path = workspace.root.join(&first.path);
         let edited = "# 用户已改名的样例\n\n草地灯笼活动的主题是亲子朗读。\n";
         files::write_atomic(&path, edited.as_bytes()).unwrap();
@@ -1376,14 +1471,18 @@ mod tests {
         assert_eq!(reused.path, first.path);
         assert_eq!(reused.title, "我的样例.md");
         assert_eq!(files::read_text(&path).unwrap(), edited);
-        assert!(!crate::db::lexical_scored(&connection, "草地灯笼", Some(&first.path))
-            .unwrap()
-            .is_empty());
+        assert!(
+            !crate::db::lexical_scored(&connection, "草地灯笼", Some(&first.path))
+                .unwrap()
+                .is_empty()
+        );
         let live_hash = files::hash(edited);
-        assert!(crate::db::lexical_scored(&connection, "阅读活动", Some(&first.path))
-            .unwrap()
-            .iter()
-            .all(|hit| hit.hash.as_deref() == Some(live_hash.as_str())));
+        assert!(
+            crate::db::lexical_scored(&connection, "阅读活动", Some(&first.path))
+                .unwrap()
+                .iter()
+                .all(|hit| hit.hash.as_deref() == Some(live_hash.as_str()))
+        );
         let other = create_project(data.path(), "其他空间").unwrap();
         let own = prepare_local_example(data.path(), &other.id).unwrap();
         assert_eq!(own.project_id, other.id);
@@ -1406,7 +1505,10 @@ mod tests {
         let view = list(data.path()).unwrap();
         assert_eq!(view.documents.len(), 1);
         let stored = &view.documents[0];
-        assert_eq!(prepare_local_example(data.path(), "inbox").unwrap().id, stored.id);
+        assert_eq!(
+            prepare_local_example(data.path(), "inbox").unwrap().id,
+            stored.id
+        );
         trash(data.path(), &stored.id, false).unwrap();
         assert!(matches!(
             prepare_local_example(data.path(), "inbox"),
@@ -1414,10 +1516,15 @@ mod tests {
         ));
         assert_eq!(list(data.path()).unwrap().documents.len(), 1);
         trash(data.path(), &stored.id, true).unwrap();
-        assert_eq!(prepare_local_example(data.path(), "inbox").unwrap().id, stored.id);
+        assert_eq!(
+            prepare_local_example(data.path(), "inbox").unwrap().id,
+            stored.id
+        );
         // Registered identity refers to a catalogue entry, so permanent
         // removal permits an explicit fresh sample without replaying old data.
-        connection.execute("DELETE FROM documents WHERE id=?", [&stored.id]).unwrap();
+        connection
+            .execute("DELETE FROM documents WHERE id=?", [&stored.id])
+            .unwrap();
         let fresh = prepare_local_example(data.path(), "inbox").unwrap();
         assert_ne!(fresh.id, stored.id);
         assert_eq!(list(data.path()).unwrap().documents.len(), 1);

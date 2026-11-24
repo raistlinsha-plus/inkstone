@@ -2,6 +2,22 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v1.2.0-beta.1 · 从聊天到文档任务
+
+Build 10207 brings Markdown tasks to their own workspace and the weekly calendar. Capture a passage from a chat, check the task in its note, or schedule a work session. Document charts share the contextual controls used by diagrams. [English release notes](docs/DELIVERY-v1.2.0-beta.1.en.md) · [中文版本说明](docs/DELIVERY-v1.2.0-beta.1.md)
+
+- macOS 构建 10207 简化数据图表。正文与分栏中的图表使用一条浮动工具栏，可切换图表、数据表与源码，并导出 SVG 或 PNG。
+- macOS 构建 10206 修正正文及分栏预览里的 Mermaid 长图裁切，简化图表和脑图边框与工具栏。标题栏拉开了应用名与版本号的间距。Wiki 关闭按钮与标题对齐，资料范围支持全选和按筛选结果批量勾选或清除。
+- macOS 构建 10205 调整问答工作台。提问以简洁气泡显示，回答下方可复制、存为文档和重试，「更多回答操作」可查看本轮上下文或从回答创建任务。联网未能核实时集中说明原因。输入框随草稿增长，聚焦时只显示一层边框，添加资料和本轮联网设置都在发送按钮旁。
+- macOS 构建 10204 优化任务快速添加和详情。点加号即可输入，回车或点「添加」后可继续录入下一条。详情将状态、排期和保存操作分组，来源文档可直接打开。
+- macOS 构建 10203 将任务和日历拆成两个一级入口。任务可直接写入空间的默认 Markdown 笔记，正文显示勾选状态和排期。周历分别展示截止、跟进和执行时段，拖动执行时段可调整排期。左侧一级导航仅显示图标，悬停或键盘聚焦时浮出名称。默认空间改名为「我的文档」，保留原文及已有自定义名称。
+- macOS 构建 10202 将问答、向量、重排和 Brave 密钥移至 Inkstone 本机私有配置。旧安装可在每项服务的设置里导入已保存的钥匙串密钥，后续问答直接读取本地配置。
+
+- 从自己的提问或助手的回答选取原话，逐项核对并保存到指定 Markdown。也可主动调用问答模型提取建议。新建、完成、排期与等待跟进都回写所属笔记，可从日历回到原行。
+- 简体中文与英文可在设置中即时切换。可以独立设置回答语言，文档、引用、历史消息与任务原话保留用户输入的文字。
+- 回答的「本轮上下文」列出各阶段实际发出的请求、最终请求里的来源数量、回答保留及引用的来源。页边同伴可说明当前动作由什么本地事件触发。
+- 调整文档问答的原句筛选及追问处理。离线对照、实机试用和真实模型评测各自的结果见[集成候选交付记录](docs/DELIVERY-v1.2.0-beta.1.md)。
+
 ## v1.0.0-rc.4 · 换个说法问笔记
 
 - 从「问这篇文档」提问时，可以用自己的说法询问笔记中的事实。开启模型辅助核对后，应用会把模型选中的内容绑定到当前原句，出处可回到原文。

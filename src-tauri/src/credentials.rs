@@ -69,127 +69,193 @@ impl CredentialReader {
             // The OS may still own a prompt. Keep its slot until the real call finishes.
         }
     }
-    pub fn pending(&self) -> bool {
+    #[cfg(test)]
+    fn pending(&self) -> bool {
         self.state
             .lock()
             .map(|s| s.flight.is_some())
             .unwrap_or(true)
     }
-    pub async fn read<F>(&self, identity: Identity, cancel: &AtomicBool, reader: F) -> ResultValue
+    #[cfg(test)]
+    async fn read<F>(&self, identity: Identity, cancel: &AtomicBool, reader: F) -> ResultValue
     where
         F: FnOnce() -> ResultValue + Send + 'static,
     {
-        if cancel.load(Ordering::SeqCst) {
-            return Err("操作已取消".into());
-        }
-        let (flight, launch) = {
-            let mut state = self.state.lock().map_err(|_| "凭据读取状态不可用")?;
-            let now = Instant::now();
-            state.cached.retain(|_, v| v.expires > now);
-            if let Some(cached) = state.cached.get(&identity) {
-                return Ok(cached.value.clone());
-            }
-            if state
-                .failed
-                .as_ref()
-                .is_some_and(|(key, until)| key == &identity && *until > now)
-            {
-                return Err("钥匙串暂不可用，请稍后重试；本地编辑和关键词检索可继续。".into());
-            }
-            if let Some(flight) = &state.flight {
-                if flight.identity != identity
-                    || flight.epoch != state.epoch
-                    || flight.started.elapsed() >= self.wait
-                {
+        self.read_until(identity, cancel, reader, None).await
+    }
+
+    pub async fn read_for_import<F>(
+        &self,
+        identity: Identity,
+        cancel: &AtomicBool,
+        reader: F,
+    ) -> ResultValue
+    where
+        F: FnOnce() -> ResultValue + Send + 'static,
+    {
+        self.read_until(
+            identity,
+            cancel,
+            reader,
+            Some(Instant::now() + Duration::from_secs(120)),
+        )
+        .await
+    }
+
+    /// A credential import can await the user's prompt, even if a previous caller
+    /// already stopped waiting. Use one deadline across every occupied OS slot.
+    async fn read_until<F>(
+        &self,
+        identity: Identity,
+        cancel: &AtomicBool,
+        reader: F,
+        import_deadline: Option<Instant>,
+    ) -> ResultValue
+    where
+        F: FnOnce() -> ResultValue + Send + 'static,
+    {
+        let epoch = self.state.lock().map_err(|_| "凭据读取状态不可用")?.epoch;
+        let mut reader = Some(reader);
+        loop {
+            let (flight, launch) = {
+                let mut state = self.state.lock().map_err(|_| "凭据读取状态不可用")?;
+                if cancel.load(Ordering::SeqCst) {
+                    return Err("操作已取消".into());
+                }
+                if state.epoch != epoch {
+                    return Err("凭据配置已变化，请重新操作。".into());
+                }
+                let now = Instant::now();
+                if import_deadline.is_some_and(|deadline| now >= deadline) {
                     return Err(PENDING.into());
                 }
-                (flight.clone(), false)
-            } else {
-                let (result, _) = watch::channel(None);
-                let flight = Arc::new(Flight {
-                    identity,
-                    epoch: state.epoch,
-                    started: now,
-                    result,
-                });
-                state.flight = Some(flight.clone());
-                (flight, true)
+                state.cached.retain(|_, v| v.expires > now);
+                if let Some(cached) = state.cached.get(&identity) {
+                    return Ok(cached.value.clone());
+                }
+                if state
+                    .failed
+                    .as_ref()
+                    .is_some_and(|(key, until)| key == &identity && *until > now)
+                {
+                    return Err("钥匙串暂不可用，请稍后重试；本地编辑和关键词检索可继续。".into());
+                }
+                if let Some(flight) = &state.flight {
+                    if import_deadline.is_none()
+                        && (flight.identity != identity
+                            || flight.epoch != epoch
+                            || flight.started.elapsed() >= self.wait)
+                    {
+                        return Err(PENDING.into());
+                    }
+                    (flight.clone(), false)
+                } else {
+                    let (result, _) = watch::channel(None);
+                    let flight = Arc::new(Flight {
+                        identity: identity.clone(),
+                        epoch,
+                        started: now,
+                        result,
+                    });
+                    state.flight = Some(flight.clone());
+                    (flight, true)
+                }
+            };
+            if launch {
+                self.start_read(
+                    flight.clone(),
+                    reader.take().expect("one native read per caller"),
+                );
             }
-        };
-        if launch {
-            let shared = self.state.clone();
-            let current = flight.clone();
-            let ttl = self.ttl;
-            // Keep management alive even when the calling future is cancelled or times out.
-            tokio::task::spawn_blocking(move || {
-                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(reader))
-                    .unwrap_or_else(|_| Err("钥匙串读取失败".into()));
-                if let Ok(mut state) = shared.lock() {
-                    if state.epoch == current.epoch {
-                        match &result {
-                            Ok(value) => {
-                                state.cached.insert(
-                                    current.identity.clone(),
-                                    Cached {
-                                        value: value.clone(),
-                                        expires: Instant::now()
-                                            + if value.is_some() {
-                                                ttl
-                                            } else {
-                                                ttl.min(Duration::from_secs(30))
-                                            },
-                                    },
-                                );
-                            }
-                            Err(_) => {
-                                state.failed = Some((
-                                    current.identity.clone(),
-                                    Instant::now() + Duration::from_secs(15),
-                                ))
-                            }
+            let deadline = import_deadline.unwrap_or(flight.started + self.wait);
+            let mut receiver = flight.result.subscribe();
+            let completion = receiver.wait_for(Option::is_some);
+            let published = tokio::select! {
+                result = tokio::time::timeout(deadline.saturating_duration_since(Instant::now()), completion) =>
+                    result.map_err(|_| PENDING.to_string())?.map_err(|_| "凭据读取中断".to_string())?,
+                error = async {
+                    loop {
+                        if cancel.load(Ordering::SeqCst) {
+                            return "操作已取消";
+                        }
+                        if !self.state.lock().is_ok_and(|state| state.epoch == epoch) {
+                            return "凭据配置已变化，请重新操作。";
+                        }
+                        tokio::time::sleep(Duration::from_millis(20)).await;
+                    }
+                } => return Err(error.into()),
+            };
+            if cancel.load(Ordering::SeqCst) {
+                return Err("操作已取消".into());
+            }
+            if flight.identity == identity && flight.epoch == epoch {
+                if self.state.lock().map_err(|_| "凭据读取状态不可用")?.epoch != epoch {
+                    return Err("凭据配置已变化，请重新操作。".into());
+                }
+                return published
+                    .as_ref()
+                    .expect("completed read has a result")
+                    .clone();
+            }
+            // Another identity completed. Discard its result and obtain this
+            // caller's credential under the same cancellation and epoch guards.
+        }
+    }
+
+    fn start_read<F>(&self, current: Arc<Flight>, reader: F)
+    where
+        F: FnOnce() -> ResultValue + Send + 'static,
+    {
+        let shared = self.state.clone();
+        let ttl = self.ttl;
+        // Keep management alive even when the calling future is cancelled or times out.
+        tokio::task::spawn_blocking(move || {
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(reader))
+                .unwrap_or_else(|_| Err("钥匙串读取失败".into()));
+            if let Ok(mut state) = shared.lock() {
+                if state.epoch == current.epoch {
+                    match &result {
+                        Ok(value) => {
+                            state.cached.insert(
+                                current.identity.clone(),
+                                Cached {
+                                    value: value.clone(),
+                                    expires: Instant::now()
+                                        + if value.is_some() {
+                                            ttl
+                                        } else {
+                                            ttl.min(Duration::from_secs(30))
+                                        },
+                                },
+                            );
+                        }
+                        Err(_) => {
+                            state.failed = Some((
+                                current.identity.clone(),
+                                Instant::now() + Duration::from_secs(15),
+                            ))
                         }
                     }
-                    if state
-                        .flight
-                        .as_ref()
-                        .is_some_and(|f| Arc::ptr_eq(f, &current))
-                    {
-                        state.flight = None;
-                    }
-                    let result = if state.epoch == current.epoch {
-                        result
-                    } else {
-                        Err("凭据配置已变化，请重新操作。".into())
-                    };
-                    current.result.send_replace(Some(result));
+                }
+                if state
+                    .flight
+                    .as_ref()
+                    .is_some_and(|f| Arc::ptr_eq(f, &current))
+                {
+                    state.flight = None;
+                }
+                let result = if state.epoch == current.epoch {
+                    result
                 } else {
-                    current
-                        .result
-                        .send_replace(Some(Err("凭据读取状态不可用".into())));
-                }
-            });
-        }
-        let mut receiver = flight.result.subscribe();
-        let remaining = self.wait.saturating_sub(flight.started.elapsed());
-        let operation = async {
-            loop {
-                if let Some(value) = receiver.borrow().clone() {
-                    if self.state.lock().map_err(|_| "凭据读取状态不可用")?.epoch != flight.epoch
-                    {
-                        return Err("凭据配置已变化，请重新操作。".into());
-                    }
-                    return value;
-                }
-                receiver
-                    .changed()
-                    .await
-                    .map_err(|_| "凭据读取中断".to_string())?;
+                    Err("凭据配置已变化，请重新操作。".into())
+                };
+                current.result.send_replace(Some(result));
+            } else {
+                current
+                    .result
+                    .send_replace(Some(Err("凭据读取状态不可用".into())));
             }
-        };
-        tokio::select! {
-            result=tokio::time::timeout(remaining,operation)=>result.unwrap_or_else(|_|Err(PENDING.into())),
-            _=async { while !cancel.load(Ordering::SeqCst) {tokio::time::sleep(Duration::from_millis(20)).await;} }=>Err("操作已取消".into()),
-        }
+        });
     }
 }
 
@@ -324,6 +390,74 @@ mod tests {
             Some("new")
         );
     }
+    #[tokio::test]
+    async fn import_waits_for_an_existing_prompt_and_other_roles_get_their_own_key() {
+        let reader = CredentialReader::new(Duration::from_secs(60), Duration::from_millis(10));
+        let chat = Identity::new("chat", "https://a.invalid/v1", false);
+        let embed = Identity::new("embedding", "https://a.invalid/v1", false);
+        let cancel = AtomicBool::new(false);
+        let (release, wait) = std::sync::mpsc::channel();
+        let pending = reader
+            .read(chat.clone(), &cancel, move || {
+                wait.recv_timeout(Duration::from_secs(10)).unwrap();
+                Ok(Some("chat-key".into()))
+            })
+            .await;
+        assert_eq!(pending.unwrap_err(), PENDING);
+
+        let same = reader.read_for_import(chat, &cancel, || panic!("join the existing chat read"));
+        let other =
+            reader.read_for_import(embed.clone(), &cancel, || Ok(Some("embedding-key".into())));
+        let (chat_result, embedding_result, _) = tokio::join!(biased; same, other, async {
+            release.send(()).unwrap();
+        });
+        assert_eq!(chat_result.unwrap().as_deref(), Some("chat-key"));
+        assert_eq!(embedding_result.unwrap().as_deref(), Some("embedding-key"));
+        assert_eq!(
+            reader
+                .read_for_import(embed, &cancel, || panic!("reuse recent key"))
+                .await
+                .unwrap()
+                .as_deref(),
+            Some("embedding-key")
+        );
+    }
+
+    #[tokio::test]
+    async fn waiting_for_another_role_honors_budget_cancel_and_configuration_changes() {
+        let reader = CredentialReader::new(Duration::from_secs(60), Duration::from_millis(10));
+        let chat = Identity::new("chat", "https://a.invalid/v1", false);
+        let embed = Identity::new("embedding", "https://a.invalid/v1", false);
+        let cancel = AtomicBool::new(false);
+        let (release, wait) = std::sync::mpsc::channel();
+        let pending = reader
+            .read(chat.clone(), &cancel, move || {
+                wait.recv_timeout(Duration::from_secs(10)).unwrap();
+                Ok(Some("old".into()))
+            })
+            .await;
+        assert_eq!(pending.unwrap_err(), PENDING);
+
+        let budget = Instant::now() + Duration::from_millis(25);
+        let result = reader
+            .read_until(embed.clone(), &cancel, || panic!("occupied"), Some(budget))
+            .await;
+        assert_eq!(result.unwrap_err(), PENDING);
+        let stop = AtomicBool::new(false);
+        let waiting = reader.read_for_import(embed.clone(), &stop, || panic!("cancelled"));
+        let (result, _) =
+            tokio::join!(biased; waiting, async { stop.store(true, Ordering::SeqCst) });
+        assert_eq!(result.unwrap_err(), "操作已取消");
+
+        let waiting = reader.read_for_import(embed, &cancel, || panic!("configuration changed"));
+        let (result, _) = tokio::join!(biased; waiting, async { reader.invalidate() });
+        assert!(result.unwrap_err().contains("配置已变化"));
+        // A new request waits out the stale OS operation, then reads the new key.
+        let fresh = reader.read_for_import(chat, &cancel, || Ok(Some("new".into())));
+        let (result, _) = tokio::join!(biased; fresh, async { release.send(()).unwrap() });
+        assert_eq!(result.unwrap().as_deref(), Some("new"));
+    }
+
     #[tokio::test]
     async fn cache_is_role_address_scoped_expiring_and_cancel_is_prompt() {
         let reader = CredentialReader::new(Duration::from_millis(30), Duration::from_secs(60));

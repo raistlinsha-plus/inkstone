@@ -224,3 +224,12 @@ test("pet panel stays within the editor on either edge and in a short split wind
           );
         }
 });
+
+test("explains the visible pose when a greeting interrupts reading at a milestone", () => {
+  render(<CompanionPet {...props} activity="working" milestone />);
+  fireEvent.click(avatar());
+  expect(screen.getByText("应用正在处理问答。")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "摸摸" }));
+  expect(screen.getByText("你刚刚和同伴打了招呼。")).toBeTruthy();
+  expect(screen.queryByText("已确认的成长里程碑。")).toBeNull();
+});

@@ -1,3 +1,4 @@
+import { msg, translate, type Message } from "../i18n";
 import {
   useCallback,
   useEffect,
@@ -10,7 +11,7 @@ import {
 } from "react";
 import { BookOpen, Feather, Heart, Moon, X } from "lucide-react";
 import CharacterSprite from "./CharacterSprite";
-import { characters, type CharacterId } from "./types";
+import { characterProfiles, type CharacterId } from "./types";
 import { isImeEvent } from "../platform/ime";
 import {
   dragPet,
@@ -182,7 +183,7 @@ export default function CompanionPet({
       false,
   );
   const animate = moving && !quiet && !reduceMotion;
-  const name = characters[role].name;
+  const name = characterProfiles()[role].name;
   const frame = petFrame(area, dragging?.placement ?? placement);
   const panelStyle = petPanelFrame(area, placement);
 
@@ -304,6 +305,16 @@ export default function CompanionPet({
               ? "resting"
               : "idle"));
 
+  const moodReasons: Record<typeof mood, Message> = {
+    held: "你正在移动桌宠。",
+    happy: "你刚刚和同伴打了招呼。",
+    landing: "你刚刚放下了桌宠。",
+    reading: "应用正在处理问答。",
+    ready: "回答已经就绪。",
+    milestone: "已确认的成长里程碑。",
+    resting: "同伴正在安静休息。",
+    idle: "来自你的互动或本机的陪读状态。",
+  };
   return (
     <div
       ref={anchor}
@@ -321,11 +332,11 @@ export default function CompanionPet({
         ref={avatar}
         type="button"
         className="companion-pet-avatar"
-        aria-label={`${name}桌宠`}
+        aria-label={translate(`${name}桌宠`, `${name} desk pet`)}
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         aria-describedby={`${menuId}-help`}
-        title={`${name} · 点击互动，拖动或用方向键停靠`}
+        title={translate(`${name} · 点击互动，拖动或用方向键停靠`, `${name} · Click to interact, drag or use arrow keys to dock`)}
         onFocus={(event) =>
           onBeforeInteract?.(
             event.relatedTarget instanceof Element ? event.relatedTarget : null,
@@ -433,14 +444,14 @@ export default function CompanionPet({
         />
       </button>
       <span hidden id={`${menuId}-help`}>
-        左右方向键切换停靠边，上下方向键调整高度。
+        {msg("左右方向键切换停靠边，上下方向键调整高度。")}
       </span>
       {open && (
         <section
           id={menuId}
           className="companion-pet-menu"
           style={panelStyle}
-          aria-label={`${name}互动`}
+          aria-label={translate(`${name}互动`, `Interact with ${name}`)}
         >
           {recordPanel || (
             <>
@@ -450,15 +461,19 @@ export default function CompanionPet({
                   ? activityText
                   : reaction === "happy"
                     ? role === "motuan"
-                      ? "墨团眯了眯眼。"
-                      : characters[role].quote
+                      ? msg("墨团眯了眯眼。")
+                      : characterProfiles()[role].quote
                     : quiet
-                      ? "安静陪读"
-                      : "一起读一会儿。"}
+                      ? msg("安静陪读")
+                      : msg("一起读一会儿。")}
               </p>
+              <details className="pet-reason"><summary>{msg("为什么是这个动作？")}</summary>
+                <p>{msg(moodReasons[mood])}</p>
+                <small>{msg("动作在本机决定，不会为此调用模型。")}</small>
+              </details>
               <div className="pet-actions">
                 <button type="button" onClick={() => react("happy", 1800)}>
-                  <Heart size={14} /> {role === "motuan" ? "摸摸" : "打招呼"}
+                  <Heart size={14} /> {role === "motuan" ? msg("摸摸") : msg("打招呼")}
                 </button>
                 <button
                   type="button"
@@ -466,17 +481,17 @@ export default function CompanionPet({
                   aria-pressed={quiet}
                   onClick={onQuiet}
                 >
-                  <Moon size={14} /> {quiet ? "恢复陪伴" : "专注"}
+                  <Moon size={14} /> {quiet ? msg("恢复陪伴") : msg("专注")}
                 </button>
                 <button type="button" onClick={onStories}>
-                  <BookOpen size={14} /> 故事
+                  <BookOpen size={14} /> {msg("故事")}
                 </button>
                 <button
                   type="button"
                   disabled={busy || recordDisabled}
                   onClick={onRecord}
                 >
-                  <Feather size={14} /> 记录本次完成
+                  <Feather size={14} /> {msg("记录本次完成")}
                 </button>
                 <button
                   type="button"
@@ -485,7 +500,7 @@ export default function CompanionPet({
                     onHide();
                   }}
                 >
-                  <X size={14} /> 收起桌宠
+                  <X size={14} /> {msg("收起桌宠")}
                 </button>
               </div>
             </>

@@ -1,3 +1,4 @@
+import { msg } from "../i18n";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
 export default class ContentBoundary extends Component<
@@ -28,7 +29,7 @@ export default class ContentBoundary extends Component<
     if (!this.state.error) return this.props.children;
     return (
       <section className="content-fallback" role="status">
-        <p>{this.props.label}暂时无法呈现，原文已保留。可修改源码后重试。</p>
+        <p>{this.props.label}{msg("暂时无法呈现，原文已保留。可修改源码后重试。")}</p>
         <pre>
           <code>{this.props.source}</code>
         </pre>

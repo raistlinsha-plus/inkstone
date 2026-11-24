@@ -5,8 +5,12 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
+import { useState } from "react";
+import { chartTemplate } from "../content/chart";
+import Chart from "./Chart";
 import Graph from "./Graph";
 afterEach(() => {
   cleanup();
@@ -98,6 +102,36 @@ test("chart validation fails closed and its own frame enables SVG and PNG only f
   });
 });
 
+test("chart view controls stay in the block toolbar while export follows the rendered view", () => {
+  function ChartBlock() {
+    const [toolbar, setToolbar] = useState<HTMLElement | null>(null);
+    return (
+      <article>
+        <header aria-label="块工具" ref={setToolbar} />
+        <Chart source={chartTemplate} toolbarHost={toolbar} readOnly />
+      </article>
+    );
+  }
+  const { container } = render(<ChartBlock />);
+  const toolbar = within(container.querySelector("header")!);
+  const button = (name: string) => toolbar.getByRole("button", { name });
+  const tableButton = button("数据表");
+  expect(button("图表").getAttribute("aria-pressed")).toBe("true");
+  expect(button("导出 SVG")).toBeDefined();
+  expect(button("导出 PNG")).toBeDefined();
+  expect(toolbar.queryByRole("button", { name: "编辑图表" })).toBeNull();
+  fireEvent.click(tableButton);
+  expect(button("数据表")).toBe(tableButton);
+  expect(tableButton.getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByRole("table")).toBeDefined();
+  expect(toolbar.queryByRole("button", { name: "导出 SVG" })).toBeNull();
+  fireEvent.click(button("源码"));
+  expect(container.querySelector("code")?.textContent).toBe(chartTemplate);
+  fireEvent.click(button("图表"));
+  expect(screen.getByTitle("数据图表本地预览")).toBeDefined();
+  expect(button("导出 SVG")).toBeDefined();
+});
+
 test("graph sizes are bounded, revision-owned and expandable without changing source", () => {
   render(<Graph kind="mermaid" source="flowchart LR\n A-->B" />);
   const iframe = screen.getByTitle("Mermaid 本地预览") as HTMLIFrameElement;
@@ -117,14 +151,88 @@ test("graph sizes are bounded, revision-owned and expandable without changing so
   size(180);
   expect(container.style.getPropertyValue("--graph-height")).toBe("180px");
   size(999999);
-  expect(container.style.getPropertyValue("--graph-height")).toBe("440px");
+  expect(container.style.getPropertyValue("--graph-height")).toBe("16384px");
+  size(920);
+  expect(container.style.getPropertyValue("--graph-height")).toBe("920px");
   size(200, job.revision - 1);
   size(NaN);
-  expect(container.style.getPropertyValue("--graph-height")).toBe("440px");
+  expect(container.style.getPropertyValue("--graph-height")).toBe("920px");
   fireEvent.click(screen.getByRole("button", { name: "展开画布" }));
-  expect(container.style.getPropertyValue("--graph-height")).toBe("560px");
+  expect(container.style.getPropertyValue("--graph-height")).toBe("1080px");
   fireEvent.click(screen.getByRole("button", { name: "收起画布" }));
-  expect(container.style.getPropertyValue("--graph-height")).toBe("440px");
+  expect(container.style.getPropertyValue("--graph-height")).toBe("920px");
+});
+
+test("only the active frame can reveal diagram controls when the pointer enters its sandbox", () => {
+  render(<Graph kind="mermaid" source="flowchart LR\nA --> B" />);
+  const frame = screen.getByTitle("Mermaid 本地预览") as HTMLIFrameElement;
+  const posted = vi.spyOn(frame.contentWindow!, "postMessage");
+  fireEvent.load(frame);
+  const job = posted.mock.calls[0][0];
+  const preview = frame.closest(".diagram-preview")!;
+  const send = (
+    inside: boolean,
+    source: Window = frame.contentWindow!,
+    revision = job.revision,
+  ) =>
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          source,
+          data: { ...job, type: "diagram-pointer", inside, revision },
+        }),
+      );
+    });
+  send(true, window);
+  send(true, frame.contentWindow!, job.revision - 1);
+  expect(preview.hasAttribute("data-frame-hover")).toBe(false);
+  send(true);
+  expect(preview.hasAttribute("data-frame-hover")).toBe(true);
+  fireEvent.pointerMove(document.body);
+  expect(preview.hasAttribute("data-frame-hover")).toBe(false);
+  expect(posted.mock.calls.at(-1)?.[0]).toMatchObject({
+    action: "pointer-left-frame",
+  });
+  send(true);
+  expect(preview.hasAttribute("data-frame-hover")).toBe(true);
+  send(false);
+  expect(preview.hasAttribute("data-frame-hover")).toBe(false);
+});
+
+test("moving directly to a second sandbox dismisses the first diagram toolbar", () => {
+  render(
+    <>
+      <Graph kind="mermaid" source="graph LR\nA --> B" />
+      <Graph kind="mindmap" source="- B" />
+    </>,
+  );
+  const diagrams = screen
+    .getAllByTitle(/Mermaid 本地预览|Markdown 脑图/)
+    .map((element) => {
+      const frame = element as HTMLIFrameElement;
+      const posted = vi.spyOn(frame.contentWindow!, "postMessage");
+      fireEvent.load(frame);
+      const job = posted.mock.calls.find(
+        ([data]) => data.type === "render",
+      )![0];
+      return {
+        preview: frame.closest(".diagram-preview")!,
+        enter: () =>
+          act(() => {
+            window.dispatchEvent(
+              new MessageEvent("message", {
+                source: frame.contentWindow!,
+                data: { ...job, type: "diagram-pointer", inside: true },
+              }),
+            );
+          }),
+      };
+    });
+  diagrams[0].enter();
+  expect(diagrams[0].preview.hasAttribute("data-frame-hover")).toBe(true);
+  diagrams[1].enter();
+  expect(diagrams[0].preview.hasAttribute("data-frame-hover")).toBe(false);
+  expect(diagrams[1].preview.hasAttribute("data-frame-hover")).toBe(true);
 });
 
 test("switching appearance rerenders the same sandbox and passes through the saved viewport", async () => {

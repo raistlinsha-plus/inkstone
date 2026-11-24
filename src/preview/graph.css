@@ -9,7 +9,8 @@
   border-color: var(--ui-line);
 }
 
-.graph-preview .graph-actions :is(.graph-kind, output) {
+.graph-preview .graph-actions :is(.graph-kind, output),
+.diagram-tools.graph-actions output {
   color: var(--ui-muted);
 }
 
@@ -37,4 +38,112 @@
   color: var(--ui-warning-text);
   background: var(--ui-warning-surface);
   border-color: var(--ui-warning-line);
+}
+
+/* Diagram controls live together in a contextual toolbar. Its space stays
+   reserved so hovering a diagram never moves the surrounding document. */
+.diagram-preview {
+  position: relative;
+}
+.inline-content-block.diagram-block > .inline-block-bar,
+.diagram-preview > .diagram-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  max-width: calc(100% - 12px);
+  min-height: 30px;
+  margin: 5px auto 0;
+  gap: 2px;
+  padding: 2px 4px;
+  color: var(--ui-text);
+  background: var(--ui-paper);
+  border: 1px solid var(--ui-line);
+  border-radius: 7px;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ui-text) 8%, transparent);
+  position: relative;
+  z-index: 2;
+}
+.diagram-tool-slot {
+  min-width: 0;
+}
+.diagram-block .diagram-tool-slot > .diagram-tools,
+.diagram-preview .diagram-tools > .block-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  min-height: 0;
+  position: static;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.diagram-block .diagram-tool-slot .graph-kind {
+  display: none;
+}
+.diagram-block .inline-block-bar .block-actions {
+  gap: 2px;
+  opacity: 1;
+}
+.diagram-block .inline-block-bar .block-title,
+.diagram-preview .diagram-tools .block-label span,
+.diagram-tools.graph-actions .graph-kind {
+  margin: 0;
+  padding-inline: 5px;
+  color: var(--ui-muted);
+  font: 500 12px/1.3 var(--font-sans);
+}
+:is(.diagram-preview, .diagram-block) .diagram-tools.graph-actions button,
+.diagram-block .inline-block-bar :is(.block-actions > button, summary) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  min-width: 28px;
+  padding: 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ui-text);
+  text-decoration: none;
+  font: 500 12px/1.3 var(--font-sans);
+}
+:is(.diagram-preview, .diagram-block)
+  .diagram-tools.graph-actions
+  button:hover:not(:disabled),
+.diagram-block .inline-block-bar :is(.block-actions > button, summary):hover {
+  background: var(--ui-hover);
+}
+.inline-content-block.diagram-block.expanded .graph-preview:not([data-kind="chart"]) iframe {
+  height: max(60vh, var(--graph-height));
+}
+.mind-node-tools {
+  margin: 4px 12px 8px;
+}
+.mind-node-tools > summary {
+  width: fit-content;
+  color: var(--ui-muted);
+  cursor: pointer;
+  font: 500 12px/1.6 var(--font-sans);
+}
+@media (hover: hover) and (pointer: fine) {
+  .diagram-block:not(:hover, :focus-within, .is-editing, .expanded, :has([data-frame-hover]))
+    > .inline-block-bar,
+  .diagram-preview:not(:hover, :focus-within, [data-frame-hover], [data-editing], :has([data-frame-hover])) > .diagram-tools {
+    opacity: 0;
+  }
+  .inkstone-node-view.selected > .diagram-block > .inline-block-bar {
+    opacity: 1;
+  }
+}
+@media (pointer: coarse) {
+  :is(.diagram-preview, .diagram-block) .diagram-tools.graph-actions button,
+  .diagram-block .inline-block-bar :is(.block-actions > button, summary) {
+    min-height: 40px;
+    min-width: 40px;
+  }
 }

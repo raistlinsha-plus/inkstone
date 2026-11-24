@@ -55,6 +55,27 @@ test("outdated render completion and errors cannot replace the latest SVG or rea
   );
   expect(ready).toHaveLength(1);
   expect(ready[0][0]).toMatchObject({ requestId: "new", revision: 2 });
+  for (const [event, inside] of [
+    ["pointerover", true],
+    ["pointerleave", false],
+  ] as const) {
+    document.documentElement.dispatchEvent(new Event(event));
+    expect(messages.mock.calls.at(-1)?.[0]).toMatchObject({
+      type: "diagram-pointer",
+      requestId: "new",
+      revision: 2,
+      inside,
+    });
+  }
+  document.documentElement.dispatchEvent(new Event("pointerover"));
+  send("new", 2, { type: "command", action: "pointer-left-frame" });
+  const beforeReentry = messages.mock.calls.length;
+  document.documentElement.dispatchEvent(new Event("pointermove"));
+  expect(messages.mock.calls.length).toBe(beforeReentry + 1);
+  expect(messages.mock.calls.at(-1)?.[0]).toMatchObject({
+    type: "diagram-pointer",
+    inside: true,
+  });
   send("failure-old", 3);
   send("latest", 4, { theme: "dark", preserveView: true });
   await vi.waitFor(() => expect(pending).toHaveLength(3));

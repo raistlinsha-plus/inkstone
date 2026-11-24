@@ -1,3 +1,5 @@
+import { calendarMonthLabel } from "./localizedCalendar";
+import { msg, useLocale } from "../i18n";
 import { Temporal } from "temporal-polyfill";
 import {
   dateInZone,
@@ -34,17 +36,18 @@ export default function CalendarTools({
         .add({ months })
         .toString(),
     );
+  const { region } = useLocale();
   return (
     <>
       <div className="calendar-toolbar">
-        <div className="calendar-view-tabs" role="group" aria-label="日历视图">
+        <div className="calendar-view-tabs" role="group" aria-label={msg("日历视图")}>
           <button
             className={view === "agenda" ? "active" : ""}
             aria-pressed={view === "agenda"}
             onClick={() => onView("agenda")}
             disabled={busy}
           >
-            日程清单
+            {msg("日程清单")}
           </button>
           <button
             className={view === "month" ? "active" : ""}
@@ -52,13 +55,13 @@ export default function CalendarTools({
             onClick={() => onView("month")}
             disabled={busy}
           >
-            月历
+            {msg("月历")}
           </button>
         </div>
         <div className="calendar-main-actions">
           {onExport && (
             <button onClick={onExport} disabled={busy}>
-              导出 ICS
+              {msg("导出 ICS")}
             </button>
           )}
           {onNew && (
@@ -67,26 +70,26 @@ export default function CalendarTools({
               onClick={onNew}
               disabled={busy}
             >
-              ＋ 新增事项
+              {msg("＋ 新增事项")}
             </button>
           )}
         </div>
       </div>
       <div className="calendar-date-nav">
-        <button onClick={() => move(-1)} aria-label="上个月">
+        <button onClick={() => move(-1)} aria-label={msg("上个月")}>
           ‹
         </button>
         <button onClick={() => onAnchor(dateInZone(new Date(), timeZone))}>
-          今天
+          {msg("今天")}
         </button>
-        <button onClick={() => move(1)} aria-label="下个月">
+        <button onClick={() => move(1)} aria-label={msg("下个月")}>
           ›
         </button>
-        <strong>{label ?? monthRange(anchor).label}</strong>
+        <strong>{calendarMonthLabel(anchor, label, region)}</strong>
         <label>
-          转到日期
+          {msg("转到日期")}
           <input
-            aria-label="日历转到日期"
+            aria-label={msg("日历转到日期")}
             type="date"
             value={anchor}
             onInput={(e) => {

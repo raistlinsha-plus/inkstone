@@ -1,3 +1,4 @@
+import { msg } from "./i18n";
 import { dismissOnOutside } from "./platform/menu";
 import { isImeEvent } from "./platform/ime";
 import {
@@ -269,21 +270,21 @@ export default function Editor({
         }
       }}
     >
-      <div className="editor-tools" role="group" aria-label="编辑操作">
-        <div className="history-tools" role="group" aria-label="历史操作">
+      <div className="editor-tools" role="group" aria-label={msg("编辑操作")}>
+        <div className="history-tools" role="group" aria-label={msg("历史操作")}>
           <button
             onClick={undo}
             disabled={!doc.canUndo}
-            title="撤销 · ⌘Z"
-            aria-label="撤销"
+            title={msg("撤销 · ⌘Z")}
+            aria-label={msg("撤销")}
           >
             <Undo2 size={17} strokeWidth={1.75} aria-hidden="true" />
           </button>
           <button
             onClick={redo}
             disabled={!doc.canRedo}
-            title="重做 · ⇧⌘Z"
-            aria-label="重做"
+            title={msg("重做 · ⇧⌘Z")}
+            aria-label={msg("重做")}
           >
             <Redo2 size={17} strokeWidth={1.75} aria-hidden="true" />
           </button>
@@ -293,19 +294,19 @@ export default function Editor({
           className="formatting-host milkdown"
           hidden={!actualVisual}
           role="toolbar"
-          aria-label="文字格式"
+          aria-label={msg("文字格式")}
         />
         {kind === "markdown" && (
           <>
             <button
               className={outline ? "selected" : ""}
               onClick={() => setOutline(!outline)}
-              aria-label="文档大纲"
+              aria-label={msg("文档大纲")}
               aria-pressed={outline}
-              title="文档大纲"
+              title={msg("文档大纲")}
             >
               <ListTree size={17} strokeWidth={1.75} aria-hidden="true" />
-              <span className="toolbar-label">大纲</span>
+              <span className="toolbar-label">{msg("大纲")}</span>
             </button>
             {!actualVisual && <span className="tools-spacer" />}
             <div
@@ -342,7 +343,7 @@ export default function Editor({
                 }}
               >
                 <Plus size={16} strokeWidth={1.8} />
-                插入
+                {msg("插入")}
                 <ChevronDown size={14} strokeWidth={1.8} />
               </button>
               {insertOpen && (
@@ -350,7 +351,7 @@ export default function Editor({
                   className="insert-menu"
                   id={insertMenuId}
                   role="menu"
-                  aria-label="插入内容"
+                  aria-label={msg("插入内容")}
                 >
                   {insertCommands.map((command) => (
                     <button
@@ -369,7 +370,7 @@ export default function Editor({
                       {command.label}
                     </button>
                   ))}
-                  <span>空段输入 / 也可插入</span>
+                  <span>{msg("空段输入 / 也可插入")}</span>
                 </div>
               )}
             </div>
@@ -377,7 +378,7 @@ export default function Editor({
         )}
         {kind === "mermaid" && (
           <select
-            aria-label="替换为图表模板（可撤销）"
+            aria-label={msg("替换为图表模板（可撤销）")}
             value=""
             onChange={(e) => {
               const template = diagramTemplates[e.target.value];
@@ -387,7 +388,7 @@ export default function Editor({
               }
             }}
           >
-            <option value="">替换为模板（可撤销）</option>
+            <option value="">{msg("替换为模板（可撤销）")}</option>
             {Object.keys(diagramTemplates).map((k) => (
               <option key={k} value={k}>
                 {k}
@@ -398,17 +399,17 @@ export default function Editor({
       </div>
       {!visualAllowed && mode === "visual" && (
         <div className="preview-help">
-          此内容保留源码编辑与实时预览，避免转换损失。
+          {msg("此内容保留源码编辑与实时预览，避免转换损失。")}
         </div>
       )}
       {previewTooLarge && mode !== "source" && (
         <div className="preview-help">
-          文档超过 300 KB，已保留源码编辑以保持流畅；请精简后预览。
+          {msg("文档超过 300 KB，已保留源码编辑以保持流畅；请精简后预览。")}
         </div>
       )}
       <div className="editor-panes">
         {outline && kind === "markdown" && (
-          <nav className="document-outline" aria-label="文档大纲">
+          <nav className="document-outline" aria-label={msg("文档大纲")}>
             {headings.map((h) => (
               <button
                 key={h.line}
@@ -418,7 +419,7 @@ export default function Editor({
                 {h.label}
               </button>
             ))}
-            {!headings.length && <p>暂无标题</p>}
+            {!headings.length && <p>{msg("暂无标题")}</p>}
           </nav>
         )}
         <div
@@ -456,7 +457,7 @@ export default function Editor({
               className="split-divider"
               role="separator"
               tabIndex={0}
-              aria-label="编辑与预览宽度"
+              aria-label={msg("编辑与预览宽度")}
               aria-orientation="vertical"
               aria-controls={sourcePaneId}
               aria-valuemin={25}

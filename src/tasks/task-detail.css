@@ -1,0 +1,269 @@
+.modal.task-detail-sheet {
+  width: min(520px, 100%);
+  max-width: 100%;
+  max-height: min(90vh, 760px);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ui-paper);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-line);
+  border-radius: 14px;
+  box-shadow: 0 12px 44px var(--ui-shadow);
+}
+.task-detail-form {
+  container-type: inline-size;
+  margin: 0;
+  color: var(--ui-text);
+  font: 14px/1.45 var(--font-sans);
+}
+.task-detail-sheet .task-detail-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.task-detail-sheet .task-detail-body {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.task-detail-heading {
+  padding: 17px 24px 12px;
+  border-bottom: 1px solid var(--ui-line);
+}
+.task-detail-form .task-detail-heading h2 {
+  margin: 0 0 6px;
+  font: 650 20px/1.3 var(--font-sans);
+  color: var(--ui-text);
+}
+.task-detail-form .task-detail-source {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--ui-muted);
+  padding: 2px 0;
+  min-height: 24px;
+  font-size: 12px;
+}
+.task-detail-source span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-detail-form svg {
+  flex: none;
+}
+.task-detail-form button.task-detail-source:hover {
+  color: var(--ui-accent);
+  background: transparent;
+  text-decoration: underline;
+}
+.task-detail-fields {
+  display: grid;
+  gap: 14px;
+  border: 0;
+  margin: 0;
+  min-inline-size: 0;
+  padding: 18px 24px;
+}
+.task-detail-form .task-detail-field {
+  margin: 0;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  color: var(--ui-muted);
+  font-size: 12px;
+  font-weight: 550;
+}
+.task-detail-form .task-detail-field input {
+  appearance: none;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--ui-control-line);
+  background: var(--ui-field);
+  color: var(--ui-text);
+  font: 400 14px/1.4 var(--font-sans);
+  text-align: start;
+}
+.task-detail-form .task-detail-field input:focus {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: -2px;
+}
+.task-date-control {
+  display: block;
+  position: relative;
+}
+.task-date-hint {
+  position: absolute;
+  inset: 1px 30px 1px 1px;
+  display: flex;
+  align-items: center;
+  padding-inline-start: 9px;
+  background: var(--ui-field);
+  border-radius: 6px;
+  color: var(--ui-placeholder);
+  font: 400 13px/1.4 var(--font-sans);
+  pointer-events: none;
+}
+.task-date-hint::before {
+  content: attr(data-hint);
+}
+.task-date-control:focus-within .task-date-hint {
+  visibility: hidden;
+}
+.task-detail-status {
+  display: flex;
+  gap: 8px 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.task-detail-status label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  min-height: 28px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.task-detail-status input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--ui-action);
+}
+.task-detail-form .task-detail-untrack,
+.task-detail-form .task-detail-help,
+.task-detail-form .task-detail-calendar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  min-height: 30px;
+  padding: 4px 6px;
+  color: var(--ui-muted);
+  font: 500 12px/1.4 var(--font-sans);
+}
+.task-detail-form button:hover:not(:disabled) {
+  background: var(--ui-hover);
+}
+.task-detail-form .task-detail-untrack {
+  margin-inline-start: auto;
+}
+.task-detail-form .task-detail-untrack:hover:not(:disabled) {
+  color: var(--ui-danger);
+  background: var(--ui-danger-surface);
+}
+.task-detail-dates,
+.task-detail-times {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.task-detail-schedule {
+  background: var(--ui-surface);
+  border-radius: 8px;
+  padding: 3px 12px;
+}
+.task-detail-schedule summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  color: var(--ui-text);
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+  list-style: none;
+}
+.task-detail-schedule summary::-webkit-details-marker {
+  display: none;
+}
+.task-detail-chevron {
+  margin-inline-start: auto;
+  color: var(--ui-muted);
+}
+.task-detail-schedule details[open] .task-detail-chevron {
+  transform: rotate(90deg);
+}
+.task-detail-times {
+  padding: 4px 0 10px;
+}
+.task-detail-zone {
+  grid-column: 1 / -1;
+}
+.task-detail-form .task-detail-calendar {
+  color: var(--ui-accent);
+  padding-inline: 0;
+  margin-bottom: 3px;
+}
+.task-detail-body > details,
+.task-detail-body > p[role="alert"] {
+  margin: 8px 24px 16px;
+}
+.task-detail-body > details summary {
+  cursor: pointer;
+}
+.task-detail-body > p[role="alert"] {
+  color: var(--ui-danger);
+}
+.task-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 24px;
+  background: var(--ui-paper);
+  border-top: 1px solid var(--ui-line);
+}
+.task-detail-submit {
+  display: flex;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+.task-detail-submit button {
+  min-height: 34px;
+  padding: 6px 13px;
+  border: 1px solid var(--ui-line);
+  border-radius: 7px;
+  color: var(--ui-text);
+  background: var(--ui-field);
+  font: 500 13px/1.4 var(--font-sans);
+}
+.task-detail-submit button.task-detail-save {
+  color: var(--ui-on-action);
+  background: var(--ui-action);
+  border-color: var(--ui-action);
+}
+.task-detail-submit .task-detail-save:hover:not(:disabled) {
+  background: var(--ui-action-hover);
+}
+.calendar-inspector:has(.task-detail-form) {
+  padding: 0;
+}
+@container (max-width: 385px) {
+  .task-detail-heading,
+  .task-detail-fields,
+  .task-detail-actions {
+    padding-inline: 14px;
+  }
+  .task-detail-dates,
+  .task-detail-times {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .task-detail-status {
+    gap: 4px 10px;
+  }
+}

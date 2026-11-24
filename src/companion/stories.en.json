@@ -1,0 +1,101 @@
+{
+  "yanzhou.intro.v1": {
+    "title": "The Blank Catalogue",
+    "paragraphs": [
+      "When you push open the study door, a catalogue lies open on the desk by the window. Every line is numbered. Only the last page is blank. A man in a grey-green coat slips a copper bookmark between the pages and looks up at your footsteps.",
+      "“I’m Yanzhou.” He pulls the other chair out a little, as casually as if it had always belonged there. “There’s time to read the books here. And if you’re halfway through writing something, you can put it down for a while.”",
+      "Lamplight catches the unengraved bookmark. He doesn’t ask how many papers you’ve brought. He simply slides a clean sheet towards you. The study has room for another person to pick up a pen."
+    ]
+  },
+  "yanzhou.acquaintance.v1": {
+    "title": "Leave a Lamp On",
+    "paragraphs": [
+      "The lamp has been turned. When you approach the desk again, Yanzhou is comparing catalogues from different years. One line has been erased so often the paper almost lets the light through.",
+      "He covers the line with his bookmark, then seems to think better of it and moves it away. “It’s nothing urgent.” After a moment he adds, “I just haven’t found the right words.”",
+      "Together you check the page numbers you can confirm. The quiet figures make no demand of the empty space. Yanzhou draws the other chair into the lamplight, leaving both manuscripts enough light.",
+      "“We don’t have to finish the catalogue before we light the lamp.” He seems a little surprised to hear himself say it. His copper bookmark bears a small new engraving: his name. For once, the unfinished catalogue stays on the desk instead of going into a drawer.",
+      "He adjusts the shade and puts the catalogue back. This time the bookmark leaves the empty line in view. The lamp stays on with the ending still unwritten."
+    ]
+  },
+  "yanzhou.together.v1": {
+    "title": "Two Marginal Notes",
+    "paragraphs": [
+      "Two notes lie on the desk in the afternoon light. Beside the same old passage, one reader circled “enough already”; another wrote “there’s more to ask”. Yanzhou studies them for a long time. This time he doesn’t merge them into one sentence.",
+      "“I used to want to leave behind a single, definitive catalogue,” he says. “As if giving every question its place would keep anyone from losing their way.” A notebook peeks from his coat pocket. Unnumbered scraps stick out between its pages.",
+      "He opens the last page. In place of titles or authors are little sentences: I wonder where they went after the rain. I’d like to reread that letter I never sent. Save a page, just so there’s somewhere to start again.",
+      "Yanzhou doesn’t take these thoughts for yours or ask whether you feel the same. He places the notebook between the manuscripts and leaves each in its own handwriting.",
+      "From the old catalogue he takes his earliest draft. Its corners have curled. Back then he measured and drew a box for every gap, but the things he wanted to write never fitted inside. Together you smooth out the sheet and find it an accessible pocket. A working draft can be worth keeping. Perhaps putting things in order means showing the next reader where a question can be taken up again. Yanzhou turns his pencil towards the empty end of the page.",
+      "“If we leave the two readings side by side for today,” he asks quietly, “where would you put the unanswered question?”"
+    ],
+    "choices": {
+      "yanzhou.c1.a": ["Leave the question in the margin", "He draws a tiny square in the margin and carefully sets the question mark inside."],
+      "yanzhou.c1.b": ["Start a new page and take our time", "He slips a fresh sheet behind the catalogue. At last the blank space has a place of its own."]
+    }
+  },
+  "zhiwei.intro.v1": {
+    "title": "A Name in the Margin",
+    "paragraphs": [
+      "Someone is writing on a dog-eared page beside the shelves. She pauses, turns it over, then turns it back, as though deciding that unfinished words can stay in plain sight. A little leaf-shaped clip is pinned to her blue-grey sleeve.",
+      "“Zhiwei.” She points to the name she has just written in the margin, then smiles. “There’s room for my name here. The rest can take its time.”",
+      "There’s an empty chair by the window and two sharpened pencils on the table. She nudges one towards you. “Write down what you think first. Leave in the places where you disagree, too. A page in this study can hold more than one voice.” The breeze lifts the paper, revealing a preface that has yet to find a title."
+    ]
+  },
+  "zhiwei.acquaintance.v1": {
+    "title": "A Letter in the Margin",
+    "paragraphs": [
+      "Zhiwei hands you a folded page. “I’ve made changes, but I didn’t rub them out.” The lines are neat. You can still make out the earlier sentences while new notes run down the margin.",
+      "After a conclusion she often adds a little “why?”. Sometimes she wants to check a source. Sometimes she hasn’t quite finished her thought. She used to wait until every last question was settled before handing a page to anyone.",
+      "“Then I realised that if I waited that long, nobody would ever get to see how I thought.” She moves her leaf clip to the corner. Underneath it she has written: this reading may still leave other voices out.",
+      "She doesn’t ask you to agree, and disagreement doesn’t upset her. The page rests between you with a pencil laid across it, waiting for a new note. The light outside moves on. The letter has no address and can wait for its answer.",
+      "Before leaving, she writes an invented date on the folded corner. “Not when it went in the post,” she says. “When I felt ready to leave the page here.”"
+    ]
+  },
+  "zhiwei.together.v1": {
+    "title": "An Unfinished Preface",
+    "paragraphs": [
+      "Zhiwei’s preface is still untitled, but there are fewer crossed-out lines. She still revises it. Her new sentences finally have enough room to sit alongside the old ones.",
+      "She puts the folded notebook by the window and points to a passage. “Here I want to say what I think. Yet every time I get this far, I find myself wondering how someone else might read it.” She says it plainly, without asking you to reassure her.",
+      "Pages rustle in the study. The sources you’ve read each have their own origins. Anything unverified is marked, however handsome the page. She draws two columns in her notes: “What the sources say” and “How I read them”.",
+      "“Those columns don’t always have to agree.” She fastens the leaf clip between them. “First, I want both to be visible.” She has rewritten the opening sentence; the last line is still empty.",
+      "She reads a much-crossed-out sentence and leaves it legible. “My hesitation is part of how I got here.” She pauses, testing whether those are words she actually wants to keep. Neither of you signs a joint conclusion or deletes a column to settle a difference. A pencil sharpens the line between them. The empty space has room for fresh sources and for a reader who changes her mind. Light crosses the folded corner, and the little leaf casts a shadow.",
+      "She shifts the page towards you. “How would you like to read this today?”"
+    ],
+    "choices": {
+      "zhiwei.c1.a": ["Discuss the marginal notes", "She writes the two readings side by side, leaving a broad strip between them like a path you might still walk across."],
+      "zhiwei.c1.b": ["Read the page quietly", "She pushes the page a little closer. There’s no hurry. The pencil rests quietly between you."]
+    }
+  },
+  "motuan.intro.v1": {
+    "title": "A Shadow at the Page’s Edge",
+    "paragraphs": [
+      "You have barely opened the book when a little shadow appears at its edge. It steps clear of the writing and touches the blank margin with a paper-white paw. Its tail tapers like a drop of ink about to fall.",
+      "They call it Motuan in the study. It hasn’t quite caught on to its name, but the sound of a turning page commands its full attention. Turn another, and it tilts its head as if checking that the previous page can still be found.",
+      "A blank bookmark slips out. Motuan catches it with a paw and slowly slides it towards your hand. It curls beside the slip like a small comma. The reading lamp by the window is on, and your place is safe."
+    ]
+  },
+  "motuan.acquaintance.v1": {
+    "title": "A Bookmark Found",
+    "paragraphs": [
+      "There’s a faint rustle in the papers. Motuan pokes out its head, a scrap stuck to its forehead and a blank bookmark under its paw. It pulls the bookmark into the light and pushes it back into the shadow, inspecting it several times.",
+      "A faint leaf pattern has appeared in its inky fur, like a freshly dried rubbing. Motuan seems surprised too. It reaches for the mark with the white tip of its paw, misses, and pretends it only meant to wash its face.",
+      "The book on the desk is open where you left it. Motuan arranges the loose bookmarks alongside it, without picking a favourite page. One bookmark is old, another has uneven corners, and one bears an imaginary page number.",
+      "At last it picks the plainest slip and drops it in an empty box. It looks up. Perhaps a slip of paper can matter simply because somebody read carefully and wanted to come back. It gives a tiny yawn and leaves the lid a crack open.",
+      "You put the box on the lowest shelf, within reach. Motuan looks it over twice, settles beside it, and curls its tail into a contented little circle."
+    ]
+  },
+  "motuan.together.v1": {
+    "title": "Reading Together in the Afternoon",
+    "paragraphs": [
+      "A strip of afternoon light lies across the page. Motuan lies in it, its tail curled around a new bookmark. The leaf pattern is clearer now against its original inky coat. The tips of its paws are as white as ever.",
+      "There are several bookmarks in the little box. It takes one in its teeth, puts it beside your hand, then straightens it with a careful paw. It bears no title from any real document, just an imagined line like a path finding its way.",
+      "When you turn a page, Motuan looks up. When you pause, its ears turn towards the window. Unread pages can wait. In the soft rhythm of turning pages, the two of you settle into reading.",
+      "Suddenly it pushes the box closer, picks up the bookmark and sets it at the edge. Then it glances at the open manuscript. Either place would do. It seems to be asking where you’d like to keep this small trace of the afternoon.",
+      "A thin tissue lines the box. Motuan once tried to smooth it out and left a faint paw print. Now you notice that every bookmark has a different edge. Some have been folded; some warmed under the lamp; others have spent only a moment in a book. Motuan leaves each a little space, without promoting the new ones or burying the old. There’s no prize for the longest reading session. It stretches, nudges a crooked bookmark straight, and gently pushes it towards you.",
+      "Motuan sits up, the paper-white tip of its tail stirring. The bookmark rests beside your hand, waiting for a small decision."
+    ],
+    "choices": {
+      "motuan.c1.a": ["Tuck it into this manuscript", "Motuan slides the bookmark between the pages and presses the corner with a white paw. A bit of leaf pattern peeks out when the book closes."],
+      "motuan.c1.b": ["Keep it in our bookmark box", "It nudges the box towards you, waits for you to put the bookmark away, then closes the lid with its nose."]
+    }
+  }
+}

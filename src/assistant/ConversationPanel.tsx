@@ -1,13 +1,20 @@
+import "./transcript.css";
+import { dismissOnOutside } from "../platform/menu";
+import ContextReceipt from "./ContextReceipt";
+import { msg, systemMessage, translate, type Message } from "../i18n";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   BookOpen,
   CircleAlert,
+  ListTodo,
+  Pencil,
+  RotateCcw,
   Copy,
   FilePlus2,
   MoreHorizontal,
 } from "lucide-react";
 import Answer from "../Answer";
-import { retrievalLabels, rerankLabel } from "../knowledge/retrievalLabels";
+import { retrievalLabel, rerankLabel } from "../knowledge/retrievalLabels";
 import type { AnswerSnapshot } from "../answerContent";
 import type { SearchResult } from "../types";
 import { answerCitations } from "./sourceDisplay";
@@ -23,12 +30,15 @@ import {
   type Turn,
 } from "./types";
 
-const preferenceLabels: Record<string, string> = {
+const legacyWebNotice =
+  "联网搜索暂不可用，公开资料未核验。所选范围未找到足够证据。请检查资料、索引或联网设置。";
+
+const preferenceLabels: Record<string, Message> = {
   structure: "回答结构",
+  language: "回答语言",
   length: "回答篇幅",
   original_units: "资料单位",
 };
-
 
 export interface AnswerRecord {
   question: string;
@@ -67,7 +77,7 @@ export function answerRecord(
     chartWarnings: r?.chartWarnings ?? [],
     warning:
       candidate.status === "stopped"
-        ? ["已停止，以下为未完成内容。", candidate.error || r?.warning]
+        ? [msg("已停止，以下为未完成内容。"), candidate.error || r?.warning]
             .filter(Boolean)
             .join("\n")
         : candidate.error || r?.warning || "",
@@ -98,17 +108,22 @@ export { ConversationHeader } from "./ConversationHeader";
 function answerBasis(record: AnswerRecord, choices: SearchResult[]) {
   if (!record.complete) return;
   if (record.snapshot?.finishReason === "no_evidence")
-    return { label: "本轮未能核实", missing: true };
+    return { label: msg("本轮未能核实"), missing: true };
   if (choices.length) {
     const web = choices.some((source) => source.external?.kind === "web");
     const local = choices.some((source) => source.external?.kind !== "web");
     return {
-      label: local && web ? "本地资料与网页" : web ? "公开网页" : "所选资料",
+      label:
+        local && web
+          ? msg("本地资料与网页")
+          : web
+            ? msg("公开网页")
+            : msg("所选资料"),
       missing: false,
     };
   }
   if (record.trace?.route === "direct")
-    return { label: "直接回答 · 本轮未附来源", missing: false };
+    return { label: msg("直接回答 · 本轮未附来源"), missing: false };
 }
 
 export function ConversationTimeline({
@@ -124,6 +139,7 @@ export function ConversationTimeline({
   workbench = false,
   onCopy,
   onTransfer,
+  onCreateTasks,
   onRetry,
   onEdit,
   onSelect,
@@ -146,6 +162,11 @@ export function ConversationTimeline({
   allowInsert?: boolean;
   onCopy: (answer: AnswerRecord) => void;
   onTransfer: (kind: "save" | "insert", answer: AnswerRecord) => void;
+  onCreateTasks?: (
+    turn: Turn,
+    candidate: Candidate | null,
+    selection: string,
+  ) => void;
   onRetry: (turn: Turn) => void;
   onEdit: (turn: Turn) => void;
   onSelect: (turn: Turn, c: Candidate) => void;
@@ -174,7 +195,8 @@ export function ConversationTimeline({
     record: AnswerRecord,
     key: string,
     active = false,
-    retryTurn?: Turn,
+    turn?: Turn,
+    candidate?: Candidate,
   ) => {
     const citations = answerCitations(
       record.sources,
@@ -185,20 +207,59 @@ export function ConversationTimeline({
     );
     const first = choices[0];
     const basis = !active ? answerBasis(record, choices) : undefined;
-    const technical = (record.snapshot || record.trace || record.memory) && (
+    // Earlier releases stored this boilerplate as the whole answer. A detailed
+    // warning already explains the outcome; keep history intact and export the visible reason.
+    const useNoticeAsAnswer =
+      basis?.missing &&
+      !!record.warning.trim() &&
+      record.text.trim() === "未能从本轮指定资料核实请求。";
+    const conciseWebNotice =
+      useNoticeAsAnswer &&
+      turn?.webAccess !== "local-only" &&
+      !conversation?.scope &&
+      !turn?.sources?.projectId &&
+      !turn?.sources?.documentIds?.length &&
+      !turn?.sources?.attachments?.length &&
+      !choices.length &&
+      record.warning.replace(/\s+/g, "") === legacyWebNotice;
+    const notice = conciseWebNotice
+      ? translate(
+          "暂时无法联网核实。请稍后重试，或添加可供核对的资料。",
+          "Web verification is temporarily unavailable. Try again later or add a source to check.",
+        )
+      : systemMessage(record.warning);
+    const transferable = useNoticeAsAnswer
+      ? { ...record, text: notice }
+      : record;
+    const retry =
+      turn && candidate?.status === "complete" && record.text
+        ? () => onRetry(turn)
+        : undefined;
+    const technical = (record.snapshot ||
+      record.trace ||
+      record.memory ||
+      turn) && (
       <details className="assistant-evidence assistant-technical">
-        <summary>技术详情</summary>
+        <summary>{msg("技术详情")}</summary>
+        {turn && conversation && (
+          <TurnSources
+            turn={turn}
+            candidate={candidate}
+            conversation={conversation}
+          />
+        )}
+        {useNoticeAsAnswer && <p>{record.text}</p>}
+        {conciseWebNotice && <p>{record.warning}</p>}
         {record.snapshot && (
           <>
             <p>
               {record.snapshot.scopeLabel} ·{" "}
-              {record.snapshot.model || "未调用问答模型"}
+              {record.snapshot.model || msg("未调用问答模型")}
             </p>
             {record.snapshot.retrievalMode && (
               <p>
-                实际检索 ·{" "}
-                {retrievalLabels.get(record.snapshot.retrievalMode) ??
-                  record.snapshot.retrievalMode}
+                {msg("实际检索 ·")}{" "}
+                {retrievalLabel(record.snapshot.retrievalMode)}
                 {record.snapshot.rerankStatus &&
                   ` · ${rerankLabel(record.snapshot.rerankStatus)}`}
               </p>
@@ -206,31 +267,39 @@ export function ConversationTimeline({
           </>
         )}
         {record.trace && (
-          <section aria-label="本轮查阅">
-            <p>本轮查阅</p>
-            <small>
-              {retrievalLabels.get(record.trace.route) ?? record.trace.route}
-            </small>
+          <section aria-label={msg("本轮查阅")}>
+            <p>{msg("本轮查阅")}</p>
+            <small>{retrievalLabel(record.trace.route)}</small>
             {record.trace.steps.map((step, index) => (
               <small key={index}>{step}</small>
             ))}
             {record.trace.unread.map((step, index) => (
-              <small key={`unread-${index}`}>未核验 · {step}</small>
+              <small key={`unread-${index}`}>
+                {msg("未核验 ·")} {step}
+              </small>
             ))}
           </section>
         )}
         {record.memory && (
-          <section aria-label="本轮上下文">
+          <section aria-label={msg("本轮上下文")}>
             <p>
-              本轮上下文 · 已应用 {record.memory.preferences.length} 项表达偏好
+              {msg("本轮上下文 · 已应用")} {record.memory.preferences.length}{" "}
+              {msg("项表达偏好")}
             </p>
             {record.memory.preferences.map((preference) => (
               <small key={preference.id}>
-                {preferenceLabels[preference.key] ?? preference.key} ·{" "}
-                {preference.scope === "space" ? "当前空间" : "全部空间"}
+                {preferenceLabels[preference.key]
+                  ? msg(preferenceLabels[preference.key])
+                  : preference.key}{" "}
+                ·{" "}
+                {preference.scope === "space"
+                  ? msg("当前空间")
+                  : msg("全部空间")}
               </small>
             ))}
-            {record.memory.history && <small>已发送 1 条历史问题背景。</small>}
+            {record.memory.history && (
+              <small>{msg("已发送 1 条历史问题背景。")}</small>
+            )}
             {record.memory.notes.map((note) => (
               <small key={note}>{note}</small>
             ))}
@@ -239,27 +308,40 @@ export function ConversationTimeline({
       </details>
     );
     return (
-      <>
+      <div
+        className="chat-reply"
+        data-unverified={basis?.missing || undefined}
+        data-notice-only={useNoticeAsAnswer || undefined}
+      >
         {basis && (
-          <div className="assistant-answer-basis">
+          <div
+            className="assistant-answer-basis"
+            data-missing={basis.missing || undefined}
+          >
             {basis.missing ? (
               <CircleAlert size={14} aria-hidden="true" />
             ) : (
               <BookOpen size={14} aria-hidden="true" />
             )}
-            <span>{basis.label}</span>
+            <span
+              className={
+                basis.missing && record.text ? "turn-sr-only" : undefined
+              }
+            >
+              {basis.label}
+            </span>
             {first && (
               <button
                 type="button"
-                title="查看本轮提供给模型的资料"
+                title={msg("查看本轮提供给模型的资料")}
                 onClick={(event) => onOpen(first, choices, event.currentTarget)}
               >
-                本轮依据 · {choices.length}
+                {msg("本轮依据 ·")} {choices.length}
               </button>
             )}
           </div>
         )}
-        {record.text && (
+        {record.text && !useNoticeAsAnswer && (
           <Answer
             text={record.text}
             sources={record.sources}
@@ -271,10 +353,12 @@ export function ConversationTimeline({
             viewKey={key}
             onError={(message) => onError(message)}
           />
-        )}{" "}
-        {record.warning && (
-          <div className="panel-warning">{record.warning}</div>
         )}
+        {record.warning &&
+          (useNoticeAsAnswer ||
+            record.warning.trim() !== record.text.trim()) && (
+            <div className="chat-reply-notice">{notice}</div>
+          )}
         {record.chartWarnings.map((w, i) => (
           <div className="panel-warning" key={i}>
             {w}
@@ -283,14 +367,16 @@ export function ConversationTimeline({
         {!!record.citationChecks?.length && (
           <section
             className="assistant-citation-checks"
-            aria-label="引用核对结果"
+            aria-label={msg("引用核对结果")}
           >
-            <h4>部分结论需要核对</h4>
+            <h4>{msg("部分结论需要核对")}</h4>
             <ul>
               {record.citationChecks.map((check, index) => (
                 <li key={index} data-review={check.status}>
                   <strong>
-                    {check.status === "conflict" ? "与来源不一致" : "待核对"}
+                    {check.status === "conflict"
+                      ? msg("与来源不一致")
+                      : msg("待核对")}
                   </strong>{" "}
                   {check.excerpt}
                   {check.citations.map((number) => {
@@ -305,7 +391,7 @@ export function ConversationTimeline({
                           onOpen(source, choices, event.currentTarget)
                         }
                       >
-                        查看引用 {number}
+                        {msg("查看引用")} {number}
                       </button>
                     ) : null;
                   })}
@@ -314,71 +400,50 @@ export function ConversationTimeline({
             </ul>
           </section>
         )}
-        {!workbench && record.text && (
-          <ContextualAnswerActions
-            key={key}
-            disabled={active}
-            onCopy={() => onCopy(record)}
-            onSave={() => onTransfer("save", record)}
-          >
-            {allowInsert && (
-              <button
-                disabled={active}
-                onClick={() => onTransfer("insert", record)}
-              >
-                插入正文
-              </button>
-            )}
-            {retryTurn && (
-              <button
-                disabled={busy || switching || conversation?.archived}
-                onClick={() => onRetry(retryTurn)}
-              >
-                重新生成
-              </button>
-            )}
-            {technical}
-          </ContextualAnswerActions>
-        )}
-        {workbench && record.text && (
-          <div className="assistant-turn-actions">
-            <button disabled={active} onClick={() => onCopy(record)}>
-              复制 Markdown
-            </button>
-            <button
-              disabled={active}
-              onClick={() => onTransfer("save", record)}
-            >
-              保存为文档
-            </button>
-            {first && !basis && (
-              <button
-                type="button"
-                onClick={(event) => onOpen(first, choices, event.currentTarget)}
-              >
-                <BookOpen size={14} /> 本轮依据 · {choices.length}
-              </button>
-            )}
-            {allowInsert && (
-              <button
-                disabled={active}
-                onClick={() => onTransfer("insert", record)}
-              >
-                插入正文
-              </button>
-            )}
-          </div>
-        )}
-        {(!record.text || !workbench) && first && !basis && (
+        {first && !basis && (
           <button
+            className="chat-source-link"
             type="button"
             onClick={(event) => onOpen(first, choices, event.currentTarget)}
           >
-            本轮依据 · {choices.length}
+            {msg("本轮依据 ·")} {choices.length}
           </button>
         )}
-        {(workbench || !record.text) && technical}
-      </>
+        {!active && (
+          <ReplyActions
+            key={key}
+            hasText={!!record.text}
+            retryDisabled={busy || switching || conversation?.archived}
+            onCopy={() => onCopy(transferable)}
+            onSave={() => onTransfer("save", transferable)}
+            onInsert={
+              allowInsert ? () => onTransfer("insert", transferable) : undefined
+            }
+            onRetry={retry}
+            onCreateTask={
+              onCreateTasks &&
+              turn &&
+              candidate?.status === "complete" &&
+              record.text
+                ? (selection) => onCreateTasks(turn, candidate, selection)
+                : undefined
+            }
+            taskDisabled={busy || switching}
+            workbench={workbench}
+          >
+            {technical}
+            {turn && candidate && (
+              <ContextReceipt
+                candidate={candidate}
+                turn={turn}
+                parent={conversation?.turns.find(
+                  (item) => item.id === turn.parentTurnId,
+                )}
+              />
+            )}
+          </ReplyActions>
+        )}
+      </div>
     );
   };
   return (
@@ -393,51 +458,72 @@ export function ConversationTimeline({
       }}
     >
       {path.length > 1 && (
-        <p className="assistant-path" aria-label="当前会话分支">
-          当前分支 · {path.length}轮 · 每轮展示选中的回答
+        <p className="assistant-path" aria-label={msg("当前会话分支")}>
+          {msg("当前分支 ·")} {path.length}
+          {msg("轮 · 每轮展示选中的回答")}
         </p>
       )}
       {path.map((turn, index) => {
         const candidate = selectedCandidate(turn);
         return (
           <section className="assistant-turn" key={turn.id}>
-            <div className="assistant-question">
-              <div className="assistant-question-heading">
-                <span>你 · 第{index + 1}轮</span>
+            <div className="chat-question-group">
+              <div
+                className="assistant-question"
+                role="group"
+                aria-label={`${msg("你 · 第")}${index + 1}${msg("轮")}`}
+              >
+                <p>{turn.question}</p>
+              </div>
+              <div className="chat-question-actions">
                 <button
+                  type="button"
+                  title={msg("修改问题并分支")}
+                  aria-label={msg("修改问题并分支")}
                   disabled={busy || switching || conversation?.archived}
                   onClick={() => onEdit(turn)}
                 >
-                  修改问题并分支
+                  <Pencil size={14} aria-hidden="true" />
                 </button>
+                {onCreateTasks && (
+                  <button
+                    type="button"
+                    title={msg("将原话转为任务")}
+                    aria-label={msg("将原话转为任务")}
+                    disabled={busy || switching}
+                    onClick={() =>
+                      onCreateTasks(
+                        turn,
+                        null,
+                        window.getSelection()?.toString() ?? "",
+                      )
+                    }
+                  >
+                    <ListTodo size={15} aria-hidden="true" />
+                  </button>
+                )}
               </div>
-              <p>{turn.question}</p>
             </div>
-            <TurnSources
-              turn={turn}
-              candidate={candidate}
-              conversation={conversation!}
-            />
             {candidate &&
               renderAnswer(
                 answerRecord(conversation!, turn, candidate, root, mode),
                 candidate.id,
                 false,
-                candidate.status === "complete" ? turn : undefined,
+                turn,
+                candidate,
               )}
             {candidate &&
-              (workbench ||
-                candidate.status !== "complete" ||
+              (candidate.status !== "complete" ||
                 !candidate.response?.text ||
                 turn.candidates.length > 1) && (
                 <div className="assistant-branches">
                   <span>
                     {candidate.status === "stopped"
-                      ? "已停止"
+                      ? msg("已停止")
                       : candidate.status === "failed"
-                        ? "生成失败"
+                        ? msg("生成失败")
                         : candidate.status === "source_changed"
-                          ? "来源已变化"
+                          ? msg("来源已变化")
                           : null}
                     {turn.candidates.length > 1 &&
                       ` · 当前选择 ${turn.candidates.indexOf(candidate) + 1}/${turn.candidates.length}`}
@@ -470,14 +556,13 @@ export function ConversationTimeline({
                       ))}
                     </select>
                   )}
-                  {(workbench ||
-                    !candidate.response?.text ||
+                  {(!candidate.response?.text ||
                     candidate.status !== "complete") && (
                     <button
                       disabled={busy || switching || conversation?.archived}
                       onClick={() => onRetry(turn)}
                     >
-                      重新生成
+                      {msg("重新生成")}
                     </button>
                   )}
                 </div>
@@ -487,8 +572,11 @@ export function ConversationTimeline({
       })}
       {live && (
         <section className="assistant-turn assistant-live">
-          <div className="assistant-question">
-            <span>你</span>
+          <div
+            className="assistant-question"
+            role="group"
+            aria-label={msg("你")}
+          >
             <p>{live.question}</p>
           </div>
           <p
@@ -496,7 +584,7 @@ export function ConversationTimeline({
             role="status"
             aria-atomic="true"
           >
-            {progress || "正在准备本轮资料…"}
+            {progress || msg("正在准备本轮资料…")}
           </p>
           {renderAnswer(live, live.snapshot?.id || "live", busy)}
         </section>
@@ -504,7 +592,7 @@ export function ConversationTimeline({
       {conversation &&
         conversation.turns.some((t) => !path.some((p) => p.id === t.id)) && (
           <details className="assistant-branch-list">
-            <summary>其他问题分支</summary>
+            <summary>{msg("其他问题分支")}</summary>
             {conversation.turns
               .filter((t) => !path.some((p) => p.id === t.id))
               .map((t) => (
@@ -530,29 +618,73 @@ export function ConversationTimeline({
             });
           }}
         >
-          回到最新回答
+          {msg("回到最新回答")}
         </button>
       )}
     </div>
   );
 }
-function ContextualAnswerActions({
-  disabled,
+function ReplyActions({
+  hasText,
+  retryDisabled,
+  taskDisabled,
+  workbench,
   onCopy,
   onSave,
+  onInsert,
+  onRetry,
+  onCreateTask,
   children,
 }: {
-  disabled: boolean;
+  hasText: boolean;
+  retryDisabled?: boolean;
+  taskDisabled: boolean;
+  workbench: boolean;
   onCopy: () => void;
   onSave: () => void;
+  onInsert?: () => void;
+  onRetry?: () => void;
+  onCreateTask?: (selection: string) => void;
   children: ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
   const area = useId();
+  const holder = useRef<HTMLDivElement>(null);
+  const passage = useRef("");
   const trigger = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!expanded) return;
+    return dismissOnOutside(
+      (event) =>
+        !!holder.current && event.composedPath().includes(holder.current),
+      () => setExpanded(false),
+    );
+  }, [expanded]);
+
+  // Native button focus can clear the selected passage before a click fires.
+  function rememberPassage() {
+    const selection = window.getSelection();
+    const answer = holder.current
+      ?.closest(".chat-reply")
+      ?.querySelector(".answer-text");
+    passage.current =
+      answer &&
+      selection &&
+      answer.contains(selection.anchorNode) &&
+      answer.contains(selection.focusNode)
+        ? selection.toString()
+        : "";
+  }
+
+  function choose(action: () => void) {
+    setExpanded(false);
+    trigger.current?.focus();
+    action();
+  }
   return (
     <div
-      className="assistant-context-actions"
+      className="chat-reply-actions"
+      ref={holder}
       onKeyDown={(event) => {
         if (expanded && event.key === "Escape") {
           event.stopPropagation();
@@ -561,39 +693,88 @@ function ContextualAnswerActions({
         }
       }}
     >
-      <div className="assistant-quick-actions">
-        <button
-          aria-label="复制 Markdown"
-          title="复制 Markdown"
-          disabled={disabled}
-          onClick={onCopy}
-        >
-          <Copy size={14} aria-hidden="true" />
-          复制
-        </button>
-        <button
-          aria-label="保存为文档"
-          title="保存为文档"
-          disabled={disabled}
-          onClick={onSave}
-        >
-          <FilePlus2 size={14} aria-hidden="true" />
-          保存
-        </button>
+      <div
+        className="chat-action-row"
+        role="group"
+        aria-label={translate("回答操作", "Answer actions")}
+      >
+        {hasText && (
+          <>
+            <button
+              type="button"
+              aria-label={msg("复制 Markdown")}
+              title={msg("复制 Markdown")}
+              onClick={onCopy}
+            >
+              <Copy size={15} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label={msg("保存为文档")}
+              title={msg("保存为文档")}
+              onClick={onSave}
+            >
+              <FilePlus2 size={16} aria-hidden="true" />
+            </button>
+            {workbench && onRetry && (
+              <button
+                type="button"
+                aria-label={msg("重新生成")}
+                title={msg("重新生成")}
+                disabled={retryDisabled}
+                onClick={onRetry}
+              >
+                <RotateCcw size={15} aria-hidden="true" />
+              </button>
+            )}
+          </>
+        )}
         <button
           ref={trigger}
           type="button"
-          aria-label="更多回答操作"
-          title="更多回答操作"
+          aria-label={msg("更多回答操作")}
+          title={msg("更多回答操作")}
+          onPointerDown={rememberPassage}
+          onKeyDown={(event) => {
+            if (!expanded && (event.key === "Enter" || event.key === " "))
+              rememberPassage();
+          }}
           aria-controls={area}
           aria-expanded={expanded}
           onClick={() => setExpanded(!expanded)}
         >
-          <MoreHorizontal size={16} aria-hidden="true" />
+          <MoreHorizontal size={17} aria-hidden="true" />
         </button>
       </div>
-      <div className="assistant-extra-actions" id={area} hidden={!expanded}>
-        {expanded && children}
+      <div className="chat-reply-details" id={area} hidden={!expanded}>
+        {((hasText && onInsert) || onCreateTask || (!workbench && onRetry)) && (
+          <div className="chat-secondary-actions">
+            {hasText && onInsert && (
+              <button type="button" onClick={() => choose(onInsert)}>
+                {msg("插入正文")}
+              </button>
+            )}
+            {onCreateTask && (
+              <button
+                type="button"
+                disabled={taskDisabled}
+                onClick={() => choose(() => onCreateTask(passage.current))}
+              >
+                {msg("从回答创建任务")}
+              </button>
+            )}
+            {!workbench && onRetry && (
+              <button
+                type="button"
+                disabled={retryDisabled}
+                onClick={() => choose(onRetry)}
+              >
+                {msg("重新生成")}
+              </button>
+            )}
+          </div>
+        )}
+        {children}
       </div>
     </div>
   );
@@ -616,13 +797,21 @@ function TurnSources({
     ? [
         picked.projectId
           ? documents
-            ? `指定 ${documents} 篇文档`
-            : "指定空间"
+            ? translate(
+                `指定 ${documents} 篇文档`,
+                `${documents} selected document${documents === 1 ? "" : "s"}`,
+              )
+            : msg("指定空间")
           : "",
-        attachments ? `${attachments} 份临时文件` : "",
+        attachments
+          ? translate(
+              `${attachments} 份临时文件`,
+              `${attachments} temporary file${attachments === 1 ? "" : "s"}`,
+            )
+          : "",
       ]
         .filter(Boolean)
-        .join("、") || "未指定本地资料"
+        .join("、") || msg("未指定本地资料")
     : conversation.scopeLabel;
   const local =
     (response?.sources.length ?? 0) +
@@ -631,23 +820,33 @@ function TurnSources({
   const publicEvidence = response?.externalSources?.some(
     (source) => source.kind === "web",
   );
-  const searched = response?.trace?.steps?.some((step) =>
-    step.startsWith("公开网页 · 检查 "),
-  );
+  // Older records could mark a search with zero candidates even when it failed.
+  const unavailable = response?.warning?.includes("联网搜索暂不可用");
+  const searched =
+    !unavailable &&
+    response?.trace?.steps?.some((step) => step.startsWith("公开网页 · 检查 "));
   const web = publicEvidence
-    ? "使用公开网页"
+    ? msg("使用公开网页")
     : turn.webAccess === "local-only"
-      ? "本轮禁止搜索网页"
+      ? msg("本轮禁止搜索网页")
       : searched
-        ? "已搜索，未使用网页证据"
-        : response?.trace?.route === "web-unavailable"
-          ? "公开网页未核验"
-          : "未使用网页证据";
+        ? msg("已搜索，未使用网页证据")
+        : unavailable || response?.trace?.route === "web-unavailable"
+          ? msg("公开网页未核验")
+          : msg("未使用网页证据");
   return (
-    <div className="assistant-turn-context" aria-label="本轮资料与网页状态">
+    <div
+      className="assistant-turn-context"
+      aria-label={msg("本轮资料与网页状态")}
+    >
       <span>
         {selected}
-        {response ? ` · ${local} 段本地证据` : ""}
+        {response
+          ? translate(
+              ` · ${local} 段本地证据`,
+              ` · ${local} local passage${local === 1 ? "" : "s"}`,
+            )
+          : ""}
       </span>
       {(response || turn.webAccess === "local-only") && <span>{web}</span>}
     </div>
@@ -671,30 +870,33 @@ export function EvidencePreview({
   return (
     <>
       <p className="muted">
-        第{source.startLine}–{source.endLine}行 ·
-        本轮来源快照。打开原文时会核对当前版本。
+        {msg("第")}
+        {source.startLine}–{source.endLine}
+        {msg("行 · 本轮来源快照。打开原文时会核对当前版本。")}
       </p>
       {unavailable && (
         <p role="status" className="panel-warning">
-          来源已删除、移入回收站或不在当前空间。此处保留历史快照，无法作为当前资料核对。
+          {msg(
+            "来源已删除、移入回收站或不在当前空间。此处保留历史快照，无法作为当前资料核对。",
+          )}
         </p>
       )}
       {source.heading && <h3>{source.heading}</h3>}
       <pre className="assistant-evidence-text">{source.text}</pre>
       <details>
-        <summary>来源版本</summary>
+        <summary>{msg("来源版本")}</summary>
         <code>{source.hash}</code>
       </details>
       <div className="modal-actions">
         <button disabled={busy} onClick={onClose}>
-          回到会话
+          {msg("回到会话")}
         </button>
         <button
           className="primary"
           disabled={busy || unavailable}
           onClick={onOpen}
         >
-          打开原文并核对版本
+          {msg("打开原文并核对版本")}
         </button>
       </div>
     </>

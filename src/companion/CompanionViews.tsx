@@ -1,11 +1,12 @@
+import { msg, translate } from "../i18n";
 import { Check, LockKeyhole } from "lucide-react";
 import { characterArt, cgArt } from "./art";
 import motuanBonusArt from "./assets/motuan-pilot-cg.svg";
 import {
   chapterLabel,
-  characters,
+  characterProfiles,
   roleLevel,
-  stages,
+  stageNames,
   type CharacterId,
   type Snapshot,
   type StoryEpisode,
@@ -20,7 +21,7 @@ export function CharacterPicker({
   return (
     <>
       <div className="companion-character-grid">
-        {(Object.keys(characters) as CharacterId[]).map((id) => (
+        {(Object.keys(characterProfiles()) as CharacterId[]).map((id) => (
           <button
             type="button"
             key={id}
@@ -30,15 +31,15 @@ export function CharacterPicker({
           >
             <img
               src={characterArt(id, 0)}
-              alt={`${characters[id].name}初遇预览插画`}
+              alt={translate(`${characterProfiles()[id].name}初遇预览插画`, `${characterProfiles()[id].name} first meeting illustration`)}
             />
-            <h3>{characters[id].name}</h3>
-            <small>{characters[id].description}</small>
-            <p>{characters[id].quote}</p>
+            <h3>{characterProfiles()[id].name}</h3>
+            <small>{characterProfiles()[id].description}</small>
+            <p>{characterProfiles()[id].quote}</p>
           </button>
         ))}
       </div>
-      <p>同伴默认安静陪读，动作可在设置中开启。你可以随时更换同伴。</p>
+      <p>{msg("同伴默认安静陪读，动作可在设置中开启。你可以随时更换同伴。")}</p>
     </>
   );
 }
@@ -47,18 +48,18 @@ function chapterAvailability(snapshot: Snapshot, stage: number) {
   const label = chapterLabel(progress, stage);
   if (label) return label;
   if (stage === snapshot.eligible || stage === 0)
-    return snapshot.settings.enabled ? "可以开始阅读" : "开启陪伴后可读";
+    return snapshot.settings.enabled ? msg("可以开始阅读") : msg("开启陪伴后可读");
 
   const missing: string[] = [];
   const previous = stage - 1;
   if (!progress?.read.includes(previous))
-    missing.push(`读完或跳过「${stages[previous]}」`);
+    missing.push(translate(`读完或跳过「${stageNames()[previous]}」`, `finish or skip “${stageNames()[previous]}”`));
   const events = (stage === 1 ? 3 : 8) - snapshot.events;
   const days = (stage === 1 ? 2 : 5) - snapshot.days;
-  if (events > 0) missing.push(`${events} 条经历`);
-  if (days > 0) missing.push(`${days} 个不同记录日`);
-  if (stage === 2 && snapshot.hasRevision === false) missing.push("一次复盘");
-  return missing.length ? `还需${missing.join("、")}` : "等待解锁";
+  if (events > 0) missing.push(translate(`${events} 条经历`, `${events} more experience(s)`));
+  if (days > 0) missing.push(translate(`${days} 个不同记录日`, `${days} distinct day(s)`));
+  if (stage === 2 && snapshot.hasRevision === false) missing.push(msg("一次复盘"));
+  return missing.length ? translate(`还需${missing.join("、")}`, `Still needed: ${missing.join(", ")}`) : msg("等待解锁");
 }
 
 export function GrowthOverview({
@@ -71,31 +72,31 @@ export function GrowthOverview({
   onStory: (stage: number) => void;
 }) {
   const role = snapshot.settings.characterId,
-    r = characters[role],
+    r = characterProfiles()[role],
     progress = snapshot.roles[role],
     level = roleLevel(progress);
-  const next = stages.findIndex((_, i) => !progress?.read.includes(i));
+  const next = stageNames().findIndex((_, i) => !progress?.read.includes(i));
   return (
     <>
       <div className="companion-profile">
         <img src={characterArt(role, progress?.outfit ?? level)} alt={r.name} />
         <div>
           <h3>
-            {r.name} · {stages[level]}
+            {r.name} · {stageNames()[level]}
           </h3>
           <p>{r.description}</p>
           <p>
-            {snapshot.events}条有效经历 · {snapshot.days}个不同有效日
+            {snapshot.events}{msg("条有效经历 ·")} {snapshot.days}{msg("个不同有效日")}
           </p>
-          <small>各空间的经历一起计入成长，记录日可以不连续。</small>
+          <small>{msg("各空间的经历一起计入成长，记录日可以不连续。")}</small>
         </div>
       </div>
       <ol className="companion-stage-list">
-        {stages.map((n, i) => (
+        {stageNames().map((n, i) => (
           <li key={n}>
             <strong>{n}</strong>
             <span>
-              {i === next && "下一章 · "}
+              {i === next && msg("下一章 · ")}
               {chapterAvailability(snapshot, i)}
             </span>
             <button
@@ -106,14 +107,14 @@ export function GrowthOverview({
               }
               onClick={() => onStory(i)}
             >
-              {progress?.outcomes?.[i] === "read" ? "重读" : "阅读"}
+              {progress?.outcomes?.[i] === "read" ? msg("重读") : msg("阅读")}
             </button>
           </li>
         ))}
       </ol>
       {next === 2 && snapshot.hasRevision === false && (
         <p>
-          复盘时，选一篇已有经历的文档，修改并保存，再将这次经历记为「复盘」。
+          {msg("复盘时，选一篇已有经历的文档，修改并保存，再将这次经历记为「复盘」。")}
         </p>
       )}
     </>
@@ -135,7 +136,7 @@ export function AlbumCards({
   const motuanBonusUnlocked = read.includes(1);
   return (
     <>
-      <p>读完或跳过「相识」「同行」后，对应的故事插画会收进相册。</p>
+      <p>{msg("读完或跳过「相识」「同行」后，对应的故事插画会收进相册。")}</p>
       <div className="companion-album">
         {[1, 2].map((n) => (
           <button
@@ -147,7 +148,7 @@ export function AlbumCards({
             {read.includes(n) ? (
               <img
                 src={cgArt(role, n)}
-                alt={`${characters[role].name} ${stages[n]}CG`}
+                alt={`${characterProfiles()[role].name} ${stageNames()[n]}CG`}
                 loading="lazy"
               />
             ) : (
@@ -158,8 +159,8 @@ export function AlbumCards({
             <strong>{episodes[n].title}</strong>
             <small>
               {read.includes(n)
-                ? "已解锁 · 点击查看"
-                : `读完或跳过「${stages[n]}」后解锁`}
+                ? msg("已解锁 · 点击查看")
+                : translate(`读完或跳过「${stageNames()[n]}」后解锁`, `Unlocks after reading or skipping “${stageNames()[n]}”`)}
             </small>
           </button>
         ))}
@@ -179,8 +180,8 @@ export function AlbumCards({
             <strong>{motuanBonusTitle}</strong>
             <small>
               {motuanBonusUnlocked
-                ? "相识纪念 · 已解锁"
-                : "相识纪念 · 读完或跳过「相识」后解锁"}
+                ? msg("相识纪念 · 已解锁")
+                : msg("相识纪念 · 读完或跳过「相识」后解锁")}
             </small>
           </button>
         )}
@@ -196,10 +197,10 @@ export function MotuanBonusScene() {
     <figure className="companion-full-cg motuan-bonus-scene">
       <img
         src={motuanBonusArt}
-        alt="墨团在圆窗旁打盹，摊开的书页里夹着一枚叶纹纸签"
+        alt={msg("墨团在圆窗旁打盹，摊开的书页里夹着一枚叶纹纸签")}
       />
       <figcaption>
-        相识纪念 · 午后的光落在书脊上，墨团替你守着翻到的这一页。
+        {msg("相识纪念 · 午后的光落在书脊上，墨团替你守着翻到的这一页。")}
       </figcaption>
     </figure>
   );
@@ -222,16 +223,16 @@ export function StoryContent({
   lockedChoice: boolean;
   onChoice: (id: string) => void;
 }) {
-  const r = characters[role];
+  const r = characterProfiles()[role];
   return (
     <>
       <figure className="companion-scene">
         <img
           src={stage === 0 ? characterArt(role, 0) : cgArt(role, stage)}
-          alt={`${r.name} ${episode.title}预览插画`}
+          alt={translate(`${r.name} ${episode.title}预览插画`, `${r.name} · ${episode.title} preview illustration`)}
         />
         <figcaption>
-          {r.name} · {stages[stage]} · 固定剧情，离线可读
+          {r.name} · {stageNames()[stage]} {msg("· 固定剧情，离线可读")}
         </figcaption>
       </figure>
       <div className="companion-prose">
@@ -257,7 +258,7 @@ export function StoryContent({
         <p className="companion-choice-result">
           {episode.choices.find((c) => c.id === choice)?.result}
           <br />
-          两种方式同等推进，故事将回到共同主线。
+          {msg("两种方式同等推进，故事将回到共同主线。")}
         </p>
       )}
     </>

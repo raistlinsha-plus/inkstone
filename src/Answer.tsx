@@ -1,3 +1,4 @@
+import { msg } from "./i18n";
 import Markdown from "./preview/Markdown";
 import type { SearchResult } from "./types";
 import type { CitationCheck, ExternalSource } from "./assistant/types";
@@ -36,7 +37,7 @@ export default function Answer({
         pending={pending}
         rejectedCharts={rejectedCharts}
         viewKey={viewKey ?? "answer"}
-        label="AI 回答"
+        label={msg("AI 回答")}
         onError={onError ?? (() => {})}
       />
     </div>

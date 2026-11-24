@@ -5,6 +5,7 @@ mod assistant_runtime;
 mod assistant_sources;
 mod calendar;
 mod calendar_commands;
+mod task_note;
 mod candidate_reading;
 mod companion;
 mod companion_commands;
@@ -38,9 +39,13 @@ mod library;
 mod library_commands;
 #[cfg(all(test, feature = "desktop-e2e"))]
 mod local_acceptance;
+mod local_credentials;
+#[cfg(test)]
+mod local_provider_key_tests;
 mod maintenance;
 mod models;
 mod providers;
+mod request_receipt;
 mod retrieval;
 mod web_retrieval;
 mod wiki;
@@ -226,6 +231,115 @@ fn sources_current(state: &AppState, ws: &Workspace, sources: &[SearchResult]) -
 #[cfg(test)]
 mod config_credential_tests {
     use super::*;
+    #[tokio::test]
+    async fn local_service_keys_survive_restarts_and_explicit_import_runs_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut settings = Settings::default();
+        settings.chat.base_url = "https://synthetic.test/v1".into();
+        let make_state = || {
+            evaluation_v086::isolated_state(dir.path(), settings.clone(), Default::default())
+                .unwrap()
+        };
+        let state = make_state();
+        let address = settings.chat.base_url.as_str();
+        let cancel = AtomicBool::new(false);
+        assert_eq!(
+            read_key(&state, "chat", address, &cancel).await.unwrap(),
+            None
+        );
+        assert!(
+            import_from_keychain(&state, "chat".into(), |kind, address, allow_role_only| {
+                assert_eq!(kind, "chat");
+                assert_eq!(address, "https://synthetic.test/v1");
+                assert!(!allow_role_only);
+                Ok(Some("synthetic-only".into()))
+            })
+            .await
+            .unwrap()
+        );
+        for reader in [&state, &state, &make_state()] {
+            assert_eq!(
+                read_key(reader, "chat", address, &cancel)
+                    .await
+                    .unwrap()
+                    .as_deref(),
+                Some("synthetic-only")
+            );
+        }
+        let never_prompt = |_: &str, _: &str, _: bool| panic!("old keychain must not be touched");
+        assert!(
+            import_from_keychain(&make_state(), "chat".into(), never_prompt)
+                .await
+                .unwrap()
+        );
+        assert_eq!(
+            read_key(&state, "embedding", address, &cancel)
+                .await
+                .unwrap(),
+            None
+        );
+        assert_eq!(
+            read_key(&state, "chat", "https://other.test/v1", &cancel)
+                .await
+                .unwrap(),
+            None
+        );
+        local_credentials::save(dir.path(), "chat", address, None, true).unwrap();
+        assert!(
+            !import_from_keychain(&make_state(), "chat".into(), never_prompt)
+                .await
+                .unwrap()
+        );
+        assert_eq!(
+            read_key(&state, "chat", address, &cancel).await.unwrap(),
+            None
+        );
+    }
+
+    #[tokio::test]
+    async fn late_import_keeps_the_users_replacement_and_checks_the_saved_endpoint() {
+        for change_address in [false, true] {
+            let dir = tempfile::tempdir().unwrap();
+            let state =
+                evaluation_v086::isolated_state(dir.path(), Default::default(), Default::default())
+                    .unwrap();
+            let address = saved_credential_address(&state, "chat").unwrap();
+            let (started, wait) = tokio::sync::oneshot::channel();
+            let (release, blocked) = std::sync::mpsc::channel();
+            let importing = import_from_keychain(&state, "chat".into(), move |_, _, _| {
+                started.send(()).unwrap();
+                blocked
+                    .recv_timeout(std::time::Duration::from_secs(10))
+                    .unwrap();
+                Ok(Some("old-synthetic".into()))
+            });
+            let edit = async {
+                wait.await.unwrap();
+                if change_address {
+                    state.settings.lock().unwrap().chat.base_url = "https://new.test/v1".into();
+                } else {
+                    local_credentials::save(
+                        dir.path(),
+                        "chat",
+                        &address,
+                        Some("new-synthetic"),
+                        false,
+                    )
+                    .unwrap();
+                }
+                release.send(()).unwrap();
+            };
+            let (result, _) = tokio::join!(importing, edit);
+            let local = local_key(&state, "chat", &address).unwrap();
+            if change_address {
+                assert!(result.is_err());
+                assert!(local.is_none());
+            } else {
+                assert_eq!(result, Ok(true));
+                assert_eq!(local.as_deref(), Some("new-synthetic"));
+            }
+        }
+    }
     #[test]
     fn legacy_origins_require_a_decoded_file_with_explicit_saved_addresses() {
         assert!(decode_saved_config(b"{broken").is_none());
@@ -446,28 +560,15 @@ async fn bootstrap(state: State<'_, AppState>) -> Result<Bootstrap, String> {
 #[tauri::command]
 async fn get_settings(state: State<'_, AppState>) -> Result<SettingsView, String> {
     let s = settings(&state)?;
-    let embedding = providers::has_key_for(
-        "embedding",
-        &s.embedding.base_url,
-        legacy_key_allowed(&state, "embedding", &s.embedding.base_url),
-    );
-    let chat = providers::has_key_for(
-        "chat",
-        &s.chat.base_url,
-        legacy_key_allowed(&state, "chat", &s.chat.base_url),
-    );
-    let rerank = providers::has_key_for(
-        "rerank",
-        &s.rerank.endpoint,
-        legacy_key_allowed(&state, "rerank", &s.rerank.endpoint),
-    );
-    let key_warning = if state.credentials.pending() {
-        Some(credentials::PENDING.into())
-    } else if embedding.is_err() || chat.is_err() || (s.rerank.enabled && rerank.is_err()) {
-        Some("钥匙串暂不可用，本地编辑和关键词检索不受影响。请在设置中重试。".into())
-    } else {
-        None
-    };
+    let embedding = has_local_key(&state, "embedding", &s.embedding.base_url);
+    let chat = has_local_key(&state, "chat", &s.chat.base_url);
+    let rerank = has_local_key(&state, "rerank", &s.rerank.endpoint);
+    let key_warning =
+        if embedding.is_err() || chat.is_err() || (s.rerank.enabled && rerank.is_err()) {
+            Some("本机凭据配置无法读取，请检查配置文件及其权限。".into())
+        } else {
+            None
+        };
     Ok(SettingsView {
         candidate_reading: s.candidate_reading,
         embedding: s.embedding,
@@ -511,15 +612,6 @@ async fn save_settings(
         clear_embedding_key,
         clear_chat_key,
     )?;
-    let reused = if let Some((role, address)) = reuse {
-        let cancel = AtomicBool::new(false);
-        let key = read_key(&state, &role, &address, &cancel)
-            .await?
-            .ok_or("来源服务尚未保存可用密钥，请先配置来源服务")?;
-        Some((role, address, key))
-    } else {
-        None
-    };
     {
         let _write = state
             .settings_write
@@ -530,11 +622,17 @@ async fn save_settings(
         providers::validate(&value.chat)?;
         providers::validate_reranker(&value.rerank)?;
         let old = settings(&state)?;
-        if let Some((role, address, _)) = &reused {
+        let reused = if let Some((role, address)) = &reuse {
             if providers::key_reuse_address(&old, role, &value.rerank.endpoint)? != *address {
                 return Err("来源服务配置已变化，请重新选择复用来源".into());
             }
-        }
+            Some(
+                local_key(&state, role, address)?
+                    .ok_or("来源服务尚未保存可用密钥，请先配置来源服务")?,
+            )
+        } else {
+            None
+        };
         // Persist legacy bindings before any credential mutation; restart must preserve their original address.
         persist(&state)?;
         if clear_embedding_key
@@ -548,33 +646,30 @@ async fn save_settings(
             || rerank_key.as_ref().is_some_and(|s| !s.trim().is_empty())
             || reused.is_some()
         {
-            let pending = state.credentials.pending();
             state.credentials.invalidate();
-            if pending {
-                return Err(
-                    "仍有钥匙串读取等待系统授权；请完成或取消系统弹窗后再保存密钥设置。".into(),
-                );
-            }
         }
-        providers::set_key_for(
+        local_credentials::save(
+            &state.data_dir,
             "embedding",
             &value.embedding.base_url,
             embedding_key.as_deref(),
             clear_embedding_key || old.embedding.base_url != value.embedding.base_url,
         )?;
-        providers::set_key_for(
+        local_credentials::save(
+            &state.data_dir,
             "chat",
             &value.chat.base_url,
             chat_key.as_deref(),
             clear_chat_key || old.chat.base_url != value.chat.base_url,
         )?;
-        providers::set_key_for(
+        local_credentials::save(
+            &state.data_dir,
             "rerank",
             &value.rerank.endpoint,
             rerank_key
                 .as_deref()
                 .filter(|s| !s.trim().is_empty())
-                .or_else(|| reused.as_ref().map(|(_, _, key)| key.as_str())),
+                .or(reused.as_deref()),
             clear_rerank_key.unwrap_or(false) || old.rerank.endpoint != value.rerank.endpoint,
         )?;
         *state.settings.lock().map_err(|_| "内部状态不可用")? = value;
@@ -592,16 +687,79 @@ async fn read_key(
     address: &str,
     cancel: &AtomicBool,
 ) -> Result<Option<String>, String> {
-    let allow_legacy = legacy_key_allowed(state, kind, address);
-    let identity = credentials::Identity::new(kind, address, allow_legacy);
-    let kind = kind.to_string();
-    let address = address.to_string();
-    state
+    if cancel.load(Ordering::SeqCst) {
+        return Err("操作已取消".into());
+    }
+    local_key(state, kind, address)
+}
+
+fn local_key(state: &AppState, kind: &str, address: &str) -> Result<Option<String>, String> {
+    let data = &state.data_dir;
+    #[cfg(test)]
+    let data = evaluation_v086::credential_directory(data);
+    match local_credentials::lookup(data.as_path(), kind, address)? {
+        local_credentials::LocalKey::Saved(key) => Ok(Some(key)),
+        _ => Ok(None),
+    }
+}
+
+fn has_local_key(state: &AppState, kind: &str, address: &str) -> Result<bool, String> {
+    Ok(local_key(state, kind, address)?.is_some())
+}
+
+fn saved_credential_address(state: &AppState, kind: &str) -> Result<String, String> {
+    let config = settings(state)?;
+    match kind {
+        "chat" => Ok(config.chat.base_url),
+        "embedding" => Ok(config.embedding.base_url),
+        "rerank" => Ok(config.rerank.endpoint),
+        web_retrieval::KEY_KIND => Ok(web_retrieval::ENDPOINT.to_owned()),
+        _ => Err("未知的凭据用途".into()),
+    }
+}
+
+#[tauri::command]
+async fn import_legacy_model_key(state: State<'_, AppState>, kind: String) -> Result<bool, String> {
+    if cfg!(feature = "desktop-e2e") {
+        return Err("隔离版本无法导入日常应用的钥匙串凭据。".into());
+    }
+    import_from_keychain(&state, kind, providers::legacy_key_for_import).await
+}
+
+async fn import_from_keychain<F>(state: &AppState, kind: String, read: F) -> Result<bool, String>
+where
+    F: FnOnce(&str, &str, bool) -> Result<Option<String>, String> + Send + 'static,
+{
+    let address = saved_credential_address(state, &kind)?;
+    match local_credentials::lookup(&state.data_dir, &kind, &address)? {
+        local_credentials::LocalKey::Saved(_) => return Ok(true),
+        local_credentials::LocalKey::Cleared => return Ok(false),
+        local_credentials::LocalKey::Missing => {}
+    }
+    let allow_legacy =
+        kind != web_retrieval::KEY_KIND && legacy_key_allowed(state, &kind, &address);
+    let identity = credentials::Identity::new(&kind, &address, allow_legacy);
+    let role = kind.clone();
+    let old_address = address.clone();
+    let cancelled = AtomicBool::new(false);
+    let result = state
         .credentials
-        .read(identity, cancel, move || {
-            providers::key_for(&kind, &address, allow_legacy)
+        .read_for_import(identity, &cancelled, move || {
+            read(&role, &old_address, allow_legacy)
         })
-        .await
+        .await?;
+    let Some(secret) = result else {
+        return Ok(false);
+    };
+    let _write = state
+        .settings_write
+        .lock()
+        .map_err(|_| "模型设置保存状态不可用")?;
+    if saved_credential_address(state, &kind)? != address {
+        return Err("服务地址已变化，请重新核对后导入。".into());
+    }
+    let stored = local_credentials::import_if_missing(&state.data_dir, &kind, &address, &secret)?;
+    Ok(matches!(stored, local_credentials::LocalKey::Saved(_)))
 }
 #[tauri::command]
 fn cancel_provider_test(state: State<'_, AppState>) {
@@ -2055,7 +2213,7 @@ async fn ask_pipeline(
         usage
     });
     let prompt = format!("资料开始\n{context}\n资料结束\n\n问题：{question_for_model}");
-    let mut output = providers::stream_chat(
+    let mut output = crate::request_receipt::with_sources(&sources, &external, providers::stream_chat(
         &state.client,
         &config,
         key.as_deref(),
@@ -2064,7 +2222,7 @@ async fn ask_pipeline(
         &state.cancel_chat,
         app,
         request_id,
-    )
+    ))
     .await;
     if provider_reviewed && !candidate_reading::provider_allowed(state, &config)? {
         return Err("候选核对的传输设置已变化，已撤回本轮结果".into());
@@ -2511,17 +2669,6 @@ mod v05_io_tests {
         config.embedding.dimensions = Some(2);
         let app = index_test_app(data.path().to_path_buf(), ws.clone(), config);
         let state = app.state::<AppState>();
-        // Seed only this isolated reader's process cache; real read_key then
-        // returns None from cache and never invokes the production Keychain.
-        state
-            .credentials
-            .read(
-                credentials::Identity::new("embedding", &address, false),
-                &AtomicBool::new(false),
-                || Ok(None),
-            )
-            .await
-            .unwrap();
         let plan = begin_index(state.clone(), None).await.unwrap();
         let old = plan.job_id;
         let file = &plan.documents[0];
@@ -2759,6 +2906,7 @@ pub fn run() {
             external_access::grants::external_grants,
             external_access::grants::external_grant_create,
             external_access::grants::external_grant_revoke,
+            task_note::task_note_append,
             calendar_commands::calendar_list,
             calendar_commands::calendar_save,
             calendar_commands::export_calendar_ics,
@@ -2793,6 +2941,7 @@ pub fn run() {
             bootstrap,
             get_settings,
             save_settings,
+            import_legacy_model_key,
             test_provider,
             test_reranker,
             cancel_provider_test,
@@ -2829,6 +2978,10 @@ pub fn run() {
             assistant_commands::assistant_export,
             assistant_commands::assistant_select_candidate,
             assistant_commands::assistant_ask,
+            assistant::tasks::task_document,
+            assistant::tasks::task_save_from_chat,
+            assistant::tasks::task_origin,
+            assistant::tasks::task_extract,
             assistant::attachments::assistant_attachment_add,
             assistant::attachments::assistant_attachment_list,
             assistant::attachments::assistant_attachment_read,
