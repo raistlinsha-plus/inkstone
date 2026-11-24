@@ -59,7 +59,7 @@
       <div class="panel-head" tabindex="-1" id="source-focus"><h2 id="source-heading" data-i="source">Source</h2><span data-i="markdown">Fictional Markdown note</span></div>
       <p id="source-empty" class="source-empty" data-i="sourceHint">Open the citation to see the lines in the original note.</p>
       <div id="source-body" hidden>
-        <div class="source-meta"><strong data-i="filename">Reading activity plans.md</strong><a id="source-file" href="https://github.com/raistlinsha-plus/inkstone/blob/main/examples/quick-tour/en/reading-activity.md#L7-L10" data-i="viewFile">View full note on GitHub</a></div>
+        <div class="source-meta"><strong data-i="filename">Reading activity plans.md</strong><a id="source-file" href="https://github.com/raistlinsha-plus/inkstone/blob/cf517ab64509bbf18d24b8d6e7d0dfb874f551f6/examples/quick-tour/en/reading-activity.md#L7-L10" data-i="viewFile">View full note on GitHub</a></div>
         <ol class="source-lines" id="source-lines"></ol>
       </div>
     </section>
@@ -88,7 +88,7 @@
     <p class="visually-hidden" id="task-status" role="status"></p>
     <nav class="sample-links" id="sample-links" aria-label="Sample notes">
       <a id="sample-download" download href="./downloads/inkstone-quick-tour-en.zip" data-i="download">Download sample notes (.zip)</a>
-      <a id="sample-source" href="https://github.com/raistlinsha-plus/inkstone/tree/main/examples/quick-tour/en/" data-i="browse">Browse the notes on GitHub</a>
+      <a id="sample-source" href="https://github.com/raistlinsha-plus/inkstone/tree/cf517ab64509bbf18d24b8d6e7d0dfb874f551f6/examples/quick-tour/en/" data-i="browse">Browse the notes on GitHub</a>
     </nav>
   </section>
   <footer class="footer"><p data-i="scope">This walkthrough uses fictional notes and fixed answers. Demo tasks last until you reload the page. To use Inkstone with your own notes, build the desktop beta on an Apple Silicon Mac running macOS 13 or later.</p><nav id="resources" aria-label="Desktop resources"><a href="https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.1" data-i="release">Get the 1.2 beta source</a><a id="product" href="https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.1/docs/PRODUCT.en.md" data-i="product">Product overview</a><a id="manual" href="https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.1/docs/USER-MANUAL.en.md" data-i="manual">User manual</a></nav></footer>
@@ -140,7 +140,7 @@ function shapeAnswer(){
 }
 function showSource(){
   el('source-empty').hidden=opened;el('source-body').hidden=!opened;
-  el('source-file').href='https://github.com/raistlinsha-plus/inkstone/blob/main/examples/quick-tour/'+lang+'/reading-activity.md'+(mode==='attendance'?'#L7-L10':'#L12');
+  el('source-file').href='https://github.com/raistlinsha-plus/inkstone/blob/cf517ab64509bbf18d24b8d6e7d0dfb874f551f6/examples/quick-tour/'+lang+'/reading-activity.md'+(mode==='attendance'?'#L7-L10':'#L12');
   if(!opened)return;
   const lines=el('source-lines');const fragment=document.createDocumentFragment();
   sourceText[lang].forEach((text,offset)=>{
@@ -174,7 +174,7 @@ function renderTask() {
   }
   el('sample-links').setAttribute('aria-label', t('sampleLinks'));
   el('sample-download').href = './downloads/inkstone-quick-tour-' + lang + '.zip';
-  el('sample-source').href = 'https://github.com/raistlinsha-plus/inkstone/tree/main/examples/quick-tour/' + lang + '/';
+  el('sample-source').href = 'https://github.com/raistlinsha-plus/inkstone/tree/cf517ab64509bbf18d24b8d6e7d0dfb874f551f6/examples/quick-tour/' + lang + '/';
 }
 el('capture-task').addEventListener('click', () => {
   taskCreated = true;
