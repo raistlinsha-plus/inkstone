@@ -162,6 +162,7 @@ export default function Graph({
   const viewport = useRef(loadViewport(viewKey));
   const [zoom, setZoom] = useState(100);
   const [canvasExpanded, setCanvasExpanded] = useState(false);
+  const [frameHover, setFrameHover] = useState(false);
   const [measuredHeight, setMeasuredHeight] = useState(240);
   const compactHeight = useMemo(() => {
     if (kind !== "mindmap" || !tree) return measuredHeight;
@@ -227,10 +228,29 @@ export default function Graph({
       "*",
     );
   useEffect(() => {
+    if (!frameHover) return;
+    // An opaque iframe may never receive pointerleave. The next pointer event
+    // in the outer document (or another diagram) identifies the real target.
+    const leave = (event: Event) => {
+      if (event.target === frame.current) return;
+      setFrameHover(false);
+      send({ type: "command", action: "pointer-left-frame" });
+    };
+    document.addEventListener("pointerover", leave, true);
+    document.addEventListener("pointermove", leave, true);
+    document.addEventListener("inkstone-diagram-enter", leave, true);
+    return () => {
+      document.removeEventListener("pointerover", leave, true);
+      document.removeEventListener("pointermove", leave, true);
+      document.removeEventListener("inkstone-diagram-enter", leave, true);
+    };
+  }, [frameHover]);
+  useEffect(() => {
     if (problem) return;
     const id = crypto.randomUUID();
     active.current = { id, revision: active.current.revision + 1 };
     setFailed(false);
+    setFrameHover(false);
     setErrorLine(null);
     setStatus("正在本地绘制…");
     let timer: ReturnType<typeof setTimeout>;
@@ -284,6 +304,9 @@ export default function Graph({
         setMeasuredHeight(
           Math.max(180, Math.min(16384, Math.ceil(data.height))),
         );
+      } else if (data.type === "diagram-pointer" && typeof data.inside === "boolean") {
+        setFrameHover(data.inside);
+        if (data.inside) frame.current?.dispatchEvent(new Event("inkstone-diagram-enter", { bubbles: true }));
       } else if (data.type === "viewport") {
         const next = graphViewport(data);
         if (next) {
@@ -294,6 +317,7 @@ export default function Graph({
           }
         }
       } else if (data.type === "ready") {
+        setFrameHover(data.pointerInside === true);
         clearTimeout(timer);
         setStatus("");
         setElapsed(Math.round(performance.now() - started));
@@ -429,6 +453,7 @@ export default function Graph({
         kind === "chart" ? "graph-preview" : "graph-preview diagram-preview"
       }
       data-kind={kind}
+      data-frame-hover={frameHover || undefined}
       style={
         kind === "chart"
           ? undefined

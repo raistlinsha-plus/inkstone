@@ -129,6 +129,78 @@ test("graph sizes are bounded, revision-owned and expandable without changing so
   expect(container.style.getPropertyValue("--graph-height")).toBe("920px");
 });
 
+test("only the active frame can reveal diagram controls when the pointer enters its sandbox", () => {
+  render(<Graph kind="mermaid" source="flowchart LR\nA --> B" />);
+  const frame = screen.getByTitle("Mermaid 本地预览") as HTMLIFrameElement;
+  const posted = vi.spyOn(frame.contentWindow!, "postMessage");
+  fireEvent.load(frame);
+  const job = posted.mock.calls[0][0];
+  const preview = frame.closest(".diagram-preview")!;
+  const send = (
+    inside: boolean,
+    source: Window = frame.contentWindow!,
+    revision = job.revision,
+  ) =>
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          source,
+          data: { ...job, type: "diagram-pointer", inside, revision },
+        }),
+      );
+    });
+  send(true, window);
+  send(true, frame.contentWindow!, job.revision - 1);
+  expect(preview.hasAttribute("data-frame-hover")).toBe(false);
+  send(true);
+  expect(preview.hasAttribute("data-frame-hover")).toBe(true);
+  fireEvent.pointerMove(document.body);
+  expect(preview.hasAttribute("data-frame-hover")).toBe(false);
+  expect(posted.mock.calls.at(-1)?.[0]).toMatchObject({
+    action: "pointer-left-frame",
+  });
+  send(true);
+  expect(preview.hasAttribute("data-frame-hover")).toBe(true);
+  send(false);
+  expect(preview.hasAttribute("data-frame-hover")).toBe(false);
+});
+
+test("moving directly to a second sandbox dismisses the first diagram toolbar", () => {
+  render(
+    <>
+      <Graph kind="mermaid" source="graph LR\nA --> B" />
+      <Graph kind="mindmap" source="- B" />
+    </>,
+  );
+  const diagrams = screen
+    .getAllByTitle(/Mermaid 本地预览|Markdown 脑图/)
+    .map((element) => {
+      const frame = element as HTMLIFrameElement;
+      const posted = vi.spyOn(frame.contentWindow!, "postMessage");
+      fireEvent.load(frame);
+      const job = posted.mock.calls.find(
+        ([data]) => data.type === "render",
+      )![0];
+      return {
+        preview: frame.closest(".diagram-preview")!,
+        enter: () =>
+          act(() => {
+            window.dispatchEvent(
+              new MessageEvent("message", {
+                source: frame.contentWindow!,
+                data: { ...job, type: "diagram-pointer", inside: true },
+              }),
+            );
+          }),
+      };
+    });
+  diagrams[0].enter();
+  expect(diagrams[0].preview.hasAttribute("data-frame-hover")).toBe(true);
+  diagrams[1].enter();
+  expect(diagrams[0].preview.hasAttribute("data-frame-hover")).toBe(false);
+  expect(diagrams[1].preview.hasAttribute("data-frame-hover")).toBe(true);
+});
+
 test("switching appearance rerenders the same sandbox and passes through the saved viewport", async () => {
   render(<Graph kind="mindmap" source="- 原始" />);
   const iframe = screen.getByTitle("Markdown 脑图") as HTMLIFrameElement;

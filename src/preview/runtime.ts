@@ -93,6 +93,20 @@ const notify = (
     "*",
   );
 };
+// WebKit and Chromium can dispatch mouse events inside the isolated frame
+// without updating :hover on its ancestors in the editor.
+let pointerInside = false;
+function updatePointer(inside: boolean) {
+  if (pointerInside === inside) return;
+  pointerInside = inside;
+  if (requestId) notify("diagram-pointer", { inside });
+}
+function pointerInFrame(event: PointerEvent) {
+  if (event.pointerType !== "touch") updatePointer(true);
+}
+document.documentElement.addEventListener("pointerover", pointerInFrame);
+document.documentElement.addEventListener("pointermove", pointerInFrame, { passive: true });
+document.documentElement.addEventListener("pointerleave", () => updatePointer(false));
 const escape = (s: string) =>
   s
     .replaceAll("&", "&amp;")
@@ -188,12 +202,12 @@ window.addEventListener("message", async (event) => {
   if (channel && channel !== data.channel) return;
   channel = data.channel;
   if (data.type === "command") {
-    if (
-      data.requestId !== requestId ||
-      data.revision !== revision ||
-      renderedGeneration !== generation
-    )
+    if (data.requestId !== requestId || data.revision !== revision) return;
+    if (data.action === "pointer-left-frame") {
+      pointerInside = false;
       return;
+    }
+    if (renderedGeneration !== generation) return;
     if (data.action === "export") {
       const job = { generation, channel, requestId, revision };
       const format = data.format === "png" ? "png" : "svg";
@@ -252,7 +266,7 @@ window.addEventListener("message", async (event) => {
   ) {
     colorMindmap(map.svg.node()!, theme);
     renderedGeneration = job.generation;
-    notify("ready", {}, job);
+    notify("ready", { pointerInside }, job);
     return;
   }
   const preserveMermaidView =
@@ -361,7 +375,7 @@ window.addEventListener("message", async (event) => {
     if (!current()) return;
     refreshPanCursor();
     renderedGeneration = job.generation;
-    notify("ready", {}, job);
+    notify("ready", { pointerInside }, job);
   } catch (error) {
     if (!current()) return;
     host.replaceChildren();

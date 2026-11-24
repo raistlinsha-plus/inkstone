@@ -9,7 +9,8 @@
   border-color: var(--ui-line);
 }
 
-.graph-preview .graph-actions :is(.graph-kind, output) {
+.graph-preview .graph-actions :is(.graph-kind, output),
+.diagram-tools.graph-actions output {
   color: var(--ui-muted);
 }
 
@@ -130,9 +131,9 @@
   font: 500 12px/1.6 var(--font-sans);
 }
 @media (hover: hover) and (pointer: fine) {
-  .diagram-block:not(:hover, :focus-within, .is-editing, .expanded)
+  .diagram-block:not(:hover, :focus-within, .is-editing, .expanded, :has([data-frame-hover]))
     > .inline-block-bar,
-  .diagram-preview:not(:hover, :focus-within) > .diagram-tools {
+  .diagram-preview:not(:hover, :focus-within, [data-frame-hover]) > .diagram-tools {
     opacity: 0;
   }
   .inkstone-node-view.selected > .diagram-block > .inline-block-bar {
