@@ -398,14 +398,16 @@ pub fn rename_project(data: &Path, id: &str, name: &str) -> Result<Project, Stri
     })
 }
 pub fn get(data: &Path, id: &str) -> Result<Document, String> {
-    conn(data)?
-        .query_row(
-            &format!("SELECT {DOC_COLS} FROM documents WHERE id=?"),
-            [id],
-            doc_row,
-        )
+    get_with_connection(&conn(data)?, id)
+}
+
+pub(crate) fn get_with_connection(c: &Connection, id: &str) -> Result<Document, String> {
+    c.prepare_cached(&format!("SELECT {DOC_COLS} FROM documents WHERE id=?"))
+        .map_err(err)?
+        .query_row([id], doc_row)
         .map_err(|_| "文档不存在".into())
 }
+
 fn unique_title(c: &Connection, project: &str, name: &str) -> String {
     let name = name.to_string();
     let p = Path::new(&name);

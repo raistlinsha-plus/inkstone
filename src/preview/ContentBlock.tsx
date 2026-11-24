@@ -17,6 +17,8 @@ export interface ContentBlockProps {
   onEditingChange?: (active: boolean) => void;
   startLine?: number;
   sourceRefs?: string[];
+  toolbarHost?: HTMLElement | null;
+  toolbarExtras?: React.ReactNode;
 }
 // Both the document NodeView and the Markdown reader use this dispatcher.
 // Editing is an explicit capability; answers never receive it.
@@ -50,6 +52,8 @@ export default function ContentBlock(props: ContentBlockProps) {
   else if (kind === "mindmap")
     body = (
       <Mindmap
+        toolbarHost={props.toolbarHost}
+        toolbarExtras={props.toolbarExtras}
         embedded
         source={source}
         readOnly={readOnly}
@@ -63,7 +67,9 @@ export default function ContentBlock(props: ContentBlockProps) {
   else if (kind === "calendar")
     body = (
       <Suspense
-        fallback={<p className="block-placeholder">{msg("正在准备本地日历…")}</p>}
+        fallback={
+          <p className="block-placeholder">{msg("正在准备本地日历…")}</p>
+        }
       >
         <CalendarBlock
           source={source}
@@ -89,6 +95,8 @@ export default function ContentBlock(props: ContentBlockProps) {
   else if (kind === "mermaid")
     body = (
       <Graph
+        toolbarHost={props.toolbarHost}
+        toolbarExtras={props.toolbarExtras}
         kind="mermaid"
         source={source}
         onError={onError}

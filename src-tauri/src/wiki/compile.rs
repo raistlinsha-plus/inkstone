@@ -258,11 +258,12 @@ fn prepare(
     let batch_limit = PER_BATCH.min(input_budget / 180);
     let mut pending = Vec::new();
     let mut retry = None;
+    let catalog = crate::library::conn(data)?;
     for id in &policy.document_ids {
         if pending.len() == batch_limit {
             break;
         }
-        let Ok((doc, text)) = read_document(data, ws, space, id) else {
+        let Ok((doc, text)) = super::read_source_document(&catalog, ws, space, id) else {
             continue;
         };
         let hash = files::hash(&text);

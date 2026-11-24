@@ -1,4 +1,4 @@
-use super::{error, Content, Policy, MAX_REFS, MAX_SECTIONS, MAX_SOURCES};
+use super::{error, Content, Policy, MAX_AUTHORIZED_DOCUMENTS, MAX_REFS, MAX_SECTIONS};
 use crate::db;
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension, TransactionBehavior};
 use serde::{de::DeserializeOwned, Serialize};
@@ -692,7 +692,7 @@ pub(crate) fn validate_snapshot(file: &Path) -> Result<(), String> {
         let policy: Policy = decode(&row.map_err(error)?)?;
         if policy.revision < 1
             || policy.topic.chars().count() > 120
-            || policy.document_ids.len() > MAX_SOURCES
+            || policy.document_ids.len() > MAX_AUTHORIZED_DOCUMENTS
             || (policy.enabled && (policy.topic.is_empty() || policy.document_ids.is_empty()))
         {
             return Err("Wiki 备份的授权范围无效".into());
@@ -729,7 +729,7 @@ pub(crate) fn validate_snapshot(file: &Path) -> Result<(), String> {
         }
         if schema == SCHEMA {
             if content.inputs.is_empty()
-                || content.inputs.len() > MAX_SOURCES
+                || content.inputs.len() > MAX_AUTHORIZED_DOCUMENTS
                 || content
                     .inputs
                     .iter()
@@ -754,4 +754,100 @@ pub(crate) fn validate_snapshot(file: &Path) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::wiki::{removed_sources, InputVersion, Original, Section};
+
+    #[test]
+    fn large_scope_and_merged_inputs_survive_backup_and_revoke_uncited_sources() {
+        let data = tempfile::tempdir().unwrap();
+        let restored = tempfile::tempdir().unwrap();
+        let mut scope = Policy {
+            revision: 1,
+            enabled: true,
+            topic: "资料".into(),
+            document_ids: (0..269).map(|id| format!("doc-{id}")).collect(),
+            ..Policy::default()
+        };
+        let inputs: Vec<_> = scope
+            .document_ids
+            .iter()
+            .map(|id| InputVersion {
+                document_id: id.clone(),
+                path: format!("{id}.md"),
+                title: id.clone(),
+                hash: "a".repeat(64),
+            })
+            .collect();
+        let first = &inputs[0];
+        let excerpt = Original {
+            document_id: first.document_id.clone(),
+            title: first.title.clone(),
+            path: first.path.clone(),
+            start_line: 1,
+            end_line: 1,
+            quote: "原文".into(),
+            hash: first.hash.clone(),
+        };
+        let change = Change {
+            id: "change".into(),
+            page_id: "page".into(),
+            base: 0,
+            result: 0,
+            policy_revision: 1,
+            status: "pending".into(),
+            reason: String::new(),
+            created: 1,
+            content: Content {
+                title: "主题".into(),
+                summary: String::new(),
+                aliases: vec![],
+                related: vec![],
+                sections: vec![Section {
+                    heading: "出处".into(),
+                    refs: vec![excerpt],
+                }],
+                inputs,
+            },
+        };
+        let db = write(data.path()).unwrap();
+        save_policy(&db, "space", &scope).unwrap();
+        save_change(&db, "space", &change).unwrap();
+        publish(&db, "space", &change).unwrap();
+        drop(db);
+        fs::copy(path(data.path()), path(restored.path())).unwrap();
+        validate_snapshot(&path(restored.path())).unwrap();
+
+        let mut db = write(restored.path()).unwrap();
+        let previous = policy(&db, "space").unwrap();
+        assert_eq!(previous.document_ids, scope.document_ids);
+        scope.document_ids.pop();
+        let removed = removed_sources(&previous, &scope.document_ids);
+        assert_eq!(removed, ["doc-268"]);
+        let impact = removal_impact(&db, "space", &removed).unwrap();
+        assert_eq!((impact.pages, impact.revisions), (1, 1));
+        let tx = db.transaction().unwrap();
+        assert_eq!(
+            impact.token,
+            removal_impact(&tx, "space", &removed).unwrap().token
+        );
+        purge_derived(&tx, "space", &removed).unwrap();
+        scope.revision += 1;
+        save_policy(&tx, "space", &scope).unwrap();
+        tx.commit().unwrap();
+        assert!(pages(&db, "space").unwrap().is_empty());
+        assert_eq!(policy(&db, "space").unwrap().document_ids.len(), 268);
+        validate_snapshot(&path(restored.path())).unwrap();
+
+        scope.document_ids = (0..=MAX_AUTHORIZED_DOCUMENTS)
+            .map(|i| i.to_string())
+            .collect();
+        save_policy(&db, "space", &scope).unwrap();
+        assert!(validate_snapshot(&path(restored.path()))
+            .unwrap_err()
+            .contains("授权范围无效"));
+    }
 }

@@ -11,14 +11,20 @@
 }
 .wiki-dialog .modal-heading {
   margin-block-end: 16px;
-  align-items: center;
+  align-items: flex-start;
 }
 .wiki-dialog .modal-heading h2 {
   font: inherit;
   font-size: 22px;
   font-weight: 680;
+  line-height: 30px;
   margin: 0;
   color: var(--ui-text);
+}
+.wiki-dialog .modal-heading .icon-button {
+  flex: 0 0 30px;
+  height: 30px;
+  margin: 0;
 }
 .wiki-dialog .wiki-space-name {
   margin: 4px 0 0;
@@ -254,9 +260,42 @@
 }
 .wiki-dialog .wiki-document-list {
   max-height: 15rem;
+  padding: 6px 10px;
+}
+.wiki-picker {
   border: 1px solid var(--ui-line);
   border-radius: 7px;
-  padding: 8px;
+  overflow: hidden;
+}
+.wiki-picker-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--ui-line);
+  background: var(--ui-surface);
+}
+.wiki-dialog .wiki-picker-actions label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 4px;
+}
+.wiki-picker-count {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-muted);
+}
+.wiki-dialog .wiki-picker-actions button {
+  border: 0;
+  border-radius: 4px;
+  padding: 4px 6px;
+  background: transparent;
+  color: var(--ui-accent);
+}
+.wiki-dialog .wiki-picker .wiki-picker-limit {
+  padding: 4px 14px;
 }
 .wiki-dialog .muted {
   margin: 0;

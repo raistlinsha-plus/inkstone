@@ -469,33 +469,45 @@ export default function Markdown({
             : -1;
         const rejected =
           language === "chart" && rejectedCharts?.includes(chartIndex);
-        return (
-          <section key={key} className="code-preview-block">
-            <div className="block-label">
-              <span>
-                {known
-                  ? blockTypes[language as keyof typeof blockTypes].label
-                  : language}{" "}
-                {msg("· 第")} {node.position.start.line} {msg("行")}
-              </span>
-              {!readOnly && onLocate && (
-                <button onClick={() => onLocate(node.position.start.line)}>
-                  {msg("编辑源码")}
-                </button>
-              )}
-              <button
-                onClick={() =>
-                  void navigator.clipboard
-                    .writeText(node.value ?? "")
-                    .catch((e) => onError?.(String(e)))
-                }
-              >
-                {msg("复制")}
+        const diagram =
+          (language === "mermaid" || language === "mindmap") &&
+          !!block &&
+          !pending;
+        const blockLabel = (
+          <div className="block-label">
+            <span>
+              {known
+                ? blockTypes[language as keyof typeof blockTypes].label
+                : language}{" "}
+              {msg("· 第")} {node.position.start.line} {msg("行")}
+            </span>
+            {!readOnly && onLocate && (
+              <button onClick={() => onLocate(node.position.start.line)}>
+                {msg("编辑源码")}
               </button>
-            </div>
+            )}
+            <button
+              onClick={() =>
+                void navigator.clipboard
+                  .writeText(node.value ?? "")
+                  .catch((e) => onError?.(String(e)))
+              }
+            >
+              {msg("复制")}
+            </button>
+          </div>
+        );
+        return (
+          <section
+            key={key}
+            className="code-preview-block"
+            data-diagram={diagram || undefined}
+          >
+            {!diagram && blockLabel}
             {known && block && !pending && !rejected ? (
               <ContentBlock
                 kind={language}
+                toolbarExtras={diagram ? blockLabel : undefined}
                 source={block.text}
                 viewKey={`${viewKey}:block:${identities[blocks.indexOf(block)] ?? block.id}`}
                 readOnly={readOnly}

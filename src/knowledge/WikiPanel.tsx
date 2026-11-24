@@ -7,6 +7,7 @@ import type { LibraryDocument, LibraryView } from "../library";
 import type { SearchResult } from "../types";
 import ModalDialog from "../ModalDialog";
 import Markdown from "../preview/Markdown";
+import WikiDocumentPicker from "./WikiDocumentPicker";
 
 import {
   WikiClaimEvidence,
@@ -180,11 +181,6 @@ export default function WikiPanel({
     (doc) => doc.projectId === projectId && doc.status === "ready",
   );
   const spaceTitle = view.projects.find((item) => item.id === projectId)?.title;
-  const visibleDocuments = docs.filter((doc) =>
-    doc.title
-      .toLocaleLowerCase()
-      .includes(documentFilter.trim().toLocaleLowerCase()),
-  );
   const active = useRef(true);
   const applyStatus = useCallback((next: WikiStatus, resetPolicy = false) => {
     ++latestStatus.current;
@@ -814,43 +810,14 @@ export default function WikiPanel({
             {policy.documentIds.length} {msg("篇。")}
             {dirty.current && msg(" 请先保存更改再整理。")}
           </p>
-          {!!docs.length && (
-            <label>
-              {msg("筛选资料")}
-              <input
-                type="search"
-                value={documentFilter}
-                onChange={(event) => setDocumentFilter(event.target.value)}
-              />
-            </label>
-          )}
-          <div className="wiki-document-list">
-            {visibleDocuments.map((doc) => (
-              <label key={doc.id}>
-                <input
-                  type="checkbox"
-                  checked={policy.documentIds.includes(doc.id)}
-                  disabled={
-                    !!busy ||
-                    (policy.documentIds.length >= 100 &&
-                      !policy.documentIds.includes(doc.id))
-                  }
-                  onChange={(e) =>
-                    patch({
-                      documentIds: e.target.checked
-                        ? [...policy.documentIds, doc.id]
-                        : policy.documentIds.filter((id) => id !== doc.id),
-                    })
-                  }
-                />
-                {doc.title}
-              </label>
-            ))}
-            {!docs.length && <small>{msg("请先在当前空间导入或新建文档。")}</small>}
-            {!!docs.length && !visibleDocuments.length && (
-              <small>{msg("没有匹配的资料。")}</small>
-            )}
-          </div>
+          <WikiDocumentPicker
+            documents={docs}
+            selectedIds={policy.documentIds}
+            filter={documentFilter}
+            onFilter={setDocumentFilter}
+            onChange={(documentIds) => patch({ documentIds })}
+            busy={!!busy}
+          />
           {removingDocuments && (
             <p className="panel-warning" role="status">
               {removalImpact

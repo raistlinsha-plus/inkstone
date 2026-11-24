@@ -25,7 +25,7 @@ use tauri::State;
 pub(crate) use compile::schedule;
 pub(crate) use store::{purge_document, upgrade_legacy, validate_snapshot};
 
-const MAX_SOURCES: usize = 100;
+const MAX_AUTHORIZED_DOCUMENTS: usize = 1_000;
 const MAX_SECTIONS: usize = 12;
 const MAX_REFS: usize = 48;
 
@@ -236,7 +236,16 @@ fn read_document(
     space: &str,
     id: &str,
 ) -> Result<(library::Document, String), String> {
-    let document = library::get(data, id)?;
+    read_source_document(&library::conn(data)?, ws, space, id)
+}
+
+fn read_source_document(
+    catalog: &Connection,
+    ws: &Workspace,
+    space: &str,
+    id: &str,
+) -> Result<(library::Document, String), String> {
+    let document = library::get_with_connection(catalog, id)?;
     if document.project_id != space || document.status != "ready" {
         return Err("来源已移除或不属于当前文档空间".into());
     }
@@ -381,11 +390,11 @@ fn status(data: &Path, ws: &Workspace, space: &str) -> Result<Status, String> {
     let db = store::read(data)?;
     let policy = store::policy(&db, space)?;
     let mut hashes = HashMap::new();
-    let coverage = policy
-        .document_ids
-        .iter()
-        .map(|id| {
-            let (title, status) = match read_document(data, ws, space, id) {
+    let mut coverage = Vec::with_capacity(policy.document_ids.len());
+    if !policy.document_ids.is_empty() {
+        let catalog = library::conn(data)?;
+        for id in &policy.document_ids {
+            let (title, status) = match read_source_document(&catalog, ws, space, id) {
                 Ok((doc, text)) if text.trim().is_empty() => (doc.title, "empty"),
                 Ok((doc, text)) => {
                     let hash = files::hash(text);
@@ -407,13 +416,13 @@ fn status(data: &Path, ws: &Workspace, space: &str) -> Result<Status, String> {
                     (String::new(), "unavailable")
                 }
             };
-            Ok(SourceCoverage {
+            coverage.push(SourceCoverage {
                 document_id: id.clone(),
                 title,
                 status,
-            })
-        })
-        .collect::<Result<Vec<_>, String>>()?;
+            });
+        }
+    }
     let pages = store::pages(&db, space)?
         .into_iter()
         .map(|(id, revision, page)| {
@@ -568,6 +577,7 @@ pub(crate) fn wiki_status(state: State<'_, AppState>) -> Result<Status, String> 
 }
 
 fn removed_sources<'a>(policy: &'a Policy, retained: &[String]) -> Vec<&'a str> {
+    let retained: HashSet<_> = retained.iter().collect();
     policy
         .document_ids
         .iter()
@@ -584,7 +594,7 @@ pub(crate) fn wiki_removal_impact(
     document_ids: Vec<String>,
 ) -> Result<store::RemovalImpact, String> {
     let (_, space) = active(&state)?;
-    if space != project_id || document_ids.len() > MAX_SOURCES {
+    if space != project_id || document_ids.len() > MAX_AUTHORIZED_DOCUMENTS {
         return Err("资料范围已变化，请重新打开 Wiki。".into());
     }
     let mut db = store::read(&state.data_dir)?;
@@ -607,12 +617,14 @@ pub(crate) fn wiki_set_policy(
     ids.sort();
     ids.dedup();
     let topic = input.topic.trim();
-    if ids.len() > MAX_SOURCES
+    if ids.len() > MAX_AUTHORIZED_DOCUMENTS
         || topic.chars().count() > 120
         || topic.chars().any(char::is_control)
         || (input.enabled && (ids.is_empty() || topic.is_empty()))
     {
-        return Err("启用 Wiki 需填写 1–120 字主题并选择 1–100 篇文档".into());
+        return Err(format!(
+            "启用 Wiki 需填写 1–120 字主题并选择 1–{MAX_AUTHORIZED_DOCUMENTS} 篇文档"
+        ));
     }
     // Removed sources can remain visible while pausing, but cannot be newly authorized.
     let _permit = crate::maintenance::mutation(&state.data_dir)?;
@@ -624,9 +636,12 @@ pub(crate) fn wiki_set_policy(
     if previous.revision != input.expected_revision {
         return Err("Wiki 设置已变化，请刷新后重试".into());
     }
-    for id in &ids {
-        if !previous.document_ids.contains(id) {
-            let doc = library::get(&state.data_dir, id)?;
+    let authorized: HashSet<_> = previous.document_ids.iter().collect();
+    let mut additions = ids.iter().filter(|id| !authorized.contains(id)).peekable();
+    if additions.peek().is_some() {
+        let catalog = library::conn(&state.data_dir)?;
+        for id in additions {
+            let doc = library::get_with_connection(&catalog, id)?;
             if doc.project_id != space || doc.status != "ready" {
                 return Err("只能授权本空间内可用的资料".into());
             }

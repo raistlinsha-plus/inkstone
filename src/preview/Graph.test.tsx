@@ -117,14 +117,16 @@ test("graph sizes are bounded, revision-owned and expandable without changing so
   size(180);
   expect(container.style.getPropertyValue("--graph-height")).toBe("180px");
   size(999999);
-  expect(container.style.getPropertyValue("--graph-height")).toBe("440px");
+  expect(container.style.getPropertyValue("--graph-height")).toBe("16384px");
+  size(920);
+  expect(container.style.getPropertyValue("--graph-height")).toBe("920px");
   size(200, job.revision - 1);
   size(NaN);
-  expect(container.style.getPropertyValue("--graph-height")).toBe("440px");
+  expect(container.style.getPropertyValue("--graph-height")).toBe("920px");
   fireEvent.click(screen.getByRole("button", { name: "展开画布" }));
-  expect(container.style.getPropertyValue("--graph-height")).toBe("560px");
+  expect(container.style.getPropertyValue("--graph-height")).toBe("1080px");
   fireEvent.click(screen.getByRole("button", { name: "收起画布" }));
-  expect(container.style.getPropertyValue("--graph-height")).toBe("440px");
+  expect(container.style.getPropertyValue("--graph-height")).toBe("920px");
 });
 
 test("switching appearance rerenders the same sandbox and passes through the saved viewport", async () => {

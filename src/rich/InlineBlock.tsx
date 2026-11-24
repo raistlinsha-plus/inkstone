@@ -24,6 +24,8 @@ export default function InlineBlock({
   const kind = language.toLowerCase(),
     known = Object.hasOwn(blockTypes, kind),
     raw = language.startsWith("inkstone-raw-");
+  const diagram = kind === "mermaid" || kind === "mindmap";
+  const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
   const [editing, setEditing] = useState(!known && !raw && !source),
     [large, setLarge] = useState(false),
     [error, setError] = useState(""),
@@ -105,7 +107,7 @@ export default function InlineBlock({
   return (
     <section
       ref={ref}
-      className={`inline-content-block ${large ? "expanded" : ""} ${editing ? "is-editing" : ""}`}
+      className={`inline-content-block ${diagram ? "diagram-block" : ""} ${large ? "expanded" : ""} ${editing ? "is-editing" : ""}`}
       data-kind={language}
       aria-label={`${known ? blockTypes[kind as BlockKind].label : raw ? "原始 Markdown" : language || "代码"}内容块`}
     >
@@ -117,6 +119,7 @@ export default function InlineBlock({
               ? msg("原始 Markdown")
               : language || msg("代码")}
         </button>
+        {diagram && <div className="diagram-tool-slot" ref={setToolbarHost} />}
         <div className="block-actions">
           <button onClick={() => setEditing(!editing)}>
             {editing ? msg("完成编辑") : msg("编辑代码")}
@@ -140,10 +143,18 @@ export default function InlineBlock({
               <MoreHorizontal size={17} />
             </summary>
             <div role="group" aria-label={msg("内容块操作")}>
+              {diagram && (
+                <button onClick={() => run("after")}>
+                  {msg("在块后继续写作")}
+                </button>
+              )}
               <button aria-label={msg("上移内容块")} onClick={() => run("up")}>
                 {msg("上移")}
               </button>
-              <button aria-label={msg("下移内容块")} onClick={() => run("down")}>
+              <button
+                aria-label={msg("下移内容块")}
+                onClick={() => run("down")}
+              >
                 {msg("下移")}
               </button>
               <button onClick={() => run("duplicate")}>{msg("复制块")}</button>
@@ -179,7 +190,9 @@ export default function InlineBlock({
               </button>
             </div>
           </details>
-          {large && <button onClick={() => setLarge(false)}>{msg("收起")}</button>}
+          {large && (
+            <button onClick={() => setLarge(false)}>{msg("收起")}</button>
+          )}
         </div>
       </header>
       {deleting && (
@@ -231,6 +244,7 @@ export default function InlineBlock({
       {known && (visible || large || activeInteraction) ? (
         <div className="inline-block-preview" ref={preview}>
           <ContentBlock
+            toolbarHost={diagram ? toolbarHost : undefined}
             kind={kind}
             source={source}
             viewKey={viewKey}
@@ -248,9 +262,11 @@ export default function InlineBlock({
           {msg("滚动到此处后本地呈现")}
         </div>
       ) : null}
-      <footer>
-        <button onClick={() => run("after")}>{msg("在块后继续写作")}</button>
-      </footer>
+      {!diagram && (
+        <footer>
+          <button onClick={() => run("after")}>{msg("在块后继续写作")}</button>
+        </footer>
+      )}
     </section>
   );
 }

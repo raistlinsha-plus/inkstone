@@ -4,7 +4,7 @@
 
 Open **My documents** and select a space. A space groups documents from different places on your Mac. Choose **Import documents** to copy a file or folder into the active space. Edits go into the copy. To edit files in place, open **Spaces and files → Open local folder (edit originals)**.
 
-Create a Markdown note with **New document**. Use **Editor** to format text, **Source** to edit Markdown, or **Split** to compare both. The insert menu supports lists, tables, JSON, Mermaid, charts, mind maps and calendars. Save with ⌘S. Use a document’s menu to inspect its history or check whether an imported original has changed.
+Create a Markdown note with **New document**. Use **Editor** to format text, **Source** to edit Markdown, or **Split** to compare both. The insert menu supports lists, tables, JSON, Mermaid, charts, mind maps and calendars. Hover over a Mermaid diagram or mind map, or Tab to its controls, to zoom, fit or export an SVG. Tall Mermaid diagrams expand with the document. Save with ⌘S. Use a document’s menu to inspect its history or check whether an imported original has changed.
 
 ## Choose your languages
 
@@ -37,7 +37,7 @@ To turn part of a chat into work, use the task action on your message or on the 
 
 ## Maintain a Wiki
 
-Open **Knowledge Wiki**, select the documents allowed for compilation and save the scope. Compilation sends the selected source material to the configured model. Open **Review and changes** to compare a candidate with the source excerpts. Publish, reject or, where available, publish only the verified excerpts. Published topics link to their sources. Recompile when a source changes. Changing the interface language alone does not rewrite a Wiki.
+Open **Knowledge Wiki**, select the documents allowed for compilation and save the scope. To change several sources at once, filter the list and select or clear all matches. Documents outside the filter keep their selection. Compilation sends the selected source material to the configured model. Open **Review and changes** to compare a candidate with the source excerpts. Publish, reject or, where available, publish only the verified excerpts. Published topics link to their sources. Recompile when a source changes. Changing the interface language alone does not rewrite a Wiki.
 
 ## Read with a companion
 
