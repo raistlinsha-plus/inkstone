@@ -1,23 +1,25 @@
-# 从源码试用 Inkstone v1.0.0-rc.4
+# 从源码试用 Inkstone v1.2.0-beta.1
 
-面向 macOS 13 及以上的 Apple Silicon Mac，应用界面为中文。GitHub 版提供源码归档和 SHA-256 校验文件。已经安装 Inkstone 的读者可以从下文的离线样例开始，也可以直接打开[用户操作手册](USER-MANUAL.zh-CN.md)。
+面向 macOS 13 及以上的 Apple Silicon Mac，界面可选择简体中文或英语，也可以跟随系统语言。GitHub 版提供源码归档和 SHA-256 校验文件。已经安装 Inkstone 的读者可以从下文的离线样例开始，也可以直接打开[用户操作手册](USER-MANUAL.zh-CN.md)。
+
+[English quick start](QUICKSTART.en.md) · [本版发布说明](DELIVERY-v1.2.0-beta.1.md)
 
 ## 运行应用
 
 先安装 Apple 命令行开发工具、Node 24.14.0、npm 11.9.0 和 Rust 1.99.1。工具链版本及目标架构记录在[工具链配置](../toolchain.json)。
 
 ```sh
-git clone --branch v1.0.0-rc.4 https://github.com/raistlinsha-plus/inkstone.git
+git clone --branch v1.2.0-beta.1 https://github.com/raistlinsha-plus/inkstone.git
 cd inkstone
 npm ci --registry=https://registry.npmjs.org
 npm run desktop
 ```
 
-首次安装和编译需要联网下载依赖。看到 Inkstone 窗口后，保持开发命令运行即可开始试用。需要独立的本机应用时，运行 `npm run bundle`。生成的应用位于 `src-tauri/target/release/bundle/macos/Inkstone.app`。本机构建使用临时签名。公开的公证安装包仍待完成发行验收。[源码发布页](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.0.0-rc.4) · [本机安装与升级](LOCAL-INSTALLATION.md)
+首次安装和编译需要联网下载依赖。看到 Inkstone 窗口后，保持开发命令运行即可开始试用。需要独立的本机应用时，运行 `npm run bundle`。生成的应用位于 `src-tauri/target/release/bundle/macos/Inkstone.app`。本机构建使用临时签名。公开的公证安装包仍待完成发行验收。[源码发布页](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.1) · [本机安装与升级](LOCAL-INSTALLATION.md)
 
 ## 先完成一次离线练习
 
-1. 在左侧打开「文档」。空间首页的「从资料到第一条回答」提供「用示例体验」。已有文档的空间，需要先点标题展开。
+1. 在左侧打开「我的文档」。空间首页的「从资料到第一条回答」提供「用示例体验」。已有文档的空间，需要先点标题展开。
 2. 进入独立样例空间后，搜索“阅读活动”，从结果打开原文。到「离线问答练习」点击「体验模拟问答」，选择一道题，核对出处并保存示例回答。样例使用预设回答，无需模型密钥。
 3. 切回自己的空间。点「导入文档 → 选择文件（可多选）」，核对「导入到空间」后点「复制导入」。可以试用[阅读活动方案](../examples/v0.7/阅读活动方案.md)或[内容块演示](../examples/v0.7/内容块演示.md)。打开副本，切换「正文」和「源码」，修改并保存一处内容。
 
@@ -31,7 +33,8 @@ npm run desktop
 
 ## 接下来可以做什么
 
-- **维护一个知识主题。** 在「知识 Wiki → 范围与维护」选定主题和文档，保存后点「整理所选资料」。整理将获准的文本发送至问答模型。首次可选「发布前全部审阅」，再到「待审阅」逐条核对并发布。[Wiki 审阅说明](DELIVERY-v0.9.4.md)
+- **给笔记中的工作排期。** 在「任务 → 今天」填标题，按 Enter 添加，打开详情安排执行时段。点左侧「日历」核对时间，点来源文档回到 Markdown 里的同一项任务。
+- **维护一个知识主题。** 在「知识 Wiki → 资料范围」选定主题和文档，保存后点「整理所选资料」。整理将获准的文本发送至问答模型。首次可选「发布前全部审阅」，再到「待审阅」逐条核对并发布。[Wiki 审阅说明](DELIVERY-v0.9.4.md)
 - **让同伴陪读。** 从「书房同伴」选择角色，在「桌宠」点「显示桌宠」，回到文档后试试拖到另一侧。保存一篇修改过的文档后，点页边角色可以预览并确认一条经历。[同伴使用说明](DELIVERY-v0.9.6.md)
 - **留一份可验证的备份。** 在空间首页点「备份与恢复预演」，选择父目录，生成并校验备份，再用全新目录做一次恢复预演。[用户操作手册](USER-MANUAL.zh-CN.md)
 

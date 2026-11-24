@@ -4,6 +4,8 @@ Entries describe implementation milestones. GitHub Releases is the record of pub
 
 ## v1.2.0-beta.1 · 从聊天到文档任务
 
+Build 10207 brings Markdown tasks to their own workspace and the weekly calendar. Capture a passage from a chat, check the task in its note, or schedule a work session. Document charts share the contextual controls used by diagrams. [English release notes](docs/DELIVERY-v1.2.0-beta.1.en.md) · [中文版本说明](docs/DELIVERY-v1.2.0-beta.1.md)
+
 - macOS 构建 10207 简化数据图表。正文与分栏中的图表使用一条浮动工具栏，可切换图表、数据表与源码，并导出 SVG 或 PNG。
 - macOS 构建 10206 修正正文及分栏预览里的 Mermaid 长图裁切，简化图表和脑图边框与工具栏。标题栏拉开了应用名与版本号的间距。Wiki 关闭按钮与标题对齐，资料范围支持全选和按筛选结果批量勾选或清除。
 - macOS 构建 10205 调整问答工作台。提问以简洁气泡显示，回答下方可复制、存为文档和重试，「更多回答操作」可查看本轮上下文或从回答创建任务。联网未能核实时集中说明原因。输入框随草稿增长，聚焦时只显示一层边框，添加资料和本轮联网设置都在发送按钮旁。
