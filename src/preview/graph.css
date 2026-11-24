@@ -118,7 +118,7 @@
 .diagram-block .inline-block-bar :is(.block-actions > button, summary):hover {
   background: var(--ui-hover);
 }
-.inline-content-block.diagram-block.expanded .graph-preview iframe {
+.inline-content-block.diagram-block.expanded .graph-preview:not([data-kind="chart"]) iframe {
   height: max(60vh, var(--graph-height));
 }
 .mind-node-tools {
@@ -133,7 +133,7 @@
 @media (hover: hover) and (pointer: fine) {
   .diagram-block:not(:hover, :focus-within, .is-editing, .expanded, :has([data-frame-hover]))
     > .inline-block-bar,
-  .diagram-preview:not(:hover, :focus-within, [data-frame-hover]) > .diagram-tools {
+  .diagram-preview:not(:hover, :focus-within, [data-frame-hover], [data-editing], :has([data-frame-hover])) > .diagram-tools {
     opacity: 0;
   }
   .inkstone-node-view.selected > .diagram-block > .inline-block-bar {

@@ -24,7 +24,7 @@ export default function InlineBlock({
   const kind = language.toLowerCase(),
     known = Object.hasOwn(blockTypes, kind),
     raw = language.startsWith("inkstone-raw-");
-  const diagram = kind === "mermaid" || kind === "mindmap";
+  const diagram = kind === "mermaid" || kind === "mindmap" || kind === "chart";
   const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
   const [editing, setEditing] = useState(!known && !raw && !source),
     [large, setLarge] = useState(false),
@@ -107,7 +107,7 @@ export default function InlineBlock({
   return (
     <section
       ref={ref}
-      className={`inline-content-block ${diagram ? "diagram-block" : ""} ${large ? "expanded" : ""} ${editing ? "is-editing" : ""}`}
+      className={`inline-content-block ${diagram ? "diagram-block" : ""} ${large ? "expanded" : ""} ${editing || (kind === "chart" && activeInteraction) ? "is-editing" : ""}`}
       data-kind={language}
       aria-label={`${known ? blockTypes[kind as BlockKind].label : raw ? "原始 Markdown" : language || "代码"}内容块`}
     >
@@ -121,9 +121,11 @@ export default function InlineBlock({
         </button>
         {diagram && <div className="diagram-tool-slot" ref={setToolbarHost} />}
         <div className="block-actions">
-          <button onClick={() => setEditing(!editing)}>
-            {editing ? msg("完成编辑") : msg("编辑代码")}
-          </button>
+          {(kind !== "chart" || editing) && (
+            <button onClick={() => setEditing(!editing)}>
+              {editing ? msg("完成编辑") : msg("编辑代码")}
+            </button>
+          )}
           <details
             className="block-menu"
             ref={menu}
@@ -143,6 +145,17 @@ export default function InlineBlock({
               <MoreHorizontal size={17} />
             </summary>
             <div role="group" aria-label={msg("内容块操作")}>
+              {kind === "chart" && !editing && (
+                <button
+                  disabled={activeInteraction}
+                  onClick={() => {
+                    setEditing(true);
+                    if (menu.current) menu.current.open = false;
+                  }}
+                >
+                  {msg("编辑代码")}
+                </button>
+              )}
               {diagram && (
                 <button onClick={() => run("after")}>
                   {msg("在块后继续写作")}

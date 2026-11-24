@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import { Copy, FilePenLine } from "lucide-react";
 import {
   codeBlocks,
   parseMarkdown,
@@ -470,9 +471,13 @@ export default function Markdown({
         const rejected =
           language === "chart" && rejectedCharts?.includes(chartIndex);
         const diagram =
-          (language === "mermaid" || language === "mindmap") &&
+          (language === "mermaid" ||
+            language === "mindmap" ||
+            language === "chart") &&
           !!block &&
+          !rejected &&
           !pending;
+        const chartControls = diagram && language === "chart";
         const blockLabel = (
           <div className="block-label">
             <span>
@@ -482,18 +487,24 @@ export default function Markdown({
               {msg("· 第")} {node.position.start.line} {msg("行")}
             </span>
             {!readOnly && onLocate && (
-              <button onClick={() => onLocate(node.position.start.line)}>
-                {msg("编辑源码")}
+              <button
+                title={msg("编辑源码")}
+                aria-label={msg("编辑源码")}
+                onClick={() => onLocate(node.position.start.line)}
+              >
+                {chartControls ? <FilePenLine size={15} /> : msg("编辑源码")}
               </button>
             )}
             <button
+              title={msg("复制")}
+              aria-label={msg("复制")}
               onClick={() =>
                 void navigator.clipboard
                   .writeText(node.value ?? "")
                   .catch((e) => onError?.(String(e)))
               }
             >
-              {msg("复制")}
+              {chartControls ? <Copy size={15} /> : msg("复制")}
             </button>
           </div>
         );

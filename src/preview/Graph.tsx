@@ -365,19 +365,17 @@ export default function Graph({
   const toolbar = (
     <div
       className={
-        kind === "chart" ? "graph-actions" : "graph-actions diagram-tools"
+        kind === "chart" ? "chart-exports" : "graph-actions diagram-tools"
       }
       role="group"
       aria-label={msg("操作")}
     >
       {toolbarExtras}
-      <span className="graph-kind">
-        {kind === "mermaid"
-          ? msg("Mermaid 图表")
-          : kind === "chart"
-            ? msg("数据图表")
-            : msg("脑图")}
-      </span>
+      {kind !== "chart" && (
+        <span className="graph-kind">
+          {kind === "mermaid" ? msg("Mermaid 图表") : msg("脑图")}
+        </span>
+      )}
       {kind !== "chart" && (
         <>
           <button
@@ -432,17 +430,19 @@ export default function Graph({
         onClick={() => send({ type: "command", action: "export" })}
       >
         <Download size={15} aria-hidden="true" />
-        {kind === "chart" && msg("导出 SVG")}
+        {kind === "chart" && "SVG"}
       </button>
       {kind === "chart" && (
         <button
           disabled={stale || !!status || !!problem}
+          title={msg("导出 PNG")}
+          aria-label={msg("导出 PNG")}
           onClick={() =>
             send({ type: "command", action: "export", format: "png" })
           }
         >
           <Download size={15} aria-hidden="true" />
-          {msg("导出 PNG")}
+          PNG
         </button>
       )}
     </div>

@@ -304,7 +304,6 @@
 .document-editor
   .data-chart
   :is(
-    .chart-tabs,
     .chart-summary,
     .chart-source-note,
     .chart-description,
@@ -326,7 +325,6 @@
   :is(
     .inline-content-block footer,
     .data-chart .chart-source-note,
-    .data-chart .chart-tabs,
     .json-row,
     .preview-table td,
     .preview-table th,
@@ -387,18 +385,6 @@
   background: var(--ui-field);
   border-color: var(--ui-control-line);
   color: var(--ui-text);
-}
-.document-editor .data-chart .chart-tabs button {
-  color: var(--ui-text);
-  background: transparent;
-}
-.document-editor .data-chart .chart-tabs button[aria-pressed="true"] {
-  color: var(--ui-accent);
-  border-color: var(--ui-control-line);
-  background: var(--ui-selected);
-}
-.document-editor .data-chart .chart-tabs .chart-edit-button {
-  border-color: var(--ui-control-line);
 }
 .document-editor
   :is(

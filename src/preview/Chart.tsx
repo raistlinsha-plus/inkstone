@@ -1,5 +1,7 @@
 import { msg } from "../i18n";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { ChartColumn, Code2, Pencil, Table2 } from "lucide-react";
 import { chartText, parseChart, type ChartData } from "../content/chart";
 import Graph from "./Graph";
 import { loadBlockDraft, saveBlockDraft } from "./drafts";
@@ -7,6 +9,8 @@ import "./chart.css";
 
 type Props = {
   source: string;
+  toolbarHost?: HTMLElement | null;
+  toolbarExtras?: ReactNode;
   onApply?: (base: string, next: string) => void;
   onError?: (message: string) => void;
   readOnly?: boolean;
@@ -14,6 +18,12 @@ type Props = {
   viewKey?: string;
   onEditingChange?: (active: boolean) => void;
 };
+const chartViews = [
+  ["chart", "图表", ChartColumn],
+  ["data", "数据表", Table2],
+  ["source", "源码", Code2],
+] as const;
+
 function inspect(source: string) {
   try {
     return { data: parseChart(source), error: "" };
@@ -29,8 +39,11 @@ export default function Chart({
   sourceRefs,
   viewKey,
   onEditingChange,
+  toolbarHost,
+  toolbarExtras,
 }: Props) {
   const id = useId();
+  const [exportSlot, setExportSlot] = useState<HTMLDivElement | null>(null);
   const checked = useMemo(() => inspect(source), [source]);
   type Draft = {
     base: string;
@@ -130,31 +143,44 @@ export default function Chart({
     }
   };
   const shown = editing && tab === "data" ? fields : checked.data;
-  return (
-    <section className="data-chart" aria-label={msg("数据图表")}>
+  const tools = (
+    <div className="graph-actions diagram-tools chart-tools">
+      {toolbarExtras}
       <div className="chart-tabs" role="group" aria-label={msg("图表视图")}>
-        {(
-          [
-            ["chart", "图表"],
-            ["data", "数据表"],
-            ["source", "源码"],
-          ] as const
-        ).map(([key, label]) => (
+        {chartViews.map(([key, label, Icon]) => (
           <button
             key={key}
+            title={msg(label)}
+            aria-label={msg(label)}
             aria-pressed={tab === key}
             disabled={editing && key !== tab}
             onClick={() => setTab(key)}
           >
-            {label}
+            <Icon size={16} aria-hidden="true" />
           </button>
         ))}
-        {!readOnly && onApply && !editing && (
-          <button className="chart-edit-button" onClick={begin}>
-            {msg("编辑图表")}
-          </button>
-        )}
       </div>
+      {!readOnly && onApply && !editing && (
+        <button
+          title={msg("编辑图表")}
+          aria-label={msg("编辑图表")}
+          onClick={begin}
+        >
+          <Pencil size={16} aria-hidden="true" />
+        </button>
+      )}
+      <div className="chart-export-slot" ref={setExportSlot} />
+    </div>
+  );
+  return (
+    <section
+      className="data-chart diagram-preview"
+      aria-label={msg("数据图表")}
+      data-editing={editing || undefined}
+    >
+      {toolbarHost === undefined
+        ? tools
+        : toolbarHost && createPortal(tools, toolbarHost)}
       {checked.error && !editing && (
         <div className="preview-error" role="status">
           {checked.error} <span>{msg("可以查看源码并修正。")}</span>
@@ -166,21 +192,15 @@ export default function Chart({
         </p>
       )}
       {tab === "chart" && checked.data && !untrustedSources && (
-        <>
-          <Graph
-            kind="chart"
-            source={source}
-            onError={(error) => {
-              setMessage(error);
-              onError?.(error);
-            }}
-          />
-          <p className="chart-summary">
-            {checked.data.title} · {checked.data.series.length} {msg("个系列 ·")}{" "}
-            {checked.data.x.values.length} {msg("个分类")}
-            {checked.data.y.unit ? ` · 单位：${checked.data.y.unit}` : ""}
-          </p>
-        </>
+        <Graph
+          kind="chart"
+          source={source}
+          toolbarHost={exportSlot}
+          onError={(error) => {
+            setMessage(error);
+            onError?.(error);
+          }}
+        />
       )}
       {tab === "data" && shown && (
         <>
@@ -536,6 +556,9 @@ export default function Chart({
       {checked.data && (
         <details className="chart-description">
           <summary>{msg("图表文字说明")}</summary>
+          <p className="chart-summary">
+            {checked.data.series.length} {msg("个系列 ·")} {checked.data.x.values.length} {msg("个分类")}
+          </p>
           <pre>{chartText(checked.data)}</pre>
         </details>
       )}

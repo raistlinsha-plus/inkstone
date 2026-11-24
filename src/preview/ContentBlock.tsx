@@ -83,6 +83,8 @@ export default function ContentBlock(props: ContentBlockProps) {
   else if (kind === "chart")
     body = (
       <Chart
+        toolbarHost={props.toolbarHost}
+        toolbarExtras={props.toolbarExtras}
         source={source}
         viewKey={viewKey}
         readOnly={readOnly}

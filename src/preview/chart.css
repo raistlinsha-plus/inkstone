@@ -1,30 +1,28 @@
 .data-chart {
+  container: chart / inline-size;
   min-width: 0;
   color: var(--ui-text);
 }
-.chart-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--ui-line);
+.chart-tools .chart-tabs,
+.chart-tools .chart-exports {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
 }
-.chart-tabs button {
-  border: 1px solid transparent;
-  background: transparent;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--ui-muted);
-  cursor: pointer;
+.chart-tools .chart-export-slot:empty {
+  display: none;
 }
-.chart-tabs button[aria-pressed="true"] {
+.diagram-tools.chart-tools .chart-tabs button[aria-pressed="true"] {
   background: var(--ui-selected);
-  border-color: var(--ui-control-line);
   color: var(--ui-accent);
 }
-.chart-tabs .chart-edit-button {
-  margin-left: auto;
-  border-color: var(--ui-control-line);
+.chart-tools .chart-exports button {
+  gap: 3px;
+}
+@container chart (max-width: 440px) {
+  .chart-tools .block-label > span {
+    display: none;
+  }
 }
 .chart-summary,
 .chart-source-note {
@@ -86,7 +84,8 @@
 }
 .chart-table th,
 .chart-table td {
-  border: 1px solid var(--ui-line);
+  border: 0;
+  border-bottom: 1px solid var(--ui-line);
   padding: 8px;
   text-align: left;
   min-width: 100px;
@@ -136,9 +135,6 @@
   color: var(--ui-text);
   background: var(--ui-surface);
   font: 12px/1.7 var(--font-mono);
-}
-.data-chart .graph-actions {
-  padding: 7px 10px;
 }
 .data-chart .graph-preview iframe {
   height: 380px;

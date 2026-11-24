@@ -243,13 +243,16 @@ const lineStyles = [
 export function chartOption(
   data: ChartData,
   theme: PreviewTheme | "export" = "light",
+  width = 800,
 ) {
   const colors = previewColors[theme === "dark" ? "dark" : "light"];
   const palette = seriesPalette[theme === "dark" ? "dark" : "light"];
   const canvas = theme === "export" ? lightGraphExport : colors.canvas;
+  const inset = width < 400 ? 12 : 20;
+  const labelWidth = Math.max(32, width - 2 * inset);
   const axisStyle = {
-    axisLine: { show: true, lineStyle: { color: colors.axis } },
-    axisTick: { lineStyle: { color: colors.axis } },
+    axisTick: { show: false },
+    nameTruncate: { maxWidth: Math.max(32, labelWidth * 0.7) },
     nameTextStyle: { color: colors.muted },
   };
   const horizontal = data.orientation === "horizontal";
@@ -258,10 +261,11 @@ export function chartOption(
     type: "category",
     name: data.x.label,
     data: data.x.values,
+    axisLine: { show: true, lineStyle: { color: colors.axis } },
     axisLabel: {
       color: colors.muted,
       hideOverlap: true,
-      width: 130,
+      width: Math.min(130, Math.max(32, width * 0.23)),
       overflow: "truncate",
     },
   };
@@ -289,13 +293,27 @@ export function chartOption(
     },
     title: {
       text: data.title,
-      left: "center",
-      top: 10,
-      textStyle: { color: colors.text, fontSize: 17, fontWeight: "normal" },
+      left: inset,
+      top: 12,
+      padding: 0,
+      textStyle: {
+        color: colors.text,
+        fontSize: 16,
+        fontWeight: 600,
+        width: labelWidth,
+        overflow: "truncate",
+      },
     },
     legend: {
-      top: 44,
+      left: inset,
+      right: inset,
+      top: 40,
+      padding: 0,
       type: "scroll",
+      itemWidth: 14,
+      itemHeight: 8,
+      itemGap: 16,
+      pageIconSize: 10,
       textStyle: { color: colors.text },
       inactiveColor: colors.muted,
       pageIconColor: colors.text,
@@ -314,14 +332,23 @@ export function chartOption(
       ? {}
       : {
           grid: {
-            top: 92,
-            left: 66,
-            right: 42,
-            bottom: 56,
-            containLabel: true,
+            top: 70,
+            left: inset,
+            right: inset,
+            bottom: 12,
+            outerBoundsMode: "same",
+            outerBoundsContain: "all",
           },
-          xAxis: horizontal ? numeric : category,
-          yAxis: horizontal ? category : numeric,
+          xAxis: {
+            ...(horizontal ? numeric : category),
+            nameLocation: "middle",
+            nameGap: 30,
+          },
+          yAxis: {
+            ...(horizontal ? category : numeric),
+            nameGap: 10,
+            nameTextStyle: { color: colors.muted, align: "left" },
+          },
         }),
     series:
       data.type === "pie"
@@ -332,7 +359,13 @@ export function chartOption(
               radius: data.donut ? ["38%", "65%"] : "65%",
               center: ["50%", "59%"],
               avoidLabelOverlap: true,
-              label: { color: colors.text, overflow: "truncate", width: 140 },
+              label: {
+                color: colors.text,
+                alignTo: "edge",
+                edgeDistance: inset,
+                overflow: "truncate",
+                width: Math.min(140, Math.max(32, width * 0.2)),
+              },
               itemStyle: { borderColor: canvas, borderWidth: 2 },
               data: data.x.values.flatMap((name, i) =>
                 data.series[0].values[i] === null
@@ -363,7 +396,7 @@ export function chartOption(
                   symbol: lineSymbols[index],
                   symbolSize: 7,
                 }
-              : { barMaxWidth: 60 }),
+              : { barMaxWidth: 44 }),
           })),
   };
 }

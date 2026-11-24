@@ -5,8 +5,12 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
+import { useState } from "react";
+import { chartTemplate } from "../content/chart";
+import Chart from "./Chart";
 import Graph from "./Graph";
 afterEach(() => {
   cleanup();
@@ -96,6 +100,36 @@ test("chart validation fails closed and its own frame enables SVG and PNG only f
     format: "png",
     requestId: job.requestId,
   });
+});
+
+test("chart view controls stay in the block toolbar while export follows the rendered view", () => {
+  function ChartBlock() {
+    const [toolbar, setToolbar] = useState<HTMLElement | null>(null);
+    return (
+      <article>
+        <header aria-label="块工具" ref={setToolbar} />
+        <Chart source={chartTemplate} toolbarHost={toolbar} readOnly />
+      </article>
+    );
+  }
+  const { container } = render(<ChartBlock />);
+  const toolbar = within(container.querySelector("header")!);
+  const button = (name: string) => toolbar.getByRole("button", { name });
+  const tableButton = button("数据表");
+  expect(button("图表").getAttribute("aria-pressed")).toBe("true");
+  expect(button("导出 SVG")).toBeDefined();
+  expect(button("导出 PNG")).toBeDefined();
+  expect(toolbar.queryByRole("button", { name: "编辑图表" })).toBeNull();
+  fireEvent.click(tableButton);
+  expect(button("数据表")).toBe(tableButton);
+  expect(tableButton.getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByRole("table")).toBeDefined();
+  expect(toolbar.queryByRole("button", { name: "导出 SVG" })).toBeNull();
+  fireEvent.click(button("源码"));
+  expect(container.querySelector("code")?.textContent).toBe(chartTemplate);
+  fireEvent.click(button("图表"));
+  expect(screen.getByTitle("数据图表本地预览")).toBeDefined();
+  expect(button("导出 SVG")).toBeDefined();
 });
 
 test("graph sizes are bounded, revision-owned and expandable without changing source", () => {

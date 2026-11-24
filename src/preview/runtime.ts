@@ -1,3 +1,4 @@
+import { trackFramePointer } from "./framePointer";
 import mermaid from "mermaid";
 import { Markmap } from "markmap-view";
 import DOMPurify from "dompurify";
@@ -93,20 +94,9 @@ const notify = (
     "*",
   );
 };
-// WebKit and Chromium can dispatch mouse events inside the isolated frame
-// without updating :hover on its ancestors in the editor.
-let pointerInside = false;
-function updatePointer(inside: boolean) {
-  if (pointerInside === inside) return;
-  pointerInside = inside;
+const framePointer = trackFramePointer((inside) => {
   if (requestId) notify("diagram-pointer", { inside });
-}
-function pointerInFrame(event: PointerEvent) {
-  if (event.pointerType !== "touch") updatePointer(true);
-}
-document.documentElement.addEventListener("pointerover", pointerInFrame);
-document.documentElement.addEventListener("pointermove", pointerInFrame, { passive: true });
-document.documentElement.addEventListener("pointerleave", () => updatePointer(false));
+});
 const escape = (s: string) =>
   s
     .replaceAll("&", "&amp;")
@@ -204,7 +194,7 @@ window.addEventListener("message", async (event) => {
   if (data.type === "command") {
     if (data.requestId !== requestId || data.revision !== revision) return;
     if (data.action === "pointer-left-frame") {
-      pointerInside = false;
+      framePointer.reset();
       return;
     }
     if (renderedGeneration !== generation) return;
@@ -266,7 +256,7 @@ window.addEventListener("message", async (event) => {
   ) {
     colorMindmap(map.svg.node()!, theme);
     renderedGeneration = job.generation;
-    notify("ready", { pointerInside }, job);
+    notify("ready", { pointerInside: framePointer.inside }, job);
     return;
   }
   const preserveMermaidView =
@@ -375,7 +365,7 @@ window.addEventListener("message", async (event) => {
     if (!current()) return;
     refreshPanCursor();
     renderedGeneration = job.generation;
-    notify("ready", { pointerInside }, job);
+    notify("ready", { pointerInside: framePointer.inside }, job);
   } catch (error) {
     if (!current()) return;
     host.replaceChildren();
