@@ -23,6 +23,7 @@ import {
 import type { CalendarPatch } from "../calendar/ProjectCalendar";
 import { translate as t, useLocale } from "../i18n";
 import type { ProjectTask } from "./project";
+import { isImeEvent } from "../platform/ime";
 import TaskOrigin from "./TaskOrigin";
 
 function TaskDateInput({
@@ -69,7 +70,7 @@ export default function TaskForm({
   onClose: () => void;
   busy: boolean;
   onCalendar?: (day: string) => void;
-  onAskForHelp?: (title: string) => void;
+  onAskForHelp?: (task: TaskDraft) => void;
   onOpenSource?: () => void;
   openSourceLabel?: string;
 }) {
@@ -92,7 +93,9 @@ export default function TaskForm({
   const [saving, setSaving] = useState(false);
   const submitting = useRef(false);
   const stale = !current || current.hash !== doc.hash;
-  async function write(action: "save" | "calendar" | "untrack" | "rekey") {
+  async function write(
+    action: "save" | "calendar" | "untrack" | "rekey" | "help",
+  ) {
     if (busy || submitting.current || stale) return;
     submitting.current = true;
     setSaving(true);
@@ -100,6 +103,7 @@ export default function TaskForm({
     try {
       let content: string;
       let calendarDay: string | undefined;
+      let helpDraft: TaskDraft | undefined;
       if (action === "rekey" && task?.duplicate) {
         content =
           doc.content.slice(0, task.markerFrom) +
@@ -122,7 +126,7 @@ export default function TaskForm({
             : zonedInput(value, zone);
         const draft: TaskDraft = {
           id,
-          title,
+          title: title.trim(),
           due: due || undefined,
           done,
           waiting: waiting || undefined,
@@ -136,6 +140,7 @@ export default function TaskForm({
                 }
               : undefined,
         };
+        if (action === "help") helpDraft = draft;
         if (action === "calendar")
           calendarDay = draft.slot
             ? dateInZone(new Date(draft.slot.start))
@@ -150,6 +155,10 @@ export default function TaskForm({
           expectedHash: doc.hash,
           content,
         });
+      if (helpDraft) {
+        onAskForHelp?.(helpDraft);
+        return;
+      }
       onClose();
       if (calendarDay) onCalendar?.(calendarDay);
     } catch (e) {
@@ -179,7 +188,7 @@ export default function TaskForm({
         void write("save");
       }}
       onKeyDown={(e) => {
-        if (e.key === "Escape" && !e.nativeEvent.isComposing && !saving) {
+        if (e.key === "Escape" && !isImeEvent(e.nativeEvent) && !saving) {
           e.preventDefault();
           onClose();
         }
@@ -347,11 +356,11 @@ export default function TaskForm({
           <button
             type="button"
             className="task-detail-help"
-            disabled={locked}
-            onClick={() => onAskForHelp(task.title)}
+            disabled={locked || !title.trim()}
+            onClick={() => void write("help")}
           >
             <Sparkles size={15} aria-hidden="true" />
-            {t("请 AI 帮我拆解", "Break down with AI")}
+            {t("保存并拆解", "Save and break down with AI")}
           </button>
         )}
         <div className="task-detail-submit">

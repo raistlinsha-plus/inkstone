@@ -1,4 +1,11 @@
-import { ChevronLeft, ChevronRight, ListFilter, Plus } from "lucide-react";
+import { isImeEvent } from "../platform/ime";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ListFilter,
+  MoreHorizontal,
+  Plus,
+} from "lucide-react";
 import { Temporal } from "temporal-polyfill";
 import type { ReactNode } from "react";
 import { addDays, dateInZone, type DateRange } from "../content/calendar";
@@ -16,6 +23,7 @@ interface Props {
   onView: (view: WorkspaceCalendarView) => void;
   onNew?: () => void;
   filtered: boolean;
+  actions: ReactNode;
   children: ReactNode;
 }
 
@@ -29,6 +37,7 @@ export default function ProjectCalendarHeader({
   onView,
   onNew,
   filtered,
+  actions,
   children,
 }: Props) {
   const { region, t } = useLocale();
@@ -105,22 +114,19 @@ export default function ProjectCalendarHeader({
             </button>
           ))}
         </div>
-        <details
-          ref={dismissDetailsOnOutside}
-          className="calendar-options"
-          onKeyDown={(e) => {
-            if (e.key === "Escape" && e.currentTarget.open) {
-              e.currentTarget.open = false;
-              e.currentTarget.querySelector("summary")?.focus();
-            }
-          }}
+        <CalendarPopover
+          label={filtered ? t("已筛选", "Filtered") : t("筛选", "Filter")}
+          icon={<ListFilter size={15} />}
         >
-          <summary>
-            <ListFilter size={15} />
-            {filtered ? t("已筛选", "Filtered") : t("筛选", "Filter")}
-          </summary>
-          <div className="calendar-options-panel">{children}</div>
-        </details>
+          {children}
+        </CalendarPopover>
+        <CalendarPopover
+          label={t("日历操作", "Calendar actions")}
+          icon={<MoreHorizontal size={16} />}
+          iconOnly
+        >
+          {actions}
+        </CalendarPopover>
         {onNew && (
           <button className="calendar-primary" onClick={onNew} disabled={busy}>
             <Plus size={16} />
@@ -129,5 +135,46 @@ export default function ProjectCalendarHeader({
         )}
       </div>
     </header>
+  );
+}
+
+function CalendarPopover({
+  label,
+  icon,
+  iconOnly,
+  children,
+}: {
+  label: string;
+  icon: ReactNode;
+  iconOnly?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details
+      className="calendar-options"
+      ref={dismissDetailsOnOutside}
+      onClick={(event) => {
+        if (!(event.target as Element).closest("button:not(:disabled)")) return;
+        event.currentTarget.open = false;
+        event.currentTarget.querySelector("summary")?.focus();
+      }}
+      onKeyDown={(event) => {
+        if (
+          event.key !== "Escape" ||
+          isImeEvent(event.nativeEvent) ||
+          !event.currentTarget.open
+        )
+          return;
+        event.stopPropagation();
+        event.currentTarget.open = false;
+        event.currentTarget.querySelector("summary")?.focus();
+      }}
+    >
+      <summary aria-label={label} title={iconOnly ? label : undefined}>
+        {icon}
+        {!iconOnly && label}
+      </summary>
+      <div className="calendar-options-panel">{children}</div>
+    </details>
   );
 }

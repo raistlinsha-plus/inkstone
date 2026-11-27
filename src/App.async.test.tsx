@@ -30,7 +30,7 @@ const api = vi.hoisted(() => ({
     undefined | ((event: { preventDefault: () => void }) => Promise<void>),
   drop: undefined as
     | undefined
-    | ((event: { payload: { type: string; paths: string[] } }) => void),
+    | ((event: { payload: { type: string; paths: string[]; position?: {x:number;y:number} } }) => void),
 }));
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: api.invoke,
@@ -183,7 +183,7 @@ vi.mock("./LibraryBrowser", async () => {
                 打开 {d.path}
               </button>
             ))}
-          <button onClick={onNew}>测试新建文档</button>
+          <button onClick={()=>onNew()}>测试新建文档</button>
           <button
             onClick={() =>
               void (async () => {
@@ -529,10 +529,10 @@ test("asking about the example starts a new document-scoped draft without sharin
   expect(
     (
       screen.getByRole("checkbox", {
-        name: "本轮不搜索网页",
+        name: "按需搜索网页",
       }) as HTMLInputElement
     ).checked,
-  ).toBe(true);
+  ).toBe(false);
   fireEvent.click(
     screen.getByRole("button", { name: "社区读书会计划开展几场阅读活动？" }),
   );
@@ -688,6 +688,37 @@ test("a late index snapshot from the previous space cannot populate the current 
   expect(screen.queryByText("旧空间索引")).toBeNull();
   expect(screen.getByText("当前空间索引")).toBeTruthy();
 });
+test("a Finder drop starts at the space root after cancelling a folder import", async () => {
+  api.realLibrary = true;
+  vi.stubGlobal("__TAURI_INTERNALS__", {});
+  overrides.set("library_layout", () => ({ folders: ["A"], locations: {}, archived: false, pinned: false }));
+  overrides.set("library_preview_import", () => ({ documents: 1, images: 0, attachments: 0, skipped: 0, warnings: [] }));
+  overrides.set("library_import", () => ({ jobId: "root-drop", projectId: "p1", cancelled: false, items: [], warnings: [] }));
+  render(<App />);
+  const sidebar = within(await screen.findByLabelText("文档库侧栏"));
+  const folder = await sidebar.findByText("A", { selector: "button" });
+  fireEvent.click(folder);
+  await screen.findByRole("heading", {name:"A"});
+  fireEvent.click(sidebar.getByRole("button", { name: "导入文档" }));
+  let importer = within(await screen.findByRole("dialog", { name: "导入本地文档" }));
+  expect(importer.getByText(/p1 \/ A/)).toBeTruthy();
+  fireEvent.click(importer.getByRole("button", { name: "取消" }));
+  const rootButton = sidebar.getByRole("button", { name: "空间根目录" });
+  const hitTest = vi.fn(() => rootButton);
+  Object.defineProperty(document,"elementFromPoint",{value:hitTest, configurable:true});
+  await act(async () => api.drop?.({ payload: { type: "drop", position: {x:24,y:24}, paths: ["/fixture/new.md"] } }));
+  importer = within(await screen.findByRole("dialog", { name: "导入本地文档" }));
+  expect(importer.getByText(/p1 \/ 根目录/)).toBeTruthy();
+  const submit = importer.getByRole("button", { name: "复制导入" });
+  await waitFor(() => expect(submit.matches(":disabled")).toBe(false));
+  fireEvent.click(submit);
+  await waitFor(() => expect(calls("library_import").at(-1)?.[1]).toMatchObject({
+    projectId: "p1", folder: "", paths: ["/fixture/new.md"],
+  }));
+  expect(hitTest).toHaveBeenCalled();
+  Reflect.deleteProperty(document,"elementFromPoint");
+});
+
 test("import completion and opening the index manager refresh persisted summary counts", async () => {
   let imported = false;
   overrides.set("index_stats", () =>
@@ -698,6 +729,7 @@ test("import completion and opening the index manager refresh persisted summary 
     embeddingProfile: "",
     documents: [],
   }));
+  overrides.set("library_preview_import", () => ({documents:1, images:0, attachments:0, skipped:0, warnings:[]}));
   overrides.set("library_import", () => {
     imported = true;
     return {
@@ -1728,7 +1760,7 @@ test("reopening a standalone draft restores its documents and no-web choice", as
   });
   fireEvent.click(screen.getByRole("checkbox", { name: "a.md" }));
   fireEvent.click(screen.getByRole("checkbox", { name: "b.md" }));
-  fireEvent.click(screen.getByRole("checkbox", { name: "本轮不搜索网页" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "按需搜索网页" }));
   const draft = "请比较这两篇";
   const save = deferred<void>();
   overrides.set("assistant_update", async (args) => {
@@ -1765,10 +1797,10 @@ test("reopening a standalone draft restores its documents and no-web choice", as
   expect(
     (
       screen.getByRole("checkbox", {
-        name: "本轮不搜索网页",
+        name: "按需搜索网页",
       }) as HTMLInputElement
     ).checked,
-  ).toBe(true);
+  ).toBe(false);
   fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
   await screen.findByRole("heading", { name: "季度分析" });
   expect(calls("assistant_ask").at(-1)?.[1]).toMatchObject({

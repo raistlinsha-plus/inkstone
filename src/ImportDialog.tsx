@@ -1,4 +1,4 @@
-import { msg } from "./i18n";
+import { translate as t, msg } from "./i18n";
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -14,6 +14,7 @@ import type {
 interface Props {
   view: LibraryView;
   projectId: string;
+  folderPath?: string;
   initialPaths: string[];
   task?: ImportTask;
   onClose: () => void;
@@ -24,6 +25,7 @@ interface Props {
 export default function ImportDialog({
   view,
   projectId,
+  folderPath = "",
   initialPaths,
   task,
   onClose,
@@ -42,6 +44,41 @@ export default function ImportDialog({
     [items, setItems] = useState<ImportItem[]>([]),
     [progress, setProgress] = useState({ done: 0, total: 0 }),
     [result, setResult] = useState<ImportResult | null>(null);
+  const target = view.projects.find((p) => p.id === project && !p.archived);
+  const folder = project === projectId ? folderPath : "";
+  const [preview, setPreview] = useState<{
+    documents: number;
+    images: number;
+    attachments: number;
+    skipped: number;
+    existing: number;
+    warnings: string[];
+  } | null>(null);
+  const [previewError, setPreviewError] = useState("");
+  const [previewAttempt, retryPreview] = useState(0);
+  const targetId = target?.id;
+  useEffect(() => {
+    let current = true;
+    setPreview(null);
+    setPreviewError("");
+    if (paths.length && targetId) {
+      invoke<NonNullable<typeof preview>>("library_preview_import", {
+        projectId: targetId,
+        skipDuplicates: skip,
+        paths,
+        attachments,
+      })
+        .then((v) => {
+          if (current) setPreview(v);
+        })
+        .catch((e) => {
+          if (current) setPreviewError(String(e));
+        });
+    }
+    return () => {
+      current = false;
+    };
+  }, [paths, targetId, skip, attachments, previewAttempt]);
   const inFlight = useRef(false);
   const choosing = useRef(false);
   const mounted = useRef(true);
@@ -88,8 +125,21 @@ export default function ImportDialog({
           ? undefined
           : [
               {
-                name: "文本与结构文档",
-                extensions: ["md", "markdown", "txt", "json", "mmd"],
+                name: t("文档与图片", "Documents and images"),
+                extensions: [
+                  "md",
+                  "markdown",
+                  "txt",
+                  "json",
+                  "mmd",
+                  "png",
+                  "jpg",
+                  "jpeg",
+                  "heic",
+                  "heif",
+                  "gif",
+                  "webp",
+                ],
               },
             ],
       });
@@ -108,7 +158,14 @@ export default function ImportDialog({
     }
   };
   const run = async (retry: ImportItem[] = []) => {
-    if (inFlight.current || choosing.current || !paths.length || !project)
+    if (
+      inFlight.current ||
+      choosing.current ||
+      !paths.length ||
+      !target ||
+      !preview ||
+      !(preview.documents + preview.images)
+    )
       return;
     inFlight.current = true;
     activeJob.current = "";
@@ -126,6 +183,7 @@ export default function ImportDialog({
     try {
       const response = await invoke<ImportResult>("library_import", {
         projectId: project,
+        folder,
         paths: retry.length ? retry.map((item) => item.source) : paths,
         skipDuplicates: skip,
         attachments,
@@ -218,13 +276,33 @@ export default function ImportDialog({
             setResult(null);
           }}
         >
-          {view.projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.title}
+          {!target && (
+            <option value={project} disabled>
+              {t("目标空间不可用", "Destination unavailable")}
             </option>
-          ))}
+          )}
+          {view.projects
+            .filter((p) => !p.archived)
+            .map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
+            ))}
         </select>
       </label>
+      {target ? (
+        <p>
+          {t("本次位置", "Destination")} · {target.title} /{" "}
+          {folder || t("根目录", "Root")}
+        </p>
+      ) : (
+        <p role="alert">
+          {t(
+            "目标空间已归档或已移除，请选择其他空间。",
+            "The destination is archived or unavailable. Choose another space.",
+          )}
+        </p>
+      )}
       <div className="import-pick">
         <Upload size={26} />
         <p>{msg("选择文件或文件夹，也可以直接拖入应用")}</p>
@@ -250,13 +328,54 @@ export default function ImportDialog({
           ))}
         </ul>
       )}
+      {paths.length > 0 && target && !preview && !previewError && (
+        <p role="status">{t("正在检查导入内容…", "Checking files…")}</p>
+      )}
+      {preview && (
+        <div className="import-preview" role="status">
+          <p>
+            {t("导入预检", "Import preview")} · {preview.documents}{" "}
+            {t("份文档", "documents")} · {preview.images}{" "}
+            {t("张独立图片", "standalone images")} · {preview.attachments}{" "}
+            {t("项附件", "assets")} · {preview.skipped} {t("项跳过", "skipped")}
+          </p>
+          {skip && (
+            <p>
+              {t(
+                `其中 ${preview.existing ?? 0} 项已存在于目标空间，将跳过。`,
+                `${preview.existing ?? 0} already in the destination space and will be skipped.`,
+              )}
+            </p>
+          )}
+          {!!preview.warnings.length && (
+            <details>
+              <summary>{t("查看预检说明", "Preview details")}</summary>
+              {preview.warnings.map((w, i) => (
+                <p key={i}>{w}</p>
+              ))}
+            </details>
+          )}
+        </div>
+      )}
+      {previewError && (
+        <div role="alert">
+          {previewError}{" "}
+          <button disabled={locked} onClick={() => retryPreview((n) => n + 1)}>
+            {t("重新检查", "Check again")}
+          </button>
+        </div>
+      )}
       <div className="import-options">
         <label>
           <input
             type="checkbox"
             checked={skip}
             disabled={locked}
-            onChange={(e) => setSkip(e.target.checked)}
+            onChange={(e) => {
+              setSkip(e.target.checked);
+              setItems([]);
+              setResult(null);
+            }}
           />
           {msg("跳过相同内容；同名不同内容自动保存副本")}
         </label>
@@ -265,13 +384,20 @@ export default function ImportDialog({
             type="checkbox"
             checked={attachments}
             disabled={locked}
-            onChange={(e) => setAttachments(e.target.checked)}
+            onChange={(e) => {
+              setAttachments(e.target.checked);
+              setItems([]);
+              setResult(null);
+            }}
           />
           {msg("一并复制源目录范围内的相对图片")}
         </label>
       </div>
       <p className="preview-help">
-        {msg("支持 MD、TXT、JSON、MMD；文本每篇最多 2 MB，图片最多 8 MB。导入不会自动发送到远程模型。")}
+        {t(
+          "文本每篇最多 2 MB，内嵌图片最多 8 MB。独立图片支持最多 64 MB 的 HEIC、HEIF、JPEG、PNG、WebP 或 GIF。文字识别在本机完成。",
+          "Text files up to 2 MB, embedded images up to 8 MB. Import standalone HEIC, HEIF, JPEG, PNG, WebP or GIF files up to 64 MB. Text recognition runs on this Mac.",
+        )}
       </p>
       {busy && (
         <div role="status">
@@ -282,8 +408,9 @@ export default function ImportDialog({
       {(result || items.length > 0) && (
         <div className="import-results">
           <strong>
-            {result?.cancelled ? msg("已停止，可重试 · ") : ""}{msg("成功")} {imported.length}{" "}
-            {msg("· 跳过")} {skipped.length} {msg("· 失败")} {failed.length}
+            {result?.cancelled ? msg("已停止，可重试 · ") : ""}
+            {msg("成功")} {imported.length} {msg("· 跳过")} {skipped.length}{" "}
+            {msg("· 失败")} {failed.length}
           </strong>
           {items.map((i, n) => (
             <div className={"import-item " + i.status} key={i.source + n}>
@@ -293,7 +420,9 @@ export default function ImportDialog({
                 (i.status === "imported" || i.status === "skipped") &&
                 !busy && (
                   <button onClick={() => onOpen(i.documentId!)}>
-                    {i.status === "skipped" ? msg("打开已有副本") : msg("打开副本")}
+                    {i.status === "skipped"
+                      ? msg("打开已有副本")
+                      : msg("打开副本")}
                   </button>
                 )}
             </div>
@@ -330,7 +459,13 @@ export default function ImportDialog({
           !complete && (
             <button
               className="button primary"
-              disabled={picking || !paths.length || !project}
+              disabled={
+                picking ||
+                !paths.length ||
+                !target ||
+                !preview ||
+                !(preview.documents + preview.images)
+              }
               onClick={() => void run(retryFailed ? failed : [])}
             >
               {retryFailed

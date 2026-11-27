@@ -2241,16 +2241,14 @@ a {
   justify-content: center;
   gap: 6px;
   min-height: 36px;
-  padding: 7px 12px !important;
+  padding: 7px 12px;
   line-height: 20px;
   font-weight: 500;
   white-space: nowrap;
 }
 .library-shortcuts button svg {
   display: block;
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
+  flex: none;
 }
 .library-shortcuts button span {
   display: block;

@@ -525,12 +525,16 @@ export function ConversationTimeline({
                         : candidate.status === "source_changed"
                           ? msg("来源已变化")
                           : null}
-                    {turn.candidates.length > 1 &&
-                      ` · 当前选择 ${turn.candidates.indexOf(candidate) + 1}/${turn.candidates.length}`}
                   </span>
                   {turn.candidates.length > 1 && (
+                    <span>{translate(
+                      `当前选择 ${turn.candidates.indexOf(candidate) + 1}/${turn.candidates.length}`,
+                      `Selected ${turn.candidates.indexOf(candidate) + 1} of ${turn.candidates.length}`,
+                    )}</span>
+                  )}
+                  {turn.candidates.length > 1 && (
                     <select
-                      aria-label={`回答候选 ${turn.question}`}
+                      aria-label={translate(`回答候选 ${turn.question}`, `Answer alternatives for ${turn.question}`)}
                       disabled={busy || switching}
                       value={candidate.id}
                       onChange={(e) => {
@@ -545,11 +549,11 @@ export function ConversationTimeline({
                           {i + 1}/{turn.candidates.length} ·{" "}
                           {
                             {
-                              complete: "已完成",
-                              stopped: "已停止",
-                              failed: "生成失败",
-                              generating: "生成中",
-                              source_changed: "来源变化",
+                              complete: msg("已完成"),
+                              stopped: msg("已停止"),
+                              failed: msg("生成失败"),
+                              generating: msg("生成中"),
+                              source_changed: msg("来源已变化"),
                             }[c.status]
                           }
                         </option>

@@ -1,3 +1,4 @@
+import { label } from "./library/mediaTypes";
 import { msg } from "./i18n";
 import { useState } from "react";
 import { RefreshCw } from "lucide-react";
@@ -100,7 +101,7 @@ export default function IndexStatusPanel({
         {shown.map((d) => (
           <article key={d.path} className="document-index-row">
             <div>
-              <strong title={d.path}>{d.title}</strong>
+              <strong title={d.path}>{label(d.title)}</strong>
               <div className="index-badges">
                 <span>{msg("关键词 ·")} {labels[d.keywordState]}</span>
                 <span>{msg("向量 ·")} {labels[d.vectorState]}</span>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import ModalDialog from "../ModalDialog";
+import { isTaskNote } from "../library/mediaTypes";
 import type { LibraryView } from "../library";
 import type { FileData, SaveResult } from "../types";
 import { useLocale } from "../i18n";
@@ -19,9 +20,11 @@ export interface ChatTaskMessage {
   selection?: string;
   question?: string;
 }
+type Destination = { id: string; data: FileData };
 export interface TaskSave {
   projectId: string;
   documentId: string;
+  taskIds: string[];
   before: FileData;
   after: string;
   result: SaveResult;
@@ -49,18 +52,19 @@ export default function ChatTaskDialog({
   const [project, setProject] = useState(
     message.source.general ? "" : currentProject,
   );
+  const projects = library.projects.filter((p) => !p.archived);
+  const activeProject = projects.some((p) => p.id === project);
   const docs = library.documents.filter(
     (d) =>
+      activeProject &&
       d.projectId === project &&
       d.status === "ready" &&
-      /\.m(?:d|arkdown)$/i.test(d.path),
+      isTaskNote(d.path),
   );
   const [documentId, setDocumentId] = useState(
     () => docs.find((d) => d.path === currentPath)?.id ?? "",
   );
-  const [target, setTarget] = useState<{ id: string; data: FileData } | null>(
-    null,
-  );
+  const [target, setTarget] = useState<Destination | null>(null);
   const [rows, setRows] = useState<ActionChoice[]>(() => {
     const selected = message.selection;
     if (
@@ -82,11 +86,13 @@ export default function ChatTaskDialog({
   const activeExtraction = useRef<string | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [generation, reload] = useState(0);
+  const selectedNote = docs.some((doc) => doc.id === documentId);
+  const createTaskList = activeProject && docs.length === 0;
   useEffect(() => {
     let current = true;
     setTarget(null);
     setError("");
-    if (documentId)
+    if (selectedNote)
       void invoke<FileData>("task_document", { projectId: project, documentId })
         .then((data) => {
           if (current) setTarget({ id: documentId, data });
@@ -97,7 +103,7 @@ export default function ChatTaskDialog({
     return () => {
       current = false;
     };
-  }, [project, documentId, generation]);
+  }, [project, documentId, selectedNote, generation]);
   function add(item: ActionChoice, selected: boolean) {
     setRows((old) =>
       old.some(
@@ -188,29 +194,48 @@ export default function ChatTaskDialog({
   }
   const selected = rows.filter((r) => r.selected);
   const ready =
-    target?.id === documentId &&
-    target &&
-    !target.data.missing &&
-    !target.data.draft;
+    createTaskList ||
+    (selectedNote &&
+      target?.id === documentId &&
+      target &&
+      !target.data.missing &&
+      !target.data.draft);
   async function save() {
-    if (!ready || !target || lock.current || !selected.length) return;
+    if (!ready || lock.current || !selected.length) return;
     lock.current = true;
     setWorking(true);
     setError("");
     try {
+      if (createTaskList) beforeSave("");
+      const destination = createTaskList
+        ? await invoke<Destination>("task_prepare_chat_note", {
+            projectId: project,
+            title: t("任务清单.md", "Tasks.md"),
+            source: message.source,
+          })
+        : target;
+      if (!destination) return;
+      const { id, data } = destination;
+      if (data.missing || data.draft)
+        throw Error(
+          t(
+            "请先打开目标文档核对待恢复的编辑。",
+            "Open the note to resolve pending edits first.",
+          ),
+        );
       const tasks = await Promise.all(
         selected.map(async (r) => ({
-          id: await actionId(message.source, documentId, r),
+          id: await actionId(message.source, id, r),
           title: r.title.trim(),
           ...(r.due ? { due: r.due } : {}),
         })),
       );
-      const after = appendTrackedTasks(target.data.content, tasks);
-      beforeSave(documentId);
+      const after = appendTrackedTasks(data.content, tasks);
+      beforeSave(id);
       const result = await invoke<SaveResult>("task_save_from_chat", {
         projectId: project,
-        documentId,
-        expectedHash: target.data.hash,
+        documentId: id,
+        expectedHash: data.hash,
         content: after,
         source: message.source,
         quotes: tasks.map((task, i) => ({
@@ -222,8 +247,9 @@ export default function ChatTaskDialog({
       });
       onSaved({
         projectId: project,
-        documentId,
-        before: target.data,
+        documentId: id,
+        taskIds: tasks.map((task) => task.id),
+        before: data,
         after,
         result,
       });
@@ -351,7 +377,7 @@ export default function ChatTaskDialog({
           }}
         >
           <option value="">{t("选择空间", "Choose a space")}</option>
-          {library.projects.map((p) => (
+          {projects.map((p) => (
             <option key={p.id} value={p.id}>
               {p.title}
             </option>
@@ -361,11 +387,15 @@ export default function ChatTaskDialog({
       <label>
         {t("目标 Markdown 文档", "Destination Markdown note")}
         <select
-          disabled={working || !project}
+          disabled={working || !activeProject || createTaskList}
           value={documentId}
           onChange={(e) => setDocumentId(e.target.value)}
         >
-          <option value="">{t("选择文档", "Choose a note")}</option>
+          <option value="">
+            {createTaskList
+              ? t("任务清单（确认保存时创建）", "Task list (created on save)")
+              : t("选择文档", "Choose a note")}
+          </option>
           {docs.map((d) => (
             <option key={d.id} value={d.id}>
               {d.title}

@@ -1,19 +1,19 @@
-# Run Inkstone v1.2.0-beta.1 from source
+# Run Inkstone v1.2.0-beta.3 from source
 
-The source preview targets Apple Silicon Macs with macOS 13 or later. The interface supports English and Simplified Chinese. To change it after launch, open **Models and settings → Language / 语言**. [简体中文](QUICKSTART.md) · [Desktop guide](USER-MANUAL.en.md) · [Release notes](DELIVERY-v1.2.0-beta.1.en.md)
+The source preview targets Apple Silicon Macs with macOS 13 or later. The interface supports English and Simplified Chinese. To change it after launch, open **Models and settings → Language / 语言**. [简体中文](QUICKSTART.md) · [Desktop guide](USER-MANUAL.en.md) · [Release notes](DELIVERY-v1.2.0-beta.3.en.md)
 
 ## Launch the app
 
 Install Xcode Command Line Tools, Node 24.14.0, npm 11.9.0 and Rust 1.99.1. The initial installation downloads dependencies. [Pinned toolchain](../toolchain.json)
 
 ```sh
-git clone --branch v1.2.0-beta.1 https://github.com/raistlinsha-plus/inkstone.git
+git clone --branch v1.2.0-beta.3 https://github.com/raistlinsha-plus/inkstone.git
 cd inkstone
 npm ci --registry=https://registry.npmjs.org
 npm run desktop
 ```
 
-Leave the command running while you try Inkstone. For a standalone local build, run `npm run bundle`. The app is created at `src-tauri/target/release/bundle/macos/Inkstone.app` using local ad hoc signing. The GitHub prerelease provides source code. Developer ID signing and Apple notarization are pending. [GitHub release](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.1)
+Leave the command running while you try Inkstone. For a standalone local build, run `npm run bundle`. The app is created at `src-tauri/target/release/bundle/macos/Inkstone.app` using local ad hoc signing. The GitHub prerelease provides source code. Developer ID signing and Apple notarization are pending. [GitHub release](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.3)
 
 ## Try it without a model key
 

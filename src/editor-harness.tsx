@@ -52,6 +52,8 @@ const samples = {
     "# 编辑体验\n\n在源码、可视化与分栏之间切换。\n\n## 计划\n\n- 可靠保存\n- 结构内容\n  - JSON\n  - Mermaid\n",
   "配置.json":
     '{"project":"Inkstone","large":9007199254740993,"a/b":{"x~y":true},"items":[1,2,3]}',
+  "读书计划脑图.mmd": "mindmap\n  root((中心主题))\n    分支一\n      11\n      22\n        221\n        222\n    分支二\n",
+  "项目构想.mindmap.md": "# 项目构想\n\n- 第一个想法\n- 交付目标\n",
   "流程.mmd":
     "flowchart LR\n  A[编辑原文] --> B[本地保存]\n  B --> C[知识检索]\n",
   "结构内容.md":

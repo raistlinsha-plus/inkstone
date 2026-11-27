@@ -59,11 +59,14 @@ try {
       .click();
     await button("书房同伴").click();
     await button("显示桌宠").click();
-    await button("返回工作区").click();
+    await button("返回文档").click();
     const pet = button(name + "桌宠");
     const anchor = page.locator(".companion-pet-anchor");
     const sprite = anchor.locator('[data-companion-sprite="' + role + '"]');
     await sprite.waitFor();
+    const pane = page.locator(".editor-source-pane");
+    const [edge, body] = await Promise.all([anchor.boundingBox(), pane.boundingBox()]);
+    assert(edge && body && (edge.x + edge.width <= body.x + 1 || body.x + body.width <= edge.x + 1), "The pet must stay outside the writing surface.");
     await pet.focus();
     await pet.press("ArrowLeft");
     await pet.press("ArrowUp");
@@ -72,7 +75,7 @@ try {
     );
     assert.equal(JSON.parse(placement).side, "left");
     await button("书房同伴").click();
-    await button("返回工作区").click();
+    await button("返回文档").click();
     await sprite.waitFor();
     assert.equal(await anchor.getAttribute("data-side"), "left");
     assert.equal(

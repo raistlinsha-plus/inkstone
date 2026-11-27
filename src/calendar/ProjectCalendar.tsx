@@ -1,4 +1,4 @@
-import { changeTrackedTask } from "../content/tasks";
+import { changeTrackedTask, type TaskDraft } from "../content/tasks";
 import { msg } from "../i18n";
 import { useEffect, useMemo, useState } from "react";
 import { RefreshCw, Undo2 } from "lucide-react";
@@ -57,7 +57,7 @@ interface Props {
   busy?: boolean;
   onRefresh?: () => void;
   onNewDocument?: () => void;
-  onAskForHelp?: (title: string) => void;
+  onAskForHelp?: (task: TaskDraft) => void;
   spaceId?: string;
   initialDay?: string;
   onCreateCalendar?: (event: CalendarEvent) => Promise<void>;
@@ -332,6 +332,29 @@ export default function ProjectCalendar({
       setSaving(false);
     }
   };
+  const exportEvents = () => {
+    try {
+      void exportCalendar(
+        calendarIcs(
+          visibleEvents.map(({ event, id, key }) => {
+            const title = Array.from(event.title);
+            // Tracked tasks allow longer titles than the calendar event schema.
+            const summary =
+              title.length > 200
+                ? {
+                    title: title.slice(0, 199).join("") + "…",
+                    notes: event.title,
+                  }
+                : {};
+            return { ...event, ...summary, id, uid: key };
+          }),
+        ),
+        "Inkstone-Calendar.ics",
+      ).catch(fail);
+    } catch (e) {
+      fail(e);
+    }
+  };
   const editingSource = editing?.source;
   const currentEditing = editingSource
     ? documents.find((d) => d.documentId === editingSource.document.documentId)
@@ -355,52 +378,40 @@ export default function ProjectCalendar({
             ? () => add()
             : undefined
         }
+        actions={
+          <>
+            <div className="calendar-heading-actions">
+              {onUndo && (
+                <button onClick={onUndo} disabled={!canUndo || busy || saving}>
+                  <Undo2 size={15} />
+                  {msg("撤销上次日历修改")}
+                </button>
+              )}
+              {onRefresh && (
+                <button onClick={onRefresh} disabled={busy || saving}>
+                  <RefreshCw size={15} /> {msg("刷新项目日历")}
+                </button>
+              )}
+              <button onClick={exportEvents}>{msg("导出 ICS")}</button>
+            </div>
+            {view !== "agenda" && (
+              <label>
+                {msg("转到日期")}
+                <input
+                  type="date"
+                  aria-label={msg("日历转到日期")}
+                  value={anchor}
+                  onChange={(e) => {
+                    if (validCalendarDate(e.target.value))
+                      chooseAnchor(e.target.value);
+                  }}
+                />
+              </label>
+            )}
+          </>
+        }
         filtered={!showTasks || !showEvents || status !== "all" || !!query}
       >
-        <div className="calendar-heading-actions">
-          {onUndo && (
-            <button onClick={onUndo} disabled={!canUndo || busy || saving}>
-              <Undo2 size={15} />
-              {msg("撤销上次日历修改")}
-            </button>
-          )}
-          {onRefresh && (
-            <button
-              onClick={onRefresh}
-              disabled={busy || saving}
-              aria-label={msg("刷新项目日历")}
-            >
-              <RefreshCw size={16} />
-            </button>
-          )}
-          <button
-            onClick={() => {
-              try {
-                void exportCalendar(
-                  calendarIcs(
-                    visibleEvents.map(({ event, id, key }) => {
-                      const title = Array.from(event.title);
-                      // Tracked tasks allow longer titles than the calendar event schema.
-                      const summary =
-                        title.length > 200
-                          ? {
-                              title: title.slice(0, 199).join("") + "…",
-                              notes: event.title,
-                            }
-                          : {};
-                      return { ...event, ...summary, id, uid: key };
-                    }),
-                  ),
-                  "Inkstone-Calendar.ics",
-                ).catch(fail);
-              } catch (e) {
-                fail(e);
-              }
-            }}
-          >
-            {msg("导出 ICS")}
-          </button>
-        </div>
         <div className="calendar-layer-filters">
           <label>
             <input
@@ -420,20 +431,6 @@ export default function ProjectCalendar({
           </label>
         </div>
         <div className="project-calendar-filters">
-          {view !== "agenda" && (
-            <label>
-              {msg("转到日期")}
-              <input
-                type="date"
-                aria-label={msg("日历转到日期")}
-                value={anchor}
-                onChange={(e) => {
-                  if (validCalendarDate(e.target.value))
-                    chooseAnchor(e.target.value);
-                }}
-              />
-            </label>
-          )}
           {view === "agenda" && (
             <>
               <label>
@@ -482,22 +479,6 @@ export default function ProjectCalendar({
             />
           </label>
         </div>
-        {available.length > 1 && (
-          <label className="calendar-target-select">
-            {msg("新增事项保存到")}
-            <select
-              aria-label={msg("新事项所属日历块")}
-              value={selectedTarget?.key ?? ""}
-              onChange={(e) => setTarget(e.target.value)}
-            >
-              {available.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.document.title} {msg("· 第")} {t.block.line} {msg("行")}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
       </ProjectCalendarHeader>
       {view === "agenda" && (
         <div className="calendar-range-description">
@@ -535,10 +516,10 @@ export default function ProjectCalendar({
               busy={busy}
               onAskForHelp={
                 onAskForHelp
-                  ? (title) => {
+                  ? (task) => {
                       // The chat composer owns focus when switching away from the details form.
                       setTaskEditor(null);
-                      onAskForHelp(title);
+                      onAskForHelp(task);
                     }
                   : undefined
               }
@@ -567,10 +548,35 @@ export default function ProjectCalendar({
                 </button>
               )}
             </div>
+            {!editing.event && available.length > 1 && (
+              <label className="calendar-target-select">
+                {msg("新增事项保存到")}
+                <select
+                  aria-label={msg("新事项所属日历块")}
+                  value={selectedTarget?.key ?? ""}
+                  disabled={busy || saving}
+                  onChange={(e) => {
+                    const destination = available.find(
+                      (entry) => entry.key === e.target.value,
+                    );
+                    if (!destination) return;
+                    setTarget(destination.key);
+                    setEditing({ ...editing, source: destination });
+                  }}
+                >
+                  {available.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.document.title} {msg("· 第")} {t.block.line}{" "}
+                      {msg("行")}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <EventEditor
               key={JSON.stringify([
-                editingSource?.document.documentId,
-                editingSource?.block.data?.id,
+                editing.event && editingSource?.document.documentId,
+                editing.event && editingSource?.block.data?.id,
                 editing.event?.id,
                 editing.date,
                 editing.time,

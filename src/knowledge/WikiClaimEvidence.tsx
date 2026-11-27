@@ -1,3 +1,4 @@
+import { label } from "../library/mediaTypes";
 import { msg, translate } from "../i18n";
 import { ExternalLink } from "lucide-react";
 
@@ -51,7 +52,7 @@ export function WikiSourceLink({
   return (
     <button type="button" disabled={!onOpen} onClick={onOpen}>
       <span>
-        <strong>{source.title}</strong>
+        <strong>{label(source.title)}</strong>
         <small>{sourceLines(source)}</small>
       </span>
       <ExternalLink size={14} aria-hidden="true" />

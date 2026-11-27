@@ -103,7 +103,7 @@ test("opt-in is explicit and selecting a role does not record work or call a mod
 });
 test("unsaved work cannot preview a completion", async () => {
   mount(false);
-  const button = await screen.findByRole("button", { name: "本次完成" });
+  const button = await screen.findByRole("button", { name: "记录文档完成" });
   expect((button as HTMLButtonElement).disabled).toBe(true);
   fireEvent.click(button);
   expect(
@@ -127,7 +127,7 @@ test("preview requires consent and sends server token; a failed write never clai
     throw Error(cmd);
   });
   mount();
-  fireEvent.click(await screen.findByRole("button", { name: "本次完成" }));
+  fireEvent.click(await screen.findByRole("button", { name: "记录文档完成" }));
   const confirm = await screen.findByRole("button", { name: "确认并记录" });
   expect((confirm as HTMLButtonElement).disabled).toBe(true);
   fireEvent.click(screen.getByRole("checkbox"));
@@ -154,7 +154,7 @@ test("a late preview cannot open in a new workspace", async () => {
         }),
   );
   const ui = mount();
-  fireEvent.click(await screen.findByRole("button", { name: "本次完成" }));
+  fireEvent.click(await screen.findByRole("button", { name: "记录文档完成" }));
   await waitFor(() => expect(resolve).toBeTypeOf("function"));
   ui.rerender(
     <CompanionDock
@@ -259,7 +259,7 @@ test("Motuan celebrates only a confirmed milestone; ordinary and duplicate compl
   });
   mount();
   const complete = async (kind: "milestone" | "complete") => {
-    fireEvent.click(await screen.findByRole("button", { name: "本次完成" }));
+    fireEvent.click(await screen.findByRole("button", { name: "记录文档完成" }));
     const submit = await screen.findByRole("button", { name: "确认并记录" });
     fireEvent.change(screen.getByLabelText("经历类型"), {
       target: { value: kind },

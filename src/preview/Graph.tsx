@@ -24,10 +24,15 @@ import { graphViewport, loadViewport, saveViewport } from "./viewport";
 import { parseChart } from "../content/chart";
 import { lightGraphExport, previewTheme } from "./theme";
 import "./graph.css";
+export type MapAction = "child" | "sibling" | "rename" | "delete" | "undo" | "redo";
 interface Props {
   kind: "mermaid" | "mindmap" | "chart";
   source: string;
   tree?: MindNode;
+  selectedNode?: string;
+  focusRequest?: number;
+  canvas?: boolean;
+  onNodeAction?: (id: string, action: MapAction) => void;
   onNode?: (id: string) => void;
   onError?: (message: string) => void;
   onLocate?: (line: number) => void;
@@ -65,7 +70,7 @@ export function diagramProblem(source: string): string | null {
     return "图表超过 200 行保护上限，请精简后手动预览。";
   return null;
 }
-async function exportSvg(svg: string, format: "svg" | "png" = "svg") {
+export async function exportSvg(svg: string, format: "svg" | "png" = "svg") {
   const clean = DOMPurify.sanitize(svg, {
     USE_PROFILES: { svg: true, svgFilters: true, html: true },
     ADD_TAGS: ["foreignObject"],
@@ -145,6 +150,10 @@ export default function Graph({
   source,
   tree,
   onNode,
+  selectedNode,
+  focusRequest = 0,
+  canvas = false,
+  onNodeAction,
   onError,
   onLocate,
   startLine = 1,
@@ -204,8 +213,10 @@ export default function Graph({
     readTheme();
     return () => observer.disconnect();
   }, []);
-  const callbacks = useRef({ onNode, onError, onLocate, startLine, source });
-  callbacks.current = { onNode, onError, onLocate, startLine, source };
+  const callbacks = useRef({ onNode, onNodeAction, selectedNode, onError, onLocate, startLine, source });
+  callbacks.current = { onNode, onNodeAction, selectedNode, onError, onLocate, startLine, source };
+  const focusPending = useRef(false);
+  const lastFocus = useRef(focusRequest);
   const stale = source !== debounced.source;
   const active = useRef({ id: "", revision: 0 });
   const lastRender = useRef<{
@@ -227,6 +238,15 @@ export default function Graph({
       },
       "*",
     );
+  const syncNode = () => {
+    if (!callbacks.current.onNodeAction) return;
+    send({ type: "command", action: "select-node", id: callbacks.current.selectedNode, focus: focusPending.current });
+  };
+  useEffect(() => {
+    if (focusRequest !== lastFocus.current) focusPending.current = true;
+    lastFocus.current = focusRequest;
+    if (!stale) syncNode();
+  }, [selectedNode, focusRequest, stale]);
   useEffect(() => {
     if (!frameHover) return;
     // An opaque iframe may never receive pointerleave. The next pointer event
@@ -273,6 +293,8 @@ export default function Graph({
         kind,
         source: debounced.source,
         tree: debounced.tree,
+        interactiveNodes: !!callbacks.current.onNodeAction,
+        canvas,
         viewport: viewport.current,
         theme,
         preserveView,
@@ -316,7 +338,10 @@ export default function Graph({
             saveViewport(viewKey, next);
           }
         }
+      } else if (data.type === "node-focused") {
+        focusPending.current = false;
       } else if (data.type === "ready") {
+        syncNode();
         setFrameHover(data.pointerInside === true);
         clearTimeout(timer);
         setStatus("");
@@ -336,6 +361,9 @@ export default function Graph({
         callbacks.current.source === debounced.source
       )
         callbacks.current.onNode?.(data.id);
+      else if (data.type === "node-action" && callbacks.current.source === debounced.source &&
+               ["child", "sibling", "rename", "delete", "undo", "redo"].includes(data.action))
+        callbacks.current.onNodeAction?.(data.id, data.action);
       else if (
         data.type === "export" &&
         callbacks.current.source === debounced.source &&
@@ -361,7 +389,7 @@ export default function Graph({
       renderWhenLoaded.current = () => {};
       window.removeEventListener("message", handler);
     };
-  }, [debounced, kind, token, attempt, problem, theme]);
+  }, [debounced, kind, token, attempt, problem, theme, canvas]);
   const toolbar = (
     <div
       className={

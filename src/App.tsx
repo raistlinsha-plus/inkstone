@@ -1,3 +1,8 @@
+import { isMermaidMindmap } from "./preview/mermaidMindmap";
+import { layout as readLayout, SpaceManager } from "./library/Organization";
+import MediaViewer from "./library/MediaViewer";
+import {mindName,label as mediaLabel} from "./library/mediaTypes";
+import "./library/media.css";
 import TaskList from "./tasks/TaskList";
 import { taskLine, type TaskDraft } from "./content/tasks";
 import ChatTaskDialog, { type ChatTaskMessage } from "./tasks/ChatTaskDialog";
@@ -33,6 +38,7 @@ import {
   Code2,
   Database,
   FileText,
+  Image as ImageIcon,
   LoaderCircle,
   MoreHorizontal,
   PanelLeftClose,
@@ -174,10 +180,15 @@ export default function App() {
     documents: [],
     pendingImports: [],
   });
-  const [importOpen, setImportOpen] = useState(false),
-    [importPaths, setImportPaths] = useState<string[]>([]),
-    [importTask, setImportTask] = useState<ImportTask | undefined>(),
-    [importBusy, setImportBusy] = useState(false);
+  const createFolder=useRef("");
+  const [importRequest, setImportRequest] = useState<{
+    paths: string[];
+    folder: string;
+    projectId: string;
+    task?: ImportTask;
+  } | null>(null);
+  const importOpen = importRequest !== null;
+  const [importBusy, setImportBusy] = useState(false);
   const [rawWorkspace, setWorkspace] = useState<Workspace | null>(null);
   const defaultTitle = t("我的文档", "My Documents");
   const libraryView = useMemo(() => ({
@@ -540,7 +551,23 @@ export default function App() {
     );
   }, [fileMenu]);
   const [welcome, setWelcome] = useState(true);
+  const [spacesPage, setSpacesPage] = useState(false);
+  const [folderLocation, setFolderLocation] = useState({ project: "", path: "" });
+  const currentFolder = folderLocation.project === workspace?.managedProjectId ? folderLocation.path : "";
+  const openDocumentId = libraryView.documents.find(d => d.path === document?.path && d.projectId === workspace?.managedProjectId)?.id;
+  useEffect(() => {
+    const project = workspace?.managedProjectId;
+    if (!native || welcome || !project || !openDocumentId) return;
+    let live = true;
+    readLayout(project).then(tree => {
+      if (live && tree) setFolderLocation({project,path:tree.locations[openDocumentId] ?? ""});
+    }).catch(() => {});
+    return () => {live = false;};
+  }, [workspace?.managedProjectId, openDocumentId, welcome]);
+  const folderNavigation = useRef(new Map<string, { top: number; focus: string }>());
   const visibleDocument = !welcome && !calendarOpen ? document : null;
+  const imagePagingTarget = useRef<string | null>(null);
+  const isPhoto = !!document?.content.startsWith("<!-- inkstone-image:v1 -->");
   const isExampleSpace =
     !!offlineExample && workspace?.managedProjectId === offlineExample.projectId;
   const searchingExample = isExampleSpace && visibleDocument?.path === offlineExample.path;
@@ -566,7 +593,11 @@ export default function App() {
     nameBusy;
   const busy = generalBusy || !!startupError;
   const taskBusy = indexBusy || chatBusy || importBusy || libraryMutationBusy;
+  const importProjectId = isExampleSpace
+    ? (previousExampleProject.current ?? "inbox")
+    : (workspace?.managedProjectId ?? "inbox");
   const interaction = useRef({
+    currentFolder, importProjectId,
     busy: taskBusy,
     booting,
     settingsOpen,
@@ -575,6 +606,7 @@ export default function App() {
     nameDialog,
   });
   interaction.current = {
+    currentFolder, importProjectId,
     busy: taskBusy,
     booting,
     settingsOpen,
@@ -1179,6 +1211,8 @@ export default function App() {
       setCompanionOpen(false);
       localStorage.setItem("inkstone:workspaceMode", "library");
       setWelcome(!path);
+      setSpacesPage(false);
+      setFolderLocation({ project: ws.managedProjectId ?? "", path: "" });
       setError("");
       setResults([]);
       setAnswer("");
@@ -1211,7 +1245,7 @@ export default function App() {
       setAssistantExpanded(false);
     }
   }
-  async function showLibraryHome() {
+  async function showLibraryHome(folder?: string, spaces = false) {
     if (navigationBlocked()) return;
     if (!workspaceRef.current?.managedProjectId) {
       if (await useLibrary()) revealDocumentPane();
@@ -1231,6 +1265,8 @@ export default function App() {
     ++calendarLoadSequence.current;
     setCalendarBusy(false);
     setPlanningView(null);
+    if (folder !== undefined) setFolderLocation({ project: workspaceRef.current?.managedProjectId ?? "", path: folder });
+    setSpacesPage(spaces);
     setWelcome(true);
     revealDocumentPane();
   }
@@ -1286,7 +1322,7 @@ export default function App() {
       requireVersion: true,
     });
   }
-  function showImport(task?: ImportTask) {
+  function showImport(task?: ImportTask, folder = interaction.current.currentFolder, paths: string[] = []) {
     const state = interaction.current;
     if (
       navigationBlocked() ||
@@ -1298,9 +1334,11 @@ export default function App() {
       notify({ key: "请先完成或关闭当前窗口，再导入文档" });
       return;
     }
-    setImportTask(task);
-    setImportPaths([]);
-    setImportOpen(true);
+    const projectId = task?.projectId ?? interaction.current.importProjectId;
+    setImportRequest({
+      paths, task, projectId,
+      folder: task?.folder ?? (projectId === workspaceRef.current?.managedProjectId ? folder : ""),
+    });
   }
   async function openLocalExample() {
     if (!native || navigationBlocked()) return;
@@ -1373,20 +1411,10 @@ export default function App() {
     if (!native) return;
     const unlisten = getCurrentWebview().onDragDropEvent((e) => {
       if (e.payload.type === "drop") {
-        const state = interaction.current;
-        if (
-          navigationBlocked() ||
-          state.settingsOpen ||
-          state.indexOpen ||
-          state.importOpen ||
-          state.nameDialog
-        ) {
-          notify({ key: "请先完成或关闭当前窗口，再拖入文档" });
-          return;
-        }
-        setImportPaths(e.payload.paths);
-        setImportTask(undefined);
-        setImportOpen(true);
+        const point = e.payload.position;
+        const target = point && window.document.elementFromPoint?.(point.x / window.devicePixelRatio, point.y / window.devicePixelRatio);
+        const location = target?.closest<HTMLElement>("[data-library-drop-folder]")?.dataset.libraryDropFolder ?? "";
+        showImport(undefined, location, e.payload.paths);
       }
     });
     return () => {
@@ -1394,6 +1422,10 @@ export default function App() {
     };
   }, []);
   const libraryProps = {
+    browseFolder: currentFolder,
+    folderNavigation: folderNavigation.current,
+    onBrowseFolder: (path: string) => void showLibraryHome(path),
+    onSpaces: () => void showLibraryHome(undefined, true),
     view: libraryView,
     projectId: workspace?.managedProjectId ?? "inbox",
     busy,
@@ -1402,7 +1434,7 @@ export default function App() {
       if (await useLibrary(id, undefined, committed)) revealDocumentPane();
     },
     onOpen: (d: LibraryDocument) => void openLibraryDocument(d),
-    onNew: () => nameAction("new"),
+    onNew: (folder?:string) => nameAction("new",folder),
     onImport: showImport,
     onSearch: () => {
       cancelSearch();
@@ -1591,7 +1623,7 @@ export default function App() {
           notify({ key: "来源已更新，行号仅供参考，请核对当前原文" });
       } else
         nextMode =
-          restore?.mode ??
+          restore?.mode ?? (mindName(path) || (documentKind(path) === "mermaid" && isMermaidMindmap(content)) ? "mindmap" : undefined) ??
           (documentKind(path) === "json" || documentKind(path) === "mermaid"
             ? "split"
             : documentKind(path) === "text" || content.length > 300000
@@ -1658,7 +1690,7 @@ export default function App() {
       fail(e);
     }
   }
-  function nameAction(action: "new" | "rename" | "copy") {
+  function nameAction(action: "new" | "rename" | "copy", folder=currentFolder) {
     if (navigationBlocked()) return;
     ++openSequence.current;
     if (fileMenu) fileTrigger.current?.focus({ preventScroll: true });
@@ -1675,6 +1707,7 @@ export default function App() {
             ? titleOf(document.path)
             : "",
     );
+    createFolder.current=folder;
     setNameDialog(action);
   }
   function closeNameDialog() {
@@ -1727,7 +1760,9 @@ export default function App() {
             projectId: ws.managedProjectId,
             title: path,
             content: action === "copy" ? (syncEditor()?.content ?? "") : "",
+            folder: action === "new" ? createFolder.current : undefined,
           });
+          window.dispatchEvent(new Event("inkstone-folders"));
           if (!current()) return;
           await refreshLibrary();
           await refreshFiles();
@@ -1996,7 +2031,7 @@ export default function App() {
         projectId,
         ...patch,
       });
-      if (!currentCalendarWrite(operation)) return;
+      if (!currentCalendarWrite(operation)) throw Error(t("空间已切换。", "The space has changed."));
       recordPlanningChange(patch.documentId, before.content, result.hash);
       setCalendarDocuments((old) =>
         old.map((d) =>
@@ -2144,9 +2179,13 @@ export default function App() {
       }
     });
   }
-  async function askAboutTask(title: string) {
+  async function askAboutTask(task: TaskDraft) {
     if (!(await newConversation())) return;
-    const draft = msg("请帮我拆解这项任务：") + title;
+    const draft = [
+      msg("请帮我拆解这项任务：") + task.title,
+      task.due && t("截止日", "Due date") + " · " + task.due,
+      task.slot && t("执行时段", "Time slot") + " · " + task.slot.start + " – " + task.slot.end + " (" + task.slot.zone + ")",
+    ].filter(Boolean).join("\n");
     setScope("workspace");
     setPanel("ask");
     setPanelOpen(true);
@@ -3001,18 +3040,18 @@ export default function App() {
       >
         <input
           type="checkbox"
-          aria-label={msg("本轮不搜索网页")}
-          checked={localOnlyTurn}
+          checked={!localOnlyTurn}
           disabled={chatBusy || composerLocked}
           onChange={(event) => {
             const { webAccess, ...context } = draftContextRef.current;
-            if (event.target.checked)
+            if (!event.target.checked)
               changeDraftContext({ ...context, webAccess: "local-only" });
             else if (webAccess) changeDraftContext(context);
           }}
         />
         {localOnlyTurn ? <GlobeLock size={15} /> : <Globe size={15} />}
-        {localOnlyTurn ? msg("不搜网页") : msg("按需搜索网页")}
+        <span>{msg("按需搜索网页")}</span>
+        <small aria-hidden="true">{localOnlyTurn ? t("关", "Off") : t("开", "On")}</small>
       </label>
       <details
         className="assistant-composer-options"
@@ -3248,22 +3287,24 @@ export default function App() {
         className={`main-layout ${focusedKnowledge && !companionOpen ? "assistant-expanded" : ""} ${standaloneAskOpen && !companionOpen ? "ask-workbench" : ""}`}
       >
         <WorkspaceRail location={[planningView, companionOpen, wikiOpen, standaloneAskOpen, panelOpen, panel, settingsOpen, indexOpen, workspace?.managedProjectId].join("/")}>
-          {!planningVisible && <button
-            className="icon-button workspace-rail-toggle"
-            type="button"
-            aria-label={t(
-              `${sidebarClosed ? "展开" : "收起"}${companionOpen ? "同伴" : standaloneAskOpen ? "会话" : "文档"}列表`,
-              `${sidebarClosed ? "Show" : "Hide"} ${companionOpen ? "companions" : standaloneAskOpen ? "conversations" : "documents"}`
-            )}
-            aria-expanded={!sidebarClosed}
-            onClick={() => setSidebarClosed(!sidebarClosed)}
-          >
-            {sidebarClosed ? (
-              <PanelLeftOpen size={17} />
-            ) : (
-              <PanelLeftClose size={17} />
-            )}
-          </button>}
+          <div className="workspace-rail-sidebar-slot">
+            {!planningVisible && <button
+              className="icon-button workspace-rail-toggle"
+              type="button"
+              aria-label={t(
+                `${sidebarClosed ? "展开" : "收起"}${companionOpen ? "同伴" : standaloneAskOpen ? "会话" : "文档"}列表`,
+                `${sidebarClosed ? "Show" : "Hide"} ${companionOpen ? "companions" : standaloneAskOpen ? "conversations" : "documents"}`
+              )}
+              aria-expanded={!sidebarClosed}
+              onClick={() => setSidebarClosed(!sidebarClosed)}
+            >
+              {sidebarClosed ? (
+                <PanelLeftOpen size={17} />
+              ) : (
+                <PanelLeftClose size={17} />
+              )}
+            </button>}
+          </div>
           <SpaceNavigation
             disabled={busy || booting || citationOpening}
             generalDisabled={generalBusy || citationOpening || !settings}
@@ -3446,9 +3487,9 @@ export default function App() {
                     )}
                   </div>
                 </details>
-                <span className="local-note">
-                  <ShieldCheck size={12} />
-                  {msg("文档保存在本机")}
+                <span className="local-note" title={msg("文档保存在本机")}>
+                  <ShieldCheck size={12} aria-hidden="true" />
+                  {msg("本机存储")}
                 </span>
               </div>
             </>
@@ -3613,7 +3654,14 @@ export default function App() {
             </div>
           ) : welcome || !document ? (
             workspace?.managedProjectId ? (
-              <LibraryBrowser {...libraryProps} firstUseGuide={firstUseGuide} />
+              spacesPage ? (
+                <SpaceManager view={libraryView} onRefresh={refreshLibrary}
+                  onArchived={async (id) => { if (workspaceRef.current?.managedProjectId === id && await useLibrary("inbox")) setSpacesPage(true); }}
+                  onRename={libraryProps.onSpaceRename}
+                  onEnter={(id) => void libraryProps.onProject(id)}
+                  onClose={() => { setSpacesPage(false); requestAnimationFrame(() => window.document.querySelector<HTMLButtonElement>(".space-entry button")?.focus()); }}
+                />
+              ) : <LibraryBrowser {...libraryProps} firstUseGuide={firstUseGuide} />
             ) : (
               <WelcomePage
                 workspace={workspace}
@@ -3639,15 +3687,15 @@ export default function App() {
                   </button>
                 )}
                 <div className="document-title">
-                  <FileText size={16} />
-                  <span className="document-project" title={workspace?.name}>
-                    {workspace?.name}
-                  </span>
+                  {isPhoto ? <ImageIcon size={16} /> : <FileText size={16} />}
+                  {workspace?.managedProjectId ? <button className="document-project document-location" title={currentFolder ? workspace.name + " / " + currentFolder : workspace.name} onClick={() => void showLibraryHome(currentFolder)}>
+                    {currentFolder ? currentFolder.split("/").at(-1) : workspace.name}
+                  </button> : <span className="document-project" title={workspace?.name}>{workspace?.name}</span>}
                   <ChevronRight size={11} />
-                  <span title={document.path}>{titleOf(document.path)}</span>
+                  <span title={document.path}>{mediaLabel(titleOf(document.path))}</span>
                   {dirty && <span className="unsaved-dot" />}
                 </div>
-                <div className="mode-switch" role="group" aria-label={msg("文档视图")}>
+                {!isPhoto && <div className="mode-switch" role="group" aria-label={msg("文档视图")}>
                   <button
                     className={mode === "source" ? "active" : ""}
                     aria-pressed={mode === "source"}
@@ -3656,15 +3704,14 @@ export default function App() {
                     <Code2 size={13} />
                     {msg("源码")}
                   </button>
-                  <button
-                    disabled={documentKind(document.path) !== "markdown"}
+                  {documentKind(document.path) === "markdown" && !mindName(document.path) && <button
                     className={mode === "visual" ? "active" : ""}
                     aria-pressed={mode === "visual"}
                     onClick={() => changeMode("visual")}
                   >
                     <PenLine size={13} />
                     {msg("正文")}
-                  </button>
+                  </button>}
                   <button
                     className={mode === "split" ? "active" : ""}
                     aria-pressed={mode === "split"}
@@ -3672,22 +3719,21 @@ export default function App() {
                   >
                     {msg("分栏")}
                   </button>
-                  <button
-                    disabled={documentKind(document.path) !== "markdown"}
+                  {(documentKind(document.path) === "markdown" || (documentKind(document.path) === "mermaid" && isMermaidMindmap(document.content))) && <button
                     className={mode === "mindmap" ? "active" : ""}
                     aria-pressed={mode === "mindmap"}
                     onClick={() => changeMode("mindmap")}
                   >
-                    {msg("大纲脑图")}
-                  </button>
-                </div>
+                    {mindName(document.path) || documentKind(document.path) === "mermaid" ? t("画布", "Canvas") : msg("大纲脑图")}
+                  </button>}
+                </div>}
                 <div className="file-actions">
                   {!citationReturn && !generalAsk && (
                     <button
                       className="button small"
                       type="button"
-                      title={searchingExample ? msg("继续离线体验") : msg("问这篇文档")}
-                      aria-label={searchingExample ? msg("继续离线体验") : msg("问这篇文档")}
+                      title={searchingExample ? msg("继续离线体验") : isPhoto ? t("问图片文字", "Ask about image text") : msg("问这篇文档")}
+                      aria-label={searchingExample ? msg("继续离线体验") : isPhoto ? t("问图片文字", "Ask about image text") : msg("问这篇文档")}
                       disabled={busy || composerLocked}
                       onClick={() =>
                         searchingExample
@@ -3697,11 +3743,11 @@ export default function App() {
                     >
                       <Sparkles size={15} />
                       <span className="ask-document-label">
-                        {searchingExample ? msg("继续离线体验") : msg("问这篇文档")}
+                        {searchingExample ? msg("继续离线体验") : isPhoto ? t("问图片文字", "Ask about image text") : msg("问这篇文档")}
                       </span>
                     </button>
                   )}
-                  <button
+                  {(!isPhoto || dirty) && <button
                     className="icon-button"
                     title={msg("保存 ⌘S")}
                     aria-label={msg("保存文件")}
@@ -3716,7 +3762,7 @@ export default function App() {
                     ) : (
                       <ArrowDownToLine size={16} />
                     )}
-                  </button>
+                  </button>}
                   <button
                     className="icon-button"
                     ref={fileTrigger}
@@ -3759,9 +3805,9 @@ export default function App() {
                       >
                         {msg("重命名文件")}
                       </button>
-                      <button role="menuitem" tabIndex={-1} onClick={() => nameAction("copy")}>
+                      {!isPhoto && <button role="menuitem" tabIndex={-1} onClick={() => nameAction("copy")}>
                         {msg("另存为新文件")}
-                      </button>
+                      </button>}
                     </div>
                   )}
                 </div>
@@ -3814,7 +3860,37 @@ export default function App() {
                 </div>
               )}
               <div className="editor-container">
-                <Editor
+                {isPhoto ? <MediaViewer
+                  key={JSON.stringify([workspace?.root, document.path])}
+                  path={document.path}
+                  content={document.content}
+                  citationLine={line}
+                  defaultModel={settings?.chat.model}
+                  documents={libraryView.documents.filter(d => d.projectId === workspace?.managedProjectId)}
+                  onReady={element => {
+                    if (imagePagingTarget.current === document.path) {
+                      imagePagingTarget.current = null;
+                      element.focus({ preventScroll: true });
+                    }
+                  }}
+                  open={async d => {
+                    imagePagingTarget.current = d.path;
+                    if (!(await openLibraryDocument(d)) && imagePagingTarget.current === d.path)
+                      imagePagingTarget.current = null;
+                  }}
+                  append={async text => {
+                    const current = docRef.current;
+                    if (!current || current.path !== document.path || workspaceRef.current?.root !== workspace?.root)
+                      throw new Error(t("请重新打开这张图片。", "Reopen this image to save."));
+                    if (!current.content.endsWith(text)) {
+                      const next = { ...current, content: current.content + text };
+                      docRef.current = next;
+                      setDocument(next);
+                    }
+                    await saveCurrent();
+                  }}
+                />:<Editor
+                  fileTitle={titleOf(document.path)}
                   handleRef={editorHandle}
                   key={`${document.path}:${document.revision}`}
                   content={document.content}
@@ -3841,7 +3917,7 @@ export default function App() {
                   onOpenAnswerSource={(source) =>
                     void openAnswerSource(source).catch(fail)
                   }
-                />
+                />}
               </div>
               <footer className="editor-status">
                 {writingReturn && writingReturn.root === workspace?.root && (
@@ -3873,14 +3949,14 @@ export default function App() {
                     </>
                   )}
                 </span>
-                <span>
+                {!isPhoto && <><span>
                   {Array.from(document.content).length.toLocaleString()} {msg("字符")}
                 </span>
-                <span>{document.content.split("\n").length} {msg("行")}</span>
+                <span>{document.content.split("\n").length} {msg("行")}</span></>}
                 <div />
-                <span>UTF-8</span>
+                {!isPhoto && <span>UTF-8</span>}
                 <span>
-                  {document.path.toLowerCase().endsWith(".txt")
+                  {isPhoto ? t("图片", "Image") : document.path.toLowerCase().endsWith(".txt")
                     ? msg("纯文本")
                     : documentKind(document.path) === "json"
                       ? "JSON"
@@ -3909,6 +3985,10 @@ export default function App() {
               activityText={assistantActivityText}
               surface={{
                 open: companionOpen,
+                returnLabel: standaloneAskOpen ? t("返回问答", "Back to chat")
+                  : planningView === "tasks" ? t("返回任务", "Back to tasks")
+                  : planningView === "calendar" ? t("返回日历", "Back to calendar")
+                  : t("返回文档", "Back to documents"),
                 navigationHost: sidebarClosed ? null : companionNavigation,
                 showPet:
                   !!document &&
@@ -4580,14 +4660,23 @@ export default function App() {
               target.path === live.path && (live.conflict || live.content !== live.saved || saveInFlight.current)
             ) throw Error(msg("请先保存目标文档的编辑。"));
           }}
-          onSaved={({ projectId, documentId, before, after, result }) => {
+          onSaved={({ projectId, documentId, taskIds, before, after, result }) => {
             if (projectId === workspaceRef.current?.managedProjectId) {
               syncCalendarSave({ ...before, documentId, title: before.path }, after, result.hash);
               setIndexDirty(result.indexStale);
               void refreshStats();
-              setCalendarDocuments((old) => old.map((doc) =>
-                doc.documentId === documentId ? { ...doc, content: after, hash: result.hash } : doc
-              ));
+              setCalendarDocuments((old) => {
+                const prior = old.find((doc) => doc.documentId === documentId);
+                const updated = {
+                  ...prior, documentId, path: before.path,
+                  title: prior?.title ?? basename(before.path),
+                  content: after, hash: result.hash,
+                  chatTaskIds: [...new Set([...(prior?.chatTaskIds ?? []), ...taskIds])],
+                };
+                return prior
+                  ? old.map((doc) => doc.documentId === documentId ? updated : doc)
+                  : [...old, updated];
+              });
             }
             void refreshLibrary();
             notify(result.warning || {
@@ -4988,28 +5077,26 @@ export default function App() {
           </div>
         </ModalDialog>
       )}
-      {importOpen && (
+      {importRequest && (
         <ImportDialog
           view={libraryView}
-          projectId={
-            isExampleSpace
-              ? (previousExampleProject.current ?? "inbox")
-              : (workspace?.managedProjectId ?? "inbox")
-          }
-          initialPaths={importPaths}
-          task={importTask}
-          onClose={() => setImportOpen(false)}
+          projectId={importRequest.projectId}
+          folderPath={importRequest.folder}
+          initialPaths={importRequest.paths}
+          task={importRequest.task}
+          onClose={() => setImportRequest(null)}
           onBusy={(next) => {
             importBusyRef.current = next;
             setImportBusy(next);
           }}
           onFinished={async () => {
+            window.dispatchEvent(new Event("inkstone-folders"));
             await refreshLibrary();
             await refreshFiles();
             await refreshIndexSnapshot();
           }}
           onOpen={(id) => {
-            setImportOpen(false);
+            setImportRequest(null);
             void refreshLibrary().then(async () => {
               const v = await invoke("library_list");
               const d = v.documents.find((d) => d.id === id);

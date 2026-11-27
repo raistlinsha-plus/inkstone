@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { act, createRef } from "react";
+import { act, createRef, useState } from "react";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
 import { answerSourceUrl } from "./content/answerSourceLink";
+import Editor, { type EditorHandle as DocumentEditorHandle } from "./Editor";
 import TextEditor, { type EditorHandle } from "./TextEditor";
 
 afterEach(cleanup);
@@ -137,4 +138,79 @@ test("the ready notification preserves the first edit and a later external revis
     ),
   );
   expect(props.onError).not.toHaveBeenCalled();
+});
+
+test("bold touching Chinese punctuation survives a source-view round trip", async () => {
+  const handleRef = createRef<EditorHandle>();
+  const props = { path: "note.md", onChange: vi.fn(), onError: vi.fn(), handleRef };
+  const { container, rerender } = render(
+    <TextEditor {...props} content="" mode="visual" />,
+  );
+  await waitFor(() => expect(container.querySelector(".milkdown-top-bar")).toBeTruthy());
+  act(() => {
+    handleRef.current!.insertMarkdown("&#x524D;**“重点”**&#x540E;", { mode: "visual", head: 1 });
+  });
+  expect(container.querySelector("strong")?.textContent).toBe("“重点”");
+  const saved = handleRef.current!.getContent();
+  rerender(<TextEditor {...props} content={saved} mode="source" />);
+  await waitFor(() => expect(container.querySelector(".cm-content")).toBeTruthy());
+  rerender(<TextEditor {...props} content={saved} mode="visual" />);
+  await waitFor(() => expect(container.querySelector("strong")?.textContent).toBe("“重点”"));
+  expect(container.querySelector(".ProseMirror")?.textContent?.trim()).toBe("前“重点”后");
+});
+
+test("draft reads and React publication wait for an IME candidate to commit", async () => {
+  const { EditorView } = await import("@codemirror/view");
+  const handleRef = createRef<EditorHandle>();
+  const onChange = vi.fn();
+  const { container } = render(
+    <TextEditor mode="source" content="前后" path="note.md" onChange={onChange}
+      onError={vi.fn()} handleRef={handleRef} />,
+  );
+  const el = container.querySelector<HTMLElement>(".cm-content")!;
+  const view = EditorView.findFromDOM(el)!;
+  fireEvent.compositionStart(el);
+  act(() => view.dispatch({ changes: { from: 1, insert: "ni" } }));
+  expect(handleRef.current!.getContent()).toBe("前后");
+  expect(onChange).not.toHaveBeenCalled();
+  act(() => view.dispatch({ changes: { from: 1, to: 3, insert: "你" } }));
+  fireEvent.compositionEnd(el, { data: "你" });
+  await waitFor(() => expect(onChange.mock.calls.map(([value]) => value)).toEqual(["前你后"]));
+  expect(handleRef.current!.getContent()).toBe("前你后");
+});
+
+test("reading a draft between Chinese candidates preserves the middle paragraph and caret", async () => {
+  const handle = createRef<DocumentEditorHandle>();
+  function Document() {
+    const [text, setText] = useState("开头\n\n2、Agentic模式\n\n3、FAQ\n\n最后一段");
+    return <Editor content={text} onChange={setText} onError={vi.fn()}
+      mode="visual" path="middle.md" handleRef={handle} />;
+  }
+  const { container, findByText } = render(<Document />);
+  const paragraph = await findByText("2、Agentic模式");
+  const node = paragraph.firstChild as Text;
+  const editor = container.querySelector<HTMLElement>(".ProseMirror")!;
+  editor.focus();
+  async function enter(text: string) {
+    await act(async () => {
+      node.data = text;
+      getSelection()!.collapse(node, node.length);
+      await new Promise(resolve => setTimeout(resolve, 5));
+    });
+  }
+  await enter("2、Agentic模式：");
+  fireEvent.compositionStart(editor);
+  await enter("2、Agentic模式：pin");
+  act(() => {
+    const draft = handle.current!.getContent();
+    expect(draft).toContain("模式：");
+    expect(draft).not.toContain("pin");
+  });
+  expect(node.isConnected).toBe(true);
+  expect(getSelection()?.focusNode).toBe(node);
+  expect(paragraph.textContent).toBe("2、Agentic模式：pin");
+  await enter("2、Agentic模式：拼音");
+  fireEvent.compositionEnd(editor, { data: "拼音" });
+  await waitFor(() => expect(handle.current!.getContent()).toContain("模式：拼音"));
+  expect(editor.lastElementChild?.textContent).toBe("最后一段");
 });

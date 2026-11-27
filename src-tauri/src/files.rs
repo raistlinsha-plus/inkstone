@@ -2,7 +2,6 @@ use crate::models::*;
 use sha2::{Digest, Sha256};
 use std::{
     fs,
-    io::Write,
     path::{Component, Path, PathBuf},
 };
 
@@ -74,6 +73,10 @@ pub fn read_text(path: &Path) -> Result<String, String> {
     Ok(value)
 }
 pub fn write_atomic(path: &Path, content: &[u8]) -> Result<(), String> {
+    write_atomic_from(path, content)
+}
+
+pub fn write_atomic_from(path: &Path, mut source: impl std::io::Read) -> Result<(), String> {
     let temporary = path.with_file_name(format!(".inkstone-{}.tmp", uuid::Uuid::new_v4()));
     let result = (|| {
         let mut file = fs::OpenOptions::new()
@@ -84,7 +87,7 @@ pub fn write_atomic(path: &Path, content: &[u8]) -> Result<(), String> {
         if let Ok(meta) = fs::metadata(path) {
             fs::set_permissions(&temporary, meta.permissions()).map_err(|e| e.to_string())?;
         }
-        file.write_all(content).map_err(|e| e.to_string())?;
+        std::io::copy(&mut source, &mut file).map_err(|e| e.to_string())?;
         file.sync_all().map_err(|e| e.to_string())?;
         fs::rename(&temporary, path).map_err(|e| e.to_string())?;
         if let Some(parent) = path.parent() {

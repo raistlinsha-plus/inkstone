@@ -1,0 +1,155 @@
+.picture-reader {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 16px clamp(12px, 3vw, 40px) 24px;
+  color: var(--ui-text);
+  background: var(--ui-paper);
+}
+.picture-stage {
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  place-items: center;
+  height: max(210px, calc(100% - 56px));
+  overflow: auto;
+  color: var(--ui-muted);
+}
+.picture-stage img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: zoom-in;
+}
+.picture-stage.is-zoomed {
+  display: block;
+}
+.picture-stage.is-zoomed img {
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  cursor: zoom-out;
+}
+.picture-reader:has(.picture-panel) .picture-stage {
+  height: clamp(160px, 32vh, 360px);
+}
+.picture-controls,
+.picture-pages,
+.picture-send,
+.picture-panel header,
+.picture-model {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.picture-controls {
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 8px auto;
+  gap: 4px;
+}
+.picture-reader button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 9px;
+  min-height: 32px;
+  color: var(--ui-text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font: inherit;
+  cursor: pointer;
+}
+.picture-reader button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.picture-reader button:hover:enabled,
+.picture-reader button[aria-expanded="true"] {
+  background: var(--ui-hover);
+}
+.picture-controls svg {
+  width: 15px;
+  height: 15px;
+}
+.picture-pages {
+  gap: 2px;
+  padding-inline-end: 6px;
+  border-inline-end: 1px solid var(--ui-line);
+  font-variant-numeric: tabular-nums;
+}
+.picture-pages span,
+.picture-send small {
+  color: var(--ui-muted);
+}
+.picture-panel {
+  box-sizing: border-box;
+  max-width: 680px;
+  margin: 16px auto 0;
+  padding: 16px 18px;
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+  background: var(--ui-overlay);
+}
+.picture-panel header,
+.picture-send {
+  justify-content: space-between;
+}
+.picture-panel header strong {
+  font-size: 15px;
+}
+.picture-panel label {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+  color: var(--ui-muted);
+  font-size: 12px;
+}
+.picture-panel :is(input, textarea) {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  color: var(--ui-text);
+  background: var(--ui-paper);
+  border: 1px solid var(--ui-line);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 14px;
+  padding: 7px 9px;
+}
+.picture-model img {
+  width: 64px;
+  height: 52px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: var(--ui-surface);
+}
+.picture-copy {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  user-select: text;
+}
+.picture-send {
+  flex-wrap: wrap;
+}
+.picture-panel .picture-primary,
+.picture-panel .picture-primary:hover:enabled {
+  background: var(--ui-action);
+  color: var(--ui-on-action);
+}
+.picture-result {
+  border-top: 1px solid var(--ui-line);
+  padding-top: 12px;
+}
+.picture-result button {
+  color: var(--ui-action);
+  margin-top: 8px;
+}

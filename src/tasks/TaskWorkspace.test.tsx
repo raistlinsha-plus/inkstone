@@ -14,6 +14,7 @@ import ProjectCalendar, {
   type CalendarPatch,
 } from "../calendar/ProjectCalendar";
 import TaskList from "./TaskList";
+import { imeBoundary } from "../platform/ime";
 import { taskViewState } from "./project";
 import {
   dateInZone,
@@ -260,7 +261,7 @@ it("keeps ordinary checklists separate and allows explicit repair of one duplica
   expect(result[0].id).not.toBe(result[1].id);
 });
 
-it("hands a selected task title to the question composer and closes its detail form", async () => {
+it("keeps a failed breakdown draft, then saves the edited task and time slot before opening chat", async () => {
   const doc = {
     documentId: "a",
     title: "A",
@@ -269,19 +270,59 @@ it("hands a selected task title to the question composer and closes its detail f
     content: taskLine({ id: crypto.randomUUID(), title: "Review plan" }),
   };
   const help = vi.fn();
+  let finish!: () => void;
+  const patch = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("disk busy"))
+    .mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
   render(
-    <TaskList
-      {...taskProps}
-      documents={[doc]}
-      onPatch={vi.fn()}
-      onOpen={vi.fn()}
-      onAskForHelp={help}
-    />,
+    <div {...imeBoundary}>
+      <TaskList
+        {...taskProps}
+        documents={[doc]}
+        onPatch={patch}
+        onOpen={vi.fn()}
+        onAskForHelp={help}
+      />
+    </div>,
   );
   fireEvent.click(screen.getByRole("button", { name: /^全部任务/ }));
   fireEvent.click(screen.getByRole("button", { name: "Review plan" }));
-  fireEvent.click(screen.getByRole("button", { name: "请 AI 帮我拆解" }));
-  expect(help).toHaveBeenCalledWith("Review plan");
+  const form = within(screen.getByRole("form", { name: "任务详情" }));
+  const title = form.getByLabelText("任务标题") as HTMLInputElement;
+  fireEvent.compositionStart(title);
+  fireEvent.keyDown(title, { key: "Escape" });
+  fireEvent.compositionEnd(title);
+  fireEvent.keyDown(title, { key: "Escape", keyCode: 229 });
+  fireEvent.keyUp(title, { key: "Escape" });
+  expect(title.isConnected).toBe(true);
+  fireEvent.change(title, { target: { value: "Review revised plan" } });
+  fireEvent.click(form.getByText("安排执行时段"));
+  fireEvent.change(form.getByLabelText("开始", { exact: true }), {
+    target: { value: "2026-12-03T11:00" },
+  });
+  fireEvent.change(form.getByLabelText("结束", { exact: true }), {
+    target: { value: "2026-12-03T12:00" },
+  });
+  const saveAndAsk = form.getByRole("button", { name: "保存并拆解" });
+  fireEvent.click(saveAndAsk);
+  expect((await form.findByRole("alert")).textContent).toContain("disk busy");
+  expect(title.value).toBe("Review revised plan");
+  expect(help).not.toHaveBeenCalled();
+  fireEvent.click(saveAndAsk);
+  expect(help).not.toHaveBeenCalled();
+  await act(async () => finish());
+  const saved = scanTrackedTasks(patch.mock.calls[1][0].content)[0];
+  expect(help).toHaveBeenCalledTimes(1);
+  expect(help).toHaveBeenCalledWith(
+    expect.objectContaining({ title: "Review revised plan", slot: saved.slot }),
+  );
+  expect(saved.slot?.start).toContain("2026-12-03T11:00");
   expect(screen.queryByRole("form", { name: "任务详情" })).toBeNull();
 });
 

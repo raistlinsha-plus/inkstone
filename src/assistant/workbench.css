@@ -1,5 +1,6 @@
 /* Keep the active document or conversation beside a fixed workspace rail. */
 .workspace-shell .workspace-rail {
+  --rail-button-size: 34px;
   width: 52px;
   min-width: 52px;
   display: flex;
@@ -11,6 +12,9 @@
   border-right: 1px solid var(--ui-line, var(--border));
   background: var(--ui-surface, #f0f0eb);
 }
+.workspace-rail-sidebar-slot {
+  flex: 0 0 var(--rail-button-size);
+}
 .workspace-shell .workspace-rail .main-nav {
   display: flex;
   flex-direction: column;
@@ -19,10 +23,10 @@
 }
 .workspace-shell .workspace-rail :is(.main-nav button, .icon-button) {
   display: grid;
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  min-height: 34px;
+  width: var(--rail-button-size);
+  height: var(--rail-button-size);
+  min-width: var(--rail-button-size);
+  min-height: var(--rail-button-size);
   position: relative;
   place-items: center;
   padding: 0;

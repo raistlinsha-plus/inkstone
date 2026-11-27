@@ -76,15 +76,27 @@ try {
       }),
     );
   for (const metric of metrics) {
-    assert.equal(metric.iconWidth, 16);
-    assert.equal(metric.iconHeight, 16);
-    assert(metric.height >= 36);
+    assert.equal(metric.iconWidth, 13);
+    assert.equal(metric.iconHeight, 13);
+    assert.equal(metric.height, 28);
     assert(metric.alignment <= 1);
   }
   assert.equal(metrics[0].height, metrics[1].height);
   checks.push(
-    "new/import real buttons: matched heights, 16px icons, center alignment <=1px",
+    "new/import real buttons: 28px buttons, 13px icons, center alignment <=1px",
   );
+  const footer = page.locator(".space-footer");
+  const summary = footer.locator("summary");
+  const label = footer.locator(".local-note");
+  const menuBounds = await summary.boundingBox();
+  const labelBounds = await label.boundingBox();
+  assert(menuBounds.x + menuBounds.width <= labelBounds.x);
+  assert((await footer.boundingBox()).height <= 35);
+  await summary.focus();
+  await summary.press("Enter");
+  assert(await footer.locator("details[open] button").first().isVisible());
+  await summary.press("Enter");
+  assert.equal(await footer.locator("details[open]").count(), 0);
   await shot("01-workspace-buttons-1440");
   await sidebar.getByLabel("文档排序").selectOption("nameDesc");
   await page.reload({ waitUntil: "networkidle" });

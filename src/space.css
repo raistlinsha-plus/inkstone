@@ -31,21 +31,22 @@
   outline: none;
 }
 .v06-shell .space-advanced {
-  position: relative;
   font-size: 12px;
 }
 .v06-shell .space-advanced summary {
   cursor: pointer;
-  padding: 8px 4px;
+  padding: 4px 2px;
+  line-height: 18px;
+  white-space: nowrap;
   color: #56694f;
 }
 .v06-shell .space-advanced > div {
   position: absolute;
   bottom: 100%;
-  left: 0;
+  left: 10px;
+  right: 10px;
   z-index: 45;
-  width: 240px;
-  max-width: calc(100vw - 24px);
+  max-width: 240px;
   background: #fffefa;
   border: 1px solid #d7ddcf;
   padding: 6px;
@@ -63,13 +64,20 @@
   background: #edf1e7;
 }
 .v06-shell .space-footer {
-  padding: 6px 12px 8px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 3px 10px;
 }
 .v06-shell .space-footer .local-note {
   display: flex;
   gap: 6px;
   font-size: 11px;
-  margin: 2px 0 0;
+  margin: 0;
+  padding: 0;
+  white-space: nowrap;
 }
 .v06-shell.sidebar-closed .sidebar {
   width: 56px;

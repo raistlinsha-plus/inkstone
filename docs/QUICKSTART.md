@@ -1,21 +1,21 @@
-# 从源码试用 Inkstone v1.2.0-beta.1
+# 从源码试用 Inkstone v1.2.0-beta.3
 
 面向 macOS 13 及以上的 Apple Silicon Mac，界面可选择简体中文或英语，也可以跟随系统语言。GitHub 版提供源码归档和 SHA-256 校验文件。已经安装 Inkstone 的读者可以从下文的离线样例开始，也可以直接打开[用户操作手册](USER-MANUAL.zh-CN.md)。
 
-[English quick start](QUICKSTART.en.md) · [本版发布说明](DELIVERY-v1.2.0-beta.1.md)
+[English quick start](QUICKSTART.en.md) · [本版发布说明](DELIVERY-v1.2.0-beta.3.md)
 
 ## 运行应用
 
 先安装 Apple 命令行开发工具、Node 24.14.0、npm 11.9.0 和 Rust 1.99.1。工具链版本及目标架构记录在[工具链配置](../toolchain.json)。
 
 ```sh
-git clone --branch v1.2.0-beta.1 https://github.com/raistlinsha-plus/inkstone.git
+git clone --branch v1.2.0-beta.3 https://github.com/raistlinsha-plus/inkstone.git
 cd inkstone
 npm ci --registry=https://registry.npmjs.org
 npm run desktop
 ```
 
-首次安装和编译需要联网下载依赖。看到 Inkstone 窗口后，保持开发命令运行即可开始试用。需要独立的本机应用时，运行 `npm run bundle`。生成的应用位于 `src-tauri/target/release/bundle/macos/Inkstone.app`。本机构建使用临时签名。公开的公证安装包仍待完成发行验收。[源码发布页](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.1) · [本机安装与升级](LOCAL-INSTALLATION.md)
+首次安装和编译需要联网下载依赖。看到 Inkstone 窗口后，保持开发命令运行即可开始试用。需要独立的本机应用时，运行 `npm run bundle`。生成的应用位于 `src-tauri/target/release/bundle/macos/Inkstone.app`。本机构建使用临时签名。公开的公证安装包仍待完成发行验收。[源码发布页](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.3) · [本机安装与升级](LOCAL-INSTALLATION.md)
 
 ## 先完成一次离线练习
 

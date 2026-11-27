@@ -64,17 +64,28 @@ pub struct Quote {
     quote: String,
 }
 
+fn is_task_note(path: &str) -> bool {
+    let path = Path::new(path);
+    let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
+    if ext.eq_ignore_ascii_case("markdown") {
+        return true;
+    }
+    if !ext.eq_ignore_ascii_case("md") {
+        return false;
+    }
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+    let stem = stem
+        .rsplit_once(" 副本")
+        .filter(|(_, n)| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+        .map_or(stem, |(prefix, _)| prefix);
+    !crate::media::supported(Path::new(stem)) && !stem.to_ascii_lowercase().ends_with(".mindmap")
+}
+
 fn target(data: &Path, project: &str, document: &str) -> Result<(Workspace, String), String> {
+    crate::organization::check_destination(&library::conn(data)?, project, "")?;
     let doc = library::get(data, document)?;
-    let ext = Path::new(&doc.path)
-        .extension()
-        .and_then(|x| x.to_str())
-        .unwrap_or_default();
-    if doc.project_id != project
-        || doc.status != "ready"
-        || !["md", "markdown"].contains(&ext.to_ascii_lowercase().as_str())
-    {
-        return Err("请选择空间中可编辑的 Markdown 文档".into());
+    if doc.project_id != project || doc.status != "ready" || !is_task_note(&doc.path) {
+        return Err("请选择活动空间中可编辑的普通 Markdown 文档".into());
     }
     let root = library::project_root(data, project)?;
     Ok((
@@ -92,8 +103,62 @@ pub fn task_document(
     document_id: String,
 ) -> Result<FileData, String> {
     let (ws, path) = target(&state.data_dir, &project_id, &document_id)?;
-    documents::read(&ws, &state.data_dir, &path)
+    read_task_note(&ws, &state.data_dir, &path)
 }
+
+fn read_task_note(ws: &Workspace, data: &Path, path: &str) -> Result<FileData, String> {
+    let note = documents::read(ws, data, path)?;
+    if library::is_image_sidecar(&note.content) {
+        return Err("图片的说明文档不能作为任务目标".into());
+    }
+    Ok(note)
+}
+#[derive(Serialize)]
+pub struct PreparedNote {
+    id: String,
+    data: FileData,
+}
+
+#[tauri::command]
+pub fn task_prepare_chat_note(
+    state: State<'_, AppState>,
+    project_id: String,
+    title: String,
+    source: Source,
+) -> Result<PreparedNote, String> {
+    let data = &state.data_dir;
+    let owner = source.owner(data, &state)?;
+    if !source.general && owner != format!("managed:{project_id}") {
+        return Err("请选择会话所在空间的文档".into());
+    }
+    source.text(&read(&open(data)?, &owner, &source.conversation_id)?)?;
+    prepare_task_note(data, &project_id, &title)
+}
+
+fn prepare_task_note(data: &Path, project: &str, title: &str) -> Result<PreparedNote, String> {
+    if !matches!(title, "任务清单.md" | "Tasks.md") {
+        return Err("任务清单名称无效".into());
+    }
+    let _permit = maintenance::mutation(data)?;
+    let ws = documents::library_workspace(data, project)?;
+    documents::with_write_lock(&ws.root, || {
+        crate::organization::check_destination(&library::conn(data)?, project, "")?;
+        let header = format!("# {}\n", title.trim_end_matches(".md"));
+        let (doc, _) = library::create_managed_document(
+            data,
+            project,
+            title,
+            &header,
+            Some(library::RememberedNote::TaskList),
+        )?;
+        let (_, path) = target(data, project, &doc.id)?;
+        Ok(PreparedNote {
+            id: doc.id,
+            data: read_task_note(&ws, data, &path)?,
+        })
+    })
+}
+
 fn exact_quote(text: &str, start: usize, quote: &str) -> bool {
     !quote.trim().is_empty()
         && quote.chars().count() <= 8000
@@ -173,7 +238,7 @@ fn save_actions(
         return Err("每次请选择 1 至 8 条任务".into());
     }
     let (ws, path) = target(data, &project_id, &document_id)?;
-    let before = documents::read(&ws, data, &path)?;
+    let before = read_task_note(&ws, data, &path)?;
     if before.draft.is_some() || before.missing {
         return Err("目标文档有未处理的草稿，请先打开并保存".into());
     }
@@ -644,6 +709,51 @@ mod tests {
 #[cfg(test)]
 mod workflow {
     use super::*;
+    #[test]
+    fn destinations_exclude_archived_spaces_and_media_notes_and_reuse_the_default_list() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = dir.path();
+        let project = library::create_project(data, "Workbench").unwrap().id;
+        for name in [
+            "photo.HeIc.md",
+            "photo.PNG 副本2.md",
+            "guide.mindmap.md",
+            "guide.mindmap 副本2.md",
+            "diagram.mmd",
+        ] {
+            let doc = library::create_document(data, &project, name, "").unwrap();
+            assert!(target(data, &project, &doc.id).is_err(), "{name}");
+        }
+        let photo = library::create_document(
+            data,
+            &project,
+            "legacy.md",
+            "<!-- inkstone-image:v1 -->\n# Photo",
+        )
+        .unwrap();
+        let (ws, path) = target(data, &project, &photo.id).unwrap();
+        assert!(read_task_note(&ws, data, &path).is_err());
+        let first = prepare_task_note(data, &project, "Tasks.md").unwrap();
+        assert_eq!(first.data.content, "# Tasks\n");
+        assert_eq!(
+            prepare_task_note(data, &project, "任务清单.md").unwrap().id,
+            first.id
+        );
+        assert!(target(data, &project, &first.id).is_ok());
+        library::conn(data)
+            .unwrap()
+            .execute(
+                "INSERT OR REPLACE INTO preferences(key,value) VALUES(?,?)",
+                params![
+                    format!("workspace.layout.v1:{project}"),
+                    r#"{"archived":true}"#
+                ],
+            )
+            .unwrap();
+        assert!(target(data, &project, &first.id).is_err());
+        assert!(prepare_task_note(data, &project, "Tasks.md").is_err());
+    }
+
     #[test]
     fn confirmed_actions_are_atomic_retryable_private_and_bound_to_the_source() {
         let dir = tempfile::tempdir().unwrap();

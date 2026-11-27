@@ -1,3 +1,6 @@
+import { isMermaidMindmap } from "./preview/mermaidMindmap";
+import { mindName } from "./library/mediaTypes";
+import StandaloneMindmap from "./preview/StandaloneMindmap";
 import { msg } from "./i18n";
 import { dismissOnOutside } from "./platform/menu";
 import { isImeEvent } from "./platform/ime";
@@ -18,7 +21,6 @@ import { headingOutline } from "./content/blocks";
 import JsonTree from "./preview/JsonTree";
 import Markdown from "./preview/Markdown";
 import Graph from "./preview/Graph";
-import Mindmap from "./preview/Mindmap";
 import { insertCommands } from "./rich/commands";
 import type { AnswerSourceLink } from "./content/answerSourceLink";
 import { ChevronDown, Plus, Undo2, Redo2, ListTree } from "lucide-react";
@@ -41,6 +43,7 @@ interface Props {
   content: string;
   mode: EditorMode;
   path: string;
+  fileTitle?: string;
   viewKey?: string;
   line?: number;
   onChange: (value: string) => void;
@@ -57,7 +60,7 @@ const diagramTemplates: Record<string, string> = {
   classDiagram: "classDiagram\n  class 文档 {\n    +标题\n    +保存()\n  }\n",
   "stateDiagram-v2":
     "stateDiagram-v2\n  [*] --> 编辑\n  编辑 --> 已保存: 保存\n  已保存 --> 编辑: 修改\n",
-  mindmap: "mindmap\n  root((中心主题))\n    分支一\n    分支二\n",
+  mindmap: "mindmap\n  root(中心主题)\n    分支一\n    分支二\n",
 };
 
 export default function Editor({
@@ -65,6 +68,7 @@ export default function Editor({
   content,
   mode,
   path,
+  fileTitle = path.split(/[\\/]/).pop() || path,
   viewKey = path,
   line,
   onChange,
@@ -90,6 +94,7 @@ export default function Editor({
   const doc = session.current;
   const inner = useRef<TextHandle>(null);
   const [, redraw] = useState(0);
+  const [externalRevision, setExternalRevision] = useState(0);
   const [jump, setJump] = useState<number>();
   const [outline, setOutline] = useState(false);
   const [ratio, setRatio] = useState(50);
@@ -153,13 +158,18 @@ export default function Editor({
     }
     return doc.content;
   };
+  // Only commands that originate outside the active text view may rewrite it.
+  const publishReplacement = () => {
+    setExternalRevision(n => n + 1);
+    publish();
+  };
   const undo = () => {
     sync();
-    if (doc.undo()) publish();
+    if (doc.undo()) publishReplacement();
   };
   const redo = () => {
     sync();
-    if (doc.redo()) publish();
+    if (doc.redo()) publishReplacement();
   };
   useImperativeHandle(handleRef, () => ({
     getContent: sync,
@@ -185,10 +195,13 @@ export default function Editor({
       sync();
     },
   }));
+  const applyMindChange = (base: string, next: string) => {
+    sync();
+    if (doc.apply(base, next)) publishReplacement();
+  };
   const apply = (base: string, next: string) => {
     try {
-      sync();
-      if (doc.apply(base, next)) publish();
+      applyMindChange(base, next);
     } catch (e) {
       onError(String(e));
     }
@@ -196,7 +209,7 @@ export default function Editor({
   useEffect(() => {
     if (content !== doc.content) {
       doc.commit(content, "structure");
-      redraw((n) => n + 1);
+      setExternalRevision(n => n + 1);
     }
   }, [content]);
   const headings = useMemo(
@@ -215,8 +228,11 @@ export default function Editor({
     (mode === "split" ||
       mode === "mindmap" ||
       (mode === "visual" && !actualVisual));
+  const standaloneMap = mindName(path);
+  const canvasOnly = hasPreview && mode === "mindmap" && (standaloneMap || kind === "mermaid");
   return (
     <div
+      data-map-canvas={canvasOnly || undefined}
       ref={editorRoot}
       data-compact-tools={compactTools}
       className={`document-editor ${hasPreview ? "has-preview" : ""}`}
@@ -296,7 +312,7 @@ export default function Editor({
           role="toolbar"
           aria-label={msg("文字格式")}
         />
-        {kind === "markdown" && (
+        {kind === "markdown" && !standaloneMap && (
           <>
             <button
               className={outline ? "selected" : ""}
@@ -376,7 +392,7 @@ export default function Editor({
             </div>
           </>
         )}
-        {kind === "mermaid" && (
+        {kind === "mermaid" && (!canvasOnly || !isMermaidMindmap(doc.content)) && (
           <select
             aria-label={msg("替换为图表模板（可撤销）")}
             value=""
@@ -425,13 +441,14 @@ export default function Editor({
         <div
           id={sourcePaneId}
           className="editor-source-pane"
-          style={hasPreview ? { flex: `${ratio} 1 0px` } : undefined}
+          style={canvasOnly ? { display: "none" } : hasPreview ? { flex: `${ratio} 1 0px` } : undefined}
         >
           <TextEditor
             handleRef={inner}
             toolbarHost={formattingHost}
             viewKey={viewKey}
             content={doc.content}
+            externalRevision={externalRevision}
             path={path}
             mode={actualVisual ? "visual" : "source"}
             line={jump ?? line}
@@ -453,7 +470,7 @@ export default function Editor({
         </div>
         {hasPreview && (
           <>
-            <div
+            {!canvasOnly && <div
               className="split-divider"
               role="separator"
               tabIndex={0}
@@ -499,18 +516,21 @@ export default function Editor({
                 event.preventDefault();
                 resizeSplit(next);
               }}
-            />
+            />}
             <div
               className="editor-preview-pane"
               style={{ flex: `${100 - ratio} 1 0px` }}
             >
-              {mode === "mindmap" && kind === "markdown" ? (
-                <Mindmap
-                  viewKey={`${viewKey}:outline`}
+              {(standaloneMap || (kind === "mermaid" && isMermaidMindmap(doc.content)) || (mode === "mindmap" && kind === "markdown")) ? (
+                <StandaloneMindmap
+                  title={fileTitle.replace(/\.mindmap( 副本\d+)?\.md$/i, "$1")}
+                  viewKey={viewKey}
                   source={doc.content}
-                  onApply={apply}
-                  onLocate={locate}
+                  format={kind === "mermaid" ? "mermaid" : "markdown"}
+                  onApply={applyMindChange}
+                  onLocate={mode === "mindmap" && !standaloneMap && kind === "markdown" ? locate : undefined}
                   onError={onError}
+                  onHistory={(back) => back ? undo() : redo()}
                 />
               ) : kind === "json" ? (
                 <JsonTree
@@ -521,6 +541,7 @@ export default function Editor({
                 />
               ) : kind === "mermaid" ? (
                 <Graph
+                  canvas={canvasOnly}
                   kind="mermaid"
                   source={doc.content}
                   onError={onError}

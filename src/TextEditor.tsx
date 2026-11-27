@@ -42,7 +42,7 @@ import type { EditorPosition } from "./document/editorSession";
 import type { DocumentSession } from "./session";
 import { Crepe } from "@milkdown/crepe";
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
-import { commandsCtx, editorViewCtx, parserCtx } from "@milkdown/kit/core";
+import { commandsCtx, editorViewCtx, parserCtx, remarkStringifyOptionsCtx } from "@milkdown/kit/core";
 import { linkAttr } from "@milkdown/kit/preset/commonmark";
 import { invoke } from "@tauri-apps/api/core";
 import { trackSourceSelection, scanTrackedTasks, readTaskMarker } from "./content/tasks";
@@ -124,6 +124,7 @@ interface Props {
   handleRef?: Ref<EditorHandle>;
   toolbarHost?: RefObject<HTMLDivElement | null>;
   content: string;
+  externalRevision?: number;
   mode: "source" | "visual";
   path: string;
   viewKey?: string;
@@ -137,6 +138,7 @@ interface Props {
 }
 export default function TextEditor({
   content,
+  externalRevision,
   mode,
   path,
   viewKey = path,
@@ -168,16 +170,19 @@ export default function TextEditor({
     onOpenAnswerSource,
   };
   const applying = useRef(false);
-  const appliedContent = useRef(content);
-  const adapter = useRef(new RichMarkdownAdapter(content));
+  const inputKey = externalRevision ?? content;
+  const appliedKey = useRef(inputKey);
+  const lastPublished = useRef<string | null>(null);
+  const adapter = useRef<RichMarkdownAdapter | null>(null);
   const callback = useRef(onChange);
   const source = useRef<EditorView | null>(null);
   const pendingFocus = useRef<Element | null>(null);
+  const beforeComposition = useRef<string | null>(null);
   const readCurrent = useRef<() => string>(() => content);
   useImperativeHandle(
     handleRef,
     () => ({
-      getContent: () => readCurrent.current(),
+      getContent: () => beforeComposition.current ?? readCurrent.current(),
       focus: () => {
         if (source.current) source.current.focus();
         else if (visual.current?.editor.status === "Created")
@@ -225,7 +230,7 @@ export default function TextEditor({
               const view = ctx.get(editorViewCtx);
               if (view.composing) throw Error("请先完成当前输入。");
               const parsed = ctx.get(parserCtx)(
-                adapter.current.prepare(text, "fragment"),
+                adapter.current!.prepare(text, "fragment"),
               );
               if (!parsed)
                 throw Error("回答内容无法转换，请复制 Markdown 后检查。");
@@ -316,7 +321,39 @@ export default function TextEditor({
   const publishStructure = useRef<(structure: boolean) => void>(() => {});
   useEffect(() => {
     if (!root.current) return;
-    appliedContent.current = content;
+    appliedKey.current = inputKey;
+    lastPublished.current = content;
+    // Keep the browser-owned composing range intact until the IME commits.
+    const surface = root.current;
+    let composing = false;
+    let commitTimer: ReturnType<typeof setTimeout>;
+    let publishCommittedText = () => {};
+    const startComposition = () => {
+      clearTimeout(commitTimer);
+      beforeComposition.current ??= readCurrent.current();
+      composing = true;
+    };
+    const endComposition = () => {
+      beforeComposition.current = null;
+      clearTimeout(commitTimer);
+      commitTimer = setTimeout(() => {
+        composing = false;
+        publishCommittedText();
+      }, 0);
+    };
+    surface.addEventListener("compositionstart", startComposition, true);
+    surface.addEventListener("compositionend", endComposition, true);
+    const stopComposition = () => {
+      beforeComposition.current = null;
+      clearTimeout(commitTimer);
+      surface.removeEventListener("compositionstart", startComposition, true);
+      surface.removeEventListener("compositionend", endComposition, true);
+    };
+    const publish = (value: string, structure?: boolean) => {
+      // A delayed React echo must not replace newer text or reset the caret.
+      lastPublished.current = value;
+      callback.current(value, structure);
+    };
     if (mode === "source") {
       const view = new EditorView({
         parent: root.current,
@@ -358,8 +395,8 @@ export default function TextEditor({
                 : [markdown()]),
             EditorView.lineWrapping,
             EditorView.updateListener.of((update) => {
-              if (update.docChanged && !applying.current)
-                callback.current(update.state.doc.toString());
+              if (update.docChanged && !applying.current && !composing)
+                publish(update.state.doc.toString());
               if (update.selectionSet || update.docChanged) {
                 if (session) {
                   session.selection = update.state.selection.main.head;
@@ -417,6 +454,10 @@ export default function TextEditor({
         }),
       });
       source.current = view;
+      publishCommittedText = () => {
+        const value = view.state.doc.toString();
+        if (value !== lastPublished.current) publish(value);
+      };
       view.dispatch({
         selection: {
           anchor: Math.min(
@@ -447,19 +488,20 @@ export default function TextEditor({
           session.positionMode = "source";
         }
         readCurrent.current = () => content;
+        stopComposition();
         source.current = null;
         view.destroy();
       };
     }
-    adapter.current = new RichMarkdownAdapter(content);
+    const richAdapter = new RichMarkdownAdapter(content);
+    adapter.current = richAdapter;
     let cancelled = false;
     let ready = false;
-    let canonical = "";
     let cleanupToolbar = () => {};
     let captureVisual = () => {};
     const crepe = new Crepe({
       root: root.current,
-      defaultValue: adapter.current.prepare(content),
+      defaultValue: richAdapter.prepare(content),
       features: {
         [Crepe.Feature.Latex]: false,
         [Crepe.Feature.AI]: false,
@@ -605,6 +647,14 @@ export default function TextEditor({
     // Keep the browser href sanitized by Milkdown; the app handles this
     // protocol only after a deliberate click inside the editor.
     crepe.editor.config((ctx) => {
+      // Use remark's delimiter-aware writers. Crepe's mark handlers wrap the
+      // selection in literal stars, which fail beside Chinese punctuation.
+      ctx.update(remarkStringifyOptionsCtx, (options) => {
+        const handlers = { ...options.handlers };
+        delete handlers.strong;
+        delete handlers.emphasis;
+        return { ...options, handlers };
+      });
       ctx.update(linkAttr.key, (previous) => (mark) => {
         const href = String(mark.attrs.href ?? "");
         return {
@@ -653,7 +703,7 @@ export default function TextEditor({
     visual.current = crepe;
     publishStructure.current = (structure) => {
       if (!ready || cancelled) return;
-      canonical = readCurrent.current();
+      const canonical = readCurrent.current();
       crepe.editor.action((ctx) =>
         rememberVisualBlockIdentities(
           viewKey,
@@ -661,28 +711,27 @@ export default function TextEditor({
           ctx.get(editorViewCtx).state,
         ),
       );
-      callback.current(canonical, structure);
+      publish(canonical, structure);
     };
-    crepe.on((listener) =>
-      listener.markdownUpdated((_, markdown) => {
-        const value = readCurrent.current();
-        if (ready && !cancelled && !applying.current && value !== canonical) {
-          canonical = value;
-          crepe.editor.action((ctx) =>
-            rememberVisualBlockIdentities(
-              viewKey,
-              value,
-              ctx.get(editorViewCtx).state,
-            ),
-          );
-          callback.current(value);
-        }
-      }),
-    );
+    publishCommittedText = () => {
+      if (!ready || cancelled || applying.current || composing) return;
+      const value = readCurrent.current();
+      if (value !== lastPublished.current) {
+        crepe.editor.action((ctx) =>
+          rememberVisualBlockIdentities(
+            viewKey,
+            value,
+            ctx.get(editorViewCtx).state,
+          ),
+        );
+        publish(value);
+      }
+    };
+    crepe.on(listener => listener.markdownUpdated(publishCommittedText));
     const creation = crepe
       .create()
       .then(() => {
-        const serializedBaseline = adapter.current.serialize(
+        const serializedBaseline = richAdapter.serialize(
           crepe.getMarkdown(),
         );
         const baseline = crepe.editor.action(
@@ -693,10 +742,9 @@ export default function TextEditor({
           const checked = checkedSources.get(doc);
           if (checked !== undefined) return checked;
           if (doc.eq(baseline)) return content;
-          const next = adapter.current.serialize(crepe.getMarkdown());
+          const next = richAdapter.serialize(crepe.getMarkdown());
           return next === serializedBaseline ? content : next;
         };
-        canonical = content;
         ready = true;
         if (cancelled) return crepe.destroy();
         crepe.editor.action((ctx) => {
@@ -972,6 +1020,7 @@ export default function TextEditor({
         if (!cancelled) onError(String(error));
       });
     return () => {
+      stopComposition();
       captureVisual();
       readCurrent.current = () => content;
       visual.current = null;
@@ -986,11 +1035,14 @@ export default function TextEditor({
     };
   }, [mode, path]);
   useEffect(() => {
-    // Crepe's ready notification can arrive after the first edit and before its
-    // Markdown listener publishes. Reapply only a new prop from the parent.
-    if (appliedContent.current === content) return;
-    if (readCurrent.current() === content) {
-      appliedContent.current = content;
+    // A session revision denotes an explicit replacement (undo, redo, reload or
+    // block edit). A draft read can publish text while the IME owns the DOM.
+    // Such local snapshots must never dispatch a replacement transaction.
+    if (appliedKey.current === inputKey) return;
+    const echo = externalRevision === undefined && lastPublished.current === content;
+    if (echo || readCurrent.current() === content) {
+      appliedKey.current = inputKey;
+      lastPublished.current = content;
       return;
     }
     const view = source.current;
@@ -1004,7 +1056,8 @@ export default function TextEditor({
         changes: { from: 0, to: view.state.doc.length, insert: content },
         selection: { anchor },
       });
-      appliedContent.current = content;
+      appliedKey.current = inputKey;
+      lastPublished.current = content;
       applying.current = false;
     } else if (visual.current && visual.current.editor.status === "Created") {
       try {
@@ -1015,7 +1068,7 @@ export default function TextEditor({
             readCurrent.current(),
             view.state,
           );
-          const parsed = ctx.get(parserCtx)(adapter.current.prepare(content));
+          const parsed = ctx.get(parserCtx)(adapter.current!.prepare(content));
           if (!parsed) throw Error("文档内容无法读取，原文已保留。");
           view.dispatch(
             view.state.tr
@@ -1024,18 +1077,19 @@ export default function TextEditor({
               .setMeta("addToHistory", false),
           );
         });
-        appliedContent.current = content;
+        appliedKey.current = inputKey;
+        lastPublished.current = content;
       } catch (error) {
         latest.current.onError(String(error));
       } finally {
         applying.current = false;
       }
     } else applying.current = false;
-  }, [content, readyVersion]);
+  }, [inputKey, readyVersion]);
   useEffect(() => {
     const view = source.current;
     if (!view && line && visual.current?.editor.status === "Created") {
-      const location = adapter.current.sourceLocation(content, line);
+      const location = adapter.current?.sourceLocation(content, line);
       if (!location) {
         visual.current.editor.action((ctx) => {
           const view = ctx.get(editorViewCtx);

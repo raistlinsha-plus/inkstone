@@ -48,7 +48,11 @@ export function outlineTree(source: string): MindNode {
         kind: "list",
         depth: parent.depth + 1,
         children: [],
-        editable: !!simple && !node.ordered && /^[-+*] /.test(firstLine),
+        editable:
+          !!simple &&
+          !node.ordered &&
+          /^[-+*] /.test(firstLine) &&
+          !/^[-+*] +\[[ xX]\](?:\s|$)/.test(firstLine),
       };
       parent.children.push(m);
       for (const child of item.children ?? [])
@@ -94,10 +98,21 @@ export function editMind(
   action: "rename" | "child" | "sibling" | "delete",
   value = "",
 ) {
-  if (!node.editable) throw new Error("该分支包含复杂正文，请回到原文编辑。");
+  const appendToRoot = node.kind === "root" && action === "child";
+  if (!node.editable && !appendToRoot)
+    throw new Error("该分支包含复杂正文，请回到原文编辑。");
   if (action !== "delete" && (!value.trim() || /[\r\n]/.test(value)))
     throw new Error("节点名称应为一行非空文字。");
   const newline = source.includes("\r\n") ? "\r\n" : "\n";
+  const label = value.trim().replace(/[\\`*_\[\]<>#!]/g, "\\$&");
+  if (appendToRoot) {
+    const marker = node.children.some((child) => child.kind === "heading")
+      ? "# "
+      : "- ";
+    return (
+      source + (source ? newline.repeat(2) : "") + marker + label + newline
+    );
+  }
   const lineStart = source.lastIndexOf("\n", node.from - 1) + 1;
   const lineEnd = source.indexOf("\n", node.from);
   const first = source
@@ -107,7 +122,6 @@ export function editMind(
   if (!prefix) throw new Error("节点位置已经变化，请刷新脑图。");
   if (action === "rename") {
     // Plain-text labels only; escape Markdown punctuation instead of introducing structure.
-    const label = value.trim().replace(/[\\`*_[\]<>#!]/g, "\\$&");
     return (
       source.slice(0, lineStart) +
       prefix +
@@ -123,7 +137,6 @@ export function editMind(
     return (
       source.slice(0, lineStart) + source.slice(node.to).replace(/^\r?\n/, "")
     );
-  const label = value.trim().replace(/[\\`*_[\]<>#!]/g, "\\$&");
   const indent = first.match(/^\s*/)?.[0] ?? "";
   const marker =
     node.kind === "heading"

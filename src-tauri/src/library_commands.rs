@@ -285,9 +285,18 @@ pub async fn library_create_document(
     project_id: String,
     title: String,
     content: String,
+    folder: Option<String>,
 ) -> Result<library::Document, String> {
     let _permit = crate::maintenance::mutation(&state.data_dir)?;
-    let doc = library::create_document(&state.data_dir, &project_id, &title, &content)?;
+    let (doc, _) = library::create_with_assets(
+        &state.data_dir,
+        &project_id,
+        &title,
+        &content,
+        None,
+        None,
+        folder.as_deref().unwrap_or(""),
+    )?;
     if let Ok(ws) = documents::library_workspace(&state.data_dir, &project_id) {
         let _ = documents::refresh_local(&ws, &state.data_dir, &doc.path, &content);
     }
@@ -368,6 +377,7 @@ pub async fn library_import(
     skip_duplicates: bool,
     attachments: bool,
     resume_job_id: Option<String>,
+    folder: Option<String>,
 ) -> Result<library::ImportResult, String> {
     let _permit = crate::maintenance::mutation(&state.data_dir)?;
     check_idle(&state)?;
@@ -380,7 +390,7 @@ pub async fn library_import(
     let cancel = state.import_cancel.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = guard;
-        let mut result = library::import(
+        let mut result = library::import_into_folder(
             &data,
             &project_id,
             &paths,
@@ -390,6 +400,7 @@ pub async fn library_import(
             |p| {
                 let _ = app.emit("import-progress", p);
             },
+            folder.as_deref().unwrap_or_default(),
         )?;
         if documents::refresh_project(&data, &project_id).is_err() {
             result

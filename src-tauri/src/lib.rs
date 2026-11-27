@@ -36,6 +36,8 @@ mod export_destination;
 pub mod external_access;
 mod files;
 mod library;
+mod media;
+mod organization;
 mod library_commands;
 #[cfg(all(test, feature = "desktop-e2e"))]
 mod local_acceptance;
@@ -1044,12 +1046,14 @@ async fn resolve_image(
     if url.contains("://") || url.starts_with("data:") || url.starts_with('/') {
         return Err("仅预览工作区内的相对路径图片".into());
     }
-    let path = document
-        .parent()
-        .ok_or("文件路径无效")?
-        .join(url)
-        .canonicalize()
-        .map_err(|_| "图片不存在")?;
+    let parent = document.parent().ok_or("文件路径无效")?;
+    let path = match parent.join(&url).canonicalize() {
+        Ok(path) => path,
+        Err(_) if url == "assets/preview.jpg" && files::read_text(&document)
+            .is_ok_and(|body| body.starts_with("<!-- inkstone-image:v1 -->")) =>
+            media::stored_asset(&document, true)?,
+        Err(_) => return Err("图片不存在".into()),
+    };
     if !path.starts_with(&ws.root)
         || !matches!(
             path.extension()
@@ -2922,11 +2926,19 @@ pub fn run() {
             library_commands::library_create_project,
             library_commands::library_rename_project,
             library_commands::library_create_document,
+            media::media_import,
+            media::media_preview,
+            media::media_export_original,
+            media::media_describe,
+            media::media_generate,
+            organization::library_layout,
+            organization::library_archived_preview,
             library_commands::library_answer_source,
             library_commands::library_prepare_local_example,
             library_commands::library_rename,
             library_commands::library_trash,
             library_commands::library_import,
+            library::library_preview_import,
             library_commands::cancel_import,
             library_commands::library_export,
             library_commands::library_reveal,
@@ -2979,6 +2991,7 @@ pub fn run() {
             assistant_commands::assistant_select_candidate,
             assistant_commands::assistant_ask,
             assistant::tasks::task_document,
+            assistant::tasks::task_prepare_chat_note,
             assistant::tasks::task_save_from_chat,
             assistant::tasks::task_origin,
             assistant::tasks::task_extract,

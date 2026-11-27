@@ -56,6 +56,7 @@ const focusable = (root: HTMLElement) =>
 export default function ModalDialog({
   label,
   onClose,
+  onEscape = onClose,
   busy = false,
   dismissOnBackdrop = true,
   className = "",
@@ -65,6 +66,7 @@ export default function ModalDialog({
 }: {
   label: string;
   onClose: () => void;
+  onEscape?: () => void;
   busy?: boolean;
   dismissOnBackdrop?: boolean;
   className?: string;
@@ -74,8 +76,8 @@ export default function ModalDialog({
 }) {
   const ref = useRef<HTMLElement>(null);
   const entryFocus = useRef<HTMLElement | null>(null);
-  const current = useRef({ onClose, busy });
-  current.current = { onClose, busy };
+  const current = useRef({ onEscape, busy });
+  current.current = { onEscape, busy };
   useLayoutEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -104,7 +106,7 @@ export default function ModalDialog({
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopImmediatePropagation();
-        if (!current.current.busy) current.current.onClose();
+        if (!current.current.busy) current.current.onEscape();
       } else if (event.key === "Tab") {
         const items = focusable(dialog);
         const first = items[0] ?? dialog,

@@ -1,3 +1,4 @@
+import { label } from "../library/mediaTypes";
 import { msg, translate } from "../i18n";
 import type { LibraryDocument } from "../library";
 
@@ -24,7 +25,7 @@ export default function WikiDocumentPicker({
 
   const query = documents.length ? filter.trim().toLocaleLowerCase() : "";
   const matches = documents.filter((doc) =>
-    doc.title.toLocaleLowerCase().includes(query),
+    label(doc.title).toLocaleLowerCase().includes(query),
   );
   const visible = new Set(matches.map((doc) => doc.id));
   const selected = new Set(selectedIds);
@@ -121,7 +122,7 @@ export default function WikiDocumentPicker({
                   )
                 }
               />
-              {doc.title}
+              {label(doc.title)}
             </label>
           ))}
           {!visible.size && (

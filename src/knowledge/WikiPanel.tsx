@@ -1,7 +1,8 @@
-import { msg, type Message } from "../i18n";
+import { label } from "../library/mediaTypes";
+import { msg, translate, type Message } from "../i18n";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BookOpen, ExternalLink, RefreshCw, X } from "lucide-react";
 import type { LibraryDocument, LibraryView } from "../library";
 import type { SearchResult } from "../types";
@@ -225,12 +226,13 @@ export default function WikiPanel({
     }
   }, [change, page, status]);
 
-  useEffect(() => {
-    if (page && change && change.id === requestedReviewFocus.current) {
+  useLayoutEffect(() => {
+    const context = reviewContext.current;
+    if (context && change && change.id === requestedReviewFocus.current) {
+      context.focus();
       requestedReviewFocus.current = undefined;
-      reviewContext.current?.focus();
     }
-  }, [change, page]);
+  }, [change, page, tab, status]);
 
   useEffect(() => {
     active.current = true;
@@ -550,7 +552,7 @@ export default function WikiPanel({
       <ul>
         {status.coverage.map((item) => (
           <li key={item.documentId} data-status={item.status}>
-            <strong>{item.title || msg("不可用资料")}</strong>
+            <strong>{label(item.title) || msg("不可用资料")}</strong>
             <span>{msg(coverageLabels[item.status])}</span>
           </li>
         ))}
@@ -806,8 +808,7 @@ export default function WikiPanel({
             </select>
           </label>
           <p className="muted">
-            {msg("整理时会把所选资料提交给配置的聊天模型。已选")}{" "}
-            {policy.documentIds.length} {msg("篇。")}
+            {translate("整理时会把所选资料提交给配置的聊天模型。", "Organizing sends the selected materials to your configured chat model.")}
             {dirty.current && msg(" 请先保存更改再整理。")}
           </p>
           <WikiDocumentPicker
@@ -826,7 +827,8 @@ export default function WikiPanel({
               {msg("原始文档会保留，可用剩余资料重新整理。")}
             </p>
           )}
-          <div className="modal-actions">
+          <div className="modal-actions wiki-policy-footer">
+            <span role="status">{translate(`已选 ${policy.documentIds.length} 篇`, `${policy.documentIds.length} selected`)}</span>
             <button
               type="button"
               disabled={!!busy}
@@ -1182,7 +1184,7 @@ function WikiReviewChanges({
               {sources.map((source, index) => (
                 <li key={index}>
                   <span>{msg(sourceChangeLabels[source.status])}</span>
-                  <strong>{source.title}</strong>
+                  <strong>{label(source.title)}</strong>
                 </li>
               ))}
             </ul>
@@ -1468,7 +1470,7 @@ function WikiHistoricalSources({
         {sources.map((source, index) => (
           <li key={`${source.documentId}-${index}`}>
             <div className="wiki-historical-label">
-              <strong>{source.title}</strong>
+              <strong>{label(source.title)}</strong>
               <small>
                 {source.excerpt
                   ? `历史摘录 · ${sourceLines(source)}`
@@ -1482,7 +1484,7 @@ function WikiHistoricalSources({
                   <button
                     type="button"
                     disabled={disabled}
-                    aria-label={`打开当前文档 ${source.title}`}
+                    aria-label={translate(`打开当前文档 ${label(source.title)}`, `Open current document ${label(source.title)}`)}
                     onClick={() => onOpenCurrent(source.documentId)}
                   >
                     {msg("打开当前文档")} <ExternalLink size={14} aria-hidden="true" />

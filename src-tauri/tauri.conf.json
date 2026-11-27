@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Inkstone",
-  "version": "1.2.0-beta.1",
+  "version": "1.2.0-beta.3",
   "identifier": "local.inkstone.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -42,7 +42,7 @@
     "shortDescription": "本地写作与知识检索",
     "macOS": {
       "minimumSystemVersion": "13.0",
-      "bundleVersion": "10207",
+      "bundleVersion": "10218",
       "signingIdentity": "-"
     },
     "resources": {

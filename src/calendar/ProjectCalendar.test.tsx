@@ -8,6 +8,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import ProjectCalendar from "./ProjectCalendar";
+import { imeBoundary } from "../platform/ime";
 import { scanTrackedTasks, taskLine } from "../content/tasks";
 import {
   calendarTemplate,
@@ -241,7 +242,7 @@ it("opens the week directly and switches month and date without changing Markdow
   expect(screen.getByTestId("grid").getAttribute("data-view")).toBe("week");
   expect(screen.queryByRole("button", { name: "任务" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "月历" }));
-  fireEvent.click(screen.getByText("筛选"));
+  fireEvent.click(screen.getByLabelText("日历操作"));
   fireEvent.change(screen.getByLabelText("日历转到日期"), {
     target: { value: "2027-02-12" },
   });
@@ -391,4 +392,123 @@ it("keeps the current form while its save is pending and ignores other edit clic
   );
   finish();
   await waitFor(() => expect(screen.queryByLabelText("事项标题")).toBeNull());
+});
+
+it("keeps the filter open while Escape cancels a Chinese candidate, then returns focus on a fresh Escape", () => {
+  render(
+    <div {...imeBoundary}>
+      <ProjectCalendar
+        documents={[document("A")]}
+        onPatch={vi.fn()}
+        onOpen={vi.fn()}
+        onError={vi.fn()}
+      />
+    </div>,
+  );
+  const trigger = screen.getByText("筛选").closest("summary")!;
+  const panel = trigger.closest("details")!;
+  fireEvent.click(trigger);
+  const input = panel.querySelector<HTMLInputElement>(
+    "input:not([type=date])",
+  )!;
+  input.focus();
+  fireEvent.compositionStart(input);
+  fireEvent.keyDown(input, { key: "Escape" });
+  expect(panel.open).toBe(true);
+  fireEvent.compositionEnd(input);
+  fireEvent.keyDown(input, { key: "Escape", keyCode: 229 });
+  expect(panel.open).toBe(true);
+  fireEvent.keyUp(input, { key: "Escape" });
+  fireEvent.keyDown(input, { key: "Escape" });
+  expect(panel.open).toBe(false);
+  expect(globalThis.document.activeElement).toBe(trigger);
+});
+
+it("hands off a rescheduled task from its calendar event only after the note is saved", async () => {
+  const help = vi.fn(),
+    write = vi.fn().mockResolvedValue(undefined);
+  const doc = {
+    ...document("slot"),
+    content: taskLine({
+      id: crypto.randomUUID(),
+      title: "Old plan",
+      due: "2026-10-28",
+      slot: {
+        start: "2026-10-28T11:00:00Z",
+        end: "2026-10-28T12:00:00Z",
+        zone: "UTC",
+      },
+    }),
+  };
+  render(
+    <ProjectCalendar
+      documents={[doc]}
+      onPatch={write}
+      onOpen={vi.fn()}
+      onError={vi.fn()}
+      onAskForHelp={help}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "执行 · Old plan" }));
+  fireEvent.change(screen.getByLabelText("任务标题"), {
+    target: { value: "New plan" },
+  });
+  fireEvent.change(screen.getByLabelText("结束", { exact: true }), {
+    target: { value: "2026-10-28T13:30" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "保存并拆解" }));
+  await waitFor(() => expect(help).toHaveBeenCalledTimes(1));
+  const saved = scanTrackedTasks(write.mock.calls[0][0].content)[0];
+  expect(saved.slot?.end).toContain("2026-10-28T13:30");
+  expect(help).toHaveBeenCalledWith(
+    expect.objectContaining({
+      title: "New plan",
+      slot: saved.slot,
+      due: saved.due,
+    }),
+  );
+  expect(screen.queryByLabelText("任务标题")).toBeNull();
+});
+
+it("keeps filters separate from calendar actions and preserves an event draft when its destination changes", async () => {
+  const patch = vi.fn().mockResolvedValue(undefined);
+  render(
+    <ProjectCalendar
+      documents={[document("A"), document("B")]}
+      onPatch={patch}
+      onOpen={vi.fn()}
+      onError={vi.fn()}
+      onRefresh={vi.fn()}
+    />,
+  );
+  const filter = screen.getByText("筛选").closest("details")!;
+  expect(filter.textContent).toContain("显示任务");
+  expect(filter.textContent).not.toMatch(/刷新|导出|保存到/);
+  const actions = screen.getByLabelText("日历操作").closest("details")!;
+  expect(actions.textContent).toContain("刷新项目日历");
+  expect(actions.textContent).toContain("导出 ICS");
+  fireEvent.click(screen.getByLabelText("日历操作"));
+  fireEvent.click(screen.getByRole("button", { name: "刷新项目日历" }));
+  expect(actions.open).toBe(false);
+  expect(globalThis.document.activeElement).toBe(
+    actions.querySelector("summary"),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "新建日程" }));
+  fireEvent.change(screen.getByLabelText("事项标题"), {
+    target: { value: "新计划" },
+  });
+  const select = screen.getByLabelText("新事项所属日历块") as HTMLSelectElement;
+  fireEvent.change(select, { target: { value: select.options[1].value } });
+  expect((screen.getByLabelText("事项标题") as HTMLInputElement).value).toBe(
+    "新计划",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "保存事项" }));
+  await waitFor(() =>
+    expect(patch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: "B",
+        content: expect.stringContaining("新计划"),
+      }),
+    ),
+  );
 });

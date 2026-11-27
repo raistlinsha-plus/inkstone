@@ -159,8 +159,10 @@
   gap: 6px;
 }
 .library-controls .library-shortcuts button {
-  min-height: 30px;
-  padding: 4px 9px;
+  min-height: 28px;
+  line-height: 18px;
+  gap: 4px;
+  padding: 3px 8px;
 }
 .library-controls .library-search {
   min-height: 34px;
@@ -190,9 +192,6 @@
   border-top: 1px solid var(--border);
   color: #65705e;
   font-size: 11px;
-}
-.v06-shell .sidebar-compact .sidebar-bottom {
-  padding: 8px 12px;
 }
 .v06-shell .sidebar-compact .local-note {
   margin: 0;

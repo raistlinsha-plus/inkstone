@@ -1,3 +1,4 @@
+import { imageName, mindName } from "./mediaTypes";
 import type { LibraryDocument } from "../library";
 export type DocumentSort = "nameAsc" | "nameDesc" | "updatedDesc";
 export type LibraryTab = "all" | "recent" | "pinned" | "trash";
@@ -21,7 +22,10 @@ export function selectDocuments(
   pins: string[],
   type = "all",
 ) {
-  const names = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+  const names = new Intl.Collator(undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
   const pinned = new Set(pins);
   return documents
     .filter(
@@ -32,9 +36,13 @@ export function selectDocuments(
         (tab !== "pinned" || pinned.has(d.id)) &&
         d.title.toLocaleLowerCase().includes(query.toLocaleLowerCase()) &&
         (type === "all" ||
-          (type === "md"
-            ? /\.(md|markdown)$/i.test(d.path)
-            : d.path.split(".").at(-1)?.toLowerCase() === type)),
+          (imageName(d.path)
+            ? type === "image"
+            : mindName(d.path)
+              ? type === "mindmap"
+              : type === "md"
+                ? /\.(md|markdown)$/i.test(d.path)
+                : d.path.split(".").at(-1)?.toLowerCase() === type)),
     )
     .sort((a, b) => {
       if (tab === "recent")

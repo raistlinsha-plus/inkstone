@@ -165,7 +165,7 @@ try {
     .selectOption("qa-space");
   await page.getByRole("checkbox", { name: title, exact: true }).check();
   await page.getByRole("button", { name: "完成选择", exact: true }).click();
-  await page.getByRole("checkbox", { name: "本轮不搜索网页" }).check();
+  await page.getByRole("checkbox", { name: "按需搜索网页" }).uncheck();
   await page.getByLabel("向 AI 提问").fill(question);
   await page.getByRole("button", { name: "发送问题" }).click();
   await page.getByRole("heading", { name: answerHeading }).waitFor();

@@ -1,0 +1,206 @@
+.editable-mind {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 260px;
+  background: var(--ui-paper);
+  color: var(--ui-text);
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+.editable-mind button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 4px 7px;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ui-text);
+  font: inherit;
+  white-space: nowrap;
+}
+.editable-mind button:hover:enabled,
+.editable-mind button[aria-expanded="true"] {
+  background: var(--ui-hover);
+}
+.editable-mind button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.editable-mind button:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: -2px;
+}
+.editable-mind button svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+.mind-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+  background: var(--ui-paper);
+  border-bottom: 1px solid var(--ui-line);
+  font-size: 12px;
+  z-index: 2;
+}
+.mind-style-picker {
+  position: relative;
+  margin-inline-start: auto;
+}
+.mind-style-menu,
+.mind-zoom,
+.mind-edit-actions,
+.mind-drag-label {
+  background: var(--ui-overlay);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-line);
+  border-radius: 9px;
+  box-shadow: 0 2px 9px var(--ui-shadow);
+}
+.mind-style-menu {
+  z-index: 4;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  display: grid;
+  gap: 2px;
+  min-width: 155px;
+  padding: 4px;
+}
+.mind-style-menu button {
+  justify-content: flex-start;
+}
+.mind-style-menu button > svg {
+  margin-left: auto;
+}
+.mind-swatch {
+  height: 11px;
+  width: 22px;
+  border-radius: 4px;
+}
+.swatch-classic {
+  background: #548871;
+}
+.swatch-color {
+  background: linear-gradient(90deg, #5484c0 34%, #c78c61 34% 66%, #ae86c1 66%);
+}
+.swatch-minimal {
+  border: 1px solid var(--ui-muted);
+}
+.mind-stage {
+  position: relative;
+  flex: 1;
+  min-height: 210px;
+  min-width: 0;
+  user-select: none;
+  touch-action: none;
+  overflow: hidden;
+}
+.mind-drawing {
+  display: block;
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+}
+.mind-drawing:active {
+  cursor: grabbing;
+}
+.mind-node {
+  cursor: grab;
+  outline: none;
+}
+.mind-node:active { cursor: grabbing; }
+.mind-node:focus-visible > .mind-node-highlight {
+  stroke: var(--ui-focus);
+  stroke-width: 2px;
+}
+.mind-node:hover:not([aria-selected="true"]) > rect:first-child {
+  fill: var(--ui-hover);
+}
+.mind-drag-label {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  padding: 5px 8px;
+  font-size: 12px;
+  max-width: 175px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.mind-zoom {
+  display: flex;
+  align-items: center;
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 2px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.mind-zoom span {
+  min-width: 35px;
+  text-align: center;
+}
+.mind-zoom button:last-child {
+  margin-left: 2px;
+  border-left: 1px solid var(--ui-line);
+  border-radius: 0 5px 5px 0;
+}
+.mind-inline-editor {
+  position: absolute;
+  display: grid;
+  gap: 4px;
+  z-index: 2;
+}
+.editable-mind .mind-inline-editor input,
+.mind-inline-editor > span {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 34px;
+  padding: 5px 9px;
+  background: var(--ui-field);
+  color: var(--ui-text);
+  font: 500 14px/1.45 var(--font-sans, system-ui, sans-serif);
+  border: 1px solid var(--ui-accent);
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px var(--ui-accent);
+  outline: 0;
+  user-select: text;
+}
+.mind-edit-actions {
+  display: flex;
+  justify-self: end;
+  padding: 1px;
+  align-items: center;
+  font-size: 12px;
+}
+.mind-edit-actions [role="status"] {
+  padding: 3px;
+}
+.mind-fold {
+  cursor: pointer;
+}
+.mind-fold[data-open="true"] {
+  opacity: 0;
+}
+.mind-node:hover .mind-fold,
+.mind-node[aria-selected="true"] .mind-fold,
+.mind-node:focus-within .mind-fold {
+  opacity: 1;
+}
+@media (hover: none) {
+  .mind-fold[data-open="true"] {
+    opacity: 1;
+  }
+}

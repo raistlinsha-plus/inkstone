@@ -107,14 +107,14 @@ try {
     const draft = page.getByLabel("向 AI 提问");
     const question = "把这句改成简短通知：下周三整理会议纪要。";
     await draft.fill(question);
-    await page.getByRole("checkbox", { name: "本轮不搜索网页" }).check();
+    await page.getByRole("checkbox", { name: "按需搜索网页" }).uncheck();
     await page.getByRole("button", { name: "发送问题" }).click();
     const settings = page.getByRole("dialog", { name: "模型设置" });
     await settings.getByRole("heading", { name: "连接问答模型" }).waitFor();
     assert.equal(await settings.getByRole("tab", { name: /嵌入|向量/ }).count(), 0);
     await settings.getByRole("button", { name: "关闭设置" }).click();
     assert.equal(await draft.inputValue(), question);
-    assert.equal(await page.getByRole("checkbox", { name: "本轮不搜索网页" }).isChecked(), true);
+    assert.equal(await page.getByRole("checkbox", { name: "按需搜索网页" }).isChecked(), false);
     await page.getByRole("button", { name: "发送问题" }).click();
     await settings.getByRole("checkbox", { name: "启用资料问答" }).check();
     await settings.getByRole("textbox", { name: /服务地址/ }).fill("http://127.0.0.1:9967/v1");
@@ -124,7 +124,7 @@ try {
     await settings.getByRole("button", { name: "保存设置" }).click();
     await settings.waitFor({ state: "hidden" });
     assert.equal(await draft.inputValue(), question);
-    assert.equal(await page.getByRole("checkbox", { name: "本轮不搜索网页" }).isChecked(), true);
+    assert.equal(await page.getByRole("checkbox", { name: "按需搜索网页" }).isChecked(), false);
     assert.equal((await calls("assistant_ask")).length, 0);
     assert.equal((await calls("save_settings"))[0].args.value.embedding.enabled, false);
     await page.screenshot({ path: resolve(out, "03-resumed-question.png") });
