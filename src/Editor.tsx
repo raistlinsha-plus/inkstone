@@ -42,6 +42,7 @@ interface Props {
   handleRef?: Ref<EditorHandle>;
   content: string;
   mode: EditorMode;
+  onOpenSource?: () => void;
   path: string;
   fileTitle?: string;
   viewKey?: string;
@@ -67,6 +68,7 @@ export default function Editor({
   handleRef,
   content,
   mode,
+  onOpenSource,
   path,
   fileTitle = path.split(/[\\/]/).pop() || path,
   viewKey = path,
@@ -527,6 +529,7 @@ export default function Editor({
                   viewKey={viewKey}
                   source={doc.content}
                   format={kind === "mermaid" ? "mermaid" : "markdown"}
+                  onOpenSource={onOpenSource}
                   onApply={applyMindChange}
                   onLocate={mode === "mindmap" && !standaloneMap && kind === "markdown" ? locate : undefined}
                   onError={onError}

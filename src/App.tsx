@@ -11,6 +11,9 @@ import { dismissDetailsOnOutside, dismissOnOutside, focusMenuButton } from "./pl
 import { imeBoundary, isImeEvent } from "./platform/ime";
 import { isTauri } from "@tauri-apps/api/core";
 import { appVersion } from "./version";
+import { ConfirmChatImage } from "./assistant/ChatImagePicker";
+import type { VisionConsent } from "./assistant/types";
+import { ImageGenerationTool, type ImageQuitGuard } from "./assistant/ImageGeneration";
 import QuestionSources from "./assistant/QuestionSources";
 import ConversationSidebar from "./assistant/ConversationSidebar";
 import ExternalSourcePreview from "./assistant/ExternalSourcePreview";
@@ -83,6 +86,7 @@ import {
 } from "./answerContent";
 import BackupDialog from "./BackupDialog";
 import ProjectCalendar from "./calendar/ProjectCalendar";
+import type { PlanningSession } from "./calendar/planningSession";
 import type { AnswerSourceLink } from "./content/answerSourceLink";
 import { codeBlocks } from "./content/blocks";
 import {
@@ -107,6 +111,7 @@ import { requestChunks } from "./knowledge/parserClient";
 import type { ImportTask, LibraryDocument, LibraryView } from "./library";
 import LibraryBrowser from "./LibraryBrowser";
 import ModalDialog from "./ModalDialog";
+import { ArchivedDocument } from "./library/ArchivedSpace";
 import ParserWorker from "./parser.worker?worker&inline";
 import { invoke } from "./platform/ipc";
 import { readPanePreference, savePanePreference } from "./platform/layout";
@@ -195,6 +200,7 @@ export default function App() {
     ...catalog,
     projects: catalog.projects.map(p => p.systemTitle ? { ...p, title: defaultTitle } : p),
   }), [catalog, defaultTitle]);
+  const activeProjects = libraryView.projects.filter((project) => !project.archived);
   const workspace = useMemo(() => {
     if (rawWorkspace?.managedProjectId === "inbox" && rawWorkspace.name === "我的文档" &&
         catalog.projects.some(p => p.id === "inbox" && p.systemTitle))
@@ -235,6 +241,11 @@ export default function App() {
       return 272;
     }
   });
+  const [taskNavigation, setTaskNavigation] = useState<HTMLDivElement | null>(null);
+  const [taskSidebarClosed, setTaskSidebarClosed] = useState(() => readPanePreference("task-sidebar-closed"));
+  useEffect(() => {
+    savePanePreference("task-sidebar-closed", taskSidebarClosed);
+  }, [taskSidebarClosed]);
   const [sidebarClosed, setSidebarClosed] = useState(() =>
     readPanePreference("sidebar-closed"),
   );
@@ -276,6 +287,17 @@ export default function App() {
   const [chatTask, setChatTask] = useState<ChatTaskMessage | null>(null);
   const [planningView, setPlanningView] = useState<"calendar" | "tasks" | null>(null);
   const calendarOpen = planningView !== null;
+  const planningSessions = useRef(new Map<string, PlanningSession>());
+  const planningSession = useMemo(() => {
+    const id = workspace?.managedProjectId;
+    if (!id) return undefined;
+    let session = planningSessions.current.get(id);
+    if (!session) {
+      session = {};
+      planningSessions.current.set(id, session);
+    }
+    return session;
+  }, [workspace?.managedProjectId]);
   const [calendarDay, setCalendarDay] = useState<string>();
   const [calendarDocuments, setCalendarDocuments] = useState<
     CalendarDocument[]
@@ -312,8 +334,10 @@ export default function App() {
   const [draftContext, setDraftContext] = useState<AssistantDraftContext>({});
   const draftContextRef = useRef(draftContext);
   const branchParent = draftContext.branch?.parentTurnId;
+  const [visionReview, setVisionReview] = useState<{ photo: LibraryDocument; retry?: Turn; baseUrl: string; model: string; intent: string }>();
   const [sourceBusy, setSourceBusy] = useState(false);
   const sourceBusyRef = useRef(false);
+  const [archivedReference, setArchivedReference] = useState<{ doc: LibraryDocument; target?: OpeningSource }>();
   const [citationPreview, setCitationPreview] = useState<CitationPreview>();
   const [citationReturn, setCitationReturn] = useState(false);
   const [citationOpening, setCitationOpening] = useState(false);
@@ -494,6 +518,7 @@ export default function App() {
   const workspaceTransition = useRef(false);
   const [workspaceBusy, setWorkspaceBusy] = useState(false);
   const closingRef = useRef(false);
+  const imageQuitGuard = useRef<ImageQuitGuard | null>(null);
   const importBusyRef = useRef(false);
   const workspaceRef = useRef<Workspace | null>(null);
   workspaceRef.current = workspace;
@@ -637,11 +662,12 @@ export default function App() {
       closingRef.current
     );
   }
-  function resetCalendar() {
+  function resetCalendar(destination: typeof planningView = null) {
     ++calendarLoadSequence.current;
     setCalendarBusy(false);
     setCalendarWriting(false);
-    setPlanningView(null);
+    setCalendarDay(undefined);
+    setPlanningView(destination);
     setCalendarDocuments([]);
     setCalendarWarnings([]);
     setCalendarRange(undefined);
@@ -993,6 +1019,11 @@ export default function App() {
       if (closingRef.current) return;
       closingRef.current = true;
       try {
+        const imageGuard = imageQuitGuard.current;
+        if (imageGuard && !(await imageGuard.confirmExit())) {
+          closingRef.current = false;
+          return;
+        }
         const pendingCalendar = calendarWrite.current,
           pendingName = nameMutation.current;
         if (pendingCalendar || pendingName)
@@ -1050,6 +1081,7 @@ export default function App() {
             // The view can already be tearing down. Document and drafts were saved above.
           }
         }
+        await imageGuard?.cancelGeneration();
         await invoke("quit_app");
       } catch (e) {
         closingRef.current = false;
@@ -1168,9 +1200,11 @@ export default function App() {
     } catch (e) {
       if (epoch === workspaceEpoch.current) fail(e);
     } finally {
-      workspaceTransition.current = false;
-      setWorkspaceBusy(false);
-      if (epoch === workspaceEpoch.current) setCalendarBusy(false);
+      if (epoch === workspaceEpoch.current) {
+        workspaceTransition.current = false;
+        setWorkspaceBusy(false);
+        setCalendarBusy(false);
+      }
     }
   }
   async function useLibrary(
@@ -1178,6 +1212,7 @@ export default function App() {
     path?: string,
     committedReopen = false,
     target?: OpeningSource,
+    planningDestination: typeof planningView = null,
   ): Promise<boolean> {
     if (!committedReopen && navigationBlocked()) return false;
     const request = ++openSequence.current,
@@ -1204,13 +1239,13 @@ export default function App() {
         return false;
       workspaceRef.current = ws;
       setWorkspace(ws);
-      resetCalendar();
+      resetCalendar(planningDestination);
       setStats(ws.stats);
       setDocument(null);
       docRef.current = null;
       setCompanionOpen(false);
       localStorage.setItem("inkstone:workspaceMode", "library");
-      setWelcome(!path);
+      setWelcome(!path && !planningDestination);
       setSpacesPage(false);
       setFolderLocation({ project: ws.managedProjectId ?? "", path: "" });
       setError("");
@@ -1226,9 +1261,11 @@ export default function App() {
     } catch (e) {
       if (epoch === workspaceEpoch.current) fail(e);
     } finally {
-      workspaceTransition.current = false;
-      setWorkspaceBusy(false);
-      if (epoch === workspaceEpoch.current) setCalendarBusy(false);
+      if (epoch === workspaceEpoch.current) {
+        workspaceTransition.current = false;
+        setWorkspaceBusy(false);
+        setCalendarBusy(false);
+      }
     }
     if (
       !entered ||
@@ -1274,7 +1311,12 @@ export default function App() {
     doc: LibraryDocument,
     target?: OpeningSource,
     keepConversation = false,
+    archived = false,
   ) {
+    if (archived || libraryView.projects.some((project) => project.id === doc.projectId && project.archived)) {
+      setArchivedReference({ doc, target });
+      return false;
+    }
     if (generalAsk && !keepConversation && !(await leaveGeneralForDocument()))
       return false;
     if (doc.projectId === workspaceRef.current?.managedProjectId) {
@@ -1308,7 +1350,7 @@ export default function App() {
         msg("当前正文与引用快照无法匹配。打开当前文档时将跳过原引用行号。"),
         { title: msg("引用版本不匹配"), kind: "warning" },
       );
-      if (openCurrent && current()) await openLibraryDocument(document);
+      if (openCurrent && current()) await openLibraryDocument(document, undefined, false, match.archived);
       return;
     }
     await openLibraryDocument(document, {
@@ -1320,7 +1362,7 @@ export default function App() {
       heading: "",
       score: 0,
       requireVersion: true,
-    });
+    }, false, match.archived);
   }
   function showImport(task?: ImportTask, folder = interaction.current.currentFolder, paths: string[] = []) {
     const state = interaction.current;
@@ -1411,6 +1453,8 @@ export default function App() {
     if (!native) return;
     const unlisten = getCurrentWebview().onDragDropEvent((e) => {
       if (e.payload.type === "drop") {
+        // Native Finder drops bypass the WebView's inert modal background.
+        if (window.document.querySelector('[aria-modal="true"], .modal-backdrop')) return;
         const point = e.payload.position;
         const target = point && window.document.elementFromPoint?.(point.x / window.devicePixelRatio, point.y / window.devicePixelRatio);
         const location = target?.closest<HTMLElement>("[data-library-drop-folder]")?.dataset.libraryDropFolder ?? "";
@@ -2439,7 +2483,7 @@ export default function App() {
         if (ready) openPanel();
       });
   }
-  async function ask(options?: { retry: Turn }) {
+  async function ask(options?: { retry: Turn }, consent?: VisionConsent, reviewedIntent?: string) {
     const prompt = options?.retry.question ?? question;
     if (
       (!workspace && !generalAsk) ||
@@ -2473,6 +2517,19 @@ export default function App() {
       openFirstUseModelSettings();
       return;
     }
+    const plan = options?.retry ? options.retry.sources : draftContextRef.current.sources;
+    const intent = JSON.stringify([generalAsk, assistant.conversation?.id, epoch, navigation, plan, prompt, options?.retry?.id]);
+    if (consent && (intent !== reviewedIntent || !generalAsk || plan?.image?.mode !== "vision" ||
+      plan.image.documentId !== consent.documentId || settings.chat.baseUrl !== consent.baseUrl)) {
+      fail(t("图片、问题或发送范围已变化，请重新确认。", "The image, question or source selection changed. Review before sending."));
+      return;
+    }
+    if (generalAsk && plan?.image?.mode === "vision" && !consent) {
+      const photo = libraryView.documents.find(d => d.id === plan.image?.documentId && d.projectId === plan.projectId && d.status === "ready");
+      if (!photo) {fail(t("所选图片已不可用。","The selected image is unavailable.")); return;}
+      setVisionReview({ photo, retry: options?.retry, baseUrl: settings.chat.baseUrl, model: settings.chat.model, intent });
+      return;
+    }
     const id = crypto.randomUUID(),
       frozenScope = options?.retry
         ? (assistant.conversation?.scope ?? null)
@@ -2503,7 +2560,7 @@ export default function App() {
           : `当前空间 · ${workspace?.name ?? ""}`,
       scopePath: frozenScope,
       mode: retrievalMode,
-      model: settings.chat.model,
+      model: consent?.model ?? settings.chat.model,
       createdAt: new Date().toISOString(),
     };
     setAnswerSnapshot(snapshot);
@@ -2524,6 +2581,7 @@ export default function App() {
         frozenScope,
         {
           question: prompt,
+          ...(consent ? { visionConsent: consent } : {}),
           parentTurnId: options?.retry
             ? options.retry.parentTurnId
             : frozenDraftContext.branch?.parentTurnId,
@@ -2677,7 +2735,7 @@ export default function App() {
       !(record?.text ?? answer).trim()
     )
       return;
-    if (kind === "save" && generalAsk && !libraryView.projects.length) {
+    if (kind === "save" && generalAsk && !activeProjects.length) {
       notify({ key: "请先创建一个文档空间，也可复制回答为 Markdown。" });
       return;
     }
@@ -2720,7 +2778,7 @@ export default function App() {
         ),
       };
       setAnswerProject(
-        workspace?.managedProjectId ?? libraryView.projects[0]?.id ?? "",
+        activeProjects.find((project) => project.id === workspace?.managedProjectId)?.id ?? activeProjects[0]?.id ?? "",
       );
       setAnswerTitle(answerFileName(record?.question ?? asked));
       setAnswerTransferError("");
@@ -3030,6 +3088,8 @@ export default function App() {
   const localOnlyTurn = draftContext.webAccess === "local-only";
   const turnControls = (
     <>
+      {generalAsk && <ImageGenerationTool quitGuard={imageQuitGuard} projects={libraryView.projects} projectId={workspace?.managedProjectId ?? undefined}
+        initialPrompt={question} disabled={chatBusy || composerLocked} onRefresh={refreshLibrary} onOpen={doc => void openLibraryDocument(doc)} />}
       <label
         className="composer-web-toggle"
         title={
@@ -3248,13 +3308,66 @@ export default function App() {
     </SourcePreviewFrame>
   );
   const planningVisible = calendarOpen && !companionOpen && !standaloneAskOpen;
+  const showTaskNavigation = planningVisible && planningView === "tasks";
+  const hasContextSidebar = !planningVisible || showTaskNavigation;
+  const contextClosed = showTaskNavigation ? taskSidebarClosed : sidebarClosed;
+  const sidebarTitle = companionOpen ? t("同伴列表", "companions") : standaloneAskOpen
+    ? t("会话列表", "conversations") : showTaskNavigation ? t("任务视图", "task views") : t("文档列表", "documents");
+  const sidebarToggleLabel = contextClosed
+    ? t("展开" + sidebarTitle, "Show " + sidebarTitle)
+    : t("收起" + sidebarTitle, "Hide " + sidebarTitle);
+  const planningPicker = planningVisible && (
+    <div className="calendar-project-picker">
+      <label>
+        {msg("空间")}{" "}
+        <select
+          aria-label={planningView === "tasks" ? t("任务空间", "Task space") : msg("日历空间")}
+          value={workspace?.managedProjectId ?? ""}
+          disabled={busy || calendarBusy}
+          onChange={(e) => {
+            const id = e.target.value;
+            const destination = planningView;
+            void useLibrary(id, undefined, false, undefined, destination).then((entered) => {
+              if (
+                entered &&
+                workspaceRef.current?.managedProjectId === id
+              )
+                void loadCalendar(undefined, undefined, destination);
+            });
+          }}
+        >
+          {activeProjects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.title}
+            </option>
+          ))}
+        </select>
+      </label>
+      {(workspaceBusy || (calendarBusy && !calendarWriting)) && (
+        <span className="muted" role="status">{t("正在读取空间…", "Loading space…")}</span>
+      )}
+    </div>
+  );
   return (
     <div
       {...imeBoundary}
-      className={`app-shell v06-shell workspace-shell ${sidebarClosed ? "sidebar-closed" : ""}`}
+      className={`app-shell v06-shell workspace-shell ${contextClosed ? "sidebar-closed" : ""}`}
       style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}
     >
       <Titlebar
+        sidebarToggle={hasContextSidebar && (
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={sidebarToggleLabel}
+            title={sidebarToggleLabel}
+            aria-expanded={!contextClosed}
+            aria-controls="workspace-context-sidebar"
+            onClick={() => showTaskNavigation ? setTaskSidebarClosed(!contextClosed) : setSidebarClosed(!contextClosed)}
+          >
+            {contextClosed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+          </button>
+        )}
         workspaceName={workspace?.name}
         panelOpen={panelOpen}
         onToggle={() => {
@@ -3287,24 +3400,6 @@ export default function App() {
         className={`main-layout ${focusedKnowledge && !companionOpen ? "assistant-expanded" : ""} ${standaloneAskOpen && !companionOpen ? "ask-workbench" : ""}`}
       >
         <WorkspaceRail location={[planningView, companionOpen, wikiOpen, standaloneAskOpen, panelOpen, panel, settingsOpen, indexOpen, workspace?.managedProjectId].join("/")}>
-          <div className="workspace-rail-sidebar-slot">
-            {!planningVisible && <button
-              className="icon-button workspace-rail-toggle"
-              type="button"
-              aria-label={t(
-                `${sidebarClosed ? "展开" : "收起"}${companionOpen ? "同伴" : standaloneAskOpen ? "会话" : "文档"}列表`,
-                `${sidebarClosed ? "Show" : "Hide"} ${companionOpen ? "companions" : standaloneAskOpen ? "conversations" : "documents"}`
-              )}
-              aria-expanded={!sidebarClosed}
-              onClick={() => setSidebarClosed(!sidebarClosed)}
-            >
-              {sidebarClosed ? (
-                <PanelLeftOpen size={17} />
-              ) : (
-                <PanelLeftClose size={17} />
-              )}
-            </button>}
-          </div>
           <SpaceNavigation
             disabled={busy || booting || citationOpening}
             generalDisabled={generalBusy || citationOpening || !settings}
@@ -3362,7 +3457,14 @@ export default function App() {
             <Settings2 size={17} />
           </button>
         </WorkspaceRail>
-        {!planningVisible && <aside
+        {showTaskNavigation && (
+          <aside id="workspace-context-sidebar" className="sidebar sidebar-compact task-context" hidden={taskSidebarClosed} aria-label={t("任务导航", "Task navigation")}>
+            <div className="space-sidebar-heading"><strong>{t("任务", "Tasks")}</strong></div>
+            {planningPicker}
+            <div className="task-context-views" ref={setTaskNavigation} />
+          </aside>
+        )}
+        {!planningVisible && <aside id="workspace-context-sidebar"
           className="sidebar sidebar-compact"
           aria-label={
             companionOpen
@@ -3495,7 +3597,7 @@ export default function App() {
             </>
           )}
         </aside>}
-        {!planningVisible && !sidebarClosed && (
+        {hasContextSidebar && !contextClosed && (
           <div
             className="sidebar-resizer"
             role="separator"
@@ -3504,7 +3606,9 @@ export default function App() {
                 ? msg("调整同伴列表宽度")
                 : standaloneAskOpen
                   ? msg("调整会话列表宽度")
-                  : msg("调整文档列表宽度")
+                  : showTaskNavigation
+                    ? t("调整任务视图宽度", "Resize task views")
+                    : msg("调整文档列表宽度")
             }
             aria-orientation="vertical"
             aria-valuemin={240}
@@ -3570,32 +3674,7 @@ export default function App() {
             />
           ) : calendarOpen ? (
             <div className={`project-calendar-container ${planningView === "tasks" ? "task-surface" : ""}`}>
-              <div className="calendar-project-picker">
-                <label>
-                  {msg("空间")}{" "}
-                  <select
-                    aria-label={planningView === "tasks" ? t("任务空间", "Task space") : msg("日历空间")}
-                    value={workspace?.managedProjectId ?? ""}
-                    disabled={busy || calendarBusy}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      void useLibrary(id).then((entered) => {
-                        if (
-                          entered &&
-                          workspaceRef.current?.managedProjectId === id
-                        )
-                          void loadCalendar(undefined, undefined, planningView ?? "calendar");
-                      });
-                    }}
-                  >
-                    {libraryView.projects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+              {planningView === "calendar" && planningPicker}
               {calendarWarnings.length > 0 && (
                 <details className="calendar-warnings">
                   <summary>{msg("有")} {calendarWarnings.length} {msg("条日历提示")}</summary>
@@ -3613,7 +3692,9 @@ export default function App() {
                 </div>
               )}
               {planningView === "tasks" ? <TaskList
+                navigationHost={taskNavigation}
                 key={workspace?.managedProjectId}
+                session={planningSession}
                 spaceId={workspace?.managedProjectId ?? ""}
                 documents={calendarDocuments}
                 onPatch={patchCalendar}
@@ -3622,10 +3703,11 @@ export default function App() {
                 onCalendar={day => void openPlanning("calendar", day)}
                 onUndo={() => void undoCalendar()}
                 canUndo={calendarHistory.current.length > 0}
-                busy={calendarBusy}
+                busy={calendarBusy || workspaceBusy}
                 onRefresh={() => void loadCalendar(undefined, undefined, "tasks")}
                 onAskForHelp={askAboutTask}
               /> : <ProjectCalendar
+                session={planningSession}
                 spaceId={workspace?.managedProjectId ?? undefined}
                 initialDay={calendarDay}
                 onCreateCalendar={newCalendarDocument}
@@ -3645,7 +3727,7 @@ export default function App() {
                 initialQuery={calendarRange?.terms}
                 onUndo={() => void undoCalendar()}
                 canUndo={calendarHistory.current.length > 0}
-                busy={calendarBusy}
+                busy={calendarBusy || workspaceBusy}
                 onRefresh={() =>
                   void loadCalendar(calendarRange, calendarScopePath)
                 }
@@ -3897,6 +3979,7 @@ export default function App() {
                   path={document.path}
                   viewKey={`${workspace?.root ?? ""}/${document.path}`}
                   mode={mode}
+                  onOpenSource={() => changeMode("source")}
                   line={line}
                   onChange={(content) => {
                     setSaveWarning("");
@@ -4476,6 +4559,7 @@ export default function App() {
                   </div>
                   {generalAsk ? (
                     <QuestionSources
+                      currentProjectId={workspace?.managedProjectId ?? undefined}
                       view={libraryView}
                       currentDocument={libraryView.documents.find(
                         (item) =>
@@ -4609,6 +4693,21 @@ export default function App() {
           }}
         />
       )}
+      {archivedReference && (
+        <ModalDialog className="answer-reading-modal" label={t("归档资料预览", "Archived document preview")} onClose={() => setArchivedReference(undefined)}>
+          <header className="modal-heading">
+            <h2>{archivedReference.doc.title}</h2>
+            <button type="button" className="icon-button" aria-label={msg("关闭")} onClick={() => setArchivedReference(undefined)}><X size={18} /></button>
+          </header>
+          <p className="muted">{libraryView.projects.find((p) => p.id === archivedReference.doc.projectId)?.title} · {t("已归档 · 只读", "Archived · read only")}</p>
+          <ArchivedDocument key={archivedReference.doc.id} projectId={archivedReference.doc.projectId} document={archivedReference.doc} citation={archivedReference.target} />
+        </ModalDialog>
+      )}
+      {visionReview && <ConfirmChatImage photo={visionReview.photo} endpoint={visionReview.baseUrl} defaultModel={visionReview.model} onClose={() => setVisionReview(undefined)} onConfirm={(model, previewHash) => {
+        const { retry, baseUrl, photo, intent } = visionReview;
+        setVisionReview(undefined);
+        void ask(retry ? { retry } : undefined, { documentId: photo.id, baseUrl, model, previewHash }, intent);
+      }}/>}
       {webSettingsOpen && (
         <WebSearchSettings onClose={() => setWebSettingsOpen(false)} />
       )}
@@ -4982,7 +5081,7 @@ export default function App() {
                 disabled={nameBusy || !!answerSavedPath}
                 onChange={(event) => setAnswerProject(event.target.value)}
               >
-                {libraryView.projects.map((project) => (
+                {activeProjects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.title}
                   </option>

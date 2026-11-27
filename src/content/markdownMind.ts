@@ -1,5 +1,5 @@
 import { translate as t } from "../i18n";
-import type { CanvasNode, MindChange, MindChangeResult } from "./editableMind";
+import { checkMindCapacity, type CanvasNode, type MindChange, type MindChangeResult } from "./editableMind";
 import { parseMarkdown } from "./blocks";
 import { flattenMind, outlineTree, type MindNode } from "./mindmap";
 
@@ -135,6 +135,7 @@ export function changeMarkdownMind(
   const root = outlineTree(source);
   const visible = visibleRoot(root);
   const nodes = flattenMind(root);
+  checkMindCapacity(nodes.length - (visible === root ? 0 : 1), change);
   const parents = new Map(
     nodes.flatMap((n) => n.children.map((child) => [child, n] as const)),
   );

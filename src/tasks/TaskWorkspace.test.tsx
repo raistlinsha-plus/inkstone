@@ -414,3 +414,58 @@ it("today includes a task due last week, a slot spanning today, and a follow-up;
     upcoming: true,
   });
 });
+
+it("returns from the source note to the task list and restores only actual edits", () => {
+  const id = crypto.randomUUID();
+  const doc = {
+    documentId: "a",
+    path: "A.md",
+    title: "A",
+    hash: "old",
+    content: taskLine({ id, title: "确认手册" }),
+  };
+  const changed = {
+    ...doc,
+    hash: "saved",
+    content: taskLine({ id, title: "确认手册", done: true }),
+  };
+  const session = {};
+  const open = vi.fn();
+  const mount = (source: CalendarDocument) =>
+    render(
+      <TaskList
+        {...taskProps}
+        session={session}
+        documents={[source]}
+        onPatch={vi.fn()}
+        onOpen={open}
+      />,
+    );
+  let pane = mount(doc);
+  fireEvent.click(screen.getByRole("button", { name: /^全部任务/ }));
+  fireEvent.click(screen.getByRole("button", { name: "确认手册" }));
+  fireEvent.click(screen.getByRole("button", { name: "打开原文" }));
+  expect(open).toHaveBeenCalledWith({ path: "A.md", line: 1 });
+  pane.unmount();
+  pane = mount(changed);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(
+    screen.getByRole<HTMLInputElement>("checkbox", { name: "确认手册" })
+      .checked,
+  ).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "确认手册" }));
+  fireEvent.change(
+    within(screen.getByRole("dialog")).getByLabelText("任务标题"),
+    { target: { value: "有未保存修改" } },
+  );
+  pane.unmount();
+  pane = mount(changed);
+  const title = within(
+    screen.getByRole("dialog"),
+  ).getByLabelText<HTMLInputElement>("任务标题");
+  expect(title.value).toBe("有未保存修改");
+  fireEvent.change(title, { target: { value: "确认手册" } });
+  pane.unmount();
+  mount(changed);
+  expect(screen.queryByRole("dialog")).toBeNull();
+});

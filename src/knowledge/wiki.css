@@ -254,6 +254,13 @@
   border-top: 1px solid var(--ui-line);
   background: var(--ui-overlay);
 }
+/* Let the impact and confirmation scroll together when sources are revoked. */
+.wiki-dialog .wiki-policy-footer[data-removing] { position: static; }
+.wiki-dialog .wiki-policy-footer .wiki-danger {
+  color: var(--ui-danger);
+  border-color: var(--ui-danger);
+  background: var(--ui-danger-surface);
+}
 .wiki-policy-footer [role="status"] { margin-inline-end: auto; color: var(--ui-muted); }
 .wiki-dialog .wiki-policy > label:first-child,
 .wiki-dialog .wiki-document-list label {

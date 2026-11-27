@@ -1,4 +1,4 @@
-type PanePreference = "sidebar-closed" | "panel-open";
+type PanePreference = "sidebar-closed" | "task-sidebar-closed" | "panel-open";
 export function readPanePreference(name: PanePreference): boolean {
   try {
     return localStorage.getItem(`inkstone:${name}`) === "true";

@@ -4,13 +4,15 @@
 
 Inkstone is a local Markdown workspace for Apple Silicon Macs. Keep notes, iPhone photos and mind maps in project folders. Ask your own model what the material says, check its citations, then turn the next step into a task you can schedule in Calendar.
 
-[**Get v1.2.0-beta.3 source**](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.3) · [**Try the browser demo**](https://raistlinsha-plus.github.io/inkstone/?lang=en) · [Desktop quickstart](docs/QUICKSTART.en.md)
+[**Get v1.4.0 source**](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.4.0) · [**Try the browser demo**](https://raistlinsha-plus.github.io/inkstone/?lang=en) · [Desktop quickstart](docs/QUICKSTART.en.md)
 
 ![A reading night planned on the Inkstone canvas, with three colored branches for choosing a book, preparing the event and following up](docs/assets/v1.2.0-beta.3/en/mind-map.png)
 
 **Try this map on your Mac.** Import the sample file, double-click a topic to rename it, then drag a branch into empty space. Its children follow it. Save and reopen the file to pick up where you left off. [Sample map](docs/assets/v1.2.0-beta.3/en/reading-night.mmd) · [Canvas controls](docs/USER-MANUAL.en.md#edit-a-standalone-mind-map-on-the-canvas)
 
 **Try Q&A in your browser.** Compare attendance at two fictional reading events. Open the cited lines, then schedule the follow-up. The interactive demo uses sample notes and preset answers and works without a model key. [Open the demo](https://raistlinsha-plus.github.io/inkstone/?lang=en) · [Use the same note on your Mac](examples/quick-tour/README.md)
+
+Pair a whiteboard photo with a meeting note in chat, or generate an illustration with your own provider and save it in the project. [What’s new in 1.4](docs/DELIVERY-v1.4.0.en.md)
 
 ## Work with your notes
 
@@ -27,10 +29,10 @@ Inkstone is a local Markdown workspace for Apple Silicon Macs. Keep notes, iPhon
 
 ## Try it from source
 
-This beta is distributed as source. On an Apple Silicon Mac running macOS 13 or later, install Apple's command-line developer tools, Node **24.14.0**, npm **11.9.0** and Rust **1.99.1**. [Pinned toolchain](toolchain.json)
+Version 1.4.0 is available as a stable source release. On an Apple Silicon Mac running macOS 13 or later, install Apple's command-line developer tools, Node **24.14.0**, npm **11.9.0** and Rust **1.99.1**. [Pinned toolchain](toolchain.json)
 
 ```sh
-git clone --branch v1.2.0-beta.3 https://github.com/raistlinsha-plus/inkstone.git
+git clone --branch v1.4.0 https://github.com/raistlinsha-plus/inkstone.git
 cd inkstone
 npm ci --registry=https://registry.npmjs.org
 npm run desktop
@@ -53,7 +55,7 @@ Provider keys live in an owner-only local preferences file. Portable backups omi
 | First steps | [Quickstart](docs/QUICKSTART.en.md) | [快速开始](docs/QUICKSTART.md) |
 | Daily use | [User manual](docs/USER-MANUAL.en.md) | [操作手册](docs/USER-MANUAL.zh-CN.md) |
 | Features | [Product tour](docs/PRODUCT.en.md) | [产品介绍](docs/PRODUCT.md) |
-| Beta changes and evaluation | [Release notes](docs/DELIVERY-v1.2.0-beta.3.en.md) | [交付与验证](docs/DELIVERY-v1.2.0-beta.3.md) |
+| Release notes and verification | [Release notes](docs/DELIVERY-v1.4.0.en.md) | [交付与验证](docs/DELIVERY-v1.4.0.md) |
 | Future work | [Roadmap](docs/ROADMAP.md) | [路线图](docs/ROADMAP.zh-CN.md) |
 
 [Architecture](docs/PUBLIC-ARCHITECTURE.md) · [Known limitations](docs/KNOWN-LIMITATIONS.md) · [Share feedback on the walkthrough](https://github.com/raistlinsha-plus/inkstone/discussions/11) · [Report an issue](https://github.com/raistlinsha-plus/inkstone/issues) · [Contributing](CONTRIBUTING.md)

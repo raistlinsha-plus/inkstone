@@ -267,6 +267,7 @@ pub async fn assistant_ask(
     memory_options: Option<memory::Options>,
     general: Option<bool>,
     sources: Option<crate::assistant_sources::Selection>,
+    vision_consent: Option<crate::assistant_images::VisionConsent>,
     web_access: Option<crate::assistant_sources::WebAccess>,
 ) -> Result<assistant::Conversation, String> {
     crate::request_receipt::observe(async {
@@ -278,7 +279,7 @@ pub async fn assistant_ask(
             return Err("通用问答暂不支持附加其他会话的历史背景".into());
         }
         let mode = retrieval_mode.as_deref().unwrap_or("hybrid");
-        let started = assistant::begin_with_sources(
+        let mut started = assistant::begin_with_sources(
             &state.data_dir,
             assistant::GENERAL_OWNER,
             &conversation_id,
@@ -291,6 +292,7 @@ pub async fn assistant_ask(
             sources,
             web_access,
         )?;
+        started.vision_consent = vision_consent;
         let _ = app.emit(
             "assistant-accepted",
             serde_json::json!({"requestId":request_id}),

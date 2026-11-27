@@ -252,3 +252,17 @@ fn day_only_after_two_independent_subjects_asks_which_of_those_items_to_verify()
         "{message}"
     );
 }
+
+#[test]
+fn a_bare_weekday_followup_uses_the_previous_request_and_preserves_ambiguity_checks() {
+    let prior = ["阅览室周一几点开门？".to_string()];
+    for question in ["周三？", "那，周三？", "那么周三呢。"] {
+        assert_eq!(
+            weekday_question(question, &prior),
+            Some(Ok("阅览室周三几点开门？".to_owned()))
+        );
+    }
+    assert!(matches!(weekday_question("周二？", &[]), Some(Err(_))));
+    assert_eq!(day_pointer("周三的票价是多少？"), None);
+    assert_eq!(day_pointer("周三或周四呢？"), None);
+}

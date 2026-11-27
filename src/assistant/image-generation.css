@@ -1,0 +1,143 @@
+.image-generation.modal {
+  width: min(480px, calc(100vw - 36px));
+  max-height: min(88vh, 780px);
+  overflow-y: auto;
+  padding: 22px;
+  display: grid;
+  gap: 16px;
+}
+.image-gen-header,
+.image-gen-header h2,
+.image-generation footer,
+.image-gen-location {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+.image-gen-header {
+  justify-content: space-between;
+}
+.image-gen-header h2 {
+  font-size: 19px;
+  margin: 0;
+}
+.image-gen-close,
+.image-gen-trigger {
+  display: inline-grid;
+  place-items: center;
+}
+.image-generation label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  text-align: start;
+}
+.image-generation label :is(input, select, textarea) {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  margin: 0;
+}
+.image-generation textarea {
+  resize: vertical;
+  min-height: 80px;
+  padding: 10px;
+}
+.image-gen-fields {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+}
+.image-gen-fields label:nth-child(2),
+.image-gen-fields.destination label:first-child {
+  grid-column: 1 / -1;
+}
+.image-gen-settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.image-gen-settings .image-gen-fields {
+  margin-top: 10px;
+}
+.image-gen-preview {
+  margin: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--ui-surface);
+  border-radius: 8px;
+}
+.image-gen-preview img {
+  max-width: 100%;
+  max-height: 38vh;
+  object-fit: contain;
+}
+.image-generation footer {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.image-gen-error {
+  margin: 0;
+  color: var(--ui-danger);
+}
+
+.image-generation.modal {
+  background: var(--ui-overlay);
+  color: var(--ui-text);
+  border-color: var(--ui-line);
+}
+.image-generation .image-gen-header h2 {
+  color: inherit;
+  margin: 0;
+}
+.image-generation label {
+  color: var(--ui-muted);
+  font-size: 12px;
+  font-weight: 550;
+}
+.image-generation label :is(input, select, textarea) {
+  color: var(--ui-text);
+  background: var(--ui-field);
+  border: 1px solid var(--ui-control-line);
+  border-radius: 7px;
+  padding: 7px 9px;
+  font-weight: 400;
+  font-size: 14px;
+}
+.image-generation
+  :is(.image-gen-close, footer button, .image-gen-settings-toggle) {
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 7px;
+  color: inherit;
+}
+.image-generation button:hover:not(:disabled) {
+  background: var(--ui-hover);
+}
+.image-generation footer button.primary {
+  color: var(--ui-on-action);
+  background: var(--ui-action);
+}
+.image-generation footer button.primary:hover:not(:disabled) {
+  background: var(--ui-action-hover);
+}
+.image-generation small {
+  overflow-wrap: anywhere;
+  color: var(--ui-muted);
+}
+.image-gen-fields.destination label:nth-child(2) {
+  grid-column: auto;
+}
+
+.image-generation label :is(input, textarea, select):focus-visible {
+  outline: 0;
+  border-color: var(--ui-focus);
+  box-shadow: 0 0 0 1px var(--ui-focus);
+}
+@media (forced-colors: active) {
+  .image-generation label :is(input, textarea, select):focus-visible {
+    outline: 2px solid Highlight;
+  }
+}

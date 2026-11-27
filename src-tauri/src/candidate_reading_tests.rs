@@ -1219,3 +1219,118 @@ async fn explicit_document_and_attachment_return_only_conditioned_original_lines
         assert!(!prompt.contains(REJECTED));
     }
 }
+
+#[tokio::test]
+async fn general_chat_image_uses_only_its_selected_channel_and_rechecks_permission() {
+    use crate::assistant_images::{ImageMode, ImageSelection, VisionConsent};
+    let body = "<!-- inkstone-image:v1 -->\n# report.png\n\n![图片](assets/0123abcd5678-preview%2Ejpg)\n\n## 图中文字\n\nOCR_MARKER_5432\n\n## 模型描述\n\nCAPTION_MARKER_8765";
+    for image_mode in [ImageMode::Ocr, ImageMode::Description, ImageMode::Vision] {
+        let data = tempfile::tempdir().unwrap();
+        let (state, listener) = setup(data.path(), false);
+        let (mut turn, id) = selected_turn_with_body(data.path(), "结合会议笔记和图表作答", false, body);
+        let source = library::get(data.path(), &id).unwrap();
+        let root = library::project_root(data.path(), "inbox").unwrap();
+        let assets = root.join(source.path).parent().unwrap().join("assets");
+        fs::create_dir_all(&assets).unwrap();
+        let pixels = [255,216,255,217];
+        fs::write(assets.join("0123abcd5678-preview.jpg"), pixels).unwrap();
+        let note = library::create_document(data.path(), "inbox", "会议笔记.md", "NOTE_MARKER_9912").unwrap();
+        let selection = turn.sources.as_mut().unwrap();
+        selection.image = Some(ImageSelection { document_id: id.clone(), mode: image_mode });
+        selection.document_ids.push(note.id.clone());
+        macro_rules! run { () => { assistant_runtime::general(None, &state, &turn, "image", "keyword", &Default::default()).await }; }
+        if image_mode == ImageMode::Vision {
+            assert!(run!().err().unwrap().contains("确认"));
+            assert!(listener.accept().is_err());
+            let consent = VisionConsent { document_id: id.clone(), base_url: crate::settings(&state).unwrap().chat.base_url, model: "isolated-vision".into(), preview_hash: "stale".into() };
+            turn.vision_consent = Some(consent);
+            assert!(run!().err().unwrap().contains("已变化"));
+            assert!(listener.accept().is_err());
+            turn.vision_consent.as_mut().unwrap().preview_hash = crate::files::hash(pixels);
+        }
+        let server = serve(listener, 200, "fixture [1] [2]", || {});
+        let answer = run!().unwrap();
+        let wire = server.join().unwrap();
+        let content = &wire["messages"][1]["content"];
+        let sent = content.to_string();
+        assert!(sent.contains("NOTE_MARKER_9912"));
+        assert_eq!(sent.contains("OCR_MARKER_5432"), image_mode == ImageMode::Ocr);
+        assert_eq!(sent.contains("CAPTION_MARKER_8765"), image_mode == ImageMode::Description);
+        assert_eq!(content.is_array(), image_mode == ImageMode::Vision);
+        assert_eq!(sent.contains("data:image/jpeg;base64,"), image_mode == ImageMode::Vision);
+        assert!(answer.external_sources.iter().any(|s| s.document_id.as_deref()==Some(id.as_str())));
+        assert!(answer.external_sources.iter().any(|s| s.document_id.as_deref()==Some(note.id.as_str())));
+        assert!(!serde_json::to_string(&answer).unwrap().contains("base64"));
+        let db = library::conn(data.path()).unwrap();
+        db.execute("UPDATE documents SET status='trashed' WHERE id=?", [&id]).unwrap();
+        assert!(run!().is_err());
+    }
+}
+
+#[tokio::test]
+async fn image_reader_rechecks_consent_and_sends_only_the_confirmed_jpeg() {
+    use crate::assistant_images::{preview, VisionConsent};
+    let directory = tempfile::tempdir().unwrap();
+    let data = directory.path();
+    let (state, listener) = setup(data, false);
+    let md = "<!-- inkstone-image:v1 -->\n# Board\n![图片](assets/preview.jpg)\n\n## 图中文字\nOCR_LOCAL\n## 模型描述\nCAPTION_LOCAL";
+    let doc = library::create_document(data, "inbox", "Board.png.md", md).unwrap();
+    let root = library::project_root(data, "inbox").unwrap();
+    let path = root.join(&doc.path);
+    let assets = path.parent().unwrap().join("assets");
+    fs::create_dir_all(&assets).unwrap();
+    let asset = assets.join("preview.jpg");
+    let provider = crate::settings(&state).unwrap().chat;
+    let mut consent = VisionConsent {
+        document_id: doc.id.clone(),
+        base_url: provider.base_url.clone(),
+        model: "fixture-vision".into(),
+        preview_hash: String::new(),
+    };
+    macro_rules! send {
+        ($configured:expr) => {
+            crate::media::describe_confirmed(
+                &state,
+                "inbox",
+                &doc.id,
+                "Shape?",
+                $configured,
+                &consent,
+            )
+            .await
+        };
+    }
+    for damaged in [false, true] {
+        if damaged {
+            fs::write(&asset, b"invalid").unwrap();
+        }
+        let local = serde_json::to_value(preview(data, "inbox", &doc.id).unwrap()).unwrap();
+        assert_eq!(local["hasOcr"], true);
+        assert_eq!(local["hasDescription"], true);
+        assert!(local["previewError"].is_string());
+        assert!(send!(&provider.model).is_err());
+    }
+    let jpeg = [0xff, 0xd8, 0xff, 0xd9];
+    fs::write(&asset, jpeg).unwrap();
+    consent.preview_hash = crate::files::hash(jpeg);
+    assert!(send!("earlier-default").is_err());
+    consent.base_url.push_str("/old-route");
+    assert!(send!(&provider.model).is_err());
+    consent.base_url = provider.base_url;
+    consent.document_id = "different-image".into();
+    assert!(send!(&provider.model).is_err());
+    consent.document_id = doc.id.clone();
+    fs::write(&asset, [0xff, 0xd8, 0xff, 0xdb, 0xff, 0xd9]).unwrap();
+    assert!(send!(&provider.model).is_err());
+    assert!(listener.accept().is_err());
+    let refreshed = preview(data, "inbox", &doc.id).unwrap();
+    consent.preview_hash = refreshed.hash;
+    let server = serve(listener, 200, "Synthetic board", || {});
+    assert_eq!(send!(&provider.model).unwrap(), "Synthetic board");
+    let request = server.join().unwrap();
+    assert_eq!(request["model"], consent.model);
+    let content = &request["messages"][0]["content"];
+    assert_eq!(content[0]["text"], "Shape?");
+    assert_eq!(content[1]["image_url"]["url"], refreshed.url);
+    assert!(!request.to_string().contains("_LOCAL"));
+}

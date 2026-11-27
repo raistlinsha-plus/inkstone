@@ -1,10 +1,12 @@
 # Inkstone product tour
 
+**v1.4.0 stable.** Pair an image with a note in chat. Use its OCR, a saved description or a confirmed preview for your vision model. Generate images with a configured service and choose a project folder after preview. [User guide](USER-MANUAL.en.md)
+
 **English** · [简体中文](PRODUCT.md) · [User manual](USER-MANUAL.en.md)
 
-**v1.2.0-beta.3** runs on Apple Silicon Macs with macOS 13 or later. Inkstone brings together Markdown notes, questions about the source material, and the actions you decide to take. You can write, schedule tasks and search your notes offline. Add your own compatible model to ask questions or compile a project Wiki.
+**v1.4.0** runs on Apple Silicon Macs with macOS 13 or later. Inkstone brings together Markdown notes, questions about the source material, and the actions you decide to take. You can write, schedule tasks and search your notes offline. Add your own compatible model to ask questions or compile a project Wiki.
 
-Suppose you promise on Monday to send a draft by Friday. Select the promise in chat, choose the note where it belongs, and set Friday as the due date. Reserve a writing session for Wednesday in Calendar. When Wednesday comes, open the task from the calendar to jump to the checklist line in your note. The interface supports English and Simplified Chinese. You can set the language for new answers independently. [Beta.3 changes](../CHANGELOG.md)
+Suppose you promise on Monday to send a draft by Friday. Select the promise in chat, choose the note where it belongs, and set Friday as the due date. Reserve a writing session for Wednesday in Calendar. When Wednesday comes, open the task from the calendar to jump to the checklist line in your note. The interface supports English and Simplified Chinese. You can set the language for new answers independently. [Changelog](../CHANGELOG.md)
 
 ## Start with two notes
 

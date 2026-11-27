@@ -11,6 +11,7 @@ import {
 import { afterEach, expect, test, vi } from "vitest";
 import type { LibraryView } from "../library";
 import WikiPanel from "./WikiPanel";
+import { setLanguagePreference } from "../i18n";
 
 const api = vi.hoisted(() => ({ invoke: vi.fn(), listen: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: api.invoke }));
@@ -751,4 +752,64 @@ test("clear selection can revoke a previously selected document that is no longe
     expectedRevision: 1,
     documentIds: [],
   });
+});
+
+test("Wiki guards dirty close, backdrop and Escape; keep, discard and save have distinct effects", async () => {
+  const onClose = vi.fn();
+  api.listen.mockResolvedValue(vi.fn());
+  api.invoke.mockImplementation(async (command, args) => {
+    if (command === "wiki_status") return status;
+    if (command === "wiki_set_policy") return {...status, policy: {...status.policy, topic: args.input.topic}};
+    throw Error(command);
+  });
+  render(<WikiPanel projectId="space" workspaceRoot={root} view={view} onOpenSource={vi.fn()} onImport={vi.fn()} onClose={onClose}/>);
+  fireEvent.click(await screen.findByRole("button", {name:"资料范围"}));
+  const topic = await screen.findByRole("textbox", {name:"关注主题"});
+  fireEvent.change(topic, {target:{value:"暂存主题"}});
+  fireEvent.keyDown(document, {key:"Escape"});
+  const dialog = () => within(screen.getByRole("dialog", {name:"保存 Wiki 更改？"}));
+  expect(document.activeElement).toBe(dialog().getByRole("button", {name:"继续编辑"}));
+  fireEvent.keyDown(document, {key:"Escape"});
+  expect((topic as HTMLInputElement).value).toBe("暂存主题");
+  fireEvent.mouseDown(screen.getByRole("dialog", {name:"知识 Wiki"}).closest(".modal-backdrop")!);
+  fireEvent.click(dialog().getByRole("button", {name:"继续编辑"}));
+  fireEvent.click(screen.getByRole("button", {name:"关闭知识 Wiki"}));
+  fireEvent.click(dialog().getByRole("button", {name:"放弃更改"}));
+  expect(onClose).toHaveBeenCalledOnce();
+  expect(api.invoke.mock.calls.filter(([command]) => command === "wiki_set_policy")).toHaveLength(0);
+  // The parent normally unmounts Wiki after accepting onClose.
+  fireEvent.keyDown(document, {key:"Escape"});
+  fireEvent.click(screen.getByRole("button", {name:"关闭知识 Wiki"}));
+  fireEvent.click(dialog().getByRole("button", {name:"保存并关闭"}));
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(2));
+  expect(api.invoke).toHaveBeenCalledWith("wiki_set_policy", {input:expect.objectContaining({topic:"暂存主题"})});
+});
+
+test("English source revocation shows affected counts and requires explicit confirmation even when closing", async () => {
+  setLanguagePreference("en");
+  try {
+    api.listen.mockResolvedValue(vi.fn());
+    api.invoke.mockImplementation(async command => {
+      if (command === "wiki_status" || command === "wiki_set_policy") return status;
+      if (command === "wiki_removal_impact") return {pages:1, revisions:3, pending:2, token:"checked"};
+      throw Error(command);
+    });
+    render(<WikiPanel projectId="space" workspaceRoot={root} view={view} onOpenSource={vi.fn()} onImport={vi.fn()} onClose={vi.fn()}/>);
+    expect(await screen.findByText("Authorized sources: 1")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", {name:"Sources"}));
+    fireEvent.click(screen.getByRole("checkbox", {name:"Enable Wiki for this space"}));
+    fireEvent.click(screen.getByRole("checkbox", {name:"手册.md"}));
+    fireEvent.keyDown(document, {key:"Escape"});
+    fireEvent.click(within(screen.getByRole("dialog", {name:"Save Wiki changes?"})).getByRole("button", {name:"Review items to clear"}));
+    const warning = await screen.findByText(/Topics to clear: 1. Published revisions: 3. Pending changes: 2/);
+    expect(warning.textContent).toContain("Original documents are kept.");
+    expect(document.activeElement).toBe(warning);
+    const confirm = document.querySelector<HTMLButtonElement>(".wiki-policy-footer .wiki-danger")!;
+    expect(confirm.getAttribute("aria-describedby")).toBe(warning.id);
+    expect(api.invoke.mock.calls.filter(([command]) => command === "wiki_set_policy")).toHaveLength(0);
+    fireEvent.click(confirm);
+    await waitFor(() => expect(api.invoke).toHaveBeenCalledWith("wiki_set_policy", {input:expect.objectContaining({removalToken:"checked"})}));
+  } finally {
+    setLanguagePreference("zh-CN");
+  }
 });

@@ -155,3 +155,22 @@ test("creating a space shows a labeled form, ignores candidate Enter and submits
     title: "写作",
   });
 });
+
+test("a renamed search result stays visible and keeps keyboard focus", async () => {
+  const current = { ...view, projects: view.projects.map(project => ({ ...project })) };
+  const props = {
+    view: current, onEnter: vi.fn(), onClose: vi.fn(),
+    onRefresh: async () => {
+      current.projects[0].title = "待读";
+    },
+  };
+  render(<SpaceManager {...props} />);
+  fireEvent.change(search(), { target: { value: "阅读" } });
+  fireEvent.click(button("阅读的更多操作"));
+  fireEvent.click(screen.getByRole("menuitem", { name: "重命名" }));
+  const field = screen.getByRole("textbox", { name: "空间名称" });
+  fireEvent.change(field, { target: { value: "待读" } });
+  fireEvent.submit(field.closest("form")!);
+  await waitFor(() => expect(document.activeElement).toBe(button("待读的更多操作")));
+  expect((search() as HTMLInputElement).value).toBe("");
+});

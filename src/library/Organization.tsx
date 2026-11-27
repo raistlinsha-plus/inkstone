@@ -264,15 +264,13 @@ export function SpaceManager({
         });
         returnTo.current = created.id;
         setArchived(false);
-        if (
-          !title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())
-        )
-          setQuery("");
       } else {
         await invoke("library_rename_project", { id: editing, title });
         returnTo.current = editing;
         onRename?.(editing, title);
       }
+      if (!title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
+        setQuery("");
       setEditing(null);
     });
   }

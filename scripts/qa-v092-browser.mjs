@@ -25,10 +25,11 @@ const onboardingSampleMarkdown = await readFile(
   "utf8",
 );
 const reports = [];
-async function contextFor(scenario, fixture, viewport) {
+async function contextFor(scenario, fixture, viewport, language = "zh-CN") {
   const ctx = await browser.newContext({ viewport });
   const errors = [], external = [], checks = [];
   reports.push({ scenario, viewport, checks, errors, external });
+  await ctx.addInitScript((lang) => localStorage.setItem("inkstone:language", lang), language);
   await ctx.addInitScript(
     `if (window === window.top) (${installV07Fixture})(${JSON.stringify(fixture)})`,
   );
@@ -191,8 +192,8 @@ try {
       assert.equal(await page.locator(".library-open[aria-current=page]").count(), 0);
     }
     await page.getByRole("button", { name: "日历", exact: true }).click();
-    const calendarTitle = page.getByRole("heading", { name: "项目日历", exact: true });
-    assert.deepEqual(await titleStyle(calendarTitle), reference, "calendar uses the library title style");
+    const calendarTitle = page.locator(".calendar-workbench-heading h1");
+    assert.match(await calendarTitle.innerText(), /年.*月/);
     await page.getByRole("button", { name: "我的文档", exact: true }).click();
     const fileButton = home.getByRole("button", { name: /阅读活动方案\.md/ }).first();
     await fileButton.click();
@@ -207,7 +208,7 @@ try {
     const sourceFont = await page.locator(".cm-content").evaluate((el) => getComputedStyle(el).fontFamily);
     assert.match(sourceFont, /monospace/i, "source editor uses a monospace stack");
     await views.getByRole("button", { name: "正文" }).click();
-    checks.push("Calendar, visual editing and split preview match the library title; source uses monospace");
+    checks.push("Calendar opens to the visible month; editing and preview share the library title style; source uses monospace");
     await page.getByRole("button", { name: "问这篇文档", exact: true }).click();
     const panel = page.locator(".contextual-panel");
     const input = panel.getByRole("textbox", { name: "向当前文档提问" });
@@ -229,6 +230,60 @@ try {
     await panel.getByRole("button", { name: "复制 Markdown" }).waitFor();
     assert.equal(await panel.evaluate((el) => el.scrollWidth <= el.clientWidth), true);
     checks.push("Library follows both system themes, selection follows the open document, and its cited tabular answer fits the side panel");
+    await finish();
+  }
+  {
+    const { page, finish, checks } = await contextFor("oversized-map-recovery", {}, { width: 960, height: 640 });
+    active = page;
+    const title = "恢复样例.mindmap.md";
+    const source = "# 测试主题\n\n" + Array.from({ length: 500 }, (_, i) => "- 测试分支" + i).join("\n") + "\n";
+    await page.evaluate(async ({ title, source }) => {
+      await window.__TAURI_INTERNALS__.invoke("library_create_document", { projectId: "qa-space", title, content: source });
+    }, { title, source });
+    await page.reload({ waitUntil: "networkidle" });
+    await page.getByRole("button", { name: title, exact: true }).first().click();
+    await page.getByRole("button", { name: "打开源码", exact: true }).click();
+    const editor = page.locator(".editor-source-pane .cm-content");
+    await editor.waitFor({ state: "visible" });
+    assert(await editor.isEditable(), "recovery opens the actual editable source");
+    await editor.focus();
+    // CodeMirror intercepts select-all and paste; paste as one ordinary editor transaction.
+    await editor.press(process.platform === "darwin" ? "Meta+a" : "Control+a");
+    await page.keyboard.insertText(source.slice(0, source.lastIndexOf("- 测试分支499")));
+    await page.getByRole("group", { name: "文档视图" }).getByRole("button", { name: "画布", exact: true }).click();
+    await page.getByRole("treeitem", { name: "测试主题", exact: true }).waitFor();
+    assert.equal(await page.getByRole("treeitem").count(), 500);
+    assert(await page.getByRole("button", { name: "新增子节点", exact: true }).isDisabled());
+    checks.push("Recovered an existing 501-node Markdown mind map through visible Source and reopened the 500-node canvas");
+    await finish();
+  }
+  {
+    const { page, calls, finish, checks } = await contextFor("wiki-revocation-en", {}, { width: 960, height: 640 }, "en");
+    active = page;
+    await page.getByRole("button", { name: "Knowledge Wiki", exact: true }).click();
+    const wiki = page.getByRole("dialog", { name: "Knowledge Wiki" });
+    const sources = wiki.getByRole("button", { name: "Sources", exact: true });
+    await sources.click();
+    await wiki.getByRole("checkbox", { name: "Enable Wiki for this space" }).check();
+    await wiki.getByLabel("Topic focus").fill("Fictional reading plan");
+    await wiki.getByRole("checkbox", { name: /Select all/ }).check();
+    await wiki.getByRole("button", { name: "Save scope and maintenance" }).click();
+    await sources.click();
+    await wiki.getByRole("checkbox", { name: "阅读活动方案.md", exact: true }).uncheck();
+    await page.keyboard.press("Escape");
+    const dialog = page.getByRole("dialog", { name: "Save Wiki changes?" });
+    await dialog.getByRole("button", { name: "Review items to clear" }).click();
+    const warning = wiki.getByText(/Topics to clear: .*Published revisions:/);
+    await warning.waitFor();
+    const visibleImpact = await warning.evaluate(el => {
+      const { top, bottom, left, width } = el.getBoundingClientRect();
+      const footer = el.parentElement.querySelector(".wiki-policy-footer").getBoundingClientRect();
+      return bottom <= footer.top && el.contains(document.elementFromPoint(left + width / 2, (top + bottom) / 2));
+    });
+    assert(visibleImpact, "destructive impact text is readable above the action bar");
+    assert.equal((await calls("wiki_set_policy")).length, 1, "reviewing impact must not save revocation");
+    await page.screenshot({ path: resolve(out, "04-wiki-revocation-en.png") });
+    checks.push("English revocation requires a separate confirmation and leaves the impact notice uncovered at 960 × 640");
     await finish();
   }
   for (const colorScheme of ["light", "dark"]) {

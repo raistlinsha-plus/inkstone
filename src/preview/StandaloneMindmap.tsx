@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { msg, translate as t } from "../i18n";
-import { mindPresentation, withMindStyle, type MindFormat, type MindChange } from "../content/editableMind";
+import { translate as t } from "../i18n";
+import { mindNodeLimit, mindPresentation, withMindStyle, type MindFormat, type MindChange } from "../content/editableMind";
 import { findTopic, maxMindOffset, positionedMind, transferPositions } from "../content/mindPositions";
 import { readMarkdownMind, changeMarkdownMind } from "../content/markdownMind";
 import { readMermaidMind, changeMermaidMind } from "../content/mermaidMindDocument";
@@ -9,6 +9,7 @@ import EditableMindCanvas from "./EditableMindCanvas";
 import Graph from "./Graph";
 
 interface Props {
+  onOpenSource?: () => void;
   title: string;
   source: string;
   viewKey: string;
@@ -19,20 +20,28 @@ interface Props {
   onLocate?: (line: number) => void;
 }
 
-export default function StandaloneMindmap({ title, source, viewKey, format = "markdown", onApply, onError, onHistory, onLocate }: Props) {
+export default function StandaloneMindmap({ title, source, viewKey, format = "markdown", onApply, onError, onHistory, onLocate, onOpenSource }: Props) {
   const { body, style, offset, positions, lineCount } = useMemo(() => mindPresentation(source, format), [source, format]);
-  const rawTree = useMemo(() => format === "mermaid" ? readMermaidMind(body) : readMarkdownMind(body, title), [body, title, format]);
-  const tree = useMemo(() => rawTree && positionedMind(rawTree, positions), [rawTree, positions]);
+  const rawTree = useMemo(() => format === "mermaid" ? readMermaidMind(body, true) : readMarkdownMind(body, title), [body, title, format]);
+  const count = useMemo(() => {
+    const pending = rawTree ? [rawTree] : [];
+    let total = 0;
+    while (pending.length && total <= mindNodeLimit) {
+      const node = pending.pop()!;
+      for (const child of node.children) pending.push(child);
+      total++;
+    }
+    return total;
+  }, [rawTree]);
+  const tree = useMemo(() => rawTree && count <= mindNodeLimit ? positionedMind(rawTree, positions) : undefined, [rawTree, count, positions]);
+  if (count > mindNodeLimit) return <section className="preview-help">
+    <p>{t("这张脑图超过 500 个节点。请在源码中精简至 500 个节点以内，再返回画布。", "This map exceeds 500 nodes. Reduce it to 500 or fewer in Source, then return to the canvas.")}</p>
+    {onOpenSource && <button type="button" onClick={onOpenSource}>{t("打开源码", "Open source")}</button>}
+  </section>;
   if (!tree) return <>
     <p className="preview-help">{t("此图含有扩展 Mermaid 语法。可在「源码」或「分栏」中编辑。", "This map uses extended Mermaid syntax. Edit it in Source or Split view.")}</p>
     <Graph canvas kind="mermaid" source={source} onError={onError} onLocate={onLocate}/>
   </>;
-  const pending = [tree];
-  let count = 0;
-  while (pending.length) {
-    if (++count > 500) return <p className="preview-error">{msg("脑图超过 500 个节点，请精简或使用文档大纲。")}</p>;
-    pending.push(...pending.pop()!.children);
-  }
   function change(edit: MindChange) {
     const next = format === "mermaid" ? changeMermaidMind(body, edit) : changeMarkdownMind(body, title, edit);
     let remapped = positions;
@@ -66,7 +75,7 @@ export default function StandaloneMindmap({ title, source, viewKey, format = "ma
     if (node && onLocate) onLocate(node.line + (node.from >= offset ? lineCount : 0));
   }
   return <EditableMindCanvas
-    tree={tree} source={source} viewKey={viewKey} style={style}
+    tree={tree} remainingSlots={mindNodeLimit - count} source={source} viewKey={viewKey} style={style}
     onStyle={next => onApply(source, withMindStyle(body, format, next, positions))}
     onPosition={position} onResetPositions={positions.size ? () => onApply(source, withMindStyle(body, format, style)) : undefined}
     onChange={change} onHistory={onHistory} onError={onError}

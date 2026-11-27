@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { exportSvg } from "./Graph";
 import StandaloneMindmap from "./StandaloneMindmap";
 import { editMind, outlineTree } from "../content/mindmap";
-vi.mock("./Graph", () => ({ default: () => null }));
+vi.mock("./Graph", () => ({ default: () => null, exportSvg: vi.fn(async () => {}) }));
 afterEach(cleanup);
 
 test("an unfinished child name survives leaving the canvas and cannot overwrite a changed source", () => {
@@ -120,3 +121,54 @@ test("a WebKit pointer blur without a new focus target keeps the style option mo
   fireEvent.pointerDown(document.body);
   expect(screen.queryByRole("menu")).toBeNull();
 });
+
+test.each(["markdown", "mermaid"] as const)("enforces the 500-node boundary and recovers an oversized %s source", (format) => {
+  const mermaid = format === "mermaid";
+  const row = (name: string) => (mermaid ? "    " : "- ") + name + "\n";
+  let source = (mermaid ? "mindmap\n  root(Map)\n" : "# Map\n\n")
+    + Array.from({ length: 498 }, (_, i) => row("topic" + i)).join("");
+  const onOpenSource = vi.fn();
+  const view = () => <StandaloneMindmap title="Map" viewKey={"limit-" + format} format={format} source={source}
+    onApply={(base, next) => { expect(base).toBe(source); source = next; }} onOpenSource={onOpenSource}
+    onHistory={vi.fn()} onError={message => { throw new Error(message); }} />;
+  const app = render(view());
+  const tool = (name: string) => screen.getByRole("button", {name}) as HTMLButtonElement;
+  fireEvent.keyDown(app.container.querySelector('[role="treeitem"][aria-label="topic0"]')!, {key: "Enter"});
+  const field = screen.getByRole("textbox");
+  fireEvent.change(field, {target: {value:"last available slot"}});
+  expect(tool("保存并新增同级").disabled).toBe(true);
+  expect(tool("保存并新增子节点").disabled).toBe(true);
+  fireEvent.keyDown(field, {key:"Enter", shiftKey:true});
+  app.rerender(view());
+  expect(app.container.querySelectorAll('[role="treeitem"]')).toHaveLength(500);
+  expect(screen.queryByRole("textbox")).toBeNull();
+  expect(tool("新增子节点").disabled).toBe(true);
+  expect(tool("新增同级").disabled).toBe(true);
+  expect(tool("重命名").disabled).toBe(false);
+  expect(tool("删除子树").disabled).toBe(false);
+  expect(tool("导出 SVG").disabled).toBe(false);
+  const leaf = app.container.querySelector('[role="treeitem"][aria-label="topic0"]')!;
+  for (const key of ["Enter", "Tab"]) fireEvent.keyDown(leaf, {key});
+  expect(screen.queryByRole("textbox")).toBeNull();
+  fireEvent.click(tool("重命名"));
+  fireEvent.change(screen.getByRole("textbox"), {target:{value:"renamed"}});
+  fireEvent.click(tool("保存"));
+  app.rerender(view());
+  expect(app.container.querySelector('[role="treeitem"][aria-label="renamed"]')).toBeTruthy();
+  fireEvent.click(tool("导出 SVG"));
+  expect(exportSvg).toHaveBeenCalledWith(expect.stringContaining("renamed"));
+  const valid = source;
+  source += row("legacy extra");
+  app.rerender(view());
+  expect(app.container.querySelector('[role="tree"]')).toBeNull();
+  fireEvent.click(tool("打开源码"));
+  expect(onOpenSource).toHaveBeenCalledOnce();
+  source = valid;
+  app.rerender(view());
+  expect(app.container.querySelectorAll('[role="treeitem"]')).toHaveLength(500);
+  fireEvent.keyDown(app.container.querySelector('[role="treeitem"][aria-label="renamed"]')!, {key:"Delete"});
+  fireEvent.click(tool("确认删除"));
+  app.rerender(view());
+  expect(app.container.querySelectorAll('[role="treeitem"]')).toHaveLength(499);
+  expect(tool("新增子节点").disabled).toBe(false);
+}, 30000);

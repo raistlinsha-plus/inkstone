@@ -396,8 +396,9 @@ async function openSampleAndSearch(content = bundledSample) {
     rerankStatus: "not-requested",
   }));
   render(<App />);
-  fireEvent.click(await screen.findByText("从资料到第一条回答"));
-  const start = await screen.findByRole("button", { name: "用示例体验" });
+  const guide = within(await screen.findByRole("region", { name: "开始使用" }));
+  fireEvent.click(guide.getByText("从资料到第一条回答"));
+  const start = guide.getByRole("button", { name: "用示例体验" });
   expect(calls("library_prepare_local_example")).toHaveLength(0);
   act(() => {
     fireEvent.click(start);
@@ -410,14 +411,13 @@ async function openSampleAndSearch(content = bundledSample) {
   );
   prepared = true;
   await act(async () => saving.resolve(sample));
-  const search = (await screen.findByRole("textbox", {
-    name: "搜索资料",
-  })) as HTMLInputElement;
+  const search = await screen.findByLabelText<HTMLInputElement>("搜索资料", { selector: "input" });
+  const searchPanel = within(search.closest("aside")!);
   expect(search.value).toBe("阅读活动");
   expect(calls("open_library").at(-1)?.[1]).toEqual({ projectId: sample.projectId });
-  const openSearch = screen.getByRole("button", { name: "执行搜索" });
+  const openSearch = within(search.form!).getByRole("button", { name: "执行搜索" });
   fireEvent.click(openSearch);
-  const source = await screen.findByRole("button", {
+  const source = await searchPanel.findByRole("button", {
     name: /关键词命中.*计划开展 4 场阅读活动/,
   });
   expect(screen.getByText("本地关键词（BM25）")).toBeTruthy();
@@ -520,23 +520,16 @@ test("asking about the example starts a new document-scoped draft without sharin
     turns: [],
   };
   const sample = await openSampleAndSearch();
-  fireEvent.click(screen.getByRole("button", { name: "对样例提问" }));
+  fireEvent.click(screen.getByText("对样例提问", { selector: "button" }));
   const composer = await readyComposer("向当前文档提问");
   expect(composer.value).toBe("");
   expect(mockConversation.draft).toBe("应该保留的旧草稿");
   expect(calls("assistant_create")).toHaveLength(0);
   expect(calls("assistant_ask")).toHaveLength(0);
-  expect(
-    (
-      screen.getByRole("checkbox", {
-        name: "按需搜索网页",
-      }) as HTMLInputElement
-    ).checked,
-  ).toBe(false);
-  fireEvent.click(
-    screen.getByRole("button", { name: "社区读书会计划开展几场阅读活动？" }),
-  );
-  fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
+  const panel = within(composer.closest("aside")!);
+  expect(panel.getByRole<HTMLInputElement>("checkbox", { name: "按需搜索网页" }).checked).toBe(false);
+  fireEvent.click(panel.getByText("社区读书会计划开展几场阅读活动？", { selector: "button" }));
+  fireEvent.click(panel.getByRole("button", { name: "发送问题" }));
   await waitFor(() => expect(calls("assistant_ask")).toHaveLength(1));
   expect(calls("assistant_create")[0][1]).toMatchObject({ scope: sample.path });
   expect(calls("assistant_ask")[0][1]).toMatchObject({
@@ -1109,7 +1102,9 @@ test("tasks and calendar have independent entries and leave document navigation 
   await boot();
   fireEvent.click(screen.getByRole("button", {name:"任务"}));
   await screen.findByRole("heading", {name:"今天"});
-  expect(document.querySelector(".sidebar-compact")).toBeNull();
+  const taskSidebar = screen.getByRole("complementary", { name: "任务导航" });
+  expect(within(taskSidebar).getByRole("navigation", { name: "任务视图" })).toBeTruthy();
+  expect(screen.queryByRole("complementary", { name: "文档空间导航" })).toBeNull();
   fireEvent.change(screen.getByRole("textbox", {name:"任务标题"}),{target:{value:"Write a prototype"}});
   fireEvent.click(screen.getByRole("button", {name:"添加任务"}));
   await screen.findByRole("checkbox",{name:"Write a prototype"});
@@ -1120,6 +1115,44 @@ test("tasks and calendar have independent entries and leave document navigation 
   expect(screen.queryByRole("navigation",{name:"任务视图"})).toBeNull();
   fireEvent.click(screen.getByRole("button", {name:"我的文档"}));
   await waitFor(()=>expect(document.querySelector(".sidebar-compact")).not.toBeNull());
+});
+
+test("the rail keeps its visible controls while document and task panes fold independently", async () => {
+  overrides.set("calendar_list", () => ({ documents: [], warnings: [] }));
+  await boot();
+  await openDocument("a.md");
+  const rail = within(document.querySelector<HTMLElement>(".workspace-rail")!);
+  const titlebar = within(screen.getByRole("banner"));
+  const buttons = () => rail.getAllByRole("button").map(button => button.getAttribute("aria-label"));
+  const order = buttons();
+  expect(order.slice(0, 3)).toEqual(["我的文档", "任务", "日历"]);
+  expect(order.at(-1)).toBe("模型与设置");
+  fireEvent.click(titlebar.getByRole("button", { name: "收起文档列表" }));
+  expect(titlebar.getByRole("button", { name: "展开文档列表" }).getAttribute("aria-expanded")).toBe("false");
+
+  fireEvent.click(rail.getByRole("button", { name: "任务" }));
+  const taskNav = await screen.findByRole("complementary", { name: "任务导航" });
+  expect(within(taskNav).getByRole("combobox", { name: "任务空间" })).toBeTruthy();
+  expect(within(taskNav).getByRole("navigation", { name: "任务视图" })).toBeTruthy();
+  expect(buttons()).toEqual(order);
+  fireEvent.click(titlebar.getByRole("button", { name: "收起任务视图" }));
+  expect(screen.queryByRole("navigation", { name: "任务视图" })).toBeNull();
+  expect(screen.getByRole("textbox", { name: "任务标题" })).toBeTruthy();
+
+  fireEvent.click(rail.getByRole("button", { name: "日历" }));
+  await screen.findByTestId("calendar-documents");
+  expect(buttons()).toEqual(order);
+  expect(screen.queryByRole("complementary", { name: /任务导航|文档空间导航/ })).toBeNull();
+  expect(titlebar.queryByRole("button", { name: /任务视图|文档列表/ })).toBeNull();
+  expect(within(screen.getByRole("main")).getByRole("combobox", { name: "日历空间" })).toBeTruthy();
+
+  fireEvent.click(rail.getByRole("button", { name: "我的文档" }));
+  fireEvent.click(await titlebar.findByRole("button", { name: "展开文档列表" }));
+  expect(screen.getByRole("complementary", { name: "文档空间导航" })).toBeTruthy();
+  fireEvent.click(rail.getByRole("button", { name: "任务" }));
+  fireEvent.click(await titlebar.findByRole("button", { name: "展开任务视图" }));
+  expect(screen.getByRole("navigation", { name: "任务视图" })).toBeTruthy();
+  expect(buttons()).toEqual(order);
 });
 
 test("a calendar response from a previous project does not reopen its calendar", async () => {
@@ -1524,9 +1557,9 @@ test("citation conflicts stay visible and survive saving an answer", async () =>
   expect(transfer.textContent).toContain("部分结论需要核对");
 });
 
-function enableTestChat() {
+function enableTestChat(baseUrl = settings.chat.baseUrl) {
   overrides.set("bootstrap", () => ({
-    settings: { ...settings, chat: { ...settings.chat, enabled: true } },
+    settings: { ...settings, chat: { ...settings.chat, enabled: true, baseUrl } },
     lastWorkspace: null,
   }));
 }
@@ -2107,9 +2140,11 @@ test.each([
   ["matching", true, false],
   ["stale", false, false],
   ["trashed", false, true],
+  ["archived", true, false],
+  ["archive changed during preview", true, false],
 ] as const)(
   "saved-answer links resolve the current catalog path and check the captured version (%s)",
-  async (_, matching, trashed) => {
+  async (scenario, matching, trashed) => {
     const source = {
       documentId: "47f3590f-53f5-4d78-bdf3-2c52db06d6ab",
       hash: "b".repeat(64),
@@ -2129,11 +2164,16 @@ test.each([
       documentId === source.documentId && !trashed
         ? {
             document: renamed,
+            archived: scenario.startsWith("archiv"),
             hash: matching ? source.hash : "c".repeat(64),
             lines: 2,
           }
         : null,
     );
+    overrides.set("library_archived_preview", () => ({
+      content: "第一页\n引用所在行\n第三行",
+      hash: scenario === "archive changed during preview" ? "new-version" : source.hash,
+    }));
     disk.set(
       "a.md",
       file("a.md", `保存的回答\n\n[原文](${answerSourceUrl(source)})`),
@@ -2152,6 +2192,19 @@ test.each([
         "read_file",
         { path: renamed.path },
       ]);
+    } else if (scenario.startsWith("archiv")) {
+      await screen.findByRole("dialog", { name: "归档资料预览" });
+      expect(screen.getByText("改名后的原文.md", { selector: "h2" })).toBeTruthy();
+      if (scenario === "archived") {
+        await screen.findByText("引用所在行", {selector: "mark"});
+      } else {
+        await screen.findByText("当前版本与引用不符，显示现有正文。");
+        expect(screen.queryByText("引用所在行", {selector: "mark"})).toBeNull();
+      }
+      expect(screen.getByTestId("opened-path").textContent).toBe("a.md:");
+      expect(calls("open_library").some(([, args]) => args.projectId === "p2")).toBe(false);
+      fireEvent.click(screen.getByRole("button", { name: "关闭" }));
+      expect(screen.queryByRole("dialog", { name: "归档资料预览" })).toBeNull();
     } else if (matching) {
       await waitFor(() =>
         expect(screen.getByTestId("opened-path").textContent).toBe(
@@ -2508,4 +2561,130 @@ test("file actions close on first outside click and filename edits survive a bac
   expect((filename as HTMLInputElement).value).toBe("新的名字.md");
   fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
   expect(screen.queryByRole("dialog", { name: "文件名称" })).toBeNull();
+});
+
+test("general chat keeps the selected note when removing a photo and reconfirms pixels on send", async () => {
+  const baseUrl = "https://vision.fixture.invalid/v1";
+  enableTestChat(baseUrl);
+  const photo = libraryDoc("Board.heic.md");
+  overrides.set("library_list", () => ({...view, documents: [...view.documents, photo]}));
+  overrides.set("assistant_image_preview", () => ({
+    url:"data:image/jpeg;base64,/9j/", hash:"viewed-digest",hasOcr:true, hasDescription:true,
+  }));
+  overrides.set("ask_question", () => syntheticAnswer);
+  await boot();
+  fireEvent.click(screen.getByRole("button", {name:"AI 问答"}));
+  const input = await readyComposer("向 AI 提问");
+  fireEvent.click(screen.getByRole("button", {name:"添加资料"}));
+  fireEvent.change(screen.getByRole("combobox",{name:"知识空间"}), {target:{value:"p1"}});
+  fireEvent.click(screen.getByRole("checkbox",{name:"a.md"}));
+  fireEvent.click(screen.getByRole("button",{name:"完成选择"}));
+  const attach = async () => {
+    fireEvent.click(screen.getByRole("button",{name:"添加图片"}));
+    await screen.findByAltText("Board.heic");
+    fireEvent.click(screen.getByRole("radio",{name:"图片预览"}));
+    fireEvent.click(screen.getByRole("button",{name:"加入本轮"}));
+  };
+  await attach();
+  fireEvent.click(screen.getByRole("button",{name:"移除本轮图片"}));
+  expect(screen.getByRole("button",{name:"p1 · 1 篇"})).toBeTruthy();
+  await attach();
+  fireEvent.change(input,{target:{value:"请比较白板和会议笔记。"}});
+  fireEvent.click(screen.getByRole("button",{name:"发送问题"}));
+  const review = await screen.findByRole("dialog",{name:"发送图片给模型"});
+  fireEvent.click(within(review).getByRole("button",{name:"取消"}));
+  expect(calls("assistant_ask")).toHaveLength(0);
+  fireEvent.click(screen.getByRole("button",{name:"发送问题"}));
+  await screen.findByAltText("Board.heic");
+  fireEvent.change(screen.getByLabelText("视觉模型"),{target:{value:"vision-test"}});
+  fireEvent.click(screen.getByRole("button",{name:"发送图片"}));
+  await waitFor(() => expect(calls("assistant_ask")).toHaveLength(1));
+  expect(calls("assistant_ask")[0][1]).toMatchObject({
+    sources:{projectId:"p1",documentIds:["a.md",photo.id],image:{documentId:photo.id,mode:"vision"}},
+    visionConsent:{documentId:photo.id,model:"vision-test",baseUrl,previewHash:"viewed-digest"},
+  });
+});
+
+async function startGeneratedImage(preview: () => Promise<string> | string) {
+  enableTestChat();
+  overrides.set("image_generation_settings", () => ({
+    config: { model: "fixture-image", baseUrl: "https://fixture.invalid/v1", useChatKey: false },
+    chatEnabled: false, chatBaseUrl: "", hasKey: false,
+  }));
+  overrides.set("library_layout", () => ({ folders: [], locations: {} }));
+  overrides.set("image_generation_preview", preview);
+  overrides.set("image_generation_cancel", () => null);
+  await boot();
+  fireEvent.click(screen.getByRole("button", { name: "AI 问答" }));
+  await readyComposer("向 AI 提问");
+  fireEvent.click(screen.getByRole("button", { name: "生成图片" }));
+  await screen.findByText("fixture-image");
+  fireEvent.change(screen.getByLabelText("图片描述"), { target: { value: "Synthetic poster" } });
+  fireEvent.click(screen.getByRole("button", { name: "生成预览" }));
+}
+
+test("native quit keeps or discards an unsaved generated image by explicit choice", async () => {
+  await startGeneratedImage(() => "data:image/png;base64,AA");
+  await screen.findByRole("img", { name: "Synthetic poster" });
+  api.confirm.mockResolvedValueOnce(false);
+  await act(async () => { await api.close?.({ preventDefault() {} }); });
+  expect(api.confirm).toHaveBeenCalledWith(expect.stringContaining("尚未保存"), expect.objectContaining({ cancelLabel: "返回预览" }));
+  expect(calls("quit_app")).toHaveLength(0);
+  expect(screen.getByRole("img", { name: "Synthetic poster" })).toBeTruthy();
+  api.confirm.mockResolvedValueOnce(true);
+  act(() => { api.events.get("request-close")?.({}); });
+  await waitFor(() => expect(calls("quit_app")).toHaveLength(1));
+  expect(calls("image_generation_save")).toHaveLength(0);
+});
+
+test("native quit keeps an ongoing generation on return and cancels it on confirmed exit", async () => {
+  await startGeneratedImage(() => new Promise(() => {}));
+  await screen.findByText("正在生成…");
+  api.confirm.mockResolvedValueOnce(false);
+  await act(async () => { await api.close?.({ preventDefault() {} }); });
+  expect(calls("quit_app")).toHaveLength(0);
+  expect(calls("image_generation_cancel")).toHaveLength(0);
+  expect(api.confirm).toHaveBeenCalledWith(expect.stringContaining("生图结果"), expect.objectContaining({ cancelLabel: "继续生成" }));
+  api.confirm.mockResolvedValueOnce(true);
+  await act(async () => { await api.close?.({ preventDefault() {} }); });
+  expect(calls("image_generation_cancel")).toHaveLength(1);
+  expect(calls("quit_app")).toHaveLength(1);
+});
+
+test("native quit waits for image persistence and needs no discard decision after it saves", async () => {
+  const save = deferred<unknown>();
+  overrides.set("image_generation_save", () => save.promise);
+  await startGeneratedImage(() => "data:image/png;base64,AA");
+  await screen.findByRole("img", { name: "Synthetic poster" });
+  fireEvent.click(screen.getByRole("button", { name: "保存到空间" }));
+  await screen.findByText("正在保存…");
+  let quit: Promise<void> | undefined;
+  act(() => { quit = api.close?.({ preventDefault() {} }); });
+  expect(calls("quit_app")).toHaveLength(0);
+  await act(async () => {
+    save.resolve({ document: libraryDoc("Poster.png.md"), actualFolder: null, existing: false });
+    await quit;
+  });
+  expect(api.confirm).not.toHaveBeenCalled();
+  expect(calls("image_generation_save")).toHaveLength(1);
+  expect(calls("quit_app")).toHaveLength(1);
+});
+
+
+test("a Finder drop respects the active image dialog and opens import after it closes", async () => {
+  const dropFile = () => api.drop?.({ payload: { type: "drop", paths: ["/fixture/notes.md"] } });
+  overrides.set("library_preview_import", () => ({ documents: 1, images: 0, attachments: 0, skipped: 0, existing: 0, warnings: [] }));
+  await startGeneratedImage(() => "data:image/png;base64,AA");
+  await screen.findByRole("img", { name: "Synthetic poster" });
+  act(dropFile);
+  expect(screen.queryByRole("dialog", { name: "导入本地文档" })).toBeNull();
+  expect(calls("library_preview_import")).toHaveLength(0);
+  expect(screen.getByRole("img", { name: "Synthetic poster" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "关闭" }));
+  act(dropFile);
+  expect(screen.getByRole("dialog", { name: "放弃未保存的预览？" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "放弃预览" }));
+  act(dropFile);
+  await screen.findByRole("dialog", { name: "导入本地文档" });
+  await waitFor(() => expect(calls("library_preview_import")).toHaveLength(1));
 });

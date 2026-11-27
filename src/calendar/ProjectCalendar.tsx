@@ -17,7 +17,6 @@ import {
   projectEvents,
   replaceCalendarBlock,
   saveCalendarEvent,
-  type CalendarContentBlock,
   type CalendarDocument,
   type CalendarEvent,
   type DateRange,
@@ -30,15 +29,16 @@ import {
   saveCalendarView,
   type WorkspaceCalendarView,
 } from "./projectCalendarView";
+import type {
+  PlanningSession,
+  EventEditing,
+  TaskEditing,
+} from "./planningSession";
 import EventEditor from "./EventEditor";
 import { exportCalendar } from "./export";
 import { useCalendarFocus } from "./useCalendarFocus";
 import TaskForm from "../tasks/TaskForm";
-import {
-  projectTasks,
-  taskCalendarRows,
-  type ProjectTask,
-} from "../tasks/project";
+import { projectTasks, taskCalendarRows } from "../tasks/project";
 import { useLocale, translate as t } from "../i18n";
 import "./calendar.css";
 import "./project-calendar.css";
@@ -48,6 +48,7 @@ export interface CalendarPatch {
   content: string;
 }
 interface Props {
+  session?: PlanningSession;
   documents: CalendarDocument[];
   onPatch: (patch: CalendarPatch) => Promise<void>;
   onOpen: (target: { path: string; line: number }) => void;
@@ -64,14 +65,8 @@ interface Props {
   initialRange?: DateRange;
   initialQuery?: string;
 }
-interface Editing {
-  source?: { document: CalendarDocument; block: CalendarContentBlock };
-  time?: string;
-  allDay?: boolean;
-  event?: CalendarEvent;
-  date?: string;
-}
 export default function ProjectCalendar({
+  session,
   documents,
   onPatch,
   onOpen,
@@ -89,10 +84,10 @@ export default function ProjectCalendar({
   onAskForHelp,
 }: Props) {
   const { language } = useLocale();
-  const [taskEditor, setTaskEditor] = useState<{
-    document: CalendarDocument;
-    origin: ProjectTask;
-  } | null>(null);
+  const saved = session?.calendar;
+  const [taskEditor, setTaskEditor] = useState<TaskEditing | null>(
+    saved?.taskEditor?.form.changed ? saved.taskEditor : null,
+  );
   const tasks = useMemo(() => projectTasks(documents), [documents]);
   const projection = useMemo(() => projectEvents(documents), [documents]);
   const zone = currentTimeZone();
@@ -106,24 +101,70 @@ export default function ProjectCalendar({
     [tasks, zone, language],
   );
   const [anchor, setAnchor] = useState(
-    () => initialRange?.start ?? initialDay ?? dateInZone(new Date(), zone),
+    () =>
+      initialRange?.start ??
+      initialDay ??
+      saved?.anchor ??
+      dateInZone(new Date(), zone),
   );
   const [view, setView] = useState<WorkspaceCalendarView>(() =>
-    initialRange ? "agenda" : initialDay ? "week" : readCalendarView(spaceId),
+    initialRange
+      ? "agenda"
+      : initialDay
+        ? "week"
+        : (saved?.view ?? readCalendarView(spaceId)),
   );
   const [range, setRange] = useState<DateRange>(
-    () => initialRange ?? calendarViewRange(view, anchor),
+    () =>
+      initialRange ??
+      (!initialDay && saved ? saved.range : calendarViewRange(view, anchor)),
   );
-  const [query, setQuery] = useState(initialQuery ?? "");
-  const [showTasks, setShowTasks] = useState(true);
-  const [showEvents, setShowEvents] = useState(true);
-  const [status, setStatus] = useState("all");
-  const [editing, setEditing] = useState<Editing | null>(null);
-  const [target, setTarget] = useState("");
+  const [query, setQuery] = useState(initialQuery ?? saved?.query ?? "");
+  const [showTasks, setShowTasks] = useState(saved?.showTasks ?? true);
+  const [showEvents, setShowEvents] = useState(saved?.showEvents ?? true);
+  const [status, setStatus] = useState(saved?.status ?? "all");
+  const [editing, setEditing] = useState<EventEditing | null>(
+    saved?.editing && (!saved.editing.event || saved.editing.form.changed)
+      ? saved.editing
+      : null,
+  );
+  const [target, setTarget] = useState(saved?.target ?? "");
+  useEffect(() => {
+    if (session)
+      session.calendar = {
+        anchor,
+        view,
+        range,
+        query,
+        showTasks,
+        showEvents,
+        status,
+        editing,
+        target,
+        taskEditor,
+      };
+  }, [
+    session,
+    anchor,
+    view,
+    range,
+    query,
+    showTasks,
+    showEvents,
+    status,
+    editing,
+    target,
+    taskEditor,
+  ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const focus = useCalendarFocus();
+  const closeTaskEditor = () => {
+    if (session?.calendar) session.calendar.taskEditor = null;
+    setTaskEditor(null);
+  };
   const finishEditing = () => {
+    if (session?.calendar) session.calendar.editing = null;
     setEditing(null);
     focus.restore();
   };
@@ -137,6 +178,9 @@ export default function ProjectCalendar({
       setAnchor(initialDay);
       setRange(calendarViewRange("week", initialDay));
       setView("week");
+      setShowTasks(true);
+      setStatus("all");
+      setQuery("");
     }
   }, [initialDay, initialRange, initialQuery]);
   const available = useMemo(
@@ -265,13 +309,14 @@ export default function ProjectCalendar({
     const dated = datedTasks.find((r) => r.key === key);
     if (dated) {
       setEditing(null);
-      setTaskEditor({ document: dated.origin.document, origin: dated.origin });
+      setTaskEditor({ origin: dated.origin, form: {} });
       return;
     }
     setTaskEditor(null);
     const row = projection.events.find((r) => r.key === key);
     if (row)
       setEditing({
+        form: {},
         source: { document: row.document, block: row.block },
         event: row.event,
       });
@@ -284,7 +329,7 @@ export default function ProjectCalendar({
       onNewDocument?.();
       return;
     }
-    setEditing({ source: selectedTarget, date, time, allDay });
+    setEditing({ source: selectedTarget, date, time, allDay, form: {} });
   };
   const save = async (event?: CalendarEvent) => {
     if (!editing || busy || saving) return;
@@ -496,19 +541,20 @@ export default function ProjectCalendar({
           <aside className="calendar-inspector">
             <TaskForm
               key={
-                taskEditor.document.documentId +
+                taskEditor.origin.document.documentId +
                 ":" +
                 (taskEditor.origin?.task.line ?? "new")
               }
-              document={taskEditor.document}
+              form={taskEditor.form}
+              document={taskEditor.origin.document}
               current={documents.find(
-                (d) => d.documentId === taskEditor.document.documentId,
+                (d) => d.documentId === taskEditor.origin.document.documentId,
               )}
               origin={taskEditor.origin}
               openSourceLabel={msg("回到原文 ↗")}
               onOpenSource={() =>
                 onOpen({
-                  path: taskEditor.document.path,
+                  path: taskEditor.origin.document.path,
                   line: taskEditor.origin.task.line,
                 })
               }
@@ -518,13 +564,13 @@ export default function ProjectCalendar({
                 onAskForHelp
                   ? (task) => {
                       // The chat composer owns focus when switching away from the details form.
-                      setTaskEditor(null);
+                      closeTaskEditor();
                       onAskForHelp(task);
                     }
                   : undefined
               }
               onClose={() => {
-                setTaskEditor(null);
+                closeTaskEditor();
                 focus.restore();
               }}
             />
@@ -548,31 +594,51 @@ export default function ProjectCalendar({
                 </button>
               )}
             </div>
-            {!editing.event && available.length > 1 && (
-              <label className="calendar-target-select">
-                {msg("新增事项保存到")}
-                <select
-                  aria-label={msg("新事项所属日历块")}
-                  value={selectedTarget?.key ?? ""}
-                  disabled={busy || saving}
-                  onChange={(e) => {
-                    const destination = available.find(
-                      (entry) => entry.key === e.target.value,
-                    );
-                    if (!destination) return;
-                    setTarget(destination.key);
-                    setEditing({ ...editing, source: destination });
-                  }}
-                >
-                  {available.map((t) => (
-                    <option key={t.key} value={t.key}>
-                      {t.document.title} {msg("· 第")} {t.block.line}{" "}
-                      {msg("行")}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+            {!editing.event &&
+              (available.length > 1 ||
+                (available.length > 0 && editingSource && !currentEditing)) && (
+                <label className="calendar-target-select">
+                  {msg("新增事项保存到")}
+                  <select
+                    aria-label={msg("新事项所属日历块")}
+                    value={
+                      editingSource
+                        ? editingSource.document.documentId +
+                          ":" +
+                          editingSource.block.data!.id
+                        : ""
+                    }
+                    disabled={busy || saving}
+                    onChange={(e) => {
+                      const destination = available.find(
+                        (entry) => entry.key === e.target.value,
+                      );
+                      if (!destination) return;
+                      setTarget(destination.key);
+                      setEditing({ ...editing, source: destination });
+                    }}
+                  >
+                    {editingSource && !currentEditing && (
+                      <option
+                        disabled
+                        value={
+                          editingSource.document.documentId +
+                          ":" +
+                          editingSource.block.data!.id
+                        }
+                      >
+                        {editingSource.document.title}
+                      </option>
+                    )}
+                    {available.map((t) => (
+                      <option key={t.key} value={t.key}>
+                        {t.document.title} {msg("· 第")} {t.block.line}{" "}
+                        {msg("行")}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             <EventEditor
               key={JSON.stringify([
                 editing.event && editingSource?.document.documentId,
@@ -582,6 +648,7 @@ export default function ProjectCalendar({
                 editing.time,
                 editing.allDay,
               ])}
+              form={editing.form}
               event={editing.event}
               date={editing.date}
               initialTime={editing.time}
@@ -589,6 +656,7 @@ export default function ProjectCalendar({
               timeZone={zone}
               busy={busy || saving}
               stale={
+                !busy &&
                 !!editingSource &&
                 (!currentEditing ||
                   currentEditing.hash !== editingSource.document.hash)

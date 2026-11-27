@@ -3,6 +3,7 @@ mod assistant;
 mod assistant_commands;
 mod assistant_runtime;
 mod assistant_sources;
+mod assistant_images;
 mod calendar;
 mod calendar_commands;
 mod task_note;
@@ -16,6 +17,8 @@ mod desktop_test;
 mod documents;
 #[cfg(test)]
 mod eval_trace;
+#[cfg(all(test, not(feature = "desktop-e2e")))]
+mod workbench_live_tests;
 #[cfg(test)]
 mod evaluation;
 #[cfg(test)]
@@ -37,6 +40,7 @@ pub mod external_access;
 mod files;
 mod library;
 mod media;
+mod image_generation;
 mod organization;
 mod library_commands;
 #[cfg(all(test, feature = "desktop-e2e"))]
@@ -2881,6 +2885,7 @@ pub fn run() {
                 .timeout(std::time::Duration::from_secs(120))
                 .build()?;
             maintenance::set_managed_error(&data_dir, library::lifecycle::recover(&data_dir).and_then(|_|library::recover(&data_dir)).err());
+            app.manage(image_generation::ActiveGeneration::default());
             app.manage(AppState {
                 credentials: credentials::CredentialReader::default(),
                 workspace: Mutex::new(None),
@@ -2930,7 +2935,10 @@ pub fn run() {
             media::media_preview,
             media::media_export_original,
             media::media_describe,
-            media::media_generate,
+            image_generation::image_generation_settings,
+            image_generation::image_generation_preview,
+            image_generation::image_generation_cancel,
+            image_generation::image_generation_save,
             organization::library_layout,
             organization::library_archived_preview,
             library_commands::library_answer_source,
@@ -2990,6 +2998,7 @@ pub fn run() {
             assistant_commands::assistant_export,
             assistant_commands::assistant_select_candidate,
             assistant_commands::assistant_ask,
+            assistant_images::assistant_image_preview,
             assistant::tasks::task_document,
             assistant::tasks::task_prepare_chat_note,
             assistant::tasks::task_save_from_chat,

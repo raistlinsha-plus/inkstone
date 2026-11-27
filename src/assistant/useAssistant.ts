@@ -18,12 +18,12 @@ function compactDraftContext(
 ): AssistantDraftContext {
   const result: AssistantDraftContext = {};
   const {
-    projectId,
+    projectId, image,
     documentIds = [],
     attachments = [],
   } = context?.sources ?? {};
   if (projectId || documentIds.length || attachments.length)
-    result.sources = { projectId: projectId ?? null, documentIds, attachments };
+    result.sources = { projectId: projectId ?? null, documentIds, attachments, ...(image ? { image } : {}) };
   if (context?.webAccess === "local-only") result.webAccess = "local-only";
   if (context?.branch)
     result.branch = { parentTurnId: context.branch.parentTurnId };

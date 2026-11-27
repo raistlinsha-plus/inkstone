@@ -512,3 +512,151 @@ it("keeps filters separate from calendar actions and preserves an event draft wh
     ),
   );
 });
+
+it("keeps each space's pending event, target and calendar filters until cancelled", () => {
+  const docs = [document("A"), document("B")];
+  const props = {
+    documents: docs,
+    onPatch: vi.fn(),
+    onOpen: vi.fn(),
+    onError: vi.fn(),
+  };
+  const firstSpace = {};
+  const secondSpace = {};
+  const open = (session: object, initialDay?: string) =>
+    render(
+      <ProjectCalendar
+        {...props}
+        spaceId="test"
+        session={session}
+        initialDay={initialDay}
+      />,
+    );
+  let mounted = open(firstSpace);
+  fireEvent.click(screen.getByRole("button", { name: "下一周" }));
+  const week = screen.getByTestId("calendar-anchor").textContent;
+  fireEvent.change(screen.getByLabelText("查找日程"), {
+    target: { value: "会议" },
+  });
+  fireEvent.change(screen.getByLabelText("日历状态筛选"), {
+    target: { value: "done" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "新建日程" }));
+  const destination =
+    screen.getByLabelText<HTMLSelectElement>("新事项所属日历块");
+  const secondBlock = destination.options[1].value;
+  fireEvent.change(destination, { target: { value: secondBlock } });
+  fireEvent.change(screen.getByLabelText("事项标题"), {
+    target: { value: "待确认日程" },
+  });
+  const notes = mounted.container.querySelector("textarea")!;
+  fireEvent.change(notes, { target: { value: "未提交的备注" } });
+  mounted.unmount();
+
+  mounted = open(secondSpace);
+  expect(screen.queryByLabelText("事项标题")).toBeNull();
+  expect(screen.getByLabelText<HTMLInputElement>("查找日程").value).toBe("");
+  mounted.unmount();
+
+  mounted = open(firstSpace);
+  expect(screen.getByTestId("calendar-anchor").textContent).toBe(week);
+  expect(screen.getByLabelText<HTMLInputElement>("查找日程").value).toBe(
+    "会议",
+  );
+  expect(screen.getByLabelText<HTMLSelectElement>("日历状态筛选").value).toBe(
+    "done",
+  );
+  expect(screen.getByLabelText<HTMLInputElement>("事项标题").value).toBe(
+    "待确认日程",
+  );
+  expect(mounted.container.querySelector("textarea")?.value).toBe(
+    "未提交的备注",
+  );
+  expect(
+    screen.getByLabelText<HTMLSelectElement>("新事项所属日历块").value,
+  ).toBe(secondBlock);
+  fireEvent.click(screen.getByRole("button", { name: "取消" }));
+  mounted.unmount();
+
+  open(firstSpace, "2027-05-04");
+  expect(screen.queryByLabelText("事项标题")).toBeNull();
+  expect(screen.getByTestId("calendar-anchor").textContent).toBe("2027-05-04");
+  expect(screen.getByLabelText<HTMLInputElement>("查找日程").value).toBe("");
+  expect(screen.getByLabelText<HTMLSelectElement>("日历状态筛选").value).toBe(
+    "all",
+  );
+});
+
+it("restores an existing task inspector and refuses its saved draft after the source changes", () => {
+  const doc = {
+    ...document("T"),
+    content: taskLine({
+      id: crypto.randomUUID(),
+      title: "Follow up",
+      due: "2026-10-28",
+    }),
+  };
+  const session = {};
+  const props = {
+    session,
+    onPatch: vi.fn(),
+    onOpen: vi.fn(),
+    onError: vi.fn(),
+  };
+  const initial = render(<ProjectCalendar {...props} documents={[doc]} />);
+  fireEvent.click(screen.getByRole("button", { name: "到期 · Follow up" }));
+  fireEvent.change(screen.getByLabelText("任务标题"), {
+    target: { value: "电话确认" },
+  });
+  fireEvent.click(screen.getByLabelText("等回复"));
+  fireEvent.change(screen.getByLabelText("跟进日"), {
+    target: { value: "2026-10-30" },
+  });
+  initial.unmount();
+  render(
+    <ProjectCalendar
+      {...props}
+      documents={[{ ...doc, hash: "external-edit" }]}
+    />,
+  );
+  expect(screen.getByLabelText<HTMLInputElement>("任务标题").value).toBe(
+    "电话确认",
+  );
+  expect(screen.getByLabelText<HTMLInputElement>("跟进日").value).toBe(
+    "2026-10-30",
+  );
+  expect(
+    screen.getByRole("button", { name: "保存任务" }).hasAttribute("disabled"),
+  ).toBe(true);
+  expect(props.onPatch).not.toHaveBeenCalled();
+});
+
+it("reopens the calendar board after viewing an unchanged task or event source", () => {
+  const eventDoc = document("A");
+  const taskDoc = {
+    ...document("T"),
+    content: taskLine({
+      id: crypto.randomUUID(),
+      title: "回访",
+      due: "2026-10-28",
+    }),
+  };
+  const props = {
+    session: {},
+    documents: [eventDoc, taskDoc],
+    onOpen: vi.fn(),
+    onPatch: vi.fn(),
+    onError: vi.fn(),
+  };
+  let pane = render(<ProjectCalendar {...props} />);
+  for (const name of ["到期 · 回访", "A事项1"]) {
+    fireEvent.click(screen.getByRole("button", { name }));
+    fireEvent.click(screen.getByRole("button", { name: "回到原文 ↗" }));
+    pane.unmount();
+    pane = render(<ProjectCalendar {...props} />);
+    expect(screen.queryByLabelText("任务标题")).toBeNull();
+    expect(screen.queryByLabelText("事项标题")).toBeNull();
+  }
+  expect(props.onOpen).toHaveBeenCalledTimes(2);
+  expect(props.onPatch).not.toHaveBeenCalled();
+});

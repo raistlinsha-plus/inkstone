@@ -165,7 +165,7 @@ export default function WikiPanel({
   const [baseline, setBaseline] = useState<WikiPage>();
   const [tab, setTab] = useState<"pages" | "changes" | "policy">("pages");
   const [search, setSearch] = useState("");
-  const [busy, setBusy] = useState("");
+  const [busy, setBusy] = useState<Message | "">("");
   const [error, setError] = useState("");
   const [reviewNotice, setReviewNotice] = useState("");
   const [readingId, setReadingId] = useState<string>();
@@ -175,6 +175,15 @@ export default function WikiPanel({
   const requestedReviewFocus = useRef<string>(undefined);
   const reviewContext = useRef<HTMLDivElement>(null);
   const dirty = useRef(false);
+  const [exitPrompt, setExitPrompt] = useState(false);
+  const removalWarning = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (removalImpact) removalWarning.current?.focus();
+  }, [removalImpact]);
+  function requestClose() {
+    if (dirty.current) setExitPrompt(true);
+    else onClose();
+  }
   const removingDocuments =
     !!policy &&
     status?.policy.documentIds.some((id) => !policy.documentIds.includes(id));
@@ -288,7 +297,7 @@ export default function WikiPanel({
     }
   }, [page, baseline, view.documents, refresh]);
 
-  async function run(label: string, task: () => Promise<unknown>) {
+  async function run(label: Message, task: () => Promise<unknown>) {
     setBusy(label);
     setError("");
     try {
@@ -301,12 +310,17 @@ export default function WikiPanel({
   }
 
   function patch(value: Partial<WikiPolicy>) {
-    dirty.current = true;
+    if (!policy) return;
+    const next = { ...policy, ...value };
+    const saved = status?.policy;
+    dirty.current = !saved || next.enabled !== saved.enabled || next.topic !== saved.topic
+      || next.paused !== saved.paused || next.automatic !== saved.automatic
+      || next.documentIds.length !== saved.documentIds.length || !next.documentIds.every(id => saved.documentIds.includes(id));
     setRemovalImpact(undefined);
-    setPolicy((old) => old && { ...old, ...value });
+    setPolicy(next);
   }
 
-  async function save() {
+  async function save(closeAfterSave = false) {
     if (!policy) return;
     const { revision: expectedRevision, ...settings } = policy;
     if (removingDocuments && !removalImpact) {
@@ -338,7 +352,8 @@ export default function WikiPanel({
       }
       if (next) applyStatus(next, true);
       else await refresh(true);
-      setTab("pages");
+      if (closeAfterSave) onClose();
+      else setTab("pages");
     });
   }
 
@@ -565,12 +580,12 @@ export default function WikiPanel({
     setTab("changes");
     void inspect(item.pageId, item);
   }
-  return (
+  return (<>
     <ModalDialog
       label={msg("知识 Wiki")}
       className="wiki-dialog"
       busy={!!busy && !isRunning}
-      onClose={onClose}
+      onClose={requestClose}
     >
       <div className="modal-heading">
         <div>
@@ -582,7 +597,7 @@ export default function WikiPanel({
           type="button"
           aria-label={msg("关闭知识 Wiki")}
           disabled={!!busy && !isRunning}
-          onClick={onClose}
+          onClick={requestClose}
         >
           <X size={18} />
         </button>
@@ -656,7 +671,7 @@ export default function WikiPanel({
         <div className="wiki-overview">
           <span>
             {status.policy.enabled
-              ? `已授权 ${status.policy.documentIds.length} 篇资料`
+              ? translate(`已授权 ${status.policy.documentIds.length} 篇资料`, `Authorized sources: ${status.policy.documentIds.length}`)
               : msg("尚未启用整理")}
           </span>
           {status.policy.enabled && status.policy.paused && (
@@ -670,7 +685,7 @@ export default function WikiPanel({
       )}
       {(busy || job?.status === "running") && (
         <p role="status">
-          {busy || jobLabels.running}
+          {msg(busy || jobLabels.running)}
           {job?.status === "running" && job.message && ` · ${job.message}`}
         </p>
       )}
@@ -820,14 +835,17 @@ export default function WikiPanel({
             busy={!!busy}
           />
           {removingDocuments && (
-            <p className="panel-warning" role="status">
+            <p className="panel-warning" role="status" ref={removalWarning} tabIndex={-1} id="wiki-removal-warning">
               {removalImpact
-                ? `确认后将清除 ${removalImpact.pages} 个主题、${removalImpact.revisions} 个已发布版本及 ${removalImpact.pending} 个待审改动。相关变更历史也将清除。`
+                ? translate(
+                    `确认后将清除 ${removalImpact.pages} 个主题、${removalImpact.revisions} 个已发布版本及 ${removalImpact.pending} 个待审改动。相关变更历史也将清除。`,
+                    `Topics to clear: ${removalImpact.pages}. Published revisions: ${removalImpact.revisions}. Pending changes: ${removalImpact.pending}. Their change history will also be cleared. `,
+                  )
                 : msg("移出资料会清除依赖它的 Wiki 内容。保存前可查看影响范围。")}
               {msg("原始文档会保留，可用剩余资料重新整理。")}
             </p>
           )}
-          <div className="modal-actions wiki-policy-footer">
+          <div className="modal-actions wiki-policy-footer" data-removing={removingDocuments || undefined}>
             <span role="status">{translate(`已选 ${policy.documentIds.length} 篇`, `${policy.documentIds.length} selected`)}</span>
             <button
               type="button"
@@ -838,7 +856,8 @@ export default function WikiPanel({
             </button>
             <button
               type="button"
-              className="primary"
+              className={removalImpact ? "wiki-danger" : "primary"}
+              aria-describedby={removingDocuments ? "wiki-removal-warning" : undefined}
               disabled={
                 !!busy ||
                 (policy.enabled &&
@@ -1113,7 +1132,24 @@ export default function WikiPanel({
           </div>
         )}
     </ModalDialog>
-  );
+    {exitPrompt && <ModalDialog
+      label={translate("保存 Wiki 更改？", "Save Wiki changes?")}
+      onClose={() => setExitPrompt(false)}>
+      <h2>{translate("保存 Wiki 更改？", "Save Wiki changes?")}</h2>
+      <p>{translate("资料范围或维护设置有未保存的更改。", "Your source selection or maintenance settings have unsaved changes.")}</p>
+      <div className="modal-actions">
+        <button data-autofocus onClick={() => setExitPrompt(false)}>{translate("继续编辑", "Keep editing")}</button>
+        <button onClick={onClose}>{translate("放弃更改", "Discard changes")}</button>
+        <button className="primary" disabled={!policy || (policy.enabled && (!policy.topic.trim() || !policy.documentIds.length))} onClick={() => {
+          setExitPrompt(false);
+          setTab("policy");
+          if (!removingDocuments) void save(true);
+          else if (!removalImpact) void save();
+          else requestAnimationFrame(() => removalWarning.current?.focus());
+        }}>{removingDocuments ? msg("查看清除范围") : translate("保存并关闭", "Save and close")}</button>
+      </div>
+    </ModalDialog>}
+  </>);
 }
 
 function WikiReviewChanges({

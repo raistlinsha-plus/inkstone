@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import MediaViewer from "./MediaViewer";
 import DirectImagePreview from "./DirectImagePreview";
@@ -22,6 +28,25 @@ const doc = (name: string): LibraryDocument => ({
   projectId: "inbox",
   status: "ready",
 });
+const jpeg = "data:image/jpeg;base64,/9j/";
+const endpoint = "https://fixture.invalid/v1";
+const visionFixture = (cmd: string) => {
+  if (cmd === "get_settings")
+    return { chat: { enabled: true, baseUrl: endpoint, model: "fixture" } };
+  if (cmd === "assistant_image_preview")
+    return { url: jpeg, hash: "digest", hasOcr: true };
+  if (cmd === "resolve_image") return jpeg;
+  throw Error("Unexpected command: " + cmd);
+};
+async function openImageReview() {
+  fireEvent.click(screen.getByRole("button", { name: "核对并发送" }));
+  const review = within(
+    await screen.findByRole("dialog", { name: "发送图片给模型" }),
+  );
+  await review.findByRole("img");
+  expect(review.getByText(endpoint)).toBeTruthy();
+  return review;
+}
 test("browse only images and attach a visual description after explicit confirmation", async () => {
   const first = doc("A.heic.md"),
     second = doc("B.png.md"),
@@ -37,7 +62,7 @@ test("browse only images and attach a visual description after explicit confirma
   const open = vi.fn(),
     append = vi.fn();
   request.mockImplementation(async (cmd) =>
-    cmd === "resolve_image" ? "data:image/jpeg;base64,/9j/" : "会议白板",
+    cmd === "media_describe" ? "会议白板" : visionFixture(cmd),
   );
   render(
     <MediaViewer
@@ -53,8 +78,29 @@ test("browse only images and attach a visual description after explicit confirma
   expect(open).toHaveBeenCalledWith(second);
   expect(request).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByRole("button", { name: "分析图片" }));
-  fireEvent.click(screen.getByRole("button", { name: "发送图片" }));
+  const canceled = await openImageReview();
+  fireEvent.click(canceled.getByRole("button", { name: "取消" }));
+  expect(request.mock.calls.some(([op]) => op === "media_describe")).toBe(
+    false,
+  );
+  const review = await openImageReview();
+  fireEvent.change(review.getByLabelText("视觉模型"), {
+    target: { value: "fixture-vision" },
+  });
+  fireEvent.click(review.getByRole("button", { name: "发送图片" }));
   await screen.findByText("会议白板");
+  expect(request).toHaveBeenCalledWith("media_describe", {
+    projectId: "inbox",
+    documentId: first.id,
+    configuredModel: "fixture",
+    question: "描述图片中可见的内容。",
+    consent: {
+      baseUrl: endpoint,
+      documentId: first.id,
+      model: "fixture-vision",
+      previewHash: "digest",
+    },
+  });
   expect(append).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "保存描述并用于检索" }));
   expect(append).toHaveBeenCalledWith(expect.stringContaining("会议白板"));
@@ -158,7 +204,7 @@ test("a pending result stays with its own image across navigation and a failed s
       ? new Promise<string>((resolve) => {
           resolveResult = resolve;
         })
-      : Promise.resolve("data:image/jpeg;base64,/9j/"),
+      : Promise.resolve(visionFixture(cmd)),
   );
   const append = vi
     .fn()
@@ -180,7 +226,8 @@ test("a pending result stays with its own image across navigation and a failed s
   fireEvent.change(screen.getByRole("textbox", { name: "问题" }), {
     target: { value: "增长了多少？" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "发送图片" }));
+  const review = await openImageReview();
+  fireEvent.click(review.getByRole("button", { name: "发送图片" }));
   rerender(view(b));
   await screen.findByRole("img", { name: "Chart B.png" });
   resolveResult("增长了两成");

@@ -141,6 +141,15 @@ try {
       }),
     );
     const documentPositions = await railPositions();
+    const contextPane = page.locator("#workspace-context-sidebar");
+    const toggleContext = page.locator(".titlebar-sidebar-control button");
+    const documentPane = await contextPane.boundingBox();
+    assert(documentPane, "The document sidebar should begin expanded.");
+    const headerOrigin = async () => {
+      const box = await contextPane.locator(".space-sidebar-heading strong").boundingBox();
+      return box && [box.x, box.y];
+    };
+    const documentHeader = await headerOrigin();
     await assertIconRail();
     const hint = page.getByRole("tooltip");
     await taskButton.hover();
@@ -161,6 +170,19 @@ try {
     );
     await taskButton.click();
     await hint.waitFor({ state: "hidden" });
+    const taskFilters = contextPane.getByRole("navigation", { name: "任务视图" });
+    await taskFilters.getByRole("button", { name: /全部任务/ }).waitFor();
+    assert.equal(await taskFilters.getByRole("button").count(), 7);
+    assert.deepEqual(await contextPane.boundingBox(), documentPane, "Task and document sidebars should line up.");
+    assert.deepEqual(await headerOrigin(), documentHeader, "Task and document headings should share an origin.");
+    await toggleContext.click();
+    assert.equal(await contextPane.isVisible(), false);
+    assert.deepEqual(await railPositions(), documentPositions);
+    await rail.getByRole("button", { name: "我的文档", exact: true }).click();
+    assert.equal(await contextPane.isVisible(), true, "Collapsing task filters must preserve the document sidebar.");
+    await taskButton.click();
+    assert.equal(await contextPane.isVisible(), false, "Task sidebar should remember its own state.");
+    await toggleContext.click();
     const task = page.getByRole("button", {
       name: "完成发布手册",
       exact: true,
@@ -180,7 +202,8 @@ try {
     const week = page.locator(".inkstone-week");
     await week.waitFor();
     assert.deepEqual(await railPositions(), documentPositions, "Entering Calendar moved the workspace navigation");
-    assert.equal(await page.locator(".sidebar-compact").count(), 0);
+    assert.equal(await contextPane.count(), 0, "Opening Calendar should show the calendar directly.");
+    assert.equal(await toggleContext.count(), 0, "Calendar has no document or task sidebar to toggle.");
     const projections = week
       .locator(":is(.calendar-task-date, .calendar-task-slot)")
       .filter({ hasText: "完成发布手册" });

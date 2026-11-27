@@ -147,7 +147,15 @@ fn change_layout(
             }
         }
         Some("pin") => layout.pinned = v == "true",
-        Some("archive") if project_id != "inbox" => layout.archived = v == "true",
+        Some("archive") if project_id != "inbox" => {
+            if v == "true" && tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM document_purges WHERE project=? AND phase NOT IN ('completed','rolledBack'))",
+                [&project_id], |r| r.get::<_, bool>(0),
+            ).map_err(err)? {
+                return Err("请先完成该空间中尚未结束的文档删除".into());
+            }
+            layout.archived = v == "true";
+        }
         _ => return Err("无法执行此空间操作".into()),
     }
     tx.execute(
@@ -192,6 +200,10 @@ fn load_layout(db: &rusqlite::Connection, project_id: &str) -> Result<Layout, St
     serde_json::from_str(raw.as_deref().unwrap_or("{}")).map_err(|e| e.to_string())
 }
 
+pub(crate) fn is_archived(data: &std::path::Path, project: &str) -> Result<bool, String> {
+    Ok(load_layout(&library::conn(data)?, project)?.archived)
+}
+
 pub(crate) fn document_folder(
     db: &rusqlite::Connection,
     project: &str,
@@ -216,6 +228,21 @@ pub(crate) fn check_destination(
         return Err("目标文件夹不存在".into());
     }
     Ok(())
+}
+
+/// Order the file replacement against archival, including requests from another process.
+pub(crate) fn write_project_file(
+    catalog: &mut rusqlite::Connection,
+    project: &str,
+    path: &std::path::Path,
+    content: &[u8],
+) -> Result<(), String> {
+    let tx = catalog
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(|e| e.to_string())?;
+    check_destination(&tx, project, "")?;
+    // No catalog changes in this transaction. Its drop releases the writer lock.
+    crate::files::write_atomic(path, content)
 }
 
 // Journal the destination with the pending document, so startup recovery can publish both together.
@@ -269,6 +296,7 @@ pub(crate) fn finish_destination(
 
 #[derive(Serialize)]
 pub struct ArchivedPreview {
+    hash: String,
     content: String,
     image: Option<String>,
 }
@@ -281,7 +309,7 @@ pub async fn library_archived_preview(
 ) -> Result<ArchivedPreview, String> {
     let data = state.data_dir.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        if !load_layout(&library::conn(&data)?, &project_id)?.archived {
+        if !is_archived(&data, &project_id)? {
             return Err("空间未归档".into());
         }
         let doc = library::get(&data, &document_id)?;
@@ -305,7 +333,11 @@ pub async fn library_archived_preview(
         } else {
             None
         };
-        Ok(ArchivedPreview { content, image })
+        Ok(ArchivedPreview {
+            hash: crate::files::hash(&content),
+            content,
+            image,
+        })
     })
     .await
     .map_err(|e| e.to_string())?
@@ -367,6 +399,70 @@ mod tests {
             layout.locations[child.items[0].document_id.as_ref().unwrap()],
             folder
         );
+    }
+
+    #[test]
+    fn archived_source_updates_and_history_preserve_current_bytes() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = dir.path();
+        let sources = tempfile::tempdir().unwrap();
+        let original = sources.path().join("notes.md");
+        std::fs::write(&original, "# One").unwrap();
+        let project = library::create_project(data, "Reading").unwrap().id;
+        let result = library::import(
+            data,
+            &project,
+            &[original.display().to_string()],
+            true,
+            true,
+            &std::sync::atomic::AtomicBool::new(false),
+            |_| {},
+        )
+        .unwrap();
+        let id = result.items[0].document_id.as_ref().unwrap();
+        let update = |keep_both| {
+            let p = library::check_source_update(data, id)?;
+            library::apply_source_update(
+                data,
+                id,
+                &p.managed_fingerprint,
+                p.source_fingerprint.as_deref().unwrap(),
+                keep_both,
+            )
+        };
+        std::fs::write(&original, "# Two").unwrap();
+        let updated = update(false).unwrap();
+        let body = library::project_root(data, &project)
+            .unwrap()
+            .join(updated.document.path);
+        let previous = library::history(data, id).unwrap().remove(0);
+        let archive = |value: &str| {
+            change_layout(
+                data,
+                project.clone(),
+                Some("archive".into()),
+                Some(value.into()),
+                None,
+            )
+        };
+        archive("true").unwrap();
+        std::fs::write(&original, "# Three").unwrap();
+        let check = library::check_source_update(data, id).unwrap();
+        for keep_both in [false, true] {
+            assert!(update(keep_both).err().unwrap().contains("归档"));
+        }
+        assert!(
+            library::restore_version(data, id, &previous.id, &check.managed_fingerprint)
+                .err()
+                .unwrap()
+                .contains("归档")
+        );
+        assert_eq!(std::fs::read(&body).unwrap(), b"# Two");
+        assert_eq!(library::history(data, id).unwrap().len(), 1);
+        assert_eq!(library::list(data).unwrap().documents.len(), 1);
+        archive("false").unwrap();
+        update(false).unwrap();
+        assert_eq!(std::fs::read(&body).unwrap(), b"# Three");
     }
 
     #[test]

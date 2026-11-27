@@ -606,6 +606,7 @@ pub(super) fn replace_with_guard(
     mut metadata: OperationMetadata,
     guard: impl Fn() -> Result<(), String>,
 ) -> Result<UpdateResult, String> {
+    crate::organization::check_destination(&conn(data)?, &d.project_id, "")?;
     let before = snapshot(data, d, current, reason)?;
     let directory = current.path.parent().ok_or("文档目录不可用")?;
     for (relative, bytes) in assets {
@@ -677,7 +678,12 @@ pub(super) fn replace_with_guard(
         return Err("CONFLICT:写入前空间副本已变化，请重新检查".into());
     }
     guard()?;
-    if let Err(e) = files::write_atomic(&current.path, text.as_bytes()) {
+    if let Err(e) = crate::organization::write_project_file(
+        &mut c,
+        &d.project_id,
+        &current.path,
+        text.as_bytes(),
+    ) {
         let _ = c.execute(
             "UPDATE library_operations SET status='aborted' WHERE id=?",
             [&op],
@@ -851,9 +857,13 @@ fn keep_both_copy(
     b: Option<&Baseline>,
 ) -> Result<UpdateResult, String> {
     let root = project_root(data, &d.project_id)?;
-    let c = conn(data)?;
+    let mut catalog = conn(data)?;
+    let tx = catalog
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(err)?;
+    crate::organization::check_destination(&tx, &d.project_id, "")?;
     let id = uuid::Uuid::new_v4().to_string();
-    let name = unique_title(&c, &d.project_id, &d.title);
+    let name = unique_title(&tx, &d.project_id, &d.title);
     let path = format!("documents/{id}/{name}");
     let self_link = format!(
         "../{}",
@@ -874,7 +884,8 @@ fn keep_both_copy(
     };
     let stage = root.join(format!(".pending-{id}"));
     let target = root.join("documents").join(&id);
-    c.execute("INSERT INTO documents(id,project,path,title,original_hash,source,updated,status,import_fingerprint) VALUES(?,?,?,?,?,?,?,'pending',?)",params![id,d.project_id,path,name,next.original_hash,d.source,now(),next.source_fingerprint]).map_err(err)?;
+    tx.execute("INSERT INTO documents(id,project,path,title,original_hash,source,updated,status,import_fingerprint) VALUES(?,?,?,?,?,?,?,'pending',?)",params![id,d.project_id,path,name,next.original_hash,d.source,now(),next.source_fingerprint]).map_err(err)?;
+    tx.commit().map_err(err)?;
     let result = (|| {
         fs::create_dir(&stage).map_err(err)?;
         for (relative, bytes) in &next.assets {
@@ -885,7 +896,8 @@ fn keep_both_copy(
         }
         files::write_atomic(&stage.join(&name), text.as_bytes())?;
         fs::rename(&stage, &target).map_err(err)?;
-        c.execute("UPDATE documents SET status='ready' WHERE id=?", [&id])
+        catalog
+            .execute("UPDATE documents SET status='ready' WHERE id=?", [&id])
             .map_err(err)?;
         let allowed = b
             .map(|b| PathBuf::from(&b.allowed_root))
@@ -898,7 +910,7 @@ fn keep_both_copy(
     })();
     if result.is_err() {
         let _ = fs::remove_dir_all(stage);
-        let _ = c.execute(
+        let _ = catalog.execute(
             "DELETE FROM documents WHERE id=? AND status='pending'",
             [&id],
         );

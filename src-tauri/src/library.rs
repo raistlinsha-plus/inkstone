@@ -503,7 +503,7 @@ pub(crate) fn create_with_assets(
     name: &str,
     content: &str,
     remembered: Option<RememberedNote>,
-    assets: Option<(&Path, &str, bool)>,
+    assets: Option<(&Path, &str, crate::media::Duplicates)>,
     folder: &str,
 ) -> Result<(Document, bool), String> {
     let mut name = title(name)?;
@@ -522,8 +522,8 @@ pub(crate) fn create_with_assets(
         .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
         .map_err(err)?;
     crate::organization::check_destination(&tx, project, folder)?;
-    if let Some((_, fingerprint, true)) = assets {
-        if let Some(doc) = existing_image(&tx, &root, project, fingerprint, true)? {
+    if let Some((_, fingerprint, duplicates)) = assets {
+        if let Some(doc) = existing_image(&tx, &root, project, fingerprint, true, duplicates)? {
             return Ok((doc, false));
         }
     }
@@ -657,26 +657,34 @@ pub fn rename(data: &Path, id: &str, name: &str) -> Result<(), String> {
     {
         return Err("重命名不改变格式，请保留原后缀".into());
     }
-    conn(data)?
-        .execute(
+    let mut catalog = conn(data)?;
+    let tx = catalog
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(err)?;
+    crate::organization::check_destination(&tx, &d.project_id, "")?;
+    tx.execute(
             "UPDATE documents SET title=?,updated=?,lifecycle_revision=lifecycle_revision+1 WHERE id=? AND status='ready'",
             params![name, now(), id],
         )
         .map_err(err)?;
-    Ok(())
+    tx.commit().map_err(err)
 }
 pub fn trash(data: &Path, id: &str, restore: bool) -> Result<(), String> {
     let d = get(data, id)?;
     if d.status == "purging" {
         return Err("删除未完成，请先重试清理".into());
     }
-    conn(data)?
-        .execute(
+    let mut catalog = conn(data)?;
+    let tx = catalog
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(err)?;
+    crate::organization::check_destination(&tx, &d.project_id, "")?;
+    tx.execute(
             "UPDATE documents SET status=?,trashed_at=?,lifecycle_revision=lifecycle_revision+1 WHERE id=?",
             params![if restore { "ready" } else { "trashed" }, if restore { None } else { Some(now()) }, id],
         )
         .map_err(err)?;
-    Ok(())
+    tx.commit().map_err(err)
 }
 pub fn recover(data: &Path) -> Result<RecoveryReport, String> {
     recovery::run(data)
@@ -892,7 +900,15 @@ fn preview_import(
             let Ok(fp) = crate::media::image_fingerprint(&input.path) else {
                 continue;
             };
-            existing_image(&db, &root, project, &fp, false)?.is_some()
+            existing_image(
+                &db,
+                &root,
+                project,
+                &fp,
+                false,
+                crate::media::Duplicates::Space,
+            )?
+            .is_some()
         } else {
             let Ok(content) = read_import_text(&input.path) else {
                 continue;
@@ -1118,7 +1134,11 @@ pub(crate) fn existing_image(
     project: &str,
     fingerprint: &str,
     importing: bool,
+    duplicates: crate::media::Duplicates<'_>,
 ) -> Result<Option<Document>, String> {
+    if matches!(duplicates, crate::media::Duplicates::Keep) {
+        return Ok(None);
+    }
     let mut matches = db
         .prepare(&format!(
             "SELECT {DOC_COLS} FROM documents WHERE project=? AND import_fingerprint=?
@@ -1136,6 +1156,11 @@ pub(crate) fn existing_image(
                 return Err("同一图片正在保存，请稍后重试。".into());
             }
             continue;
+        }
+        if let crate::media::Duplicates::Folder(folder) = duplicates {
+            if crate::organization::document_folder(db, project, &existing.id)? != folder {
+                continue;
+            }
         }
         if root.join(&existing.path).is_file() {
             return Ok(Some(existing));

@@ -352,8 +352,11 @@ pub(crate) async fn request(
                 .as_array()
                 .into_iter()
                 .flatten()
-                .filter_map(|m| m["content"].as_str())
-                .map(|s| s.chars().count())
+                .map(|m| match &m["content"] {
+                    Value::String(text) => text.chars().count(),
+                    Value::Array(parts) => parts.iter().filter_map(|p| p["text"].as_str()).map(|s| s.chars().count()).sum(),
+                    _ => 0,
+                })
                 .sum(),
         )
     };
@@ -639,8 +642,27 @@ pub async fn stream_chat(
     app: Option<&tauri::AppHandle>,
     request_id: &str,
 ) -> Result<ChatOutput, String> {
-    let body = json!({"model":provider.model,"stream":true,"messages":[{"role":"system","content":system},{"role":"user","content":user}],"max_tokens":4096});
-    let response = request(client, provider, key, "chat/completions", body, cancel, 3).await?;
+    stream_chat_with_image(client, provider, key, system, user, None, cancel, app, request_id).await
+}
+
+pub async fn stream_chat_with_image(
+    client: &reqwest::Client,
+    provider: &Provider,
+    key: Option<&str>,
+    system: &str,
+    user: &str,
+    image: Option<&str>,
+    cancel: &AtomicBool,
+    app: Option<&tauri::AppHandle>,
+    request_id: &str,
+) -> Result<ChatOutput, String> {
+    let content = match image {
+        Some(url) => json!([{"type":"text","text":user},{"type":"image_url","image_url":{"url":url}}]),
+        None => json!(user)
+    };
+    let body = json!({"model":provider.model,"stream":true,"messages":[{"role":"system","content":system},{"role":"user","content":content}],"max_tokens":4096});
+    let attempts = if image.is_some() { 1 } else { 3 };
+    let response = request(client, provider, key, "chat/completions", body, cancel, attempts).await?;
     let receipt = response
         .extensions()
         .get::<crate::request_receipt::Handle>()

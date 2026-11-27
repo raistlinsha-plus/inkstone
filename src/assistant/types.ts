@@ -97,7 +97,13 @@ export interface CitationCheck {
   citations: number[];
   status: "conflict" | "unverified";
 }
+export interface ChatImage {
+  documentId: string;
+  mode: "ocr" | "description" | "vision";
+}
+export interface VisionConsent { previewHash: string; documentId: string; model: string; baseUrl: string }
 export interface AssistantSourcePlan {
+  image?: ChatImage;
   projectId?: string | null;
   documentIds?: string[];
   attachments?: string[];
@@ -132,6 +138,7 @@ export interface RetrievalTrace {
   unread: string[];
 }
 export interface StartQuestion {
+  visionConsent?: VisionConsent;
   sources?: AssistantSourcePlan;
   webAccess?: AssistantWebAccess;
   memoryOptions?: { skipPreferences: boolean; history: HistoryRef | null };

@@ -164,7 +164,17 @@ fn save_inner(
         if files::hash(&original) != expected {
             return Err("CONFLICT:磁盘文件已被其他应用修改，请核对原文或另存为。".into());
         }
-        files::write_atomic(&p, content.as_bytes())?;
+        if crate::maintenance::is_managed_root(data_dir, &ws.root) {
+            let project = library::project_at_root(data_dir, &ws.root).ok_or("文档不在当前空间")?;
+            crate::organization::write_project_file(
+                &mut library::conn(data_dir)?,
+                &project,
+                &p,
+                content.as_bytes(),
+            )?;
+        } else {
+            files::write_atomic(&p, content.as_bytes())?;
+        }
         // File persistence is authoritative. A disposable index cannot turn success into failure.
         let invalidation = refresh_local(ws, data_dir, path, content);
         let calendar = crate::calendar::refresh_saved(data_dir, &ws.root, path, content);

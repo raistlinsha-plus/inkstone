@@ -1,4 +1,6 @@
-# How Inkstone works · v1.2.0-beta.1
+# How Inkstone works · v1.4.0
+
+Image records keep original media separate from locally extracted text and saved descriptions. Vision requests bind an approved preview to the selected service and model. A generated preview becomes a library item when the user saves it to a project folder. [Image workflows](DELIVERY-v1.4.0.en.md)
 
 Inkstone runs as a Tauri desktop app on Apple Silicon Macs. A **space** groups managed copies of documents imported from one or more folders. The Markdown and text files remain readable outside the app. SQLite holds the catalog, search index and feature-specific stores. Users can write, search by keyword, read published Wiki pages and use their study companion locally. They can configure providers for model-assisted tasks.
 

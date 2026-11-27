@@ -1,4 +1,5 @@
-import { msg } from "../i18n";
+import { imageName } from "../library/mediaTypes";
+import { msg, translate } from "../i18n";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useState } from "react";
 import { publicCitationUrl, sourceKind } from "./sourceDisplay";
@@ -96,7 +97,7 @@ export default function ExternalSourcePreview({
             disabled={busy}
             onClick={onOpenDocument}
           >
-            {msg("打开文档")}
+            {imageName(source.label.split(" · 第 ").slice(0, -1).join(" · 第 ")) ? translate("打开原图", "Open image") : msg("打开文档")}
           </button>
         )}
         <button type="button" disabled={busy} onClick={onClose}>
