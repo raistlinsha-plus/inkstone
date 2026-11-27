@@ -104,6 +104,7 @@ export interface Commands {
       projectId: string;
       title: string;
       content?: string;
+      folder?: string;
     },
     LibraryDocument
   >;

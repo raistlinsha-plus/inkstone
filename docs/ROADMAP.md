@@ -1,8 +1,10 @@
 # Inkstone roadmap
 
-**v1.2.0-beta.1 · 24 November 2026.** The beta brings together the RC.5 evidence changes, Markdown-backed tasks and the English and Simplified Chinese interface. Tasks and Calendar have separate workspaces. The editor shows data charts, Mermaid diagrams and mind maps with contextual controls. [Beta release notes](DELIVERY-v1.2.0-beta.1.en.md) · [简体中文](ROADMAP.zh-CN.md)
+**v1.2.0-beta.3 · build 10218.** Browse project folders, search text in photos and edit mind maps on a canvas. Markdown-backed tasks and calendar entries stay linked to their source notes. [Release notes](DELIVERY-v1.2.0-beta.3.en.md) · [简体中文](ROADMAP.zh-CN.md)
 
 ## Next validation work
+
+RC.1 focuses on native Mac regression testing, assistive technology and real-model verification. [English manual](USER-MANUAL.en.md)
 
 | Area | What to verify next |
 | --- | --- |
@@ -11,7 +13,7 @@
 | Day-to-day use | Observe first-time import, Wiki review and five days of optional companion use. Record where users get stuck or where the pet covers their writing. |
 | Public Mac installer | Verify the notices and rights for the binary, Developer ID signature and notarization. Test the exact download on a clean Apple Silicon Mac with Gatekeeper enabled, including upgrade and rollback. |
 
-The current beta measures source coverage offline. Its frozen live-answer score, independent human review and installer acceptance are open. Other interface languages, PDF/OCR, cloud collaboration and a system-level desktop pet depend on later evaluations. [Known limitations](KNOWN-LIMITATIONS.md)
+The current beta measures source coverage offline. Its frozen live-answer score, independent human review and installer acceptance are open. Other interface languages, PDF import and OCR for PDFs, cloud collaboration and a system-level desktop pet depend on later evaluations. [Known limitations](KNOWN-LIMITATIONS.md)
 
 ## Earlier milestones
 

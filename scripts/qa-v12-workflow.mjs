@@ -10,7 +10,7 @@ const { chromium } = require(
 );
 const url = new URL(process.env.INKSTONE_QA_URL || "http://127.0.0.1:14932/");
 assert.equal(url.hostname, "127.0.0.1");
-const folder = resolve("artifacts/v1.2.0-beta.1/build-10203/browser");
+const folder = resolve(process.env.INKSTONE_QA_ARTIFACTS || "artifacts/v1.2.0-beta.1/build-10203/browser");
 await mkdir(folder, { recursive: true });
 const browser = await chromium.launch({
   headless: true,
@@ -134,6 +134,13 @@ try {
         "Navigation should expose accessible names and display only icons.",
       );
     }
+    const railPositions = () => rail.getByRole("button").evaluateAll(buttons =>
+      buttons.map(button => {
+        const { x, y } = button.getBoundingClientRect();
+        return [button.getAttribute("aria-label"), x, y];
+      }),
+    );
+    const documentPositions = await railPositions();
     await assertIconRail();
     const hint = page.getByRole("tooltip");
     await taskButton.hover();
@@ -160,6 +167,7 @@ try {
     });
     await page.getByRole("button", { name: /来自问答/ }).click();
     await task.waitFor();
+    assert.deepEqual(await railPositions(), documentPositions, "Entering Tasks moved the workspace navigation");
     await page.getByRole("button", { name: /^今天/ }).click();
     await task.click();
     const details = page.getByRole("dialog");
@@ -171,6 +179,7 @@ try {
     await calendarButton.click();
     const week = page.locator(".inkstone-week");
     await week.waitFor();
+    assert.deepEqual(await railPositions(), documentPositions, "Entering Calendar moved the workspace navigation");
     assert.equal(await page.locator(".sidebar-compact").count(), 0);
     const projections = week
       .locator(":is(.calendar-task-date, .calendar-task-slot)")

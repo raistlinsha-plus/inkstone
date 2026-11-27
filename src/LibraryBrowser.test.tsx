@@ -216,3 +216,85 @@ test("document actions dismiss on the first outside click or key without stealin
   fireEvent.pointerDown(search);
   expect((draft as HTMLInputElement).value).toBe("草稿");
 });
+
+test("an entered folder lists only direct children and all create paths use the breadcrumb destination", async () => {
+  vi.stubGlobal("__TAURI_INTERNALS__", {});
+  const tree = {
+    folders: ["A", "A/B", "A/B/C", "Other"],
+    locations: { note: "A", deep: "A/B" },
+    archived: false,
+    pinned: false,
+  };
+  const docs = ["note", "deep", "root"].map((id) => ({
+    id,
+    projectId: "s1",
+    title: id + ".md",
+    path: id + ".md",
+    source: "",
+    updated: 1,
+    opened: 0,
+    status: "ready" as const,
+  }));
+  const open = vi.fn(),
+    add = vi.fn(),
+    copy = vi.fn(),
+    navigate = vi.fn();
+  api.invoke.mockImplementation(async (cmd) =>
+    cmd === "library_layout"
+      ? tree
+      : cmd === "library_create_document"
+        ? docs[0]
+        : null,
+  );
+  try {
+    render(
+      <LibraryBrowser
+        view={{
+          projects: [{ id: "s1", title: "资料" }],
+          documents: docs,
+          pendingImports: [],
+        }}
+        projectId="s1"
+        busy={false}
+        browseFolder="A"
+        onBrowseFolder={navigate}
+        onNew={add}
+        onImport={copy}
+        onProject={vi.fn()}
+        onOpen={open}
+        onRefresh={async () => {}}
+        onTrash={async () => {}}
+        onBeforeAction={async () => true}
+        onError={(e) => {
+          throw e;
+        }}
+      />,
+    );
+    const child = await screen.findByRole("button", { name: "B" });
+    expect(screen.getByTitle("note.md")).toBeTruthy();
+    expect(screen.queryByTitle("deep.md")).toBeNull();
+    expect(screen.queryByTitle("root.md")).toBeNull();
+    expect(screen.queryByRole("button", { name: "C" })).toBeNull();
+    fireEvent.click(child);
+    expect(navigate).toHaveBeenCalledWith("A/B");
+    fireEvent.click(screen.getByRole("button", { name: "新建文档" }));
+    expect(add).toHaveBeenCalledWith("A");
+    fireEvent.click(screen.getByRole("button", { name: "导入文档" }));
+    expect(copy).toHaveBeenCalledWith(undefined, "A");
+    const area = screen.getByRole("region", { name: "我的文档" });
+    fireEvent.paste(area, { clipboardData: { getData: () => "# 资料\n内容" } });
+    expect(
+      (screen.getByLabelText("粘贴的文本") as HTMLTextAreaElement).value,
+    ).toBe("# 资料\n内容");
+    fireEvent.click(screen.getByRole("button", { name: "确定" }));
+    await waitFor(() => expect(open).toHaveBeenCalledWith(docs[0]));
+    expect(api.invoke).toHaveBeenCalledWith("library_create_document", {
+      projectId: "s1",
+      folder: "A",
+      title: "剪贴笔记.md",
+      content: "# 资料\n内容",
+    });
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

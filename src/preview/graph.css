@@ -147,3 +147,54 @@
     min-width: 40px;
   }
 }
+
+.document-editor[data-map-canvas] .editor-preview-pane {
+  padding: 0;
+}
+.document-editor[data-map-canvas] .editor-preview-pane > .diagram-preview iframe,
+.standalone-map .diagram-preview iframe {
+  min-height: clamp(280px, 54vh, 640px);
+}
+.standalone-map .map-node-bar,
+.standalone-map .map-node-bar form,
+.standalone-map .map-node-bar label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.standalone-map .map-node-bar {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ui-line);
+  font-size: 13px;
+}
+.standalone-map .map-current-node {
+  max-width: 16em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 6px;
+  font-weight: 600;
+}
+.standalone-map .map-node-bar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 30px;
+  min-width: 30px;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ui-text);
+}
+.standalone-map .map-node-bar button:hover:not(:disabled) { background: var(--ui-hover); }
+.standalone-map .map-node-bar input {
+  max-width: 100%;
+  border: 1px solid var(--ui-control-line);
+  border-radius: 5px;
+  padding: 5px 8px;
+  background: var(--ui-field);
+  color: var(--ui-text);
+}

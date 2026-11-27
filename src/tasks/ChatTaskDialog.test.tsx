@@ -223,3 +223,79 @@ test("shares persistent action identities with the Rust verifier, including esca
     expect(await actionId(source, v.documentId, row)).toBe(v.expectedId);
   }
 });
+
+test("an asset-only active space can create its shared task list only after confirmation", async () => {
+  const photo = {
+    ...library.documents[0],
+    id: "photo",
+    path: "image.HEIC 副本2.md",
+    title: "Photo",
+  };
+  const map = { ...photo, id: "map", path: "outline.mindmap.md", title: "Map" };
+  const picked = { ...source, general: true };
+  const onSaved = vi.fn();
+  ipc.mockImplementation(async (cmd) => {
+    if (cmd === "task_prepare_chat_note")
+      return {
+        id: "list",
+        data: {
+          content: "# Tasks\n",
+          hash: "r1",
+          path: "Tasks.md",
+          missing: false,
+        },
+      };
+    if (cmd === "task_save_from_chat") return { hash: "r2", indexStale: true };
+    throw Error(cmd);
+  });
+  render(
+    <ChatTaskDialog
+      library={{
+        ...library,
+        projects: [
+          library.projects[0],
+          { ...library.projects[1], archived: true },
+        ],
+        documents: [photo, map, { ...library.documents[0], status: "trashed" }],
+      }}
+      message={{ text, source: picked, selection: "Write a guide." }}
+      currentProject="a"
+      currentPath={photo.path}
+      onClose={vi.fn()}
+      beforeSave={vi.fn()}
+      onSaved={onSaved}
+    />,
+  );
+  expect(screen.queryByRole("option", { name: "家庭" })).toBeNull();
+  const save = screen.getByRole<HTMLButtonElement>("button", {
+    name: /Save to note/,
+  });
+  expect(save.disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText("Destination space"), {
+    target: { value: "a" },
+  });
+  expect(
+    screen.getByRole("option", { name: /Task list.*created on save/ }),
+  ).toBeTruthy();
+  for (const name of ["Photo", "Map", "手册"])
+    expect(screen.queryByRole("option", { name })).toBeNull();
+  expect(ipc).not.toHaveBeenCalled();
+  fireEvent.click(save);
+  await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+  expect(ipc.mock.calls.map(([cmd]) => cmd)).toEqual([
+    "task_prepare_chat_note",
+    "task_save_from_chat",
+  ]);
+  expect(onSaved.mock.calls[0][0].taskIds).toEqual([
+    ipc.mock.calls[1][1].quotes[0].taskId,
+  ]);
+  expect(ipc.mock.calls[0][1]).toEqual({
+    projectId: "a",
+    title: "Tasks.md",
+    source: picked,
+  });
+  expect(ipc.mock.calls[1][1]).toMatchObject({
+    documentId: "list",
+    expectedHash: "r1",
+  });
+});

@@ -244,6 +244,17 @@
   width: min(100%, 44rem);
   margin: 12px auto 0;
 }
+.wiki-dialog .wiki-policy-footer {
+  position: sticky;
+  bottom: calc(-1 * var(--wiki-padding));
+  z-index: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--ui-line);
+  background: var(--ui-overlay);
+}
+.wiki-policy-footer [role="status"] { margin-inline-end: auto; color: var(--ui-muted); }
 .wiki-dialog .wiki-policy > label:first-child,
 .wiki-dialog .wiki-document-list label {
   display: flex;

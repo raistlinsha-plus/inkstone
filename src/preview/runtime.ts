@@ -1,3 +1,5 @@
+import { mindPresentation } from "../content/editableMind";
+import { isMermaidMindmap, orderedMindmap, type MermaidMindDB } from "./mermaidMindmap";
 import { trackFramePointer } from "./framePointer";
 import mermaid from "mermaid";
 import { Markmap } from "markmap-view";
@@ -21,6 +23,7 @@ let renderedGeneration = -1;
 let map: Markmap | null = null;
 let kind = "";
 let diagramSource = "";
+let fullCanvas = false;
 let theme: PreviewTheme = "light";
 let mermaidQueue: Promise<unknown> = Promise.resolve();
 let scale = 1;
@@ -33,6 +36,7 @@ const styleNonce =
 function colorMindmap(svg: SVGElement, theme: PreviewTheme) {
   const colors = previewColors[theme];
   svg.style.setProperty("--markmap-branch", colors.branch);
+  svg.style.setProperty("--preview-selected", colors.node);
   svg.style.setProperty("--markmap-text-color", colors.text);
   svg.style.setProperty("--markmap-circle-open-bg", colors.canvas);
 }
@@ -66,6 +70,15 @@ function renderMermaid(source: string, id: string, theme: PreviewTheme) {
         textColor: colors.text,
       },
     });
+    if (isMermaidMindmap(source) && !source.includes('`')) {
+      const presentation = mindPresentation(source, "mermaid");
+      const parsed = await mermaid.mermaidAPI.getDiagramFromText(presentation.body);
+      const db = parsed.db as Partial<MermaidMindDB>;
+      if (db.getMindmap && db.nodeType) {
+        const diagram = orderedMindmap(db as MermaidMindDB, theme, presentation.style, presentation.positions);
+        if (diagram) return diagram;
+      }
+    }
     const { svg } = await mermaid.render(id, source);
     return DOMPurify.sanitize(svg, {
       RETURN_DOM_FRAGMENT: true,
@@ -123,7 +136,7 @@ function layoutMermaid() {
   svg.style.maxWidth = "none";
   svg.style.width = `${width}px`;
   svg.style.height = `${height}px`;
-  svg.style.margin = "12px auto";
+  svg.style.margin = fullCanvas ? `${Math.max(12, (host.clientHeight - height) / 2)}px auto` : "12px auto";
   notify("size", { height: height + 28 + (width > host.clientWidth ? 16 : 0) });
 }
 function refreshPanCursor() {
@@ -198,6 +211,18 @@ window.addEventListener("message", async (event) => {
       return;
     }
     if (renderedGeneration !== generation) return;
+    if (data.action === "select-node" && map) {
+      for (const el of host.querySelectorAll<SVGGElement>("[data-source-node]")) {
+        const active = el.dataset.sourceNode === data.id;
+        el.setAttribute("aria-pressed", String(active));
+        el.setAttribute("tabindex", active ? "0" : "-1");
+        if (active && data.focus === true) {
+          el.focus({ preventScroll: true });
+          notify("node-focused");
+        }
+      }
+      return;
+    }
     if (data.action === "export") {
       const job = { generation, channel, requestId, revision };
       const format = data.format === "png" ? "png" : "svg";
@@ -266,6 +291,7 @@ window.addEventListener("message", async (event) => {
     diagramSource === data.source;
   const scroll = { left: host.scrollLeft, top: host.scrollTop };
   kind = data.kind;
+  fullCanvas = data.canvas === true;
   diagramSource = data.source;
   map?.destroy();
   map = null;
@@ -308,8 +334,11 @@ window.addEventListener("message", async (event) => {
         pan: false,
         scrollForPan: true,
         maxInitialScale: 1,
-        initialExpandLevel: 4,
+        initialExpandLevel: data.interactiveNodes ? -1 : 4,
         maxWidth: 220,
+        spacingHorizontal: 100,
+        spacingVertical: 12,
+        lineWidth: () => 1.6,
         embedGlobalCSS: true,
         color: () => "var(--markmap-branch)",
       });
@@ -355,11 +384,47 @@ window.addEventListener("message", async (event) => {
         localMap.destroy();
         return;
       }
+      if (data.interactiveNodes === true) {
+        const groups = [...svg.querySelectorAll<SVGGElement>("g.markmap-node")];
+        for (const [i, group] of groups.entries()) {
+          const id = (group as Element & { __data__?: {payload?: {sourceId?: string}} }).__data__?.payload?.sourceId;
+          if (!id) continue;
+          group.dataset.sourceNode = id;
+          group.setAttribute("tabindex", i ? "-1" : "0");
+          group.setAttribute("role", "button");
+          group.setAttribute("aria-label", group.textContent?.trim() || id);
+          group.addEventListener("keydown", (event) => {
+            if (event.isComposing || event.keyCode === 229 || event.altKey) return;
+            if (event.key.startsWith("Arrow")) {
+              event.preventDefault();
+              const direction = ["ArrowDown", "ArrowRight"].includes(event.key) ? 1 : -1;
+              const target = groups[Math.min(groups.length - 1, Math.max(0, i + direction))];
+              target.focus();
+              notify("node", { id: target.dataset.sourceNode });
+              return;
+            }
+            if (event.shiftKey && event.key === "Tab") return;
+            const action = (event.ctrlKey || event.metaKey)
+              ? (event.key.toLowerCase() === "z" ? event.shiftKey ? "redo" : "undo" : undefined)
+              : ({ Tab: "child", Enter: "sibling", F2: "rename", Delete: "delete" } as Record<string, string>)[event.key];
+            if (action) { event.preventDefault(); notify("node-action", { id, action }); }
+          });
+          group.addEventListener("dblclick", (event) => {
+            event.stopPropagation();
+            notify("node-action", { id, action: "rename" });
+          });
+        }
+        const sheet = document.createElementNS("http://www.w3.org/2000/svg", "style");
+        sheet.textContent = 'g[data-source-node]{cursor:pointer}g[data-source-node] foreignObject div{border-radius:4px}g[data-source-node][aria-pressed="true"] foreignObject>div{background:var(--preview-selected)}g[data-source-node]:focus-visible{outline:1.5px solid var(--markmap-branch);outline-offset:3px}';
+        svg.prepend(sheet);
+      }
       svg.addEventListener("click", (event) => {
         const node = (event.target as Element).closest("g.markmap-node") as
           (Element & { __data__?: any }) | null;
-        if (map === localMap && node?.__data__?.payload?.sourceId)
+        if (map === localMap && node?.__data__?.payload?.sourceId) {
+          if (data.interactiveNodes) (node as SVGGElement).focus({ preventScroll: true });
           notify("node", { id: node.__data__.payload.sourceId });
+        }
       });
     } else throw new Error("不支持的本地图表类型。");
     if (!current()) return;

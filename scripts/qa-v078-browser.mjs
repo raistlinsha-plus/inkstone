@@ -76,7 +76,7 @@ try {
     .selectOption("qa-space");
   await page.getByRole("checkbox", { name: firstTitle, exact: true }).check();
   await page.getByRole("button", { name: "完成选择", exact: true }).click();
-  await page.getByRole("checkbox", { name: "本轮不搜索网页" }).check();
+  await page.getByRole("checkbox", { name: "按需搜索网页" }).uncheck();
   await page.getByLabel("向 AI 提问").fill("比较两种阅读活动的参与人数");
   await page.getByRole("button", { name: "发送问题" }).click();
   await page.getByRole("heading", { name: "甲方案参与人数较多" }).waitFor();
@@ -149,7 +149,7 @@ try {
   await companion.emulateMedia({ reducedMotion: "no-preference" });
   await companion.getByRole("button", { name: "书房同伴", exact: true }).click();
   await companion.getByRole("button", { name: "显示桌宠", exact: true }).click();
-  await companion.getByRole("button", { name: "返回工作区", exact: true }).click();
+  await companion.getByRole("button", { name: "返回文档", exact: true }).click();
   const sprite = companion.locator("[data-companion-sprite='motuan']");
   await sprite.waitFor();
   assert.equal(await sprite.getAttribute("data-state"), "idle");

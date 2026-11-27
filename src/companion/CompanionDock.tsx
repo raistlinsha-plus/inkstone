@@ -10,6 +10,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { createPortal } from "react-dom";
 import {
+  ArrowLeft,
   BookOpen,
   Leaf,
   Settings2,
@@ -150,13 +151,14 @@ export default function CompanionDock({
   surface?: {
     open: boolean;
     showPet: boolean;
+    returnLabel?: string;
     navigationHost?: HTMLElement | null;
     onOpen: () => void;
     onClose: () => void;
     onResumeWriting?: () => void;
   };
 }) {
-  const { language } = useLocale();
+  const { language, t } = useLocale();
   const [snapshot, updateSnapshot] = useState<Snapshot | null>(null),
     [view, setView] = useState<View | null>(null),
     [error, setError] = useState(""),
@@ -796,7 +798,7 @@ export default function CompanionDock({
                   }
                   onClick={startPreview}
                 >
-                  {msg("本次完成")}
+                  {t("记录文档完成", "Record document completion")}
                 </button>
               </div>
             )}
@@ -836,7 +838,7 @@ export default function CompanionDock({
                   }
                   onClick={startPreview}
                 >
-                  {msg("本次完成")}
+                  {t("记录文档完成", "Record document completion")}
                 </button>
               </div>
             )}
@@ -901,11 +903,11 @@ export default function CompanionDock({
             </div>
             <button
               type="button"
-              aria-label={inWorkspace ? msg("返回工作区") : msg("关闭同伴面板")}
+              aria-label={inWorkspace ? surface?.returnLabel || msg("返回工作区") : msg("关闭同伴面板")}
               disabled={busy}
               onClick={closeView}
             >
-              <X size={18} />
+              {inWorkspace ? <><ArrowLeft size={15} />{surface?.returnLabel || msg("返回工作区")}</> : <X size={18} />}
             </button>
           </header>
           {(inWorkspace ||
@@ -1004,7 +1006,7 @@ export default function CompanionDock({
                         }
                         onClick={startPreview}
                       >
-                        {msg("本次完成")}
+                        {t("记录文档完成", "Record document completion")}
                       </button>
                     </>
                   )}

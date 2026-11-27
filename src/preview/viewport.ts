@@ -29,9 +29,13 @@ export function loadViewport(key?: string): GraphViewport | null {
     return null;
   }
 }
-export function saveViewport(key: string | undefined, value: GraphViewport) {
+export function saveViewport(key: string | undefined, value: GraphViewport | null) {
   if (!key) return;
   try {
+    if (value === null) {
+      localStorage.removeItem(prefix + key);
+      return;
+    }
     // View preferences contain no document content. Bound their storage growth.
     const keys = Object.keys(localStorage).filter((k) => k.startsWith(prefix));
     if (keys.length >= 200 && !keys.includes(prefix + key))

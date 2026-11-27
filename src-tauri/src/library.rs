@@ -12,9 +12,11 @@ use std::{
 };
 pub mod lifecycle;
 mod links;
+mod media_assets;
 mod recovery;
 mod updates;
 pub use links::{relink_apply, relink_preview, RelinkChoice, RelinkPreview};
+pub(crate) use media_assets::is_sidecar as is_image_sidecar;
 pub use recovery::{recovery_report, RecoveryItem, RecoveryReport};
 pub use updates::{
     apply_source_update, check_source_update, history, restore_version, HistoryVersion,
@@ -61,6 +63,8 @@ pub(crate) fn conn(data: &Path) -> Result<Connection, String> {
  CREATE TABLE IF NOT EXISTS projects(id TEXT PRIMARY KEY,title TEXT NOT NULL,created INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS documents(id TEXT PRIMARY KEY,project TEXT NOT NULL REFERENCES projects(id),path TEXT NOT NULL,title TEXT NOT NULL,original_hash TEXT NOT NULL,source TEXT NOT NULL,updated INTEGER NOT NULL,opened INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL,UNIQUE(project,path));
  CREATE TABLE IF NOT EXISTS imports(id TEXT PRIMARY KEY,project TEXT NOT NULL,paths TEXT NOT NULL,created INTEGER NOT NULL,status TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS import_destinations(job TEXT PRIMARY KEY REFERENCES imports(id) ON DELETE CASCADE,folder TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS pending_locations(document TEXT PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,folder TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS import_items(job TEXT NOT NULL,source TEXT NOT NULL,status TEXT NOT NULL,document TEXT,message TEXT NOT NULL,PRIMARY KEY(job,source));
  CREATE TABLE IF NOT EXISTS preferences(key TEXT PRIMARY KEY,value TEXT NOT NULL);
  ").map_err(err)?;
@@ -130,6 +134,10 @@ CREATE TABLE IF NOT EXISTS purge_previews(token TEXT PRIMARY KEY,document TEXT N
 #[serde(rename_all = "camelCase")]
 pub struct Project {
     #[serde(default)]
+    pub archived: bool,
+    #[serde(default)]
+    pub pinned: bool,
+    #[serde(default)]
     pub system_title: bool,
     pub id: String,
     pub title: String,
@@ -159,6 +167,8 @@ pub struct ImportTask {
     pub id: String,
     pub project_id: String,
     pub paths: Vec<String>,
+    #[serde(default)]
+    pub folder: String,
     pub status: String,
 }
 #[derive(Clone, Serialize, Deserialize)]
@@ -256,11 +266,12 @@ pub fn set_view(data: &Path, project: &str, p: &ViewPreferences) -> Result<(), S
 pub fn list(data: &Path) -> Result<LibraryView, String> {
     let c = conn(data)?;
     let projects = c
-        .prepare("SELECT id,title,(id='inbox' AND EXISTS (SELECT 1 FROM preferences WHERE key='library.inbox-title.v1' AND value='system')) FROM projects ORDER BY created,id")
+        .prepare("SELECT id,title,(id='inbox' AND EXISTS (SELECT 1 FROM preferences WHERE key='library.inbox-title.v1' AND value='system')),coalesce(json_extract(p.value,'$.archived'),0),coalesce(json_extract(p.value,'$.pinned'),0) FROM projects LEFT JOIN preferences p ON p.key='workspace.layout.v1:'||projects.id ORDER BY created,id")
         .map_err(err)?
         .query_map([], |r| {
             Ok(Project {
                 system_title: r.get(2)?,
+                archived:r.get(3)?,pinned:r.get(4)?,
                 id: r.get(0)?,
                 title: r.get(1)?,
             })
@@ -269,7 +280,7 @@ pub fn list(data: &Path) -> Result<LibraryView, String> {
         .collect::<Result<Vec<_>, _>>()
         .map_err(err)?;
     let documents=c.prepare(&format!("SELECT {DOC_COLS} FROM documents WHERE status!='pending' ORDER BY opened DESC,updated DESC,id")).map_err(err)?.query_map([],doc_row).map_err(err)?.collect::<Result<Vec<_>,_>>().map_err(err)?;
-    let pending_imports=c.prepare("SELECT id,project,paths,status FROM imports WHERE status IN ('interrupted','cancelled','partial') ORDER BY created DESC LIMIT 20").map_err(err)?.query_map([],|r|{let raw:String=r.get(2)?;Ok(ImportTask{id:r.get(0)?,project_id:r.get(1)?,paths:serde_json::from_str(&raw).unwrap_or_default(),status:r.get(3)?})}).map_err(err)?.collect::<Result<Vec<_>,_>>().map_err(err)?;
+    let pending_imports=c.prepare("SELECT id,project,paths,status,COALESCE(d.folder,'') FROM imports LEFT JOIN import_destinations d ON d.job=imports.id WHERE status IN ('interrupted','cancelled','partial') ORDER BY created DESC LIMIT 20").map_err(err)?.query_map([],|r|{let raw:String=r.get(2)?;Ok(ImportTask{id:r.get(0)?,project_id:r.get(1)?,paths:serde_json::from_str(&raw).unwrap_or_default(),status:r.get(3)?,folder:r.get(4)?})}).map_err(err)?.collect::<Result<Vec<_>,_>>().map_err(err)?;
     Ok(LibraryView {
         projects,
         documents,
@@ -327,7 +338,7 @@ pub fn last_project(data: &Path) -> String {
         .ok()
         .and_then(|c| {
             c.query_row(
-                "SELECT value FROM preferences WHERE key='lastProject'",
+                "SELECT value FROM preferences WHERE key='lastProject' AND EXISTS (SELECT 1 FROM projects WHERE id=preferences.value) AND NOT EXISTS (SELECT 1 FROM preferences p WHERE p.key='workspace.layout.v1:'||preferences.value AND json_extract(p.value,'$.archived')=1)",
                 [],
                 |r| r.get(0),
             )
@@ -356,26 +367,49 @@ fn title(name: &str) -> Result<String, String> {
     }
     Ok(s.into())
 }
+fn check_project_name(tx: &rusqlite::Transaction<'_>, name: &str, id: &str) -> Result<(), String> {
+    let taken: bool = tx
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM projects WHERE title=? AND id<>?)",
+            params![name, id],
+            |r| r.get(0),
+        )
+        .map_err(err)?;
+    if taken {
+        return Err("空间名称重复".into());
+    }
+    Ok(())
+}
 pub fn create_project(data: &Path, name: &str) -> Result<Project, String> {
     let title = title(name)?;
     let id = uuid::Uuid::new_v4().to_string();
-    conn(data)?
-        .execute(
-            "INSERT INTO projects VALUES(?,?,?)",
-            params![id, title, now()],
-        )
+    let mut db = conn(data)?;
+    let tx = db
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
         .map_err(err)?;
+    check_project_name(&tx, &title, &id)?;
+    tx.execute(
+        "INSERT INTO projects VALUES(?,?,?)",
+        params![id, title, now()],
+    )
+    .map_err(err)?;
+    tx.commit().map_err(err)?;
     project_root(data, &id)?;
     Ok(Project {
         id,
         title,
+        archived: false,
+        pinned: false,
         system_title: false,
     })
 }
 pub fn rename_project(data: &Path, id: &str, name: &str) -> Result<Project, String> {
     let name = title(name)?;
     let mut c = conn(data)?;
-    let tx = c.transaction().map_err(err)?;
+    let tx = c
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(err)?;
+    check_project_name(&tx, &name, id)?;
     if tx
         .execute("UPDATE projects SET title=? WHERE id=?", params![name, id])
         .map_err(err)?
@@ -392,6 +426,8 @@ pub fn rename_project(data: &Path, id: &str, name: &str) -> Result<Project, Stri
     }
     tx.commit().map_err(err)?;
     Ok(Project {
+        archived: false,
+        pinned: false,
         system_title: false,
         id: id.into(),
         title: name,
@@ -458,6 +494,18 @@ pub(crate) fn create_managed_document(
     content: &str,
     remembered: Option<RememberedNote>,
 ) -> Result<(Document, bool), String> {
+    create_with_assets(data, project, name, content, remembered, None, "")
+}
+
+pub(crate) fn create_with_assets(
+    data: &Path,
+    project: &str,
+    name: &str,
+    content: &str,
+    remembered: Option<RememberedNote>,
+    assets: Option<(&Path, &str, bool)>,
+    folder: &str,
+) -> Result<(Document, bool), String> {
     let mut name = title(name)?;
     if Path::new(&name).extension().is_none() {
         name.push_str(".md")
@@ -473,6 +521,12 @@ pub(crate) fn create_managed_document(
     let tx = c
         .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
         .map_err(err)?;
+    crate::organization::check_destination(&tx, project, folder)?;
+    if let Some((_, fingerprint, true)) = assets {
+        if let Some(doc) = existing_image(&tx, &root, project, fingerprint, true)? {
+            return Ok((doc, false));
+        }
+    }
     let preference_key = remembered.map(|kind| kind.key(project));
     if let Some(key) = &preference_key {
         let existing = tx.query_row(
@@ -492,7 +546,8 @@ pub(crate) fn create_managed_document(
     let id = uuid::Uuid::new_v4().to_string();
     let name = unique_title(&tx, project, &name);
     let path = format!("documents/{id}/{name}");
-    tx.execute("INSERT INTO documents(id,project,path,title,original_hash,source,updated,status) VALUES(?,?,?,?,?,'',?,'pending')",params![id,project,path,name,files::hash(content),now()]).map_err(err)?;
+    tx.execute("INSERT INTO documents(id,project,path,title,original_hash,source,updated,status,import_fingerprint) VALUES(?,?,?,?,?,'',?,'pending',?)",params![id,project,path,name,files::hash(content),now(),assets.map_or("",|a|a.1)]).map_err(err)?;
+    crate::organization::remember_destination(&tx, project, &id, folder)?;
     if let Some(key) = &preference_key {
         tx.execute(
             "INSERT OR REPLACE INTO preferences(key,value) VALUES(?,?)",
@@ -504,13 +559,24 @@ pub(crate) fn create_managed_document(
     let dest = root.join(&path);
     if let Err(e) = fs::create_dir_all(dest.parent().unwrap())
         .map_err(err)
-        .and_then(|_| files::write_atomic(&dest, content.as_bytes()))
+        .and_then(|_| {
+            if let Some((dir, _, _)) = assets {
+                fs::rename(dir, dest.parent().unwrap().join("assets")).map_err(err)?;
+            }
+            files::write_atomic(&dest, content.as_bytes())
+        })
     {
+        let _ = fs::remove_dir_all(dest.parent().unwrap());
         let _ = c.execute("DELETE FROM documents WHERE id=?", [&id]);
         return Err(e);
     }
-    c.execute("UPDATE documents SET status='ready' WHERE id=?", [&id])
+    let tx = c
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
         .map_err(err)?;
+    crate::organization::finish_destination(&tx, project, &id)?;
+    tx.execute("UPDATE documents SET status='ready' WHERE id=?", [&id])
+        .map_err(err)?;
+    tx.commit().map_err(err)?;
     get(data, &id).map(|doc| (doc, true))
 }
 
@@ -627,23 +693,45 @@ fn excluded(name: &str) -> bool {
             "node_modules" | "target" | "dist" | "build" | "vendor"
         )
 }
-fn inputs(paths: &[String], warnings: &mut Vec<String>) -> Vec<Input> {
+#[derive(Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportPreview {
+    documents: usize,
+    images: usize,
+    attachments: usize,
+    skipped: usize,
+    existing: usize,
+    warnings: Vec<String>,
+}
+fn inputs(paths: &[String], include_attachments: bool) -> (Vec<Input>, ImportPreview) {
+    let mut report = ImportPreview::default();
+    let warnings = &mut report.warnings;
+    let mut explicit = HashSet::new();
     let mut seen = HashSet::new();
     let mut files = vec![];
-    for path in paths {
+    'selections: for path in paths {
         let p = PathBuf::from(path);
         let Ok(meta) = fs::symlink_metadata(&p) else {
+            report.skipped += 1;
             warnings.push(format!("{path}：无法访问"));
             continue;
         };
         if meta.file_type().is_symlink() {
+            report.skipped += 1;
             warnings.push(format!("{path}：跳过符号链接"));
             continue;
         }
-        let Ok(p) = p.canonicalize() else { continue };
+        let Ok(p) = p.canonicalize() else {
+            report.skipped += 1;
+            continue;
+        };
         if let Err(reason) = files::require_document_path(&p) {
+            report.skipped += 1;
             warnings.push(reason);
             continue;
+        }
+        if p.is_file() {
+            explicit.insert(p.clone());
         }
         let allowed = if p.is_dir() {
             p.clone()
@@ -662,19 +750,22 @@ fn inputs(paths: &[String], warnings: &mut Vec<String>) -> Vec<Input> {
             let e = match entry {
                 Ok(e) => e,
                 Err(e) => {
+                    report.skipped += 1;
                     warnings.push(e.to_string());
                     continue;
                 }
             };
+            if e.file_type().is_symlink() {
+                report.skipped += 1;
+                continue;
+            }
             if !e.file_type().is_file() {
                 continue;
             }
-            if !files::supported(e.path()) {
-                if p.is_file() {
-                    warnings.push(format!(
-                        "{}：支持 MD/TXT/JSON/MMD，未导入此格式",
-                        p.display()
-                    ))
+            if !files::supported(e.path()) && !crate::media::supported(e.path()) {
+                report.skipped += 1;
+                if report.skipped <= 8 {
+                    warnings.push(format!("{}：不支持的格式", e.path().display()));
                 }
                 continue;
             }
@@ -686,13 +777,172 @@ fn inputs(paths: &[String], warnings: &mut Vec<String>) -> Vec<Input> {
             }
             if files.len() >= 2000 {
                 warnings.push("本次最多导入 2000 篇，请分批导入。".into());
-                return files;
+                break 'selections;
             }
         }
     }
     files.sort_by(|a, b| a.path.cmp(&b.path));
-    files
+    let mut references = HashSet::new();
+    let mut required = HashSet::new();
+    let mut copyable = HashSet::new();
+    for file in &files {
+        if crate::media::supported(&file.path) {
+            continue;
+        }
+        let markdown = file
+            .path
+            .extension()
+            .and_then(|s| s.to_str())
+            .is_some_and(|s| s.eq_ignore_ascii_case("md") || s.eq_ignore_ascii_case("markdown"));
+        if !markdown {
+            report.documents += 1;
+            continue;
+        }
+        let Ok(text) = files::read_text(&file.path) else {
+            report.documents += 1;
+            continue;
+        };
+        let sidecar = media_assets::is_sidecar(&text);
+        if sidecar {
+            report.images += 1;
+            match media_assets::read(&file.path, &file.allowed, &text) {
+                Ok(assets) => required.extend(assets.into_iter().map(|a| a.path)),
+                Err(reason) => warnings.push(format!("{}：{reason}", file.path.display())),
+            }
+        } else {
+            report.documents += 1;
+        }
+        for event in Parser::new(&text) {
+            let url = match event {
+                Event::Start(Tag::Image { dest_url, .. })
+                | Event::Start(Tag::Link { dest_url, .. }) => dest_url,
+                _ => continue,
+            };
+            let Some((url, _)) = local_url(&url) else {
+                continue;
+            };
+            let Ok(relative) = decoded(url) else { continue };
+            let joined = file.path.parent().unwrap_or(&file.allowed).join(relative);
+            if !(updates::image_path(&joined) || sidecar && crate::media::supported(&joined)) {
+                continue;
+            }
+            let Ok(path) = joined.canonicalize() else {
+                continue;
+            };
+            if path.starts_with(&file.allowed) && files::require_document_path(&path).is_ok() {
+                if updates::image_path(&path)
+                    && path
+                        .metadata()
+                        .is_ok_and(|md| md.is_file() && md.len() <= 8 * 1024 * 1024)
+                {
+                    copyable.insert(path.clone());
+                }
+                references.insert(path);
+            }
+        }
+    }
+    files.retain(|input| {
+        !crate::media::supported(&input.path)
+            || !references.contains(&input.path)
+            || explicit.contains(&input.path)
+    });
+    report.images += files
+        .iter()
+        .filter(|input| crate::media::supported(&input.path))
+        .count();
+    let copied: HashSet<_> = if include_attachments {
+        copyable.union(&required).collect()
+    } else {
+        required.iter().collect()
+    };
+    report.attachments = copied.len();
+    report.skipped += references
+        .iter()
+        .filter(|p| !copied.contains(*p) && !explicit.contains(*p))
+        .count();
+    (files, report)
 }
+
+fn preview_import(
+    data: &Path,
+    project: Option<&str>,
+    paths: &[String],
+    attachments: bool,
+    skip: bool,
+) -> Result<ImportPreview, String> {
+    let (incoming, mut preview) = inputs(paths, attachments);
+    let Some(project) = project.filter(|_| skip) else {
+        return Ok(preview);
+    };
+    let root = project_root(data, project)?;
+    let db = conn(data)?;
+    let have_images: bool = db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM documents WHERE project=? AND status='ready' AND import_fingerprint LIKE 'image:%')",
+        [project], |r| r.get(0)
+    ).map_err(err)?;
+    let mut matching_hash = db.prepare_cached(
+        "SELECT EXISTS(SELECT 1 FROM documents WHERE project=? AND original_hash=? AND status IN ('ready','pending'))"
+    ).map_err(err)?;
+    let mut text_bytes = 0usize;
+    for input in incoming {
+        let matched = if crate::media::supported(&input.path) {
+            if !have_images {
+                continue;
+            }
+            let Ok(fp) = crate::media::image_fingerprint(&input.path) else {
+                continue;
+            };
+            existing_image(&db, &root, project, &fp, false)?.is_some()
+        } else {
+            let Ok(content) = read_import_text(&input.path) else {
+                continue;
+            };
+            text_bytes += content.len();
+            if text_bytes > 30 * 1024 * 1024 {
+                continue;
+            }
+            let hash = files::hash(&content);
+            if !matching_hash
+                .query_row(params![project, hash], |r| r.get::<_, bool>(0))
+                .map_err(err)?
+            {
+                continue;
+            }
+            let Ok(assets) = media_assets::read(&input.path, &input.allowed, &content) else {
+                continue;
+            };
+            let Ok(fp) = source_fingerprint(&input, &content, &hash, attachments, &assets) else {
+                continue;
+            };
+            existing_note(&db, &root, project, &hash, &fp)?.is_some()
+        };
+        preview.existing += usize::from(matched);
+    }
+    Ok(preview)
+}
+
+#[tauri::command]
+pub async fn library_preview_import(
+    state: tauri::State<'_, crate::AppState>,
+    project_id: Option<String>,
+    paths: Vec<String>,
+    attachments: bool,
+    skip_duplicates: Option<bool>,
+) -> Result<ImportPreview, String> {
+    let data = state.data_dir.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        preview_import(
+            &data,
+            project_id.as_deref(),
+            &paths,
+            attachments,
+            skip_duplicates.unwrap_or(true),
+        )
+    })
+    .await
+    .map_err(err)?
+}
+
 fn local_url(url: &str) -> Option<(&str, &str)> {
     if url.starts_with('#') || url.starts_with('/') || url.contains(':') || url.starts_with("//") {
         return None;
@@ -781,6 +1031,7 @@ struct Plan {
     title: String,
     text: String,
     original_hash: String,
+    media_assets: Vec<media_assets::Asset>,
 }
 
 /// The original Markdown hash alone cannot distinguish equal relative image
@@ -825,7 +1076,7 @@ fn import_fingerprint(input: &Input, text: &str, original_hash: &str, attachment
                 parts.push("unresolved-image".into());
                 continue;
             };
-            if !path.starts_with(&input.allowed) {
+            if !path.starts_with(&input.allowed) || files::require_document_path(&path).is_err() {
                 parts.push("unresolved-image".into());
                 continue;
             }
@@ -861,6 +1112,109 @@ fn import_fingerprint(input: &Input, text: &str, original_hash: &str, attachment
         files::hash(serde_json::to_vec(&parts).expect("string list is serializable"))
     )
 }
+pub(crate) fn existing_image(
+    db: &Connection,
+    root: &Path,
+    project: &str,
+    fingerprint: &str,
+    importing: bool,
+) -> Result<Option<Document>, String> {
+    let mut matches = db
+        .prepare(&format!(
+            "SELECT {DOC_COLS} FROM documents WHERE project=? AND import_fingerprint=?
+             AND status IN ('ready','pending') ORDER BY status='ready' DESC, updated DESC, id"
+        ))
+        .map_err(err)?;
+    let rows = matches
+        .query_map(params![project, fingerprint], doc_row)
+        .map_err(err)?;
+    for candidate in rows {
+        let existing = candidate.map_err(err)?;
+        if existing.status == "pending" {
+            // A different process may still be publishing this original.
+            if importing {
+                return Err("同一图片正在保存，请稍后重试。".into());
+            }
+            continue;
+        }
+        if root.join(&existing.path).is_file() {
+            return Ok(Some(existing));
+        }
+    }
+    Ok(None)
+}
+
+fn read_import_text(path: &Path) -> Result<String, String> {
+    let mut text = files::read_text(path)?;
+    if text.starts_with('\u{feff}') {
+        text.remove(0);
+    }
+    Ok(text)
+}
+
+fn source_fingerprint(
+    input: &Input,
+    text: &str,
+    hash: &str,
+    attachments: bool,
+    assets: &[media_assets::Asset],
+) -> Result<String, String> {
+    if assets.is_empty() {
+        return Ok(import_fingerprint(input, text, hash, attachments));
+    }
+    let original = assets
+        .iter()
+        .find(|a| a.name.starts_with("original."))
+        .ok_or("图片资料缺少原件")?;
+    crate::media::image_fingerprint(&original.path)
+}
+
+fn existing_note(
+    db: &Connection,
+    root: &Path,
+    project: &str,
+    hash: &str,
+    fingerprint: &str,
+) -> Result<Option<String>, String> {
+    let mut query = db.prepare_cached("SELECT id,path,import_fingerprint FROM documents WHERE project=? AND original_hash=? AND status IN ('ready','pending') ORDER BY updated,id").map_err(err)?;
+    let candidates = query
+        .query_map(params![project, hash], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+            ))
+        })
+        .map_err(err)?;
+    for candidate in candidates {
+        let (id, stored_path, stored_fp) = candidate.map_err(err)?;
+        if !stored_fp.is_empty() && stored_fp != fingerprint {
+            continue;
+        }
+        let Ok(stored) = files::resolve(root, &stored_path, false) else {
+            continue;
+        };
+        let Ok(body) = files::read_text(&stored) else {
+            continue;
+        };
+        // Old catalogues lack a fingerprint. Compare the retained copy and its attachments.
+        if !stored_fp.is_empty()
+            || import_fingerprint(
+                &Input {
+                    allowed: stored.parent().ok_or("无效文档路径")?.to_path_buf(),
+                    path: stored,
+                },
+                &body,
+                hash,
+                true,
+            ) == fingerprint
+        {
+            return Ok(Some(id));
+        }
+    }
+    Ok(None)
+}
+
 fn read_attachment(path: &Path) -> Result<Vec<u8>, String> {
     files::require_document_path(path)?;
     use std::io::Read;
@@ -884,10 +1238,36 @@ pub fn import(
     cancel: &AtomicBool,
     progress: impl Fn(ImportProgress),
 ) -> Result<ImportResult, String> {
+    import_into_folder(
+        data,
+        project,
+        paths,
+        skip_duplicates,
+        attachments,
+        cancel,
+        progress,
+        "",
+    )
+}
+
+pub fn import_into_folder(
+    data: &Path,
+    project: &str,
+    paths: &[String],
+    skip_duplicates: bool,
+    attachments: bool,
+    cancel: &AtomicBool,
+    progress: impl Fn(ImportProgress),
+    folder: &str,
+) -> Result<ImportResult, String> {
     let root = project_root(data, project)?;
-    let c = conn(data)?;
+    let mut c = conn(data)?;
+    let tx = c
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(err)?;
+    crate::organization::check_destination(&tx, project, folder)?;
     let job = uuid::Uuid::new_v4().to_string();
-    c.execute(
+    tx.execute(
         "INSERT INTO imports VALUES(?,?,?,?, 'running')",
         params![
             job,
@@ -897,8 +1277,16 @@ pub fn import(
         ],
     )
     .map_err(err)?;
-    let mut warnings = vec![];
-    let incoming = inputs(paths, &mut warnings);
+    if !folder.is_empty() {
+        tx.execute(
+            "INSERT INTO import_destinations(job,folder) VALUES(?,?)",
+            params![job, folder],
+        )
+        .map_err(err)?;
+    }
+    tx.commit().map_err(err)?;
+    let (incoming, preview) = inputs(paths, attachments);
+    let mut warnings = preview.warnings;
     let total = incoming.len();
     let mut plans = vec![];
     let mut items = vec![];
@@ -908,68 +1296,88 @@ pub fn import(
             break;
         }
         let result = (|| {
-            let mut content = files::read_text(&input.path)?;
-            if content.starts_with('\u{feff}') {
-                content.remove(0);
+            if crate::media::supported(&input.path) {
+                let image = crate::media::import_into_folder(
+                    data,
+                    project,
+                    &input.path,
+                    skip_duplicates,
+                    folder,
+                )?;
+                if let Some(warning) = image.warning {
+                    warnings.push(format!("{}：{warning}", image.document.title));
+                }
+                return Ok(Err(ImportItem {
+                    source: input.path.display().to_string(),
+                    status: if image.existing {
+                        "skipped"
+                    } else {
+                        "imported"
+                    }
+                    .into(),
+                    document_id: Some(image.document.id),
+                    message: String::new(),
+                }));
             }
+            let content = read_import_text(&input.path)?;
             sum += content.len();
             if sum > 30 * 1024 * 1024 {
                 return Err("本批文本超过 30 MB，请分批导入".to_string());
             }
             let hash = files::hash(&content);
-            let fingerprint = import_fingerprint(&input, &content, &hash, attachments);
+            let media_assets = media_assets::read(&input.path, &input.allowed, &content)?;
+            let fingerprint =
+                source_fingerprint(&input, &content, &hash, attachments, &media_assets)?;
             if skip_duplicates {
-                let candidates = c.prepare("SELECT id,path,import_fingerprint FROM documents WHERE project=? AND original_hash=? AND status IN ('ready','pending') ORDER BY updated").map_err(err)?
-                    .query_map(params![project,hash], |r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?))).map_err(err)?
-                    .collect::<Result<Vec<_>,_>>().map_err(err)?;
-                for (id, stored_path, stored_fingerprint) in candidates {
-                    // A stale catalogue entry is not a reusable document. Do
-                    // not skip a fresh copy when its retained body disappeared.
-                    if files::resolve(&root, &stored_path, false)
-                        .and_then(|path| files::read_text(&path))
-                        .is_err()
-                    {
-                        continue;
-                    }
-                    let stored_fingerprint = if stored_fingerprint.is_empty() {
-                        // Migrate lazily using the managed copy's retained image
-                        // bytes, never the possibly changed external original.
-                        let stored = root.join(&stored_path);
-                        match files::read_text(&stored) {
-                            Ok(text) => import_fingerprint(
-                                &Input {
-                                    path: stored.clone(),
-                                    allowed: stored.parent().unwrap().to_path_buf(),
-                                },
-                                &text,
-                                &hash,
-                                true,
-                            ),
-                            Err(_) => continue,
-                        }
-                    } else {
-                        stored_fingerprint
-                    };
-                    if fingerprint == stored_fingerprint {
-                        c.execute(
-                            "UPDATE documents SET import_fingerprint=? WHERE id=?",
-                            params![stored_fingerprint, id],
-                        )
-                        .map_err(err)?;
-                        return Ok(Err(ImportItem {
-                            source: input.path.display().to_string(),
-                            status: "skipped".into(),
-                            document_id: Some(id),
-                            message: "正文与可复制附件相同，保留已有副本".into(),
-                        }));
-                    }
+                if let Some(id) = existing_note(&c, &root, project, &hash, &fingerprint)? {
+                    c.execute(
+                        "UPDATE documents SET import_fingerprint=? WHERE id=? AND import_fingerprint=''",
+                        params![fingerprint, id],
+                    ).map_err(err)?;
+                    return Ok(Err(ImportItem {
+                        source: input.path.display().to_string(),
+                        status: "skipped".into(),
+                        document_id: Some(id),
+                        message: "正文与可复制附件相同，保留已有副本".into(),
+                    }));
                 }
             }
             let id = uuid::Uuid::new_v4().to_string();
-            let name = title(&input.path.file_name().unwrap_or_default().to_string_lossy())?;
-            let name = unique_title(&c, project, &name);
+            let mut name = title(&input.path.file_name().unwrap_or_default().to_string_lossy())?;
+            if let Some(original) = media_assets
+                .iter()
+                .find(|a| a.name.starts_with("original."))
+            {
+                let ext = original
+                    .name
+                    .strip_prefix("original.")
+                    .ok_or("无效的图片扩展名")?;
+                let stem = Path::new(&name)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("图片");
+                let base = stem
+                    .rsplit_once(" 副本")
+                    .filter(|(_, n)| !n.is_empty() && n.bytes().all(|ch| ch.is_ascii_digit()))
+                    .map_or(stem, |(s, _)| s);
+                if !base.to_lowercase().ends_with(&format!(".{ext}")) {
+                    name = title(&format!("{stem}.{ext}.md"))?;
+                }
+            }
+            let tx = c
+                .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+                .map_err(err)?;
+            let name = unique_title(&tx, project, &name);
             let path = format!("documents/{id}/{name}");
-            c.execute("INSERT INTO documents(id,project,path,title,original_hash,source,updated,status,import_fingerprint) VALUES(?,?,?,?,?,?,?,'pending',?)",params![id,project,path,name,hash,input.path.display().to_string(),now(),fingerprint]).map_err(err)?;
+            // Portable photos own their assets, like directly imported photos.
+            let source = if media_assets.is_empty() {
+                input.path.display().to_string()
+            } else {
+                String::new()
+            };
+            tx.execute("INSERT INTO documents(id,project,path,title,original_hash,source,updated,status,import_fingerprint) VALUES(?,?,?,?,?,?,?,'pending',?)",params![id,project,path,name,hash,source,now(),fingerprint]).map_err(err)?;
+            crate::organization::remember_destination(&tx, project, &id, folder)?;
+            tx.commit().map_err(err)?;
             Ok(Ok(Plan {
                 input: input.clone(),
                 id,
@@ -977,6 +1385,7 @@ pub fn import(
                 title: name,
                 text: content,
                 original_hash: hash,
+                media_assets,
             }))
         })();
         match result {
@@ -1046,6 +1455,12 @@ pub fn import(
         let result = (|| {
             fs::create_dir_all(&stage).map_err(err)?;
             let mut attached = HashMap::<PathBuf, String>::new();
+            for asset in &plan.media_assets {
+                fs::create_dir_all(stage.join("assets")).map_err(err)?;
+                let name = format!("assets/{}", asset.name);
+                fs::copy(&asset.path, stage.join(&name)).map_err(err)?;
+                attached.insert(asset.path.clone(), name);
+            }
             let mut text = plan.text.clone();
             let mut link_warnings = vec![];
             if plan.path.to_lowercase().ends_with(".md")
@@ -1057,6 +1472,13 @@ pub fn import(
                         let (url, suffix) = local_url(url)?;
                         let value = decoded(url).ok()?;
                         let source = plan.input.path.parent()?.join(&value);
+                        if !plan.media_assets.is_empty() {
+                            if let Some(dest) =
+                                source.canonicalize().ok().and_then(|s| attached.get(&s))
+                            {
+                                return Some(format!("{}{suffix}", encoded(dest)));
+                            }
+                        }
                         if !image && !updates::image_path(&source) {
                             match resolver.resolve(&source) {
                                 links::Match::Unique(target) => {
@@ -1138,26 +1560,41 @@ pub fn import(
             files::write_atomic(&stage.join(&plan.title), text.as_bytes())?;
             fs::create_dir_all(target.parent().unwrap()).map_err(err)?;
             fs::rename(&stage, &target).map_err(err)?;
-            let copied_input = Input {
-                path: target.join(&plan.title),
-                allowed: target.clone(),
+            let actual_fingerprint = if plan.media_assets.is_empty() {
+                let copied = Input {
+                    path: target.join(&plan.title),
+                    allowed: target.clone(),
+                };
+                Some(import_fingerprint(
+                    &copied,
+                    &text,
+                    &plan.original_hash,
+                    attachments,
+                ))
+            } else {
+                None
             };
-            let actual_fingerprint =
-                import_fingerprint(&copied_input, &text, &plan.original_hash, attachments);
-            c.execute(
-                "UPDATE documents SET status='ready',import_fingerprint=? WHERE id=?",
-                params![actual_fingerprint, plan.id],
-            )
-            .map_err(err)?;
-            // The baseline is the actual copied body and attachments, not the
-            // possibly changed original. Failure must not undo a saved import.
-            if let Err(error) =
-                updates::record_import_baseline(data, &plan.id, &plan.input.allowed, attachments)
-            {
-                warnings.push(format!(
-                    "{}：副本已保存，来源更新基线未建立：{error}",
-                    plan.title
-                ));
+            let tx = c
+                .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+                .map_err(err)?;
+            crate::organization::finish_destination(&tx, project, &plan.id)?;
+            tx.execute(
+                "UPDATE documents SET status='ready',import_fingerprint=COALESCE(?,import_fingerprint) WHERE id=?",
+                params![actual_fingerprint,plan.id],
+            ).map_err(err)?;
+            tx.commit().map_err(err)?;
+            if plan.media_assets.is_empty() {
+                if let Err(error) = updates::record_import_baseline(
+                    data,
+                    &plan.id,
+                    &plan.input.allowed,
+                    attachments,
+                ) {
+                    warnings.push(format!(
+                        "{}：副本已保存，来源更新基线未建立：{error}",
+                        plan.title
+                    ));
+                }
             }
             Ok(())
         })();
@@ -1323,10 +1760,17 @@ pub fn export_bundle(
         for d in &docs {
             let path = files::resolve(&root, &d.path, false)?;
             let mut content = files::read_text(&path)?;
-            if matches!(
-                path.extension().and_then(|s| s.to_str()),
-                Some("md" | "markdown")
-            ) {
+            let media_assets =
+                media_assets::read(&path, path.parent().ok_or("图片目录不可用")?, &content)?;
+            let mut photo_files = HashMap::new();
+            for asset in media_assets {
+                let dest = format!("assets/{}/{}", d.id, asset.name);
+                let target = folder.join(&dest);
+                fs::create_dir_all(target.parent().unwrap()).map_err(err)?;
+                fs::copy(&asset.path, target).map_err(err)?;
+                photo_files.insert(asset.path, dest);
+            }
+            if updates::markdown(&d.path) {
                 content = rewrite_links(
                     content,
                     |url, _| {
@@ -1336,7 +1780,8 @@ pub fn export_bundle(
                             .join(decoded(url).ok()?)
                             .canonicalize()
                             .ok()?;
-                        if let Some(name) = mapped.get(&source) {
+                        if let Some(name) = photo_files.get(&source).or_else(|| mapped.get(&source))
+                        {
                             return Some(format!("{}{}", encoded(name), suffix));
                         }
                         if !source.starts_with(&root) {
@@ -1388,7 +1833,7 @@ pub fn export_bundle(
                 .map_err(err)?;
         }
         zip.finish().map_err(err)?;
-        files::write_atomic(target, &fs::read(archive).map_err(err)?)
+        files::write_atomic_from(target, fs::File::open(archive).map_err(err)?)
     })();
     let _ = fs::remove_dir_all(temp);
     result
@@ -1417,6 +1862,11 @@ mod tests {
         assert!(projects
             .iter()
             .any(|p| p.id == other.id && !p.system_title && p.title == "收件箱"));
+        assert_eq!(
+            rename_project(root, "inbox", "收件箱").err().as_deref(),
+            Some("空间名称重复")
+        );
+        rename_project(root, &other.id, "过去的笔记").unwrap();
         rename_project(root, "inbox", "收件箱").unwrap();
         assert_eq!(project_title(root, "inbox").unwrap(), "收件箱");
         assert!(
@@ -1558,6 +2008,101 @@ mod tests {
         trash(d.path(), id, true).unwrap();
         rename(d.path(), id, "新标题.md").unwrap();
         assert_eq!(get(d.path(), id).unwrap().title, "新标题.md");
+    }
+    #[test]
+    fn folder_preflight_distinguishes_gallery_images_from_linked_assets() {
+        let source = tempfile::tempdir().unwrap();
+        let dir = source.path();
+        fs::write(dir.join("Notes.md"), "![board](embedded.png)").unwrap();
+        fs::write(dir.join("embedded.png"), "attachment").unwrap();
+        fs::write(dir.join("Gallery.heic"), "independent").unwrap();
+        fs::write(dir.join("Report.pdf"), "unsupported").unwrap();
+        let mut paths = vec![dir.display().to_string()];
+        let (items, report) = inputs(&paths, true);
+        assert_eq!(
+            (
+                report.documents,
+                report.images,
+                report.attachments,
+                report.skipped
+            ),
+            (1, 1, 1, 1)
+        );
+        assert_eq!(items.len(), 2);
+        assert_eq!(inputs(&paths, false).1.attachments, 0);
+        paths.push(dir.join("embedded.png").display().to_string());
+        assert_eq!(inputs(&paths, true).1.images, 2);
+    }
+    #[test]
+    fn preview_matches_destination_originals_notes_and_portable_photos_without_writing() {
+        let data = tempfile::tempdir().unwrap();
+        let source = tempfile::tempdir().unwrap();
+        let dir = source.path();
+        let assets = dir.join("assets");
+        fs::create_dir(&assets).unwrap();
+        let portable = dir.join("Board.png.md");
+        let note = dir.join("notes.md");
+        let original = assets.join("original.png");
+        let media = include_bytes!("../native/fixtures/media-board.png");
+        fs::write(&original, media).unwrap();
+        fs::write(assets.join("preview.jpg"), b"preview").unwrap();
+        let text = "<!-- inkstone-image:v1 -->\n# Board\n![Preview](assets/preview.jpg)\n[Original](assets/original.png)\n";
+        fs::write(&portable, text).unwrap();
+        fs::write(&note, "\u{feff}![picture](snapshot.png)").unwrap();
+        fs::write(dir.join("snapshot.png"), b"asset").unwrap();
+        let paths = [portable.display().to_string(), note.display().to_string()];
+        let first = import(
+            data.path(),
+            "inbox",
+            &paths,
+            true,
+            true,
+            &AtomicBool::new(false),
+            |_| {},
+        )
+        .unwrap();
+        assert!(first.items.iter().all(|i| i.status == "imported"));
+        let copied_photo = dir.join("new-name.PNG");
+        fs::write(&copied_photo, media).unwrap();
+        let all = [
+            paths[0].clone(),
+            paths[1].clone(),
+            copied_photo.display().to_string(),
+        ];
+        let preview = |project, enabled, assets| {
+            preview_import(data.path(), Some(project), &all, assets, enabled).unwrap()
+        };
+        let other = create_project(data.path(), "Empty").unwrap();
+        assert_eq!(preview(&other.id, true, true).existing, 0);
+        assert_eq!(preview("inbox", false, true).existing, 0);
+        assert_eq!(preview("inbox", true, false).existing, 2);
+        let report = preview("inbox", true, true);
+        assert_eq!(
+            (
+                report.documents,
+                report.images,
+                report.attachments,
+                report.skipped,
+                report.existing
+            ),
+            (1, 2, 3, 0, 3)
+        );
+        // Different retained attachments and changed sidecar captions must not suppress an import.
+        fs::write(dir.join("snapshot.png"), b"changed").unwrap();
+        fs::write(&portable, format!("{text}New caption\n")).unwrap();
+        assert_eq!(preview("inbox", true, true).existing, 1);
+        let db = conn(data.path()).unwrap();
+        assert_eq!(
+            db.query_row("SELECT count(*) FROM imports", [], |r| r.get::<_, usize>(0))
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            db.query_row("SELECT count(*) FROM documents", [], |r| r
+                .get::<_, usize>(0))
+                .unwrap(),
+            2
+        );
     }
     #[test]
     fn import_handles_duplicates_bom_links_assets_and_bad_files() {

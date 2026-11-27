@@ -36,7 +36,7 @@ pub fn recovery_report(data: &Path) -> Result<RecoveryReport, String> {
 pub(super) fn run(data: &Path) -> Result<RecoveryReport, String> {
     // Catalogue/migration errors remain global failures. A damaged individual
     // journal or file is isolated below and cannot stop healthy later items.
-    let c = conn(data)?;
+    let mut c = conn(data)?;
     let previous = recovery_report(data);
     let mut report = previous.clone().unwrap_or_default();
     if previous.is_err() {
@@ -85,8 +85,13 @@ pub(super) fn run(data: &Path) -> Result<RecoveryReport, String> {
             }
             let p = files::resolve(&root, &path, false)?;
             files::read_text(&p)?;
-            c.execute("UPDATE documents SET status='ready' WHERE id=?", [&id])
+            let tx = c
+                .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
                 .map_err(err)?;
+            crate::organization::finish_destination(&tx, &project, &id)?;
+            tx.execute("UPDATE documents SET status='ready' WHERE id=?", [&id])
+                .map_err(err)?;
+            tx.commit().map_err(err)?;
             Ok((
                 "recovered",
                 false,

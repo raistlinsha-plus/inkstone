@@ -1,5 +1,7 @@
 export interface LibraryProject {
   systemTitle?: boolean;
+  archived?: boolean;
+  pinned?: boolean;
   id: string;
   title: string;
 }
@@ -14,6 +16,7 @@ export interface LibraryDocument {
   status: "ready" | "trashed" | "purging";
 }
 export interface ImportTask {
+  folder?: string;
   id: string;
   projectId: string;
   paths: string[];

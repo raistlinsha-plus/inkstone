@@ -2,6 +2,53 @@
 
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
+## v1.2.0-beta.3 · 左侧导航位置（构建 10218）
+
+切换文档、任务和日历时，左侧一级导航图标保持在同一位置。
+
+## v1.2.0-beta.3 · 脑图样式与拖动（构建 10217）
+
+- 从「样式」选择主题后，画布随即显示所选配色，保存并重新打开文件后仍然生效。
+- 把节点拖到画布空白处可以调整位置，布局随文件保存。拖到另一个节点上可以调整分支层级。
+
+## v1.2.0-beta.3 · 脑图中心标题（构建 10216）
+
+脑图的圆形中心主题现以紧凑的圆角标题块显示，宽度随标题文字调整。已有脑图打开即可看到变化，导出的 SVG 也使用相同外观。
+
+## v1.2.0-beta.3 · 在画布上整理分支（构建 10215）
+
+- 可连续输入多个想法。填写节点名称时，Shift+Enter 保存并接着输入同级，⌘+Enter 保存并接着输入子节点。
+- 右键点击节点即可添加子节点或同级节点、改名、调整同级顺序或删除分支。键盘可用 Shift+F10 打开菜单。
+- 有子节点的分支可以折叠。展开后恢复全部后代，折叠操作只改变画布视图。
+
+## v1.2.0-beta.3 · 独立脑图画布（构建 10214）
+
+- 双击节点可以就地改名，使用 Tab 或 Enter 添加子节点或同级节点。在 Markdown 和常用 Mermaid 脑图中，拖动分支可更换父节点或调整同级顺序。
+- 新增「青竹」「彩色分支」「墨线」三种样式，选择随文件保存。普通笔记继续提供大纲视图，特殊 Mermaid 语法可在源码或分栏中编辑。
+
+Standalone Markdown and supported Mermaid maps now support in-place node editing, drag-to-reorder and drag-to-reparent. Choose Jade, Color branches or Ink and save the theme with the map. [English user manual](docs/USER-MANUAL.en.md)
+
+## v1.2.0-beta.3 · 空间、图片与脑图（构建 10213）
+
+- 「我的空间」进入主区域。文件夹支持逐级浏览、改名、移动和删除空目录。
+- 独立图片直接进入查看器。OCR 在本机读取，视觉提问按图保留待保存结果；保存描述后可以检索并引用。
+- Mermaid 脑图默认打开画布，使用细曲线和按源码排列的分支。独立 Markdown 脑图支持键盘添加、命名节点。
+- 聊天、笔记、任务与日历共用一条任务的排期和完成状态。Wiki 资料选择保留保存入口。
+
+Spaces and folders open in the main pane. Browse photos, review OCR or explicitly send a preview for visual analysis. Mermaid mind maps open on a canvas, and Markdown mind maps support keyboard editing. [中文交付说明](docs/DELIVERY-v1.2.0-beta.3.md) · [English manual](docs/USER-MANUAL.en.md)
+
+## v1.2.0-beta.2 · 控件与编辑可靠性（构建 10212）
+
+- 在「我的空间」中可以搜索、清空并继续输入，就地修改名称。行尾菜单可用方向键操作，靠近窗口底部时向上展开。按 Esc 退出当前操作后，焦点回到原行。
+- 导入窗口显示目标空间、文件夹和扫描结果。从 Finder 拖入文件默认导入当前空间根目录。重新加入已有图片可直接打开原来那一份。导出空间或图片附件包时一并保留原图、预览、识别文字和已保存的描述。
+- 在任务列表或日历中选「保存并拆解」，会先写回笔记，再把当前任务标题和排期填入问答。保存失败时可以留在原处修改或重试。聊天转任务可在缺少可写笔记时创建默认任务清单。
+
+Space search and inline renaming support keyboard navigation and Chinese text composition. Imports show their destination, and image bundles preserve the original file and its description. Saving a task for AI assistance carries the edited title and schedule into the question draft. [操作与验收说明](docs/DELIVERY-v1.2.0-beta.2.md)
+
+## 本地构建 10211 · 图片、脑图与空间目录
+
+支持直接打开图片、空间内翻图、保留 HEIC/HEIF 原件和导出原图。macOS 生成预览并识别文字，视觉模型描述可保存为可检索文本。新增独立脑图、嵌套文件夹、按文件夹新建和导入资料，以及空间管理中的置顶、归档与恢复。
+
 ## v1.2.0-beta.1 · 从聊天到文档任务
 
 Build 10207 brings Markdown tasks to their own workspace and the weekly calendar. Capture a passage from a chat, check the task in its note, or schedule a work session. Document charts share the contextual controls used by diagrams. [English release notes](docs/DELIVERY-v1.2.0-beta.1.en.md) · [中文版本说明](docs/DELIVERY-v1.2.0-beta.1.md)

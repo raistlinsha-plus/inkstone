@@ -289,6 +289,8 @@ export function installV07Fixture({
       persist();
       return clone(template);
     }
+    if (command === "library_preview_import" && clean)
+      return { documents: args.paths.length, images: 0, attachments: 0, skipped: 0, existing: 0, warnings: [] };
     if (command === "library_import" && clean) {
       const original = templates.documents[0];
       const doc = {
@@ -314,6 +316,7 @@ export function installV07Fixture({
         ],
       };
     }
+    if (command === "library_layout") return { folders: [], locations: {}, pinned: false, archived: false };
     if (command === "library_list")
       return {
         projects: store.spaces,

@@ -131,6 +131,7 @@
   list-style: none;
 }
 .agent-composer summary::-webkit-details-marker { display: none; }
+.agent-composer .composer-web-toggle small { font-size: 10px; font-weight: 650; }
 .agent-composer .composer-web-toggle input {
   position: absolute;
   inset: 0;

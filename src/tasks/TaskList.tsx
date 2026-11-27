@@ -25,6 +25,7 @@ import {
   changeTrackedTask,
   type TaskDraft,
 } from "../content/tasks";
+import { isTaskNote } from "../library/mediaTypes";
 import { isImeEvent } from "../platform/ime";
 import { translate as t, useLocale } from "../i18n";
 import ModalDialog from "../ModalDialog";
@@ -68,7 +69,7 @@ interface Props {
   onUndo: () => void;
   canUndo: boolean;
   onRefresh: () => void;
-  onAskForHelp: (title: string) => void;
+  onAskForHelp: (task: TaskDraft) => void;
 }
 
 export default function TaskList({
@@ -204,7 +205,9 @@ export default function TaskList({
       retry.current = { signature, id: crypto.randomUUID() };
     const draft = { id: retry.current.id, title: name, due };
     if (target) {
-      const doc = documents.find((d) => d.documentId === target);
+      const doc = documents.find(
+        (d) => d.documentId === target && isTaskNote(d.path),
+      );
       if (!doc)
         throw Error(
           t(
@@ -343,11 +346,13 @@ export default function TaskList({
                     <option value="">
                       {t("默认任务笔记", "Default task note")}
                     </option>
-                    {documents.map((d) => (
-                      <option key={d.documentId} value={d.documentId}>
-                        {d.title}
-                      </option>
-                    ))}
+                    {documents
+                      .filter((d) => isTaskNote(d.path))
+                      .map((d) => (
+                        <option key={d.documentId} value={d.documentId}>
+                          {d.title}
+                        </option>
+                      ))}
                   </select>
                   {view === "today"
                     ? t("今天截止", "Due today")
@@ -478,15 +483,17 @@ export default function TaskList({
           <TaskForm
             document={detail.document}
             current={currentDetail}
-            onOpenSource={() => onOpen({ path: detail.document.path, line: detail.task.line })}
+            onOpenSource={() =>
+              onOpen({ path: detail.document.path, line: detail.task.line })
+            }
             origin={detail}
             onCalendar={onCalendar}
             onPatch={onPatch}
             busy={locked}
             onClose={() => setDetail(null)}
-            onAskForHelp={(name) => {
+            onAskForHelp={(task) => {
               setDetail(null);
-              onAskForHelp(name);
+              onAskForHelp(task);
             }}
           />
         </ModalDialog>

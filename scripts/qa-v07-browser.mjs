@@ -147,7 +147,7 @@ try {
     3,
   );
   await shot("04-character-picker");
-  await page.getByRole("button", { name: "返回工作区", exact: true }).click();
+  await page.getByRole("button", { name: "返回文档", exact: true }).click();
   checks.push(
     "companion workspace opens preferences and shows all three character choices",
   );

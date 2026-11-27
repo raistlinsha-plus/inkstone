@@ -1,6 +1,30 @@
-# Inkstone desktop guide · v1.2.0-beta.1
+# Inkstone desktop guide · v1.2.0-beta.3
 
-[简体中文手册](USER-MANUAL.zh-CN.md) · [Build from source](QUICKSTART.en.md) · [What changed in this beta](DELIVERY-v1.2.0-beta.1.en.md)
+[简体中文手册](USER-MANUAL.zh-CN.md) · [Build from source](QUICKSTART.en.md) · [Beta.3 changes](../CHANGELOG.md)
+
+## Images, mind maps and folders
+
+In Documents, open **Create and organize → Open images…**. Choose one or several images in Finder, browse them with **Previous** and **Next**, then use **Add to space** to retain a local copy. For batch imports, choose the image files in **Import documents**. If you add the same original to the space again, Inkstone shows where it is already saved. Choose **Open existing image** to see its saved text and description.
+
+Open a saved image to browse the other images in the same space in name order, zoom in, or export the original. HEIC, HEIF, JPEG, PNG, WebP and GIF files are supported up to 64 MB per original. The preview displays the primary image or a static frame. macOS recognizes text locally on import. Search and Q&A use this text. For a visual description, open **Analyze image**, check the preview and model, and select **Send image**. This sends the preview to the configured chat endpoint. Select **Save description for search** to include the answer in the document. **Generate image** requires a model on that endpoint that supports image generation and returns a Base64 image.
+
+Select a folder before creating a note, nested folder or mind map. Use a document’s menu to move it. A standalone mind map is saved as a portable `.mindmap.md` file and opens on the canvas. Select a node to rename it or add a child or sibling. In **My spaces**, search by name and use **Clear search** to type another query. Use a row’s **⋯** menu to pin, archive or rename the space. **Rename** selects the old name in place. Use the arrow keys and Enter to choose an action, or press Esc to return to the row. Clicking outside dismisses the menu. Restore archived spaces under **Archived**.
+
+**My spaces** opens in the main pane. Open a folder to browse its direct children and use the breadcrumb to return. You can browse archived spaces and restore one to write to it again. In the image viewer, arrow keys move through the space’s images. **View text** separates OCR from saved descriptions. You can leave an image and return to its pending result. Save any description you want to keep before quitting.
+
+## Edit a standalone mind map on the canvas
+
+Open a `.mindmap.md` file or a supported Mermaid `.mmd` diagram that starts with `mindmap`. Double-click a node or select it and press F2 to rename it in place. Press Tab to add a child or Enter to add a sibling. Type the name and press Enter to apply it, or Esc to cancel. Review the branch before confirming deletion.
+
+Drag a topic into empty space to place its whole branch there. Inkstone saves that position with the map. To change the hierarchy, drop the branch in the middle of another topic to make it a child, or near its top or bottom edge to put it before or after. Drag the background to pan. Choose **Auto layout** to clear manual positions, or press ⌘Z to undo the last edit. [Practice with the reading night map](assets/v1.2.0-beta.3/en/reading-night.mmd)
+
+While naming a topic, press Shift+Enter to save and start another sibling. Press ⌘+Enter (Ctrl+Enter on other platforms) to save and start a child. Enter saves just the current name. Esc cancels the unconfirmed entry. The buttons below the name field also let you save and start a sibling or child.
+
+Right-click the topic you want to organize, or select it and press Shift+F10. Choose **Move up** or **Move down** to shift the whole branch by one sibling. With a topic selected, Option+Up or Option+Down also moves its branch. Use the arrow keys to choose a command, Enter to apply it, or Esc to close the menu.
+
+To see the main branches of a large map, click the fold control at the edge of a branch or select it and press ⌘/ (Ctrl+/ on Windows keyboards). Its badge shows how many topics are hidden. Expand it again to see the original branch.
+
+Under **Style**, choose **Jade**, **Color branches** or **Ink**. The theme is stored in the map file and survives saving and reopening. A single top-level H1 can be renamed at the root of a Markdown map. Maps with several top-level branches use the filename as their shared title. Use source view for branches that contain prose or complex Markdown. Mermaid maps with advanced syntax such as icons or directives retain their native preview and can be edited in source or split view. For an ordinary note, open its outline mind map to inspect the document structure.
 
 ## Try a note first
 
@@ -8,7 +32,7 @@ Open **My documents → From sources to your first answer → Try the example**.
 
 ## Start writing
 
-Open **My documents** and select a space. A space groups documents from different places on your Mac. Choose **Import documents** to copy a file or folder into the active space. Edits go into the copy. To edit files in place, open **Spaces and files → Open local folder (edit originals)**.
+Open **My documents** and select a space. A space groups documents from different places on your Mac. Choose **Import documents** and check the destination space and folder before importing. The preview counts notes, standalone images, attachments and skipped items. With duplicate detection on, it also shows how many items already exist in the destination space. Dropping files from Finder into the window starts a new import at the root of the current space. Edits go into the copy. To edit files in place, open **Spaces and files → Open local folder (edit originals)**.
 
 Create a Markdown note with **New document**. Use **Editor** to format text, **Source** to edit Markdown, or **Split** to compare both. The insert menu supports lists, tables, JSON, Mermaid, charts, mind maps and calendars. Hover over a Mermaid diagram or mind map, or Tab to its controls, to zoom, fit or export an SVG. Tall Mermaid diagrams expand with the document. Save with ⌘S. Use a document’s menu to inspect its history or check whether an imported original has changed.
 
@@ -63,8 +87,8 @@ Open **Calendar** in the main navigation to see the week. A due date marks the d
 
 1. On your own message use **Create tasks from the original message**. For an answer, choose **More answer actions (…) → Create tasks from answer**. Select the sentence that describes the work, then choose **Add selection**.
 2. For a long message, **Extract with chat model** can propose actions. By default the request includes the displayed message. When extracting from an answer, select **Include my question in extraction** to send the question too.
-3. Review the proposed actions, change their titles or deadlines, select a destination space and Markdown note, then choose **Save to note**. If the note changed during review, reload it and check the destination before saving.
-4. Open the task in **Tasks** to set a deadline or schedule. **Break down with AI** prepares a draft question you can edit before sending.
+3. Review the proposed actions, change their titles or deadlines, choose an active space and a writable Markdown note, then select **Save to note**. If that space has no writable notes, **Task list (created on save)** creates the task note when you confirm. If the note changed during review, reload it and check the destination before saving.
+4. Open the task in **Tasks** or **Calendar**, edit the title or scheduled time, and choose **Save and break down with AI**. After the note is saved, the edited title and schedule appear in a question you can review and send. If the save fails, the task details stay open with your edits ready to retry.
 
 ## Maintain a Wiki
 
@@ -82,7 +106,9 @@ In **Models and settings → External tools**, choose one space and create a rea
 
 ## Back up and recover
 
-Open **Spaces and files → Backup and restore rehearsal**. Create a backup, verify its manifest and test restoration in an empty folder. Keep the verified archive separately. Configure service keys separately after restoring to a different Mac. Use the document trash to restore a removed copy or review the impact before permanently deleting it. Use **Recovery and diagnostics** if an import or file operation was interrupted.
+To share one space, choose **Export space** on the space home page. The ZIP includes each standalone image’s original, preview, recognized text and saved description. To import it into another space, extract the archive, open **Import documents** in the destination and select the extracted folder.
+
+To back up all spaces, open **Spaces and files → Backup and restore rehearsal**. Create a backup, verify its manifest and test restoration in an empty folder. Keep the verified archive separately. Configure service keys separately after restoring to a different Mac. Use the document trash to restore a removed copy or review the impact before permanently deleting it. Use **Recovery and diagnostics** if an import or file operation was interrupted.
 
 
 ## When a result looks wrong

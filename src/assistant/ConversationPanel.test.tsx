@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
+import { setLanguagePreference } from "../i18n";
 import { ConversationTimeline } from "./ConversationPanel";
 import type { Conversation } from "./types";
 import type { ChatResponse } from "../types";
@@ -11,6 +12,7 @@ function timeline(
   response: ChatResponse,
   onCreateTasks = vi.fn(),
   onCopy = vi.fn(),
+  alternate = false,
 ) {
   const createdAt = "2026-01-01T00:00:00Z";
   const conversation: Conversation = {
@@ -44,6 +46,14 @@ function timeline(
       },
     ],
   };
+  const turn = conversation.turns[0];
+  if (alternate)
+    turn.candidates.push({
+      ...turn.candidates[0],
+      id: "alternative",
+      status: "stopped",
+      response: null,
+    });
   const onOpen = vi.fn();
   const noop = () => {};
   render(
@@ -231,4 +241,24 @@ test("legacy generic web notices use a concise explanation and retain the full d
   fireEvent.click(screen.getByRole("button", { name: "更多回答操作" }));
   fireEvent.click(screen.getByText("技术详情"));
   expect(original.closest("details")?.open).toBe(true);
+});
+
+test("labels multiple answers and their states in the active interface language", () => {
+  setLanguagePreference("en");
+  try {
+    timeline(
+      { text: "答复", finishReason: "stop", sources: [], warning: null },
+      undefined,
+      undefined,
+      true,
+    );
+    const alternatives = screen.getByRole("combobox", {
+      name: "Answer alternatives for 整理两份资料。",
+    });
+    expect(alternatives.textContent).toContain("1/2 · Done");
+    expect(alternatives.textContent).toContain("2/2 · Stopped");
+    expect(screen.getByText("Selected 1 of 2")).toBeTruthy();
+  } finally {
+    setLanguagePreference("zh-CN");
+  }
 });

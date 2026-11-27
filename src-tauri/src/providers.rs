@@ -311,7 +311,7 @@ fn status_message(code: reqwest::StatusCode) -> String {
         _ => format!("模型服务返回 HTTP {}", code.as_u16()),
     }
 }
-async fn request(
+pub(crate) async fn request(
     client: &reqwest::Client,
     provider: &Provider,
     key: Option<&str>,
@@ -452,7 +452,7 @@ pub fn parse_embeddings(
     }
     Ok(result)
 }
-async fn bounded_json(
+pub(crate) async fn bounded_json(
     response: reqwest::Response,
     limit: usize,
     cancel: &AtomicBool,
