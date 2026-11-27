@@ -98,6 +98,7 @@ pub async fn library_list(state: State<'_, AppState>) -> Result<library::Library
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnswerSourceVersion {
+    archived: bool,
     document: library::Document,
     hash: String,
     lines: usize,
@@ -126,6 +127,7 @@ pub async fn library_answer_source(
             return Ok(None);
         };
         Ok(Some(AnswerSourceVersion {
+            archived: crate::organization::is_archived(&data, &document.project_id)?,
             document,
             hash: crate::files::hash(&content),
             lines: content.split('\n').count(),
@@ -551,4 +553,99 @@ pub async fn library_relink_apply(
     })
     .await
     .map_err(|_| "链接修复未完成，请核对正文与历史".to_string())?
+}
+
+#[cfg(test)]
+mod archive_lifecycle_tests {
+    use super::*;
+    use tauri::Manager;
+
+    #[tokio::test]
+    async fn archived_citation_cannot_change_catalog_or_purge_a_document() {
+        let temp = tempfile::tempdir().unwrap();
+        let data = temp.path();
+        let app = tauri::test::mock_builder()
+            .manage(
+                crate::evaluation_v086::isolated_state(
+                    data,
+                    Default::default(),
+                    Default::default(),
+                )
+                .unwrap(),
+            )
+            .build(tauri::test::mock_context(tauri::test::noop_assets()))
+            .unwrap();
+        let space = library::create_project(data, "引用来源").unwrap().id;
+        let note = library::create_document(data, &space, "会议.md", "保存的原文").unwrap();
+        let binned = library::create_document(data, &space, "会议草稿.md", "草稿原文").unwrap();
+        library_trash(app.state(), binned.id.clone(), false)
+            .await
+            .unwrap();
+        let preview = library::lifecycle::preview(data, &space, &binned.id).unwrap();
+        crate::organization::library_layout(
+            app.state(),
+            space.clone(),
+            Some("archive".into()),
+            Some("true".into()),
+            None,
+        )
+        .await
+        .unwrap();
+        let citation = library_answer_source(app.state(), note.id.clone())
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(citation.archived);
+        assert_eq!(citation.hash, crate::files::hash("保存的原文"));
+        let rename = library_rename(app.state(), note.id.clone(), "改名.md".into()).await;
+        let trash = library_trash(app.state(), note.id.clone(), false).await;
+        let fresh_preview = library::lifecycle::preview(data, &space, &binned.id);
+        let purge = library::lifecycle::execute(
+            data,
+            &space,
+            &binned.id,
+            &preview.token,
+            &uuid::Uuid::new_v4().to_string(),
+            "删除",
+        );
+        let restore = library_trash(app.state(), binned.id.clone(), true).await;
+        let attempts = [
+            rename.err(),
+            trash.err(),
+            restore.err(),
+            purge.err(),
+            fresh_preview.err(),
+        ];
+        assert!(
+            attempts
+                .iter()
+                .all(|message| message.as_deref().is_some_and(|s| s.contains("归档"))),
+            "{attempts:?}"
+        );
+        assert_eq!(library::get(data, &note.id).unwrap().title, "会议.md");
+        assert_eq!(library::get(data, &note.id).unwrap().status, "ready");
+        assert_eq!(library::get(data, &binned.id).unwrap().status, "trashed");
+        let root = library::project_root(data, &space).unwrap();
+        assert_eq!(
+            std::fs::read(root.join(note.path)).unwrap(),
+            "保存的原文".as_bytes()
+        );
+        assert_eq!(
+            std::fs::read(root.join(binned.path)).unwrap(),
+            "草稿原文".as_bytes()
+        );
+        crate::organization::library_layout(
+            app.state(),
+            space.clone(),
+            Some("archive".into()),
+            Some("false".into()),
+            None,
+        )
+        .await
+        .unwrap();
+        library_rename(app.state(), note.id.clone(), "改名.md".into())
+            .await
+            .unwrap();
+        library_trash(app.state(), binned.id, true).await.unwrap();
+    }
 }

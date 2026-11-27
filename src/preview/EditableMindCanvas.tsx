@@ -41,6 +41,7 @@ import MindNodeMenu, { type NodeCommand, type NodeMenuAnchor } from "./MindNodeM
 import "./editable-mind.css";
 
 interface Props {
+  remainingSlots?: number;
   tree: CanvasNode;
   source: string;
   viewKey: string;
@@ -72,6 +73,7 @@ interface Gesture {
   source: string;
 }
 const ghost = "__inkstone_draft__";
+const dragThreshold = 5;
 const styleNames = () => ({
   classic: t("青竹", "Jade"),
   color: t("彩色分支", "Color branches"),
@@ -99,7 +101,7 @@ function draftTree(root: CanvasNode, id?: string, action?: Action): CanvasNode {
   }
   return insert(root);
 }
-function canAct(box: PlacedNode, action: Action) {
+function allowsNodeAction(box: PlacedNode, action: Action) {
   if (action === "child") return box.node.canAddChild !== false;
   if (action === "rename") return box.node.editable !== false;
   if (!box.parent) return false;
@@ -182,6 +184,7 @@ function NodeShape({
 
 export default function EditableMindCanvas({
   tree,
+  remainingSlots = Infinity,
   source,
   viewKey,
   style,
@@ -193,11 +196,15 @@ export default function EditableMindCanvas({
   onError,
   onLocateNode,
 }: Props) {
+  const canAct = (box: PlacedNode, action: Action) =>
+    (remainingSlots > 0 || (action !== "child" && action !== "sibling")) && allowsNodeAction(box, action);
   const draftKey = viewKey + ":canvas-name";
   const viewportKey = viewKey + ":editable-canvas";
-  const [draft, setDraft] = useState<Draft | undefined>(() =>
-    loadBlockDraft(draftKey, source),
-  );
+  const [draft, setDraft] = useState<Draft | undefined>(() => {
+    const saved = loadBlockDraft<Draft>(draftKey, source);
+    if (!remainingSlots && (saved?.action === "child" || saved?.action === "sibling")) return undefined;
+    return saved;
+  });
   const [selected, select] = useState(draft?.id || tree.id);
   const [nodeMenu, setNodeMenu] = useState<NodeMenuAnchor>();
   const closeNodeMenu = useCallback(() => setNodeMenu(undefined), []);
@@ -404,6 +411,10 @@ export default function EditableMindCanvas({
     setDraft(undefined);
     focusNode(id);
   }
+  const canContinue = (action: "sibling" | "child") => !!draft
+    && remainingSlots > (draft.action === "rename" ? 0 : 1)
+    && (draft.action !== "rename" || canAct(current, action));
+
   function commit(continueWith?: "sibling" | "child") {
     if (!draft || stale || (draft.action !== "delete" && !draft.value.trim()))
       return;
@@ -419,7 +430,7 @@ export default function EditableMindCanvas({
       const id = updated.selection || (draft.action === "delete"
         ? current.parent?.node.id || tree.id
         : draft.id);
-      if (continueWith && updated.selection && (draft.action !== "rename" || canAct(current, continueWith))) {
+      if (continueWith && updated.selection && canContinue(continueWith)) {
         if (continueWith === "child" && draft.action === "rename") openBranch(draft.id);
         select(id);
         setDraft({ id, action: continueWith, value: "", base: updated.source });
@@ -573,7 +584,7 @@ export default function EditableMindCanvas({
     if (!g || g.pointer !== e.pointerId) return;
     const dx = e.clientX - g.startX,
       dy = e.clientY - g.startY;
-    if (!g.active && Math.hypot(dx, dy) < 5) return;
+    if (!g.active && Math.hypot(dx, dy) < dragThreshold) return;
     if (g.id && !onPosition && scene.byId.get(g.id)?.node.movable === false) return;
     if (!g.active) {
       g.active = true;
@@ -613,22 +624,26 @@ export default function EditableMindCanvas({
   function finishDrag(pointerId: number, release?: { clientX: number; clientY: number }) {
     const g = gesture.current;
     if (!g || g.pointer !== pointerId) return;
-    // Hit-test the actual release, even if the OS coalesced the final moves.
-    const destination = release && g.active && g.id && dropAt(g.id, release.clientX, release.clientY);
     gesture.current = null;
     setDrop(undefined);
     setDragged(undefined);
     setDragPoint(undefined);
     if (stage.current?.hasPointerCapture(pointerId))
       stage.current.releasePointerCapture(pointerId);
-    if (!release || !g.active || g.source !== source) return;
+    if (!release || g.source !== source) return;
+    // A fast drag may reach pointerup without a delivered pointermove.
+    const dx = release.clientX - g.startX;
+    const dy = release.clientY - g.startY;
+    if (!g.active && Math.hypot(dx, dy) < dragThreshold) return;
     if (!g.id) {
-      setCamera({ ...g.camera, x: g.camera.x + release.clientX - g.startX, y: g.camera.y + release.clientY - g.startY });
+      setCamera({ ...g.camera, x: g.camera.x + dx, y: g.camera.y + dy });
       return;
     }
+    const destination = dropAt(g.id, release.clientX, release.clientY);
+    if (!g.active && destination) setCamera(g.camera);
     try {
       if (destination === "free") {
-        onPosition?.(g.id, (release.clientX - g.startX) / g.camera.scale, (release.clientY - g.startY) / g.camera.scale);
+        onPosition?.(g.id, dx / g.camera.scale, dy / g.camera.scale);
         focusNode(g.id);
       } else if (destination) {
         const moved = onChange({ type: "move", id: g.id, ...destination });
@@ -764,6 +779,7 @@ export default function EditableMindCanvas({
         role="group"
         aria-label={t("节点操作", "Node actions")}
       >
+        {remainingSlots === 0 && <span role="status">{t("已达 500 个节点上限。删除节点后可继续新增。", "500-node limit reached. Delete a node to add another.")}</span>}
         <button
           disabled={!!draft || !canAct(current, "child")}
           title={t("新增子节点 · Tab", "Add child · Tab")}
@@ -1067,13 +1083,13 @@ export default function EditableMindCanvas({
                 <Check />
               </button>
               {draft.action !== "delete" && <>
-                <button type="button" disabled={!!stale || !draft.value.trim() || (draft.action === "rename" && !canAct(current, "sibling"))}
+                <button type="button" disabled={!!stale || !draft.value.trim() || !canContinue("sibling")}
                   aria-label={t("保存并新增同级", "Save and add a sibling")}
                   title={t("保存并新增同级 · Shift+Enter", "Save and add a sibling · Shift+Enter")}
                   onClick={() => commit("sibling")}>
                   <GitBranch />
                 </button>
-                <button type="button" disabled={!!stale || !draft.value.trim() || (draft.action === "rename" && !canAct(current, "child"))}
+                <button type="button" disabled={!!stale || !draft.value.trim() || !canContinue("child")}
                   aria-label={t("保存并新增子节点", "Save and add a child")}
                   title={t("保存并新增子节点 · ⌘/Ctrl+Enter", "Save and add a child · Cmd/Ctrl+Enter")}
                   onClick={() => commit("child")}>

@@ -44,6 +44,8 @@ const currentDocuments = [
   "docs/USER-MANUAL.zh-CN.md",
   "docs/USER-MANUAL.en.md",
   "docs/ROADMAP.zh-CN.md",
+  "docs/DELIVERY-v1.4.0.md",
+  "docs/DELIVERY-v1.4.0.en.md",
   "docs/DELIVERY-v1.2.0-beta.3.md",
   "docs/DELIVERY-v1.2.0-beta.3.en.md",
   "docs/design/v1.2-frontend-roadmap.zh-CN.md",

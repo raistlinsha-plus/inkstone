@@ -230,6 +230,7 @@ pub fn detail(data: &Path, project: &str, id: &str) -> Result<TrashDetail, Strin
 }
 pub fn preview(data: &Path, project: &str, id: &str) -> Result<PurgePreview, String> {
     let _permit = maintenance::mutation(data)?;
+    crate::organization::check_destination(&conn(data)?, project, "")?;
     let d = checked(data, project, id)?;
     if d.status != "trashed" {
         return Err("NOT_TRASHED:请先将文档移入回收站".into());
@@ -239,14 +240,19 @@ pub fn preview(data: &Path, project: &str, id: &str) -> Result<PurgePreview, Str
     let hash = digest(data, &d, &paths, &members)?;
     let token = uuid::Uuid::new_v4().to_string();
     let expires = now() + 300;
-    let c = conn(data)?;
-    c.execute("DELETE FROM purge_previews WHERE expires<?", [now()])
+    let mut catalog = conn(data)?;
+    let tx = catalog
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
         .map_err(err)?;
-    c.execute(
+    crate::organization::check_destination(&tx, project, "")?;
+    tx.execute("DELETE FROM purge_previews WHERE expires<?", [now()])
+        .map_err(err)?;
+    tx.execute(
         "INSERT INTO purge_previews VALUES(?,?,?,?,?)",
         params![token, id, project, expires, hash],
     )
     .map_err(err)?;
+    tx.commit().map_err(err)?;
     Ok(PurgePreview {
         detail: detail(data, project, id)?,
         token,
@@ -315,6 +321,7 @@ pub fn execute(
         }
         return resume(data, op);
     }
+    crate::organization::check_destination(&c, project, "")?;
     let d = checked(data, project, id)?;
     if d.status != "trashed" {
         return Err("NOT_TRASHED:文档已不在回收站".into());
@@ -339,7 +346,10 @@ pub fn execute(
         roots: paths,
         digest: files::hash(serde_json::to_vec(&members).map_err(err)?),
     };
-    let tx = c.transaction().map_err(err)?;
+    let tx = c
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(err)?;
+    crate::organization::check_destination(&tx, project, "")?;
     tx.execute(
         "INSERT INTO document_purges(id,document,project,phase,payload) VALUES(?,?,?,'prepared',?)",
         params![op, id, project, serde_json::to_string(&plan).map_err(err)?],

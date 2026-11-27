@@ -1,4 +1,12 @@
+import { translate } from "../i18n";
 import { maxMindOffset, type MindOffset, type MindPositions } from "./mindPositions";
+
+export const mindNodeLimit = 500;
+
+export function checkMindCapacity(count: number, edit: MindChange) {
+  if (count >= mindNodeLimit && (edit.type === "child" || edit.type === "sibling"))
+    throw new Error(translate("已达 500 个节点上限。", "The 500-node limit has been reached."));
+}
 
 export interface CanvasNode {
   id: string;

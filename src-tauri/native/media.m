@@ -3,10 +3,21 @@
 #import <ImageIO/ImageIO.h>
 #import <Vision/Vision.h>
 
-static NSString *recognizeText(CGImageRef image, BOOL cpuOnly, NSError **error) {
+static NSString *recognizeText(CGImageRef image, BOOL cpuOnly,
+                               VNRequestTextRecognitionLevel level, NSError **error) {
   VNRecognizeTextRequest *request = [VNRecognizeTextRequest new];
-  request.recognitionLevel = VNRequestTextRecognitionLevelAccurate;
-  request.recognitionLanguages = @[ @"zh-Hans", @"en-US" ];
+  request.recognitionLevel = level;
+  if (level == VNRequestTextRecognitionLevelFast) {
+    NSArray *supported = [request supportedRecognitionLanguagesAndReturnError:error];
+    if (!supported) return nil;
+    NSMutableArray *languages = [NSMutableArray array];
+    for (NSString *language in @[ @"zh-Hans", @"en-US" ]) {
+      if ([supported containsObject:language]) [languages addObject:language];
+    }
+    if (languages.count) request.recognitionLanguages = languages;
+  } else {
+    request.recognitionLanguages = @[ @"zh-Hans", @"en-US" ];
+  }
   if (cpuOnly) {
     if (@available(macOS 14.0, *)) {
       NSDictionary *stages = [request supportedComputeStageDevicesAndReturnError:error];
@@ -80,16 +91,20 @@ char *inkstone_decode(const char *source, const char *preview, int recognize) {
       return strdup("");
     }
     NSError *error = nil;
-    NSString *text = recognizeText(img, NO, &error);
+    NSString *text = recognizeText(img, NO, VNRequestTextRecognitionLevelAccurate, &error);
     if (!text) {
       // An accelerator can fail to prepare the text model, especially at cold
       // start. Retry with a fresh request and handler on the CPU.
       NSLog(@"Inkstone OCR retry on CPU (%@ %ld)", error.domain, (long)error.code);
       error = nil;
-      text = recognizeText(img, YES, &error);
+      text = recognizeText(img, YES, VNRequestTextRecognitionLevelAccurate, &error);
       if (!text) {
         NSLog(@"Inkstone OCR failed (%@ %ld)", error.domain, (long)error.code);
-        text = @"（本机文字识别未完成）";
+        // The fast recognizer can still read supported scripts if the accurate
+        // model cannot load, even after switching compute devices.
+        error = nil;
+        text = recognizeText(img, NO, VNRequestTextRecognitionLevelFast, &error);
+        if (!text.length) text = @"（本机文字识别未完成）";
       }
     }
     CGImageRelease(img);

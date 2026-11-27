@@ -1,12 +1,37 @@
-# Inkstone desktop guide · v1.2.0-beta.3
+# Inkstone desktop guide · v1.4.0
 
-[简体中文手册](USER-MANUAL.zh-CN.md) · [Build from source](QUICKSTART.en.md) · [Beta.3 changes](../CHANGELOG.md)
+## Switch between documents, tasks and calendar
+
+Documents stays first in the left navigation. The document list and task filters share a divider you can drag to resize. Use the sidebar button at the top left of the window to hide either list. Each remembers its own setting. Calendar opens at full width.
+
+
+While editing, you can visit another page and return to the task or event draft in the same space. Calendar also restores your date and filters. To change an archived note, restore its space first.
+
+## Use a picture in chat
+
+1. Open general Q&A and choose **Add image** beside the composer. Pick one picture from the current space. You can also select a note in the same turn, for example to check a date in meeting minutes against a whiteboard photo.
+2. Choose **Recognized text (OCR)** for the words, **Saved description** for an existing description, or **Image preview** to let a vision model see the picture. For a visual request, review the pixels, model and endpoint before sending. Escape returns to the composer.
+3. Follow a citation back to the picture or note. Removing the image from the composer keeps the note selected.
+
+If a preview cannot load, choose available OCR or a saved description. A changed preview, model or endpoint requires fresh approval to send pixels.
+
+## Generate an image and save it to a project
+
+If the folder list fails to load after generation, retry the list to keep the current preview. Closing or replacing an unsaved result asks for confirmation.
+
+1. Choose **Create image** beside the chat composer and describe the image. Enter your image generation model ID and compatible endpoint. You can reuse the chat key for its configured endpoint, or enter a separate service key.
+2. Generate and inspect the preview. Revise the prompt, cancel, or name the result and choose a space and folder. Choose **Save to space** to add the image to the library.
+3. Open the saved result to view it, export the original or inspect locally recognized text. The provider must return an inline Base64 PNG, JPEG or WebP image. Services that return only a download URL require a different model or endpoint.
+
+![A generated reading-event poster, ready to save in the Event posters folder](assets/v1.4.0/en/create-image.png)
+
+[简体中文手册](USER-MANUAL.zh-CN.md) · [Build from source](QUICKSTART.en.md) · [Local release notes](DELIVERY-v1.4.0.en.md)
 
 ## Images, mind maps and folders
 
 In Documents, open **Create and organize → Open images…**. Choose one or several images in Finder, browse them with **Previous** and **Next**, then use **Add to space** to retain a local copy. For batch imports, choose the image files in **Import documents**. If you add the same original to the space again, Inkstone shows where it is already saved. Choose **Open existing image** to see its saved text and description.
 
-Open a saved image to browse the other images in the same space in name order, zoom in, or export the original. HEIC, HEIF, JPEG, PNG, WebP and GIF files are supported up to 64 MB per original. The preview displays the primary image or a static frame. macOS recognizes text locally on import. Search and Q&A use this text. For a visual description, open **Analyze image**, check the preview and model, and select **Send image**. This sends the preview to the configured chat endpoint. Select **Save description for search** to include the answer in the document. **Generate image** requires a model on that endpoint that supports image generation and returns a Base64 image.
+Open a saved image to browse the other images in the same space in name order, zoom in, or export the original. HEIC, HEIF, JPEG, PNG, WebP and GIF files are supported up to 64 MB per original. The preview displays the primary image or a static frame. macOS recognizes text locally on import. Search and Q&A use this text. For a visual description, open **Analyze image**, check the preview and model, and select **Send image**. This sends the preview to the configured chat endpoint. Select **Save description for search** to include the answer in the document. See the image generation instructions above for endpoint and format support.
 
 Select a folder before creating a note, nested folder or mind map. Use a document’s menu to move it. A standalone mind map is saved as a portable `.mindmap.md` file and opens on the canvas. Select a node to rename it or add a child or sibling. In **My spaces**, search by name and use **Clear search** to type another query. Use a row’s **⋯** menu to pin, archive or rename the space. **Rename** selects the old name in place. Use the arrow keys and Enter to choose an action, or press Esc to return to the row. Clicking outside dismisses the menu. Restore archived spaces under **Archived**.
 

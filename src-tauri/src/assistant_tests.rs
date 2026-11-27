@@ -188,6 +188,7 @@ fn saved_draft_scope_and_local_only_policy_freeze_with_the_new_turn() {
         project_id: Some("inbox".into()),
         document_ids: vec![doc.id.clone()],
         attachments: vec![],
+        image: None,
     };
     let context = DraftContext {
         sources: Some(selection.clone()),
@@ -271,6 +272,7 @@ fn missing_draft_document_rejects_send_and_preserves_the_draft() {
             project_id: Some("inbox".into()),
             document_ids: vec![doc.id.clone()],
             attachments: vec![],
+            image: None,
         }),
         ..Default::default()
     };

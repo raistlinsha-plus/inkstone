@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
@@ -12,6 +13,7 @@ import {
   Sun,
   Undo2,
 } from "lucide-react";
+import type { PlanningSession, TaskEditing } from "../calendar/planningSession";
 import type { CalendarPatch } from "../calendar/ProjectCalendar";
 import {
   addDays,
@@ -30,12 +32,7 @@ import { isImeEvent } from "../platform/ime";
 import { translate as t, useLocale } from "../i18n";
 import ModalDialog from "../ModalDialog";
 import TaskForm from "./TaskForm";
-import {
-  projectTasks,
-  taskViewState,
-  type ProjectTask,
-  type TaskView,
-} from "./project";
+import { projectTasks, taskViewState, type TaskView } from "./project";
 import "./task-workspace.css";
 
 const allViews: TaskView[] = [
@@ -59,6 +56,8 @@ function initialView(spaceId: string): TaskView {
 }
 
 interface Props {
+  session?: PlanningSession;
+  navigationHost?: HTMLElement | null;
   spaceId: string;
   documents: CalendarDocument[];
   busy: boolean;
@@ -73,6 +72,8 @@ interface Props {
 }
 
 export default function TaskList({
+  session,
+  navigationHost,
   spaceId,
   documents,
   busy,
@@ -88,16 +89,24 @@ export default function TaskList({
   const { language } = useLocale();
   const [view, setView] = useState(() => initialView(spaceId));
   const [sort, setSort] = useState("date");
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(session?.task?.title ?? "");
   const titleInput = useRef<HTMLInputElement>(null);
-  const [target, setTarget] = useState("");
-  const [detail, setDetail] = useState<ProjectTask | null>(null);
+  const [target, setTarget] = useState(session?.task?.target ?? "");
+  const [detail, setDetail] = useState<TaskEditing | null>(
+    session?.taskDetail?.form.changed ? session.taskDetail : null,
+  );
+  useEffect(() => {
+    if (session) session.taskDetail = detail;
+  }, [session, detail]);
   const [error, setError] = useState("");
   const [writing, setWriting] = useState(false);
   const pending = useRef(false);
   const retry = useRef<{ signature: string; id: string } | undefined>(
-    undefined,
+    session?.task?.retry,
   );
+  useEffect(() => {
+    if (session) session.task = { title, target, retry: retry.current };
+  }, [session, title, target, writing]);
   const [limit, setLimit] = useState(100);
   const [today, setToday] = useState(() => dateInZone());
   useEffect(() => {
@@ -224,6 +233,15 @@ export default function TaskList({
     retry.current = undefined;
     setTitle("");
   }
+  function closeDetail() {
+    if (session) session.taskDetail = null;
+    setDetail(null);
+  }
+  function clearEntry() {
+    retry.current = undefined;
+    setTitle("");
+    setTarget("");
+  }
   function nav(key: TaskView) {
     const [Icon, label] = views[key];
     return (
@@ -240,20 +258,25 @@ export default function TaskList({
     );
   }
   const currentDetail = documents.find(
-    (d) => d.documentId === detail?.document.documentId,
+    (d) => d.documentId === detail?.origin.document.documentId,
   );
   const showCreate = !["done", "chat", "waiting"].includes(view);
+  const navigation = (
+    <nav className="task-navigation" aria-label={t("任务视图", "Task views")}>
+      {navigationHost === undefined && <h2>{t("任务", "Tasks")}</h2>}
+      {(["today", "upcoming", "all", "done"] as const).map(nav)}
+      <div className="task-nav-divider" />
+      {(["unscheduled", "waiting", "chat"] as const).map(nav)}
+    </nav>
+  );
   return (
     <section
       className="task-workspace"
       aria-label={t("空间任务清单", "Space task list")}
     >
-      <nav className="task-navigation" aria-label={t("任务视图", "Task views")}>
-        <h2>{t("任务", "Tasks")}</h2>
-        {(["today", "upcoming", "all", "done"] as const).map(nav)}
-        <div className="task-nav-divider" />
-        {(["unscheduled", "waiting", "chat"] as const).map(nav)}
-      </nav>
+      {navigationHost === undefined
+        ? navigation
+        : navigationHost && createPortal(navigation, navigationHost)}
       <div className="task-desk">
         <div className="task-desk-inner">
           <header className="task-desk-head">
@@ -318,8 +341,11 @@ export default function TaskList({
                     placeholder={t("添加任务…", "Add a task…")}
                     onChange={(e) => setTitle(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && isImeEvent(e.nativeEvent))
-                        e.preventDefault();
+                      if (isImeEvent(e.nativeEvent)) {
+                        if (e.key === "Enter") e.preventDefault();
+                        return;
+                      }
+                      if (e.key === "Escape" && !locked) clearEntry();
                     }}
                   />
                 </label>
@@ -346,6 +372,22 @@ export default function TaskList({
                     <option value="">
                       {t("默认任务笔记", "Default task note")}
                     </option>
+                    {target &&
+                      !documents.some(
+                        (d) => d.documentId === target && isTaskNote(d.path),
+                      ) && (
+                        <option value={target} disabled>
+                          {busy
+                            ? t(
+                                "正在读取所选文档…",
+                                "Loading selected document…",
+                              )
+                            : t(
+                                "所选文档不可用",
+                                "Selected document unavailable",
+                              )}
+                        </option>
+                      )}
                     {documents
                       .filter((d) => isTaskNote(d.path))
                       .map((d) => (
@@ -411,7 +453,7 @@ export default function TaskList({
                           className="task-row-title"
                           type="button"
                           disabled={locked}
-                          onClick={() => setDetail(row)}
+                          onClick={() => setDetail({ origin: row, form: {} })}
                         >
                           {task.title}
                           {task.duplicate && (
@@ -478,21 +520,25 @@ export default function TaskList({
           className="task-detail-sheet"
           label={t("任务详情", "Task details")}
           busy={locked}
-          onClose={() => setDetail(null)}
+          onClose={closeDetail}
         >
           <TaskForm
-            document={detail.document}
+            form={detail.form}
+            document={detail.origin.document}
             current={currentDetail}
             onOpenSource={() =>
-              onOpen({ path: detail.document.path, line: detail.task.line })
+              onOpen({
+                path: detail.origin.document.path,
+                line: detail.origin.task.line,
+              })
             }
-            origin={detail}
+            origin={detail.origin}
             onCalendar={onCalendar}
             onPatch={onPatch}
             busy={locked}
-            onClose={() => setDetail(null)}
+            onClose={closeDetail}
             onAskForHelp={(task) => {
-              setDetail(null);
+              closeDetail();
               onAskForHelp(task);
             }}
           />

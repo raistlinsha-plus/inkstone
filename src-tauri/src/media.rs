@@ -35,11 +35,38 @@ fn decode(_: &Path, _: &Path, _: bool) -> Result<String, String> {
     Err("需要 macOS 图片解码服务".into())
 }
 
+#[derive(Copy, Clone)]
+pub(crate) enum Duplicates<'a> {
+    Keep,
+    Space,
+    Folder(&'a str),
+}
+
 pub(crate) fn import_into_folder(
     data: &Path,
     project: &str,
     source: &Path,
     skip: bool,
+    folder: &str,
+) -> Result<ImageImportResult, String> {
+    import_image(
+        data,
+        project,
+        source,
+        if skip {
+            Duplicates::Space
+        } else {
+            Duplicates::Keep
+        },
+        folder,
+    )
+}
+
+pub(crate) fn import_image(
+    data: &Path,
+    project: &str,
+    source: &Path,
+    duplicates: Duplicates<'_>,
     folder: &str,
 ) -> Result<ImageImportResult, String> {
     let err = |e: std::io::Error| e.to_string();
@@ -56,12 +83,13 @@ pub(crate) fn import_into_folder(
         let original = tmp.join(format!("original.{ext}"));
         fs::copy(source, &original).map_err(err)?;
         let fingerprint = image_fingerprint(&original)?;
-        if skip {
+        if !matches!(duplicates, Duplicates::Keep) {
             let existing = documents::with_write_lock(&root, || {
                 let mut db = library::conn(data)?;
                 let tx = db.transaction().map_err(|e| e.to_string())?;
                 crate::organization::check_destination(&tx, project, folder)?;
-                let matched = library::existing_image(&tx, &root, project, &fingerprint, true)?;
+                let matched =
+                    library::existing_image(&tx, &root, project, &fingerprint, true, duplicates)?;
                 Ok(matched.map(|document| {
                     let location = crate::organization::document_folder(&tx, project, &document.id);
                     ImageImportResult::existing(document, location)
@@ -86,7 +114,7 @@ pub(crate) fn import_into_folder(
                 &format!("{name}.md"),
                 &body,
                 None,
-                Some((&tmp, &fingerprint, skip)),
+                Some((&tmp, &fingerprint, duplicates)),
                 folder,
             )
         })?;
@@ -163,36 +191,52 @@ pub async fn media_import(
 #[tauri::command]
 pub async fn media_describe(
     state: State<'_, AppState>,
+    project_id: String,
     document_id: String,
     question: String,
-    model: String,
+    configured_model: String,
+    consent: crate::assistant_images::VisionConsent,
 ) -> Result<String, String> {
-    use base64::Engine;
-    let d = library::get(&state.data_dir, &document_id)?;
-    if d.status != "ready" {
-        return Err("图片不可用".into());
-    }
-    let root = library::project_root(&state.data_dir, &d.project_id)?;
-    let doc = crate::files::resolve(&root, &d.path, false)?;
-    let src = stored_asset(&doc, true)?;
-    if fs::metadata(&src).map_err(|e| e.to_string())?.len() > 8 * 1024 * 1024 {
-        return Err("图片无法用于视觉问答".into());
-    }
+    describe_confirmed(
+        &state,
+        &project_id,
+        &document_id,
+        &question,
+        &configured_model,
+        &consent,
+    )
+    .await
+}
+
+pub(crate) async fn describe_confirmed(
+    state: &AppState,
+    project_id: &str,
+    document_id: &str,
+    question: &str,
+    configured_model: &str,
+    consent: &crate::assistant_images::VisionConsent,
+) -> Result<String, String> {
     if question.len() > 8000 {
         return Err("问题过长".into());
     }
-    let mut p = crate::settings(&state)?.chat;
-    if !model.trim().is_empty() {
-        p.model = model.trim().into()
+    let mut provider = crate::settings(state)?.chat;
+    if provider.model != configured_model {
+        return Err("模型设置已变化，请重新确认后发送".into());
     }
-    let key = crate::local_key(&state, "chat", &p.base_url)?;
-    let img =
-        base64::engine::general_purpose::STANDARD.encode(fs::read(src).map_err(|e| e.to_string())?);
-    let body = serde_json::json!({"model":p.model,"messages":[{"role":"user","content":[{"type":"text","text":question},{"type":"image_url","image_url":{"url":format!("data:image/jpeg;base64,{img}")}}]}]});
+    provider.model = consent.model.trim().to_owned();
+    let preview = crate::assistant_images::confirmed_pixels(
+        &state.data_dir,
+        project_id,
+        document_id,
+        &provider,
+        consent,
+    )?;
+    let key = crate::local_key(state, "chat", &provider.base_url)?;
+    let body = serde_json::json!({"model":provider.model,"messages":[{"role":"user","content":[{"type":"text","text":question},{"type":"image_url","image_url":{"url":preview}}]}]});
     let cancel = std::sync::atomic::AtomicBool::new(false);
     let res = crate::providers::request(
         &state.client,
-        &p,
+        &provider,
         key.as_deref(),
         "chat/completions",
         body,
@@ -207,82 +251,6 @@ pub async fn media_describe(
         .map(String::from)
         .ok_or("模型未返回描述".into())
 }
-#[tauri::command]
-pub async fn media_generate(
-    state: State<'_, AppState>,
-    project_id: String,
-    title: String,
-    model: String,
-    prompt: String,
-    folder: Option<String>,
-) -> Result<library::Document, String> {
-    use base64::Engine;
-    let name = title.trim();
-    if name.is_empty()
-        || name.len() > 140
-        || name.contains(['/', '\\', '\0'])
-        || name.starts_with('.')
-        || prompt.trim().is_empty()
-        || prompt.len() > 12000
-        || model.trim().is_empty()
-    {
-        return Err("请输入有效的图片名称、提示词和模型 ID".into());
-    }
-    let root = library::project_root(&state.data_dir, &project_id)?;
-    let folder = folder.unwrap_or_default();
-    crate::organization::check_destination(&library::conn(&state.data_dir)?, &project_id, &folder)?;
-    let mut p = crate::settings(&state)?.chat;
-    p.model = model.trim().into();
-    let key = crate::local_key(&state, "chat", &p.base_url)?;
-    let cancel = std::sync::atomic::AtomicBool::new(false);
-    let body =
-        serde_json::json!({"model":p.model,"prompt":prompt,"n":1,"response_format":"b64_json"});
-    let res = crate::providers::request(
-        &state.client,
-        &p,
-        key.as_deref(),
-        "images/generations",
-        body,
-        &cancel,
-        1,
-    )
-    .await?;
-    let value = crate::providers::bounded_json(res, 32 * 1024 * 1024, &cancel).await?;
-    let bytes = base64::engine::general_purpose::STANDARD
-        .decode(
-            value["data"][0]["b64_json"]
-                .as_str()
-                .ok_or("服务需返回 b64_json 图片")?,
-        )
-        .map_err(|_| "图片数据无效")?;
-    let ext = if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
-        "png"
-    } else if bytes.starts_with(&[255, 216, 255]) {
-        "jpg"
-    } else if bytes.starts_with(b"RIFF") && bytes.get(8..12) == Some(b"WEBP") {
-        "webp"
-    } else {
-        return Err("生图响应格式不支持".into());
-    };
-    let name = format!("{name}.{ext}");
-    let data = state.data_dir.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        let _guard = crate::maintenance::mutation(&data)?;
-        let tmp = root.join(format!(".pending-generation-{}", uuid::Uuid::new_v4()));
-        fs::create_dir(&tmp).map_err(|e| e.to_string())?;
-        let path = tmp.join(name);
-        let result = fs::write(&path, bytes)
-            .map_err(|e| e.to_string())
-            .and_then(|_| {
-                import_into_folder(&data, &project_id, &path, false, &folder).map(|r| r.document)
-            });
-        let _ = fs::remove_dir_all(tmp);
-        result
-    })
-    .await
-    .map_err(|e| e.to_string())?
-}
-
 pub(crate) fn supported(path: &Path) -> bool {
     matches!(
         path.extension()

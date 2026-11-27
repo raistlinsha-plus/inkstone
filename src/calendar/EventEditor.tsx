@@ -1,6 +1,8 @@
 import { msg } from "../i18n";
 import { Temporal } from "temporal-polyfill";
-import { useRef, useState } from "react";
+import { rememberPlanningForm, type EventEditing } from "./planningSession";
+import { isImeEvent } from "../platform/ime";
+import { useEffect, useRef, useState } from "react";
 import {
   addDays,
   currentTimeZone,
@@ -15,6 +17,7 @@ import {
   type CalendarEvent,
 } from "../content/calendar";
 interface Props {
+  form?: EventEditing["form"];
   event?: CalendarEvent;
   date?: string;
   initialTime?: string;
@@ -40,6 +43,7 @@ const zones = [
   "Australia/Sydney",
 ];
 export default function EventEditor({
+  form,
   event,
   date,
   initialTime = "09:00",
@@ -51,40 +55,73 @@ export default function EventEditor({
   onDelete,
   onCancel,
 }: Props) {
+  const saved = form?.values;
   const initialDate =
     date ??
     (event ? event.start.slice(0, 10) : dateInZone(new Date(), timeZone));
-  const [title, setTitle] = useState(event?.title ?? "");
-  const [zone, setZone] = useState(event?.timeZone ?? timeZone);
-  const [allDay, setAllDay] = useState(event?.allDay ?? initialAllDay);
+  const [title, setTitle] = useState(saved?.title ?? event?.title ?? "");
+  const [zone, setZone] = useState(saved?.zone ?? event?.timeZone ?? timeZone);
+  const [allDay, setAllDay] = useState(
+    saved?.allDay ?? event?.allDay ?? initialAllDay,
+  );
   const [start, setStart] = useState(
-    event
-      ? event.allDay
-        ? event.start
-        : dateTimeInput(event.start, event.timeZone)
-      : initialAllDay
-        ? initialDate
-        : initialDate + "T" + initialTime,
+    () =>
+      saved?.start ??
+      (event
+        ? event.allDay
+          ? event.start
+          : dateTimeInput(event.start, event.timeZone)
+        : initialAllDay
+          ? initialDate
+          : initialDate + "T" + initialTime),
   );
   const [end, setEnd] = useState(
-    event
-      ? event.allDay
-        ? addDays(event.end, -1)
-        : dateTimeInput(event.end, event.timeZone)
-      : initialAllDay
-        ? initialDate
-        : Temporal.PlainDateTime.from(initialDate + "T" + initialTime)
-            .add({ hours: 1 })
-            .toString({ smallestUnit: "minute" }),
+    () =>
+      saved?.end ??
+      (event
+        ? event.allDay
+          ? addDays(event.end, -1)
+          : dateTimeInput(event.end, event.timeZone)
+        : initialAllDay
+          ? initialDate
+          : Temporal.PlainDateTime.from(initialDate + "T" + initialTime)
+              .add({ hours: 1 })
+              .toString({ smallestUnit: "minute" })),
   );
   const [startInstant, setStartInstant] = useState<string | null>(
-    event && !event.allDay ? event.start : null,
+    saved ? saved.startInstant : event && !event.allDay ? event.start : null,
   );
   const [endInstant, setEndInstant] = useState<string | null>(
-    event && !event.allDay ? event.end : null,
+    saved ? saved.endInstant : event && !event.allDay ? event.end : null,
   );
-  const [status, setStatus] = useState(event?.status ?? "planned");
-  const [notes, setNotes] = useState(event?.notes ?? "");
+  const [status, setStatus] = useState(
+    saved?.status ?? event?.status ?? "planned",
+  );
+  const [notes, setNotes] = useState(saved?.notes ?? event?.notes ?? "");
+  useEffect(() => {
+    rememberPlanningForm(form, {
+      title,
+      zone,
+      allDay,
+      start,
+      end,
+      startInstant,
+      endInstant,
+      status,
+      notes,
+    });
+  }, [
+    form,
+    title,
+    zone,
+    allDay,
+    start,
+    end,
+    startInstant,
+    endInstant,
+    status,
+    notes,
+  ]);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -195,7 +232,7 @@ export default function EventEditor({
         void save();
       }}
       onKeyDown={(e) => {
-        if (e.key === "Escape" && !waiting) {
+        if (e.key === "Escape" && !waiting && !isImeEvent(e.nativeEvent)) {
           e.stopPropagation();
           onCancel();
         }

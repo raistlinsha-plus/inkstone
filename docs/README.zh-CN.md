@@ -4,13 +4,15 @@
 
 砚台是一款面向 Apple Silicon Mac 的本地 Markdown 工作台。把笔记、iPhone 照片和脑图收进项目文件夹，用自己的模型向资料提问，点开引用核对原文，再把聊定的下一步变成任务，排进日历。
 
-[**获取 v1.2.0-beta.3 源码**](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.3) · [**在浏览器里体验**](https://raistlinsha-plus.github.io/inkstone/?lang=zh-CN) · [桌面版快速开始](QUICKSTART.md)
+[**获取 v1.4.0 源码**](https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.4.0) · [**在浏览器里体验**](https://raistlinsha-plus.github.io/inkstone/?lang=zh-CN) · [桌面版快速开始](QUICKSTART.md)
 
 ![在砚台的彩色脑图上筹备社区阅读之夜，从选书、筹备活动一直到读者反馈](assets/v1.2.0-beta.3/zh-CN/mind-map.png)
 
 **在 Mac 上动手改这张图。** 导入示例脑图，双击一个节点改名，再把分支拖到画布空白处。它的子节点会一起移动。保存后再打开，就能从刚才排好的位置继续。[示例脑图](assets/v1.2.0-beta.3/zh-CN/reading-night.mmd) · [画布操作手册](USER-MANUAL.zh-CN.md#在画布上编辑独立脑图)
 
 **在浏览器里试一次问答。** 两场阅读活动，哪场来的人更多？点开引用核对人数，再把后续安排排进日历。网页演示使用虚构笔记和预设回答，打开就能体验。[进入演示](https://raistlinsha-plus.github.io/inkstone/?lang=zh-CN) · [在 Mac 上试用同一份笔记](../examples/quick-tour/README.zh-CN.md)
+
+在一次对话里用白板照片核对会议纪要，或用自己的生图服务生成配图，预览后存回项目。[查看 1.4 更新](DELIVERY-v1.4.0.md)
 
 ## 从笔记到行动
 
@@ -27,10 +29,10 @@
 
 ## 从源码开始
 
-这个预发布版提供源码。在运行 macOS 13 或以上版本的 Apple Silicon Mac 上准备 Apple 命令行开发工具、Node **24.14.0**、npm **11.9.0** 和 Rust **1.99.1**，然后运行下面的命令。[工具版本](../toolchain.json)
+v1.4.0 稳定版提供源码。在运行 macOS 13 或以上版本的 Apple Silicon Mac 上准备 Apple 命令行开发工具、Node **24.14.0**、npm **11.9.0** 和 Rust **1.99.1**，然后运行下面的命令。[工具版本](../toolchain.json)
 
 ```sh
-git clone --branch v1.2.0-beta.3 https://github.com/raistlinsha-plus/inkstone.git
+git clone --branch v1.4.0 https://github.com/raistlinsha-plus/inkstone.git
 cd inkstone
 npm ci --registry=https://registry.npmjs.org
 npm run desktop
@@ -53,7 +55,7 @@ npm run desktop
 | 入门 | [快速开始](QUICKSTART.md) | [Quickstart](QUICKSTART.en.md) |
 | 日常操作 | [操作手册](USER-MANUAL.zh-CN.md) | [User manual](USER-MANUAL.en.md) |
 | 产品功能 | [产品介绍](PRODUCT.md) | [Product tour](PRODUCT.en.md) |
-| 版本变化与评测 | [交付与验证](DELIVERY-v1.2.0-beta.3.md) | [Release notes](DELIVERY-v1.2.0-beta.3.en.md) |
+| 版本变化与评测 | [交付与验证](DELIVERY-v1.4.0.md) | [Release notes](DELIVERY-v1.4.0.en.md) |
 | 后续计划 | [路线图](ROADMAP.zh-CN.md) | [Roadmap](ROADMAP.md) |
 
 [架构说明](ARCHITECTURE-4A.md) · [已知限制](KNOWN-LIMITATIONS.md) · [分享试用感受](https://github.com/raistlinsha-plus/inkstone/discussions/11) · [反馈问题](https://github.com/raistlinsha-plus/inkstone/issues) · [参与贡献](../CONTRIBUTING.md)

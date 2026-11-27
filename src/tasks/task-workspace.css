@@ -4,12 +4,6 @@
   flex-direction: column;
   overflow: hidden;
 }
-.task-surface > .calendar-project-picker {
-  min-height: 43px;
-  margin: 0;
-  padding: 6px 16px;
-  border-bottom: 1px solid var(--ui-line);
-}
 .task-workspace {
   display: flex;
   min-height: 0;
@@ -325,4 +319,38 @@
     gap: 8px;
     padding-inline-start: 29px;
   }
+}
+
+.task-context .calendar-project-picker {
+  flex: none;
+  margin: 0;
+  padding: 0 14px 8px;
+}
+.task-context .calendar-project-picker label {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+}
+.task-context .calendar-project-picker select {
+  min-width: 0;
+  flex: 1;
+}
+.task-context-views {
+  min-height: 0;
+  overflow: auto;
+}
+.task-context .task-navigation {
+  display: block;
+  padding: 6px 10px;
+  border: 0;
+}
+.task-context .task-navigation button {
+  width: 100%;
+  color: var(--ui-text);
+}
+.task-context .task-navigation button[aria-pressed="true"] {
+  color: var(--ui-accent);
+}
+.task-context .task-nav-divider {
+  display: block;
 }

@@ -29,7 +29,35 @@ fn backup_local_snapshot() {
     let backup = maintenance::create_backup(&data, &target).unwrap();
     let validation = serde_json::to_value(maintenance::validate_backup(&target).unwrap()).unwrap();
     assert_eq!(validation["valid"], true, "{validation}");
-    fs::write(out.join("backup.json"),serde_json::to_vec_pretty(&serde_json::json!({"backup":backup,"validation":validation,"credentialsAccessed":false,"scope":"closed-app copied snapshot; live catalog not migrated by this operator"})).unwrap()).unwrap();
+    // Exercise the same publish-to-a-new-directory path offered in Settings.
+    let scratch = tempfile::tempdir_in(&out).unwrap();
+    let restored = scratch.path().join("restored");
+    let rehearsal =
+        serde_json::to_value(maintenance::restore_backup(&target, &restored, &data).unwrap())
+            .unwrap();
+    assert_eq!(rehearsal["manifestHash"], validation["manifestHash"]);
+    let identities = |path: &std::path::Path| {
+        let view = crate::library::list(path).unwrap();
+        view.documents
+            .into_iter()
+            .map(|doc| (doc.id, doc.project_id, doc.path, doc.status))
+            .collect::<std::collections::BTreeSet<_>>()
+    };
+    let expected = identities(&data);
+    assert_eq!(identities(&restored), expected);
+    let result = serde_json::json!({
+        "backup": backup,
+        "validation": validation,
+        "restoredDocuments": expected.len(),
+        "restoreRehearsal": true,
+        "credentialsAccessed": false,
+        "scope": "closed-app snapshot restored to a new temporary directory"
+    });
+    fs::write(
+        out.join("backup.json"),
+        serde_json::to_vec_pretty(&result).unwrap(),
+    )
+    .unwrap();
 }
 
 #[test]

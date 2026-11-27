@@ -1,3 +1,4 @@
+import ImageGeneration from "./assistant/ImageGeneration";
 import DirectImagePreview from "./library/DirectImagePreview";
 import { open as chooseFile } from "@tauri-apps/plugin-dialog";
 import {
@@ -285,7 +286,6 @@ export default function LibraryBrowser({
   const [action, setAction] = useState(""),
     [value, setValue] = useState(""),
     [prompt, setPrompt] = useState(""),
-    [model, setModel] = useState(""),
     [working, setWorking] = useState(false);
   const [moveDoc, setMoveDoc] = useState("");
   useEffect(() => {
@@ -387,14 +387,6 @@ export default function LibraryBrowser({
             folder: destination,
             content:
               "# " + title + "\n\n- " + t("第一个想法", "First idea") + "\n",
-          });
-        } else {
-          doc = await invoke<LibraryDocument>("media_generate", {
-            projectId,
-            title: value.trim(),
-            prompt,
-            model,
-            folder: destination,
           });
         }
       }
@@ -519,8 +511,9 @@ export default function LibraryBrowser({
               onClick={() => {
                 setMenu("");
                 rememberEntry(d.id);
-                if (d.status !== "ready") setTrashDetail(d);
-                else onOpen(d);
+                if (d.status !== "ready") {
+                  if (!project?.archived) setTrashDetail(d);
+                } else onOpen(d);
               }}
             >
               {pins.includes(d.id) ? (
@@ -549,7 +542,7 @@ export default function LibraryBrowser({
             {d.status !== "ready" ? (
               <>
                 <button
-                  disabled={busy || d.status === "purging"}
+                  disabled={busy || project?.archived || d.status === "purging"}
                   aria-label={"恢复 " + d.title}
                   onClick={() => void onTrash(d, true).catch(onError)}
                 >
@@ -557,7 +550,7 @@ export default function LibraryBrowser({
                 </button>
                 <button
                   aria-label={"回收站操作 " + d.title}
-                  disabled={busy}
+                  disabled={busy || project?.archived}
                   onClick={() => setTrashDetail(d)}
                 >
                   {d.status === "purging" ? (
@@ -640,7 +633,7 @@ export default function LibraryBrowser({
                   <button
                     role="menuitem"
                     tabIndex={-1}
-                    disabled={busy}
+                    disabled={busy || project?.archived}
                     onClick={() =>
                       void (async () => {
                         if (!(await onBeforeAction())) return;
@@ -655,6 +648,7 @@ export default function LibraryBrowser({
                 <button
                   role="menuitem"
                   tabIndex={-1}
+                  disabled={busy || project?.archived}
                   onClick={() => {
                     setRename(d);
                     setTitle(d.title);
@@ -665,6 +659,7 @@ export default function LibraryBrowser({
                 <button
                   role="menuitem"
                   tabIndex={-1}
+                  disabled={busy || project?.archived}
                   onClick={() => {
                     setMoveDoc(d.id);
                     startAction("move");
@@ -678,7 +673,7 @@ export default function LibraryBrowser({
                   <button
                     role="menuitem"
                     tabIndex={-1}
-                    disabled={busy}
+                    disabled={busy || project?.archived}
                     onClick={() =>
                       void (async () => {
                         if (!(await onBeforeAction())) return;
@@ -693,7 +688,7 @@ export default function LibraryBrowser({
                 <button
                   role="menuitem"
                   tabIndex={-1}
-                  disabled={busy}
+                  disabled={busy || project?.archived}
                   onClick={() =>
                     void (async () => {
                       if (!(await onBeforeAction())) return;
@@ -732,6 +727,7 @@ export default function LibraryBrowser({
                 <button
                   role="menuitem"
                   tabIndex={-1}
+                  disabled={busy || project?.archived}
                   onClick={() => void onTrash(d, false).catch(onError)}
                 >
                   <Trash2 size={12} />
@@ -830,7 +826,11 @@ export default function LibraryBrowser({
           }}
         />
       )}
-      {action && (
+      {action === "generate" && (
+        <ImageGeneration projects={view.projects} projectId={projectId} initialFolder={destination}
+          onRefresh={onRefresh} onOpen={onOpen} onClose={() => setAction("")} />
+      )}
+      {action && action !== "generate" && (
         <ModalDialog
           label={t("空间操作", "Space action")}
           busy={working}
@@ -900,28 +900,6 @@ export default function LibraryBrowser({
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
               />
-            )}
-            {action === "generate" && (
-              <>
-                <p>
-                  {t(
-                    "使用问答服务地址和凭据，调用图像生成接口。",
-                    "Uses the chat service endpoint and credentials for image generation.",
-                  )}
-                </p>
-                <input
-                  required
-                  placeholder={t("生图模型 ID", "Image model ID")}
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                />
-                <textarea
-                  required
-                  placeholder={t("描述要生成的图片", "Describe the image")}
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                />
-              </>
             )}
             <div>
               <button

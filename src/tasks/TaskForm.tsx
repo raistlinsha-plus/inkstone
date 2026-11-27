@@ -1,4 +1,8 @@
-import { useRef, useState } from "react";
+import {
+  rememberPlanningForm,
+  type TaskEditing,
+} from "../calendar/planningSession";
+import { useEffect, useRef, useState } from "react";
 import {
   CalendarClock,
   ChevronRight,
@@ -52,6 +56,7 @@ function TaskDateInput({
 }
 
 export default function TaskForm({
+  form,
   document: doc,
   current,
   origin,
@@ -63,6 +68,7 @@ export default function TaskForm({
   onOpenSource,
   openSourceLabel,
 }: {
+  form?: TaskEditing["form"];
   document: CalendarDocument;
   current?: CalendarDocument;
   origin?: ProjectTask;
@@ -76,19 +82,43 @@ export default function TaskForm({
 }) {
   useLocale();
   const task = origin?.task;
+  const saved = form?.values;
   const [id] = useState(() => task?.id ?? crypto.randomUUID());
-  const [title, setTitle] = useState(task?.title ?? "");
-  const [due, setDue] = useState(task?.due ?? "");
-  const [waiting, setWaiting] = useState(task?.waiting ?? false);
-  const [followOn, setFollowOn] = useState(task?.followOn ?? "");
-  const [zone, setZone] = useState(task?.slot?.zone ?? currentTimeZone());
+  const [title, setTitle] = useState(saved?.title ?? task?.title ?? "");
+  const [due, setDue] = useState(saved?.due ?? task?.due ?? "");
+  const [waiting, setWaiting] = useState(
+    saved?.waiting ?? task?.waiting ?? false,
+  );
+  const [followOn, setFollowOn] = useState(
+    saved?.followOn ?? task?.followOn ?? "",
+  );
+  const [zone, setZone] = useState(
+    saved?.zone ?? task?.slot?.zone ?? currentTimeZone(),
+  );
   const [start, setStart] = useState(
-    task?.slot ? dateTimeInput(task.slot.start, task.slot.zone) : "",
+    saved?.start ??
+      (task?.slot ? dateTimeInput(task.slot.start, task.slot.zone) : ""),
   );
   const [end, setEnd] = useState(
-    task?.slot ? dateTimeInput(task.slot.end, task.slot.zone) : "",
+    saved?.end ??
+      (task?.slot ? dateTimeInput(task.slot.end, task.slot.zone) : ""),
   );
-  const [done, setDone] = useState(task?.done ?? false);
+  const [showSlotOnOpen] = useState(() =>
+    Boolean(task?.slot || saved?.start || saved?.end),
+  );
+  const [done, setDone] = useState(saved?.done ?? task?.done ?? false);
+  useEffect(() => {
+    rememberPlanningForm(form, {
+      title,
+      due,
+      done,
+      waiting,
+      followOn,
+      start,
+      end,
+      zone,
+    });
+  }, [form, title, due, done, waiting, followOn, start, end, zone]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const submitting = useRef(false);
@@ -215,7 +245,7 @@ export default function TaskForm({
         )}
       </header>
       <div className="task-detail-body">
-        {stale && (
+        {stale && !busy && (
           <p role="alert">
             {t(
               "原文已更改，请重开任务后核对。",
@@ -292,7 +322,7 @@ export default function TaskForm({
               )}
             </div>
             <div className="task-detail-schedule">
-              <details open={task?.slot ? true : undefined}>
+              <details open={showSlotOnOpen || undefined}>
                 <summary>
                   <CalendarClock size={16} aria-hidden="true" />
                   {t("安排执行时段", "Schedule a time slot")}

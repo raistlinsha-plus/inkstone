@@ -163,6 +163,7 @@ export default function Harness() {
           key={path + ":" + reopen}
           content={content}
           mode={mode}
+          onOpenSource={() => setMode("source")}
           path={path}
           line={line}
           onChange={(next) => {

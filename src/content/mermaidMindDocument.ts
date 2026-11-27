@@ -1,4 +1,4 @@
-import type { CanvasNode, MindChange, MindChangeResult } from "./editableMind";
+import { mindNodeLimit, checkMindCapacity, type CanvasNode, type MindChange, type MindChangeResult } from "./editableMind";
 import { translate as t } from "../i18n";
 
 interface SourceNode {
@@ -95,7 +95,7 @@ function readNode(line: string) {
   };
 }
 
-function parse(source: string) {
+function parse(source: string, detectOverflow = false) {
   const eol = source.includes("\r\n") ? "\r\n" : "\n";
   const lines = source.split(eol);
   if (lines.some((line) => /[\r\n]/.test(line))) return null;
@@ -119,7 +119,7 @@ function parse(source: string) {
       continue;
     }
     const parsed = readNode(line);
-    if (!parsed || rows.size >= 500) return null;
+    if (!parsed || (!detectOverflow && rows.size >= mindNodeLimit)) return null;
     while (
       stack.length &&
       stack[stack.length - 1].indent.length >= parsed.indent.length
@@ -168,12 +168,14 @@ function parse(source: string) {
     for (const ancestor of stack) ancestor.lastLine = lineNo;
     stack.push(node);
     trivia = lineNo + 1;
+    // The viewer only needs one extra node to offer source recovery.
+    if (detectOverflow && rows.size > mindNodeLimit) break;
   }
   return root && { root, rows, lines, eol, terminated };
 }
 
-export function readMermaidMind(source: string): CanvasNode | null {
-  return parse(source)?.root.view ?? null;
+export function readMermaidMind(source: string, detectOverflow = false): CanvasNode | null {
+  return parse(source, detectOverflow)?.root.view ?? null;
 }
 
 export function changeMermaidMind(
@@ -182,6 +184,7 @@ export function changeMermaidMind(
 ): MindChangeResult {
   const doc = parse(source);
   if (!doc) throw unsupported();
+  checkMindCapacity(doc.rows.size, change);
   const node = doc.rows.get(change.id);
   if (!node)
     throw new Error(

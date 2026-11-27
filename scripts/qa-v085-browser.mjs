@@ -1,9 +1,17 @@
-/** Narrow-window onboarding against the built UI, with offline synthetic IPC. */
+/** Historical v0.8.5 onboarding fixture. The current isolated sample, narrow-window
+ * onboarding and calendar route are exercised by qa-v092-browser.mjs. */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { installV07Fixture } from "./testing/v07-fixture.mjs";
+
+// Preserve the historical assertions for replay against archived v0.8.5 bundles.
+if (!process.argv.includes("--historical-v085")) {
+  console.info("Running the current onboarding flow. Use --historical-v085 for an archived v0.8.5 bundle.");
+  await import("./qa-v092-browser.mjs");
+  process.exit(0);
+}
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(

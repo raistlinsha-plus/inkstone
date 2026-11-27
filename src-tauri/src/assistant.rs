@@ -130,6 +130,7 @@ pub struct Export {
 }
 #[derive(Clone, Debug)]
 pub struct Started {
+    pub vision_consent: Option<crate::assistant_images::VisionConsent>,
     pub conversation_id: String,
     pub turn_id: String,
     pub candidate_id: String,
@@ -809,6 +810,11 @@ pub fn begin_with_sources(
         let selection = if regenerate.is_some() {
             attachments::selection(&tx, &turn_id)?.unwrap_or_default()
         } else {
+            if let (Some(draft), Some(requested)) = (&matching_draft.sources, &selected_sources) {
+                if (draft.image.is_some() || requested.image.is_some()) && draft != requested {
+                    return Err("图片或资料范围已变化，请重新确认".into());
+                }
+            }
             matching_draft
                 .sources
                 .or(selected_sources)
@@ -898,6 +904,7 @@ pub fn begin_with_sources(
     bump(&tx, id)?;
     tx.commit().map_err(err)?;
     Ok(Started {
+        vision_consent: None,
         conversation_id: id.into(),
         turn_id,
         candidate_id,

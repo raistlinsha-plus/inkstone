@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.4.0 · Stable
+
+图片问答支持单独使用已有 OCR、描述或经确认的 JPEG。生成后可重新读取目标文件夹并保存本次结果。任务与日历保留同一空间的草稿，归档空间保护原文。另修复脑图节点上限与 Wiki 范围审阅。 [交付说明](docs/DELIVERY-v1.4.0.md) · [English notes](docs/DELIVERY-v1.4.0.en.md)
+
+
+## v1.4.0-rc.1 · Local candidate
+
+通用问答可以把空间图片与笔记放在同一轮。用户可选用 OCR、已保存描述或确认将预览交给视觉模型。生图工具使用用户配置的服务，先预览，再选择项目保存。 [本机交付记录](docs/DELIVERY-v1.4.0-rc.1.md) · [English notes](docs/DELIVERY-v1.4.0-rc.1.en.md)
+
+最左侧的图标始终从「文档」开始。文档目录和任务筛选栏共用同一条分隔线，拖动分隔线可以调宽。点击窗口左上方的侧栏按钮可分别收起文档目录或任务筛选，切回来时会记住各自的状态。打开「日历」直接显示整幅日历。
+
 Entries describe implementation milestones. GitHub Releases is the record of public dates, tags and assets. The first public source preview was v0.6.6. [Public release history](https://github.com/raistlinsha-plus/inkstone/releases) · [v0.6.6 notes](docs/PUBLIC-RELEASE-v0.6.6.md)
 
 ## v1.2.0-beta.3 · 左侧导航位置（构建 10218）

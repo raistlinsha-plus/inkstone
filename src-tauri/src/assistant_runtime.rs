@@ -646,11 +646,21 @@ pub async fn general(
     memory: &assistant::memory::Options,
 ) -> Result<ChatResponse, String> {
     let generation = state.workspace_generation.load(Ordering::SeqCst);
-    let config = crate::settings(state)?.chat;
+    let mut config = crate::settings(state)?.chat;
     if !config.enabled {
         return Err("请在模型设置中启用问答服务".into());
     }
     let selection = started.sources.as_ref().ok_or("本轮资料范围未保存")?;
+    use crate::assistant_images::ImageMode;
+    let image = selection.image.as_ref();
+    let vision = image.filter(|i| i.mode == ImageMode::Vision);
+    if started.vision_consent.is_some() && vision.is_none() { return Err("图片范围已变化，请重新确认".into()); }
+    if let Some(image) = vision {
+        let consent = started.vision_consent.as_ref()
+            .filter(|c| c.document_id == image.document_id && c.base_url == config.base_url && !c.model.trim().is_empty() && c.model.len() <= 256)
+            .ok_or("请重新确认本轮图片和目标模型")?;
+        config.model = consent.model.trim().to_owned();
+    }
     let day_query = if selection.is_empty() {
         None
     } else {
@@ -719,7 +729,7 @@ pub async fn general(
     let facets = crate::evidence_reader::split_facets(&retrieval::knowledge_query(question));
     let local_search = async {
         let mut items = Vec::new();
-        let mut read_selected = explicit && factual;
+        let mut read_selected = explicit && factual && image.is_none();
         let mut ranked = Vec::new();
         let mut related = Vec::new();
         let mut steps = Vec::new();
@@ -869,7 +879,13 @@ pub async fn general(
                         Err(_) if selection.document_ids.is_empty() => continue,
                         Err(error) => return Err(error),
                     };
-                    let parts = selected_parts(id, Some(project), &doc.title, &content);
+                    let parts = if let Some(selected) = image.filter(|v| v.document_id == **id) {
+                        let (section, first) = crate::assistant_images::section(&content, selected.mode)?;
+                        snippets(question, &doc.title, &section).into_iter()
+                            .map(|(text, lo, hi)| (text, first + lo - 1, first + hi - 1)).collect()
+                    } else {
+                        selected_parts(id, Some(project), &doc.title, &content)
+                    };
                     if content.chars().count() > 2800 {
                         unread.push(format!("{} · 仅读取相关片段", doc.title));
                     }
@@ -958,9 +974,24 @@ pub async fn general(
         GENERAL_SYSTEM
     };
     let mut prompt = if grounded {
-        // Only current originals and the resolved current question may inform
-        // this grounded turn, including when the user changed the selection.
-        question.to_owned()
+        // prior_questions truncates at a change of selection or branch. Also
+        // require the previous cited originals to survive unchanged before
+        // using a parent question to resolve a pronoun in this turn.
+        let parent = started.previous_questions.last().filter(|_| {
+            selected_scope && started.followup_sources.is_some() && resolved_day.is_none()
+                && clock.is_none() && !started.previous_local_sources.is_empty()
+                && started.previous_local_sources.iter().all(|source| {
+                    original(data, &started.conversation_id, source).is_some_and(|(_, body)| {
+                        source.content_hash.as_deref() == Some(files::hash(body).as_str())
+                    })
+                })
+        });
+        if let Some(parent) = parent {
+            let reference = parent.chars().take(350).collect::<String>();
+            format!("上一轮用户问题（仅供确定本轮指代对象）：{}\n当前问题：{question}\n只回答当前所指对象，并使用本轮资料核实。", serde_json::to_string(&reference).unwrap_or_default())
+        } else {
+            question.to_owned()
+        }
     } else {
         let original = serde_json::to_string(question).unwrap_or_default();
         let prior = started
@@ -1236,15 +1267,33 @@ pub async fn general(
     if let Some(app) = app {
         progress(app, request, "generating", "正在生成回答");
     }
+    let pixels = if let Some(image) = vision {
+        let citation = external.iter().find(|e| e.metadata.document_id.as_deref() == Some(image.document_id.as_str()))
+            .ok_or("本轮上下文已满，请减少资料后重试")?.metadata.citation;
+        let consent = started.vision_consent.as_ref().ok_or("图片发送尚未确认")?;
+        let active = crate::settings(state)?.chat;
+        if !active.enabled || active.base_url != consent.base_url {
+            return Err("模型地址已变化，请重新确认".into());
+        }
+        let bytes = crate::assistant_images::confirmed_pixels(
+            data, project.ok_or("缺少图片空间")?, &image.document_id, &config, consent,
+        )?;
+        trace.steps.push(format!("已发送图片预览 · S{citation}"));
+        Some((bytes, citation))
+    } else { None };
+    let user = if let Some((_, citation)) = &pixels {
+        format!("{user}\n附图对应来源 [{citation}]。请引用该编号说明从图中观察到的内容，读不清处注明不确定。")
+    } else { user };
     let mut output = crate::request_receipt::with_sources(
         &[],
         &external,
-        providers::stream_chat(
+        providers::stream_chat_with_image(
             &state.client,
             &config,
             key.as_deref(),
             system,
             &user,
+            pixels.as_ref().map(|(bytes, _)| bytes.as_str()),
             &state.cancel_chat,
             app,
             request,

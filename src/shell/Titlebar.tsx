@@ -2,10 +2,12 @@ import { msg, useLocale } from "../i18n";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { version } from "../../package.json";
 export default function Titlebar({
+  sidebarToggle,
   workspaceName,
   panelOpen,
   onToggle,
 }: {
+  sidebarToggle?: React.ReactNode;
   workspaceName?: string;
   panelOpen: boolean;
   onToggle: () => void;
@@ -14,6 +16,7 @@ export default function Titlebar({
   return (
     <header className="titlebar" data-tauri-drag-region>
       <div className="traffic-space" data-tauri-drag-region />
+      <div className="titlebar-sidebar-control">{sidebarToggle}</div>
       <span className="titlebar-name" data-tauri-drag-region>
         {language === "zh-CN" && <>砚台 <span>/</span> </>}Inkstone
       </span>

@@ -44,12 +44,15 @@ pub(crate) fn weekday(text: &str) -> Option<&str> {
 }
 
 pub(crate) fn day_pointer(question: &str) -> Option<&str> {
-    let q = question.trim().trim_end_matches(['？', '?']);
-    let q = q
+    let q = question
+        .trim()
+        .trim_end_matches(['？', '?', '。', '.'])
+        .trim();
+    let day = q
         .strip_prefix("那么")
         .or_else(|| q.strip_prefix('那'))
-        .unwrap_or(q);
-    let day = q.trim().strip_suffix('呢')?.trim();
+        .map_or(q, |rest| rest.trim_start_matches([' ', '，', ',']).trim());
+    let day = day.strip_suffix('呢').unwrap_or(day).trim();
     (weekday(day) == Some(day)).then_some(day)
 }
 

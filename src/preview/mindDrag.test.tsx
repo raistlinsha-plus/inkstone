@@ -71,3 +71,15 @@ test("small deliberate moves inside the original hit box can reposition, cancell
   pointer(stage, "up", 100, 20);
   expect(onPosition).toHaveBeenCalledTimes(1);
 });
+
+test("release past the drag threshold works when the OS coalesces moves; an ordinary click never writes", () => {
+  localStorage.setItem("inkstone.graph-view.v1:drag-test:editable-canvas", JSON.stringify({ x: 0, y: 0, scale: 1 }));
+  const { branch, stage, onPosition, onChange } = canvas();
+  pointer(branch, "down", 30, 20);
+  pointer(stage, "up", 32, 22);
+  expect(onPosition).not.toHaveBeenCalled();
+  pointer(branch, "down", 30, 20);
+  pointer(stage, "up", 70, 30);
+  expect(onPosition).toHaveBeenCalledExactlyOnceWith("a", 40, 10);
+  expect(onChange).not.toHaveBeenCalled();
+});

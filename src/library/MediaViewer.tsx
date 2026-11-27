@@ -1,4 +1,5 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";
 import {
   ChevronLeft,
@@ -12,6 +13,8 @@ import {
 } from "lucide-react";
 import { translate as t } from "../i18n";
 import type { LibraryDocument } from "../library";
+import { ConfirmChatImage } from "../assistant/ChatImagePicker";
+import type { Settings } from "../types";
 import { imageName, label } from "./mediaTypes";
 import "./image-reader.css";
 
@@ -112,16 +115,69 @@ export default function MediaViewer({
   function move(delta: number) {
     if (pos >= 0 && images[pos + delta]) open(images[pos + delta]);
   }
-  async function analyze() {
-    if (!photo || !src || analyses.get(id)?.pending) return;
-    update(id, { pending: true, error: "" });
+  const reviewRequest = useRef(0);
+  const [loadingReview, setLoadingReview] = useState(false);
+  const [review, setReview] = useState<{
+    id: string;
+    endpoint: string;
+    configuredModel: string;
+    model: string;
+    question: string;
+  }>();
+  useEffect(() => {
+    setReview(undefined);
+    setLoadingReview(false);
+    return () => {
+      reviewRequest.current++;
+    };
+  }, [id]);
+  async function reviewImage() {
+    if (!photo || !src || draft.pending || loadingReview) return;
+    const request = ++reviewRequest.current;
+    setLoadingReview(true);
+    update(id, { error: "" });
     try {
-      const result = await invoke<string>("media_describe", {
-        documentId: photo.id,
-        model: draft.model.trim(),
+      const { chat } = await invoke<Settings>("get_settings");
+      if (request !== reviewRequest.current) return;
+      if (!chat.enabled || !chat.baseUrl)
+        throw Error(
+          t(
+            "请在模型设置中启用问答服务。",
+            "Enable the chat service in model settings.",
+          ),
+        );
+      setReview({
+        id,
+        endpoint: chat.baseUrl,
+        configuredModel: chat.model,
+        model: draft.model.trim() || chat.model,
         question:
           draft.question.trim() ||
           t("描述图片中可见的内容。", "Describe what is visible in the image."),
+      });
+    } catch (reason) {
+      if (request === reviewRequest.current)
+        update(id, { error: String(reason) });
+    } finally {
+      if (request === reviewRequest.current) setLoadingReview(false);
+    }
+  }
+  async function analyze(model: string, previewHash: string) {
+    if (!photo || review?.id !== id || analyses.get(id)?.pending) return;
+    setReview(undefined);
+    update(id, { pending: true, error: "" });
+    try {
+      const result = await invoke<string>("media_describe", {
+        projectId: photo.projectId,
+        documentId: photo.id,
+        question: review.question,
+        configuredModel: review.configuredModel,
+        consent: {
+          documentId: photo.id,
+          model,
+          previewHash,
+          baseUrl: review.endpoint,
+        },
       });
       update(id, { result });
     } catch (reason) {
@@ -151,12 +207,15 @@ export default function MediaViewer({
   }
   return (
     <section
-      ref={element => { if (element) onReady?.(element); }}
+      ref={(element) => {
+        if (element) onReady?.(element);
+      }}
       className="picture-reader"
       tabIndex={0}
       aria-label={t("图片查看器", "Image viewer")}
       onKeyDown={(e) => {
         if (
+          review ||
           e.altKey ||
           e.metaKey ||
           e.ctrlKey ||
@@ -265,7 +324,12 @@ export default function MediaViewer({
           {panel === "text" ? (
             <>
               <p className="picture-copy">
-                {ocr.trim() || t("未识别到文字", "No text detected")}
+                {ocr.trim() === "（本机文字识别未完成）"
+                  ? t(
+                      "本机文字识别未完成。",
+                      "Local text recognition did not finish.",
+                    )
+                  : ocr.trim() || t("未识别到文字", "No text detected")}
               </p>
               {saved.length > 0 && (
                 <>
@@ -319,12 +383,18 @@ export default function MediaViewer({
                 </small>
                 <button
                   className="picture-primary"
-                  disabled={!src || !photo || draft.pending || draft.saving}
-                  onClick={() => void analyze()}
+                  disabled={
+                    !src ||
+                    !photo ||
+                    draft.pending ||
+                    draft.saving ||
+                    loadingReview
+                  }
+                  onClick={() => void reviewImage()}
                 >
                   {draft.pending
                     ? t("分析中…", "Analyzing…")
-                    : t("发送图片", "Send image")}
+                    : t("核对并发送", "Review and send")}
                 </button>
               </div>
               {draft.error && <p role="alert">{draft.error}</p>}
@@ -343,6 +413,20 @@ export default function MediaViewer({
           )}
         </section>
       )}
+      {review &&
+        review.id === id &&
+        photo &&
+        createPortal(
+          <ConfirmChatImage
+            photo={photo}
+            endpoint={review.endpoint}
+            defaultModel={review.model}
+            imageQuestion={review.question}
+            onClose={() => setReview(undefined)}
+            onConfirm={(model, hash) => void analyze(model, hash)}
+          />,
+          document.body,
+        )}
     </section>
   );
 }

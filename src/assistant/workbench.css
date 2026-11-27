@@ -6,18 +6,25 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  overflow: auto;
+  min-height: 0;
+  overflow: hidden;
   gap: 9px;
   padding: 9px 0;
   border-right: 1px solid var(--ui-line, var(--border));
   background: var(--ui-surface, #f0f0eb);
 }
-.workspace-rail-sidebar-slot {
-  flex: 0 0 var(--rail-button-size);
+.titlebar-sidebar-control {
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  margin-inline-end: 6px;
 }
 .workspace-shell .workspace-rail .main-nav {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
   gap: 5px;
   padding: 0;
 }

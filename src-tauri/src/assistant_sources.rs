@@ -32,12 +32,15 @@ pub struct Selection {
     pub project_id: Option<String>,
     pub document_ids: Vec<String>,
     pub attachments: Vec<String>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    pub image: Option<crate::assistant_images::ImageSelection>,
 }
 
 impl Selection {
     pub fn validate(&self) -> Result<(), String> {
         let valid = |id: &str| uuid::Uuid::parse_str(id).is_ok();
-        if self.document_ids.len() > 5
+        if self.image.as_ref().is_some_and(|image| !self.document_ids.contains(&image.document_id))
+            || self.document_ids.len() > 5
             || self.attachments.len() > 5
             || (!self.document_ids.is_empty() && self.project_id.is_none())
             || self

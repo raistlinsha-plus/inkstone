@@ -42,7 +42,7 @@ export interface Commands {
   library_list: Command<undefined, LibraryView>;
   library_answer_source: Command<
     { documentId: string },
-    { document: LibraryDocument; hash: string; lines: number } | null
+    { document: LibraryDocument; archived: boolean; hash: string; lines: number } | null
   >;
   library_get_view: Command<{ projectId: string }, ViewPreferences>;
   library_set_view: Command<
