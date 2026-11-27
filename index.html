@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Try a cited answer, save a follow-up in Markdown and schedule it on a calendar. A bilingual interactive walkthrough of Inkstone with fictional notes.">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Inkstone · From a note to a scheduled task</title>
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://raistlinsha-plus.github.io/inkstone/">
@@ -40,10 +40,11 @@
 .calendar-event span {color:var(--muted); font-size:13px}
 .sample-links {display:flex; flex-wrap:wrap; align-items:center; gap:9px 20px; font-size:14px; margin-top:15px}
 .sample-links a {padding-block:5px}
+.desktop-map{display:grid;grid-template-columns:minmax(15rem,1fr) minmax(0,1.6fr);gap:clamp(18px,4vw,44px);align-items:center;margin:38px 0;scroll-margin-top:18px}.desktop-map h2{font:700 clamp(24px,3vw,36px)/1.15 var(--serif);margin:0}.desktop-map p{color:var(--muted)}.desktop-map img{display:block;width:100%;height:auto;border:1px solid var(--rule);border-radius:10px}@media(max-width:720px){.desktop-map{grid-template-columns:1fr}.navlinks{gap:10px}}
 </style>
 </head>
 <body>
-<header><div class="shell top"><a class="wordmark" href="https://github.com/raistlinsha-plus/inkstone"><span aria-hidden="true">砚</span> Inkstone</a><nav class="navlinks" aria-label="Project"><a href="https://github.com/raistlinsha-plus/inkstone" data-i="repo">GitHub</a><button id="language" type="button" lang="zh-CN" aria-label="切换到中文">中文</button></nav></div></header>
+<header><div class="shell top"><a class="wordmark" href="https://github.com/raistlinsha-plus/inkstone"><span aria-hidden="true">砚</span> Inkstone</a><nav class="navlinks" aria-label="Project"><a href="#desktop-map" data-i="desktopNav">Desktop beta</a><a href="https://github.com/raistlinsha-plus/inkstone" data-i="repo">GitHub</a><button id="language" type="button" lang="zh-CN" aria-label="切换到中文">中文</button></nav></div></header>
 <main class="shell">
   <div class="intro"><p class="eyebrow" data-i="eyebrow">Interactive walkthrough</p><h1 data-i="heading">Ask your notes.<br>Open the source.</h1><p data-i="lead">Try two questions about a fictional reading program. One has a clear answer in the notes. The other remains open.</p><a class="jump" href="#task-demo" data-i="jump">Try the task and calendar demo ↓</a></div>
   <div class="questions" id="questions" role="group" aria-label="Choose a question">
@@ -91,16 +92,22 @@
       <a id="sample-source" href="https://github.com/raistlinsha-plus/inkstone/tree/cf517ab64509bbf18d24b8d6e7d0dfb874f551f6/examples/quick-tour/en/" data-i="browse">Browse the notes on GitHub</a>
     </nav>
   </section>
-  <footer class="footer"><p data-i="scope">This walkthrough uses fictional notes and fixed answers. Demo tasks last until you reload the page. To use Inkstone with your own notes, build the desktop beta on an Apple Silicon Mac running macOS 13 or later.</p><nav id="resources" aria-label="Desktop resources"><a href="https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.1" data-i="release">Get the 1.2 beta source</a><a id="product" href="https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.1/docs/PRODUCT.en.md" data-i="product">Product overview</a><a id="manual" href="https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.1/docs/USER-MANUAL.en.md" data-i="manual">User manual</a></nav></footer>
+  <section class="desktop-map" id="desktop-map" aria-labelledby="map-title">
+    <div><h2 id="map-title" data-i="mapHeading">Plan a reading night on the canvas</h2><p data-i="mapBody">Open the sample in Inkstone on your Mac. Double-click a topic to rename it, drag a branch to move its children, then save and reopen the map.</p>
+    <a id="map-download" href="downloads/en/reading-night.mmd" download="reading-night.mmd" data-i="mapDownload">Download the editable map (.mmd)</a></div>
+    <img id="map-preview" loading="lazy" width="1600" height="950" src="downloads/en/mind-map.png" alt="The sample reading night mind map open in Inkstone">
+  </section>
+  <footer class="footer"><p data-i="scope">This walkthrough uses fictional notes and fixed answers. Demo tasks last until you reload the page. To use Inkstone with your own notes, build the desktop beta on an Apple Silicon Mac running macOS 13 or later.</p><nav id="resources" aria-label="Desktop resources"><a href="https://github.com/raistlinsha-plus/inkstone/releases/tag/v1.2.0-beta.3" data-i="release">Get beta.3 source</a><a id="product" href="https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.3/docs/PRODUCT.en.md" data-i="product">Product overview</a><a id="manual" href="https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.3/docs/USER-MANUAL.en.md" data-i="manual">User manual</a></nav></footer>
   <noscript><p>This walkthrough needs JavaScript for switching questions and opening citations. <a href="https://github.com/raistlinsha-plus/inkstone">View the source project</a>.</p></noscript>
 </main>
 <script>
 'use strict';
 const copy={
-  en:{repo:'GitHub',eyebrow:'Interactive walkthrough',heading:'Ask your notes.<br>Open the source.',lead:'Try two questions about a fictional reading program. One has a clear answer in the notes. The other remains open.',attendance:'Compare attendance',satisfaction:'Which event had higher satisfaction?',answer:'Answer',simulated:'Simulated',source:'Source',markdown:'Fictional Markdown note',sourceHint:'Open the citation to see the lines in the original note.',filename:'reading-activity.md',viewFile:'View full note on GitHub',scope:'This walkthrough uses fictional notes and fixed answers. Demo tasks last until you reload the page. To use Inkstone with your own notes, build the desktop beta on an Apple Silicon Mac running macOS 13 or later.',release:'Get the 1.2 beta source',resources:'Desktop resources',product:'Product overview',manual:'User manual',questions:'Choose a question',switchLang:'切换到中文',title:'Inkstone · From a note to a scheduled task',firstTitle:'Plan A had more attendees.',firstBody:'Plan A recorded 120 attendees and Plan B recorded 80. The difference was 40 people.',sourceFirst:'Open citation · lines 7–10',secondTitle:'The notes do not say.',secondBody:'Attendance is recorded for each event. The notes do not report a satisfaction measure for either plan.',next:'Add survey results before comparing satisfaction.',sourceSecond:'Open citation · line 12',updated:'Selected question: ',revealedFirst:'Lines 7–10 are highlighted in the original note.',revealedSecond:'Line 12 is highlighted in the original note.'},
-  'zh-CN':{repo:'GitHub',eyebrow:'交互演示',heading:'向笔记提问，<br>打开原文核对。',lead:'试问两条关于虚构阅读活动的问题。一条能从笔记里找到答案，另一条还缺少依据。',attendance:'比较两场活动的参与人数',satisfaction:'哪场活动的满意度更高？',answer:'回答',simulated:'模拟回答',source:'来源',markdown:'虚构的 Markdown 笔记',sourceHint:'点击引用，查看它指向的笔记原文。',filename:'reading-activity.md',viewFile:'在 GitHub 查看完整原文',scope:'本演示使用虚构笔记和固定回答，刷新页面后演示任务会重置。要处理自己的笔记，可在配备 Apple 芯片、运行 macOS 13 或更高版本的 Mac 上从源码构建桌面测试版。',release:'获取 1.2 测试版源码',resources:'桌面版资源',product:'产品与功能',manual:'操作手册',questions:'选择问题',switchLang:'Switch to English',title:'砚台 Inkstone · 从笔记引用到任务排期',firstTitle:'甲方案参与人数更多。',firstBody:'甲方案记录了 120 人，乙方案记录了 80 人。两者相差 40 人。',sourceFirst:'打开引用 · 第 7–10 行',secondTitle:'资料没有提供满意度。',secondBody:'笔记记录了两场活动的参与人数，未提供任一方案的满意度结果。',next:'补充满意度调查结果后，再比较两场活动。',sourceSecond:'打开引用 · 第 12 行',updated:'已选择问题：',revealedFirst:'原文第 7–10 行已标记。',revealedSecond:'原文第 12 行已标记。'}
+  en:{repo:'GitHub',eyebrow:'Interactive walkthrough',heading:'Ask your notes.<br>Open the source.',lead:'Try two questions about a fictional reading program. One has a clear answer in the notes. The other remains open.',attendance:'Compare attendance',satisfaction:'Which event had higher satisfaction?',answer:'Answer',simulated:'Simulated',source:'Source',markdown:'Fictional Markdown note',sourceHint:'Open the citation to see the lines in the original note.',filename:'reading-activity.md',viewFile:'View full note on GitHub',scope:'This walkthrough uses fictional notes and fixed answers. Demo tasks last until you reload the page. To use Inkstone with your own notes, build the desktop beta on an Apple Silicon Mac running macOS 13 or later.',release:'Get beta.3 source',resources:'Desktop resources',product:'Product overview',manual:'User manual',questions:'Choose a question',switchLang:'切换到中文',title:'Inkstone · From a note to a scheduled task',firstTitle:'Plan A had more attendees.',firstBody:'Plan A recorded 120 attendees and Plan B recorded 80. The difference was 40 people.',sourceFirst:'Open citation · lines 7–10',secondTitle:'The notes do not say.',secondBody:'Attendance is recorded for each event. The notes do not report a satisfaction measure for either plan.',next:'Add survey results before comparing satisfaction.',sourceSecond:'Open citation · line 12',updated:'Selected question: ',revealedFirst:'Lines 7–10 are highlighted in the original note.',revealedSecond:'Line 12 is highlighted in the original note.'},
+  'zh-CN':{repo:'GitHub',eyebrow:'交互演示',heading:'向笔记提问，<br>打开原文核对。',lead:'试问两条关于虚构阅读活动的问题。一条能从笔记里找到答案，另一条还缺少依据。',attendance:'比较两场活动的参与人数',satisfaction:'哪场活动的满意度更高？',answer:'回答',simulated:'模拟回答',source:'来源',markdown:'虚构的 Markdown 笔记',sourceHint:'点击引用，查看它指向的笔记原文。',filename:'reading-activity.md',viewFile:'在 GitHub 查看完整原文',scope:'本演示使用虚构笔记和固定回答，刷新页面后演示任务会重置。要处理自己的笔记，可在配备 Apple 芯片、运行 macOS 13 或更高版本的 Mac 上从源码构建桌面测试版。',release:'获取 beta.3 源码',resources:'桌面版资源',product:'产品与功能',manual:'操作手册',questions:'选择问题',switchLang:'Switch to English',title:'砚台 Inkstone · 从笔记引用到任务排期',firstTitle:'甲方案参与人数更多。',firstBody:'甲方案记录了 120 人，乙方案记录了 80 人。两者相差 40 人。',sourceFirst:'打开引用 · 第 7–10 行',secondTitle:'资料没有提供满意度。',secondBody:'笔记记录了两场活动的参与人数，未提供任一方案的满意度结果。',next:'补充满意度调查结果后，再比较两场活动。',sourceSecond:'打开引用 · 第 12 行',updated:'已选择问题：',revealedFirst:'原文第 7–10 行已标记。',revealedSecond:'原文第 12 行已标记。'}
 };
 Object.assign(copy.en, {
+  desktopNav:'Desktop beta',mapHeading:'Plan a reading night on the canvas',mapBody:'Open the sample in Inkstone on your Mac. Double-click a topic to rename it, drag a branch to move its children, then save and reopen the map.',mapDownload:'Download the editable map (.mmd)',mapAlt:'The sample reading night mind map open in Inkstone',
   jump:'Try the task and calendar demo ↓', taskHeading:'Turn a follow-up into a task',
   messageLabel:'A message from the reading group', taskTitle:'Send the satisfaction survey', capture:'Save as a Markdown task',
   destination:'Markdown · reading-activity.md', schedule:'Add to calendar', reschedule:'Update time',
@@ -108,6 +115,7 @@ Object.assign(copy.en, {
   sampleLinks:'Sample notes', download:'Download sample notes (.zip)', browse:'Browse the notes on GitHub'
 });
 Object.assign(copy['zh-CN'], {
+  desktopNav:'桌面测试版',mapHeading:'用一张脑图筹备读书会',mapBody:'在 Mac 上用砚台打开示例。双击节点改名，拖动分支时子节点会一起移动。保存后重新打开，就能接着整理。',mapDownload:'下载可编辑脑图（.mmd）',mapAlt:'砚台桌面应用中打开的社区阅读之夜示例脑图',
   jump:'体验任务与日历 ↓', taskHeading:'把后续行动存成任务',
   messageLabel:'读书会的一条消息', taskTitle:'发放满意度问卷', capture:'保存为 Markdown 任务',
   destination:'Markdown · reading-activity.md', schedule:'安排到日历', reschedule:'更新时段',
@@ -194,8 +202,10 @@ function render(){
   document.querySelectorAll('[data-i]').forEach(node=>{if(node.dataset.i==='heading'){const [first,second]=t('heading').split('<br>');node.replaceChildren(first,document.createElement('br'),second);}else node.textContent=t(node.dataset.i)});
   el('language').lang=lang==='en'?'zh-CN':'en';el('language').textContent=lang==='en'?'中文':'English';el('language').setAttribute('aria-label',t('switchLang'));
   el('resources').setAttribute('aria-label',t('resources'));
-  el('manual').href='https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.1/docs/USER-MANUAL.'+lang+'.md';
-  el('product').href='https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.1/'+(lang==='en'?'docs/PRODUCT.en.md':'docs/PRODUCT.md');
+  el('map-download').href='downloads/'+lang+'/reading-night.mmd';
+  el('map-preview').src='downloads/'+lang+'/mind-map.png';el('map-preview').alt=t('mapAlt');
+  el('manual').href='https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.3/docs/USER-MANUAL.'+lang+'.md';
+  el('product').href='https://github.com/raistlinsha-plus/inkstone/blob/v1.2.0-beta.3/'+(lang==='en'?'docs/PRODUCT.en.md':'docs/PRODUCT.md');
   el('questions').setAttribute('aria-label',t('questions'));
   document.querySelectorAll('.question').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
   shapeAnswer();showSource();renderTask();
